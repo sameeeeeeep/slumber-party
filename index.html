@@ -157,6 +157,13 @@
   .step .q .sub{ color:var(--brand-soft); font-style:italic; }
   .step input, .step textarea{ width:100%; background:var(--input-bg); border:none; border-bottom:2px solid var(--input-border);
     color:#fff; font-family:var(--sans); font-size:1.05em; padding:.45em .2em; transition:border-color .2s ease; }
+  .choices{ display:flex; flex-wrap:wrap; gap:.5em; margin-top:.2em; }
+  .choice{ font-family:var(--sans); font-size:1em; color:#fff; cursor:pointer; border:1px solid var(--input-border);
+    background:var(--input-bg); border-radius:100px; padding:.5em 1.1em; transition:background .15s ease, color .15s ease, border-color .15s ease; }
+  .choice:hover{ border-color:var(--brand-yellow); }
+  .choice.sel{ background:var(--brand-pink); color:var(--btn-fg); border-color:var(--brand-pink); }
+  .choices.nudge{ animation:nudge .4s; }
+  @keyframes nudge{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
   .step input::placeholder, .step textarea::placeholder{ color:rgba(255,255,255,.45); }
   .step input:focus, .step textarea:focus{ outline:none; border-color:var(--brand-yellow); }
   .step textarea{ resize:none; }
@@ -212,7 +219,7 @@
       <div id="formwrap">
         <form class="fcard" id="apply" novalidate>
           <p class="ftitle">want <span class="sub">in?</span></p>
-          <p class="fcount"><span id="stepnum">01</span> / 06</p>
+          <p class="fcount"><span id="stepnum">01</span> / <span id="steptotal">07</span></p>
           <div class="step on" data-name="name">
             <p class="q">what's your <span class="sub">name?</span></p>
             <input name="name" type="text" placeholder="first & last" autocomplete="name" required />
@@ -224,6 +231,16 @@
           <div class="step" data-name="city">
             <p class="q">where are you <span class="sub">based?</span></p>
             <input name="city" type="text" placeholder="mumbai" required />
+          </div>
+          <div class="step" data-name="role">
+            <p class="q">and who <span class="sub">are you?</span></p>
+            <div class="choices">
+              <button type="button" class="choice" data-val="creator">creator</button>
+              <button type="button" class="choice" data-val="artist">artist</button>
+              <button type="button" class="choice" data-val="entrepreneur">entrepreneur</button>
+              <button type="button" class="choice" data-val="follower">follower</button>
+            </div>
+            <input name="role" type="hidden" required />
           </div>
           <div class="step" data-name="handle">
             <p class="q">your <span class="sub">instagram?</span></p>
@@ -467,12 +484,14 @@ const form=document.getElementById('apply');
 const stepsEls=[...form.querySelectorAll('.step')];
 const dotsWrap=document.getElementById('dots');
 const stepnum=document.getElementById('stepnum');
+const steptotal=document.getElementById('steptotal');
 const fback=document.getElementById('fback');
 const fnext=document.getElementById('fnext');
 const fdone=document.getElementById('fdone');
 let cur=0;
 stepsEls.forEach((_,i)=>{ const d=document.createElement('i'); dotsWrap.appendChild(d); });
 const dots=[...dotsWrap.children];
+if(steptotal) steptotal.textContent=String(stepsEls.length).padStart(2,'0');
 function renderStep(){
   stepsEls.forEach((s,i)=>s.classList.toggle('on', i===cur));
   dots.forEach((d,i)=>d.classList.toggle('on', i===cur));
@@ -480,24 +499,61 @@ function renderStep(){
   fback.hidden = cur===0;
   fnext.textContent = cur===stepsEls.length-1 ? ('send it '+String.fromCharCode(9825)) : ('next '+String.fromCharCode(8594));  // ASCII source survives artifact entity-encoding
   const inp=stepsEls[cur].querySelector('input,textarea');
-  setTimeout(()=>{ try{ inp.focus(); }catch(e){} }, 60);
+  if(inp && inp.type!=='hidden') setTimeout(()=>{ try{ inp.focus(); }catch(e){} }, 60);
 }
 function advance(){
   const inp=stepsEls[cur].querySelector('input,textarea');
-  if(!inp.reportValidity()) return;
+  if(inp.type==='hidden'){                                   // a choice step (e.g. "who are you?")
+    if(!inp.value){ const ch=stepsEls[cur].querySelector('.choices'); ch.classList.add('nudge'); setTimeout(()=>ch.classList.remove('nudge'),400); return; }
+  } else if(!inp.reportValidity()) return;
   if(cur<stepsEls.length-1){ cur++; renderStep(); }
   else submitForm();
 }
+// tappable choice pills fill their step's hidden input
+form.querySelectorAll('.choices').forEach(wrap=>{
+  wrap.addEventListener('click', e=>{
+    const b=e.target.closest('.choice'); if(!b) return;
+    wrap.querySelectorAll('.choice').forEach(c=>c.classList.remove('sel'));
+    b.classList.add('sel');
+    wrap.parentElement.querySelector('input[type=hidden]').value=b.dataset.val;
+  });
+});
 fnext.addEventListener('click', advance);
 fback.addEventListener('click', ()=>{ if(cur>0){ cur--; renderStep(); } });
 form.addEventListener('keydown', e=>{ if(e.key==='Enter' && stepsEls[cur].querySelector('textarea')===null){ e.preventDefault(); advance(); } });
 form.addEventListener('submit', e=>{ e.preventDefault(); advance(); });
 
-const ENDPOINT=''; // set to a Formspree/Basin/your endpoint to actually collect entries
+/* ---- Google Form wiring ----
+   Responses post straight into a Google Form (→ a Google Sheet you own).
+   HOW TO CONNECT:
+   1. Make a Google Form with 6 short-answer questions (name, age, city, instagram, email, why).
+   2. In the form editor: ⋮ (top-right) → "Get pre-filled link". Type each field's OWN NAME as the
+      answer (put "name" in the name box, "age" in the age box, …), then "Get link" and copy it.
+   3. That link looks like:
+      https://docs.google.com/forms/d/e/FORM_ID/viewform?usp=pp_url&entry.111=name&entry.222=age&…
+      Put FORM_ID below, and map each field to its entry.NNN id.  */
+const GFORM = {
+  id: '1FAIpQLSdSzWXdviCvCDrwhM1Gu7FnPJSfKwk2FFZYLzqmE964NNFyUg',
+  fields: {
+    name:  'entry.1654540336',
+    age:   'entry.881493978',
+    city:  'entry.1303070172',
+    role:  'entry.2090027833',   // "who are you?"
+    handle:'entry.1679267567',
+    email: 'entry.1473309531',
+    why:   'entry.1553029635'
+  }
+};
 async function submitForm(){
   const data=Object.fromEntries(new FormData(form).entries());
-  try{ if(ENDPOINT){ await fetch(ENDPOINT,{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json'},body:JSON.stringify(data)}); } else { console.log('Application:', data); } }
-  catch(err){ console.warn('submit failed, confirming anyway', err); }
+  if(GFORM.id){
+    const body=new URLSearchParams();
+    for(const k in data){ if(GFORM.fields[k]) body.append(GFORM.fields[k], data[k]); }
+    try{
+      await fetch(`https://docs.google.com/forms/d/e/${GFORM.id}/formResponse`,
+        { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
+    }catch(err){ console.warn('submit failed, confirming anyway', err); }
+  } else { console.log('Application (Google Form not configured yet):', data); }
   form.style.display='none'; fdone.classList.add('on');
 }
 renderStep();
