@@ -39,25 +39,8 @@
     --tv-tint:radial-gradient(145% 145% at 50% 44%, transparent 36%, rgba(0,0,0,.55) 100%);
     --static-alpha:.5;
   }
-  :root[data-theme="dark"]{
-    --ink:#eddfe4; --ink-strong:#ffffff;
-    --rose:#f88aa6; --pink:#f88aa6; --gold:#ebd81b; --soft:#f5c3cf;
-    --bg-a:#383535; --bg-b:#2a2727;
-    --flare-1:rgba(235,100,140,.22); --flare-2:rgba(245,195,207,.13); --flare-3:rgba(255,241,225,.10);
-    --scrim:rgba(6,4,8,.5); --scrim-2:rgba(6,4,8,.2);
-    --halo:0 2px 22px rgba(0,0,0,.6);
-    --card-a:rgba(46,42,44,.86); --card-b:rgba(30,27,29,.9);
-    --tag-fg:#f8b3c6; --tag-border:rgba(248,138,166,.5); --tag-bg:rgba(255,255,255,.08);
-    --input-bg:rgba(255,255,255,.08); --input-border:rgba(248,138,166,.45);
-    --veil-bg:#2a2727;
-    --head-scrim:linear-gradient(180deg, rgba(30,28,28,.62), rgba(30,28,28,0));
-    --btn-fg:#3a1526; --btn-bg:linear-gradient(90deg,#f88aa6,#ebd81b);
-    --room-dim:brightness(.82) saturate(1.02);
-    --tv-tint:radial-gradient(145% 145% at 50% 44%, transparent 34%, rgba(0,0,0,.6) 100%);
-    --static-alpha:.42;
-  }
   *{ margin:0; padding:0; box-sizing:border-box; }
-  html{ scroll-behavior:smooth; scroll-snap-type:y proximity; }
+  html{ scroll-behavior:smooth; scroll-snap-type:y mandatory; }
   body{
     background:
       radial-gradient(1000px 760px at 74% -8%, var(--flare-1) 0%, transparent 56%),
@@ -122,12 +105,6 @@
   .wordmark .slumber{ font-family:var(--display); font-weight:700; text-transform:uppercase; letter-spacing:.015em; font-size:.98em; color:var(--ink-strong); margin-top:.06em; }
   #masthead .wordmark{ font-size:clamp(.86rem,1.7vw,1.06rem); }
   .head-right{ display:flex; align-items:center; gap:.7rem; pointer-events:auto; }
-  .icon-btn{ display:grid; place-items:center; width:38px; height:38px; border-radius:100px; cursor:pointer;
-    color:var(--rose); border:1px solid var(--tag-border); background:var(--card-a); backdrop-filter:blur(5px);
-    transition:transform .15s ease; }
-  .icon-btn:hover{ transform:translateY(-1px); } .icon-btn:focus-visible{ outline:2px solid var(--rose); outline-offset:2px; }
-  .icon-btn svg{ width:18px; height:18px; } .i-sun{ display:none; } .i-moon{ display:block; }
-  :root[data-theme="dark"] .i-sun{ display:block; } :root[data-theme="dark"] .i-moon{ display:none; }
   #masthead .apply-link{ font-family:var(--sans); font-size:.7rem; letter-spacing:.2em; text-transform:uppercase;
     color:var(--rose); text-decoration:none; white-space:nowrap; border:1px solid var(--tag-border);
     border-radius:100px; padding:.55rem .95rem; background:var(--card-a); backdrop-filter:blur(5px); transition:background .2s ease,color .2s ease; }
@@ -183,8 +160,21 @@
   .fdone .q{ margin-top:.2em; }
 
   .scroll-space{ position:relative; z-index:5; pointer-events:none; }
-  .snap{ height:100vh; scroll-snap-align:start; }
+  /* Each groove's TOP is a snap point; its height places that point on a beat's progress
+     (progress = top ÷ (totalHeight − 100vh), total = 600vh ⇒ divisor = 500vh). Proximity
+     snapping lets you scrub freely through the animation, then settles onto the nearest beat. */
+  .snap{ scroll-snap-align:start; }
+  .s-hero { height:110vh; }  /* top 0vh   → p≈0.00  "…a secret to share" */
+  .s-party{ height:85vh;  }  /* top 110vh → p≈0.22  "a slumber party"    */
+  .s-tea  { height:90vh;  }  /* top 195vh → p≈0.39  "spill the tea"      */
+  .s-crew { height:185vh; }  /* top 285vh → p≈0.57  "30 creators…"       */
+  .s-form { height:130vh; }  /* top 470vh → p≈0.94  the application form  */
   @media (prefers-reduced-motion:reduce){ .scroll-cue .line{ animation:none; } }
+  /* mobile: iOS auto-zooms the page when a focused input is <16px, which shatters the fixed
+     TV illusion — pin form fields to 16px so focusing a question never zooms the viewport */
+  @media (max-width:640px){
+    .step input, .step textarea{ font-size:16px; }
+  }
 </style>
 </head>
 <body>
@@ -276,10 +266,6 @@
       <span class="slumber">slumber party</span>
     </div>
     <div class="head-right">
-      <button id="themeToggle" class="icon-btn" aria-label="Switch between light and dark" title="Switch theme">
-        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
-      </button>
       <a class="apply-link" href="#apply" id="applyLink">Apply</a>
     </div>
   </header>
@@ -288,10 +274,13 @@
   <div class="scroll-cue" id="cue"><span>scroll</span><span class="line"></span></div>
   <div id="veil"><div class="l">shhh…</div></div>
 
-  <!-- scroll grooves: 6 full-height snap detents, one per beat -->
+  <!-- scroll grooves: one snap detent per beat + the form (heights defined in CSS place each point) -->
   <div class="scroll-space">
-    <section class="snap"></section><section class="snap"></section><section class="snap"></section>
-    <section class="snap"></section><section class="snap"></section><section class="snap"></section>
+    <section class="snap s-hero"></section>
+    <section class="snap s-party"></section>
+    <section class="snap s-tea"></section>
+    <section class="snap s-crew"></section>
+    <section class="snap s-form"></section>
   </div>
 
 <script>
@@ -349,7 +338,9 @@ function updateZoom(p){
   const Tx=z*(0.5-base.cx)*Vw, Ty=z*(0.5-base.cy)*Vh;
   roomimg.style.transform=`translate(${Tx}px, ${Ty}px) scale(${s})`;
   room.style.opacity='1';                                     // computer stays put; #tv covers it at full zoom
-  tvcontent.style.fontSize=Math.min(34, Math.max(11, Math.min(w*Vw, h*Vh)*0.05))+'px';  // scales with the screen
+  // scales with the screen — but also capped by viewport WIDTH so the nowrap pixel beats
+  // never overflow a narrow (mobile) screen (they're tuned to fit the widest line at ~0.046·vw)
+  tvcontent.style.fontSize=Math.max(11, Math.min(34, Math.min(w*Vw, h*Vh)*0.05, Vw*0.046))+'px';
   // grey static while "tuning in", then it clears for the pink noise
   scv.style.opacity=String(lerp(0.5, 0.15, smooth(0.02, 0.14, p)) * (1 - smooth(0.46, 0.54, p)));
   // pink noise fills the screen at full zoom, stays for the form (dimmed so the form reads)
@@ -464,16 +455,6 @@ function hideVeil(){ if(veilGone)return; veilGone=true; const v=document.getElem
 roomimg.complete ? hideVeil() : roomimg.addEventListener('load', hideVeil);
 addEventListener('load', hideVeil); setTimeout(hideVeil, 2000);
 
-/* ---------- theme toggle ---------- */
-const THEME_KEY='ksp-theme';
-function applyTheme(t){ if(t==='dark') document.documentElement.setAttribute('data-theme','dark'); else document.documentElement.removeAttribute('data-theme'); }
-let theme='light'; try{ theme=localStorage.getItem(THEME_KEY)||'light'; }catch(e){}
-applyTheme(theme);
-document.getElementById('themeToggle').addEventListener('click', ()=>{
-  theme = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
-  applyTheme(theme); try{ localStorage.setItem(THEME_KEY,theme); }catch(e){}
-});
-
 /* ---------- header "Apply" jumps to the form ---------- */
 document.getElementById('applyLink').addEventListener('click', e=>{
   e.preventDefault(); window.scrollTo({ top:document.body.scrollHeight, behavior:'smooth' });
@@ -492,21 +473,25 @@ let cur=0;
 stepsEls.forEach((_,i)=>{ const d=document.createElement('i'); dotsWrap.appendChild(d); });
 const dots=[...dotsWrap.children];
 if(steptotal) steptotal.textContent=String(stepsEls.length).padStart(2,'0');
-function renderStep(){
+function renderStep(focusNow){
   stepsEls.forEach((s,i)=>s.classList.toggle('on', i===cur));
   dots.forEach((d,i)=>d.classList.toggle('on', i===cur));
   stepnum.textContent=String(cur+1).padStart(2,'0');
   fback.hidden = cur===0;
   fnext.textContent = cur===stepsEls.length-1 ? ('send it '+String.fromCharCode(9825)) : ('next '+String.fromCharCode(8594));  // ASCII source survives artifact entity-encoding
-  const inp=stepsEls[cur].querySelector('input,textarea');
-  if(inp && inp.type!=='hidden') setTimeout(()=>{ try{ inp.focus(); }catch(e){} }, 60);
+  // focus SYNCHRONOUSLY inside the tap/keydown that changed the step (no setTimeout) — otherwise
+  // mobile loses the user-gesture and dismisses the keyboard, forcing a re-tap on every question
+  if(focusNow){
+    const inp=stepsEls[cur].querySelector('input,textarea');
+    if(inp && inp.type!=='hidden'){ try{ inp.focus({preventScroll:true}); }catch(e){} }
+  }
 }
 function advance(){
   const inp=stepsEls[cur].querySelector('input,textarea');
   if(inp.type==='hidden'){                                   // a choice step (e.g. "who are you?")
     if(!inp.value){ const ch=stepsEls[cur].querySelector('.choices'); ch.classList.add('nudge'); setTimeout(()=>ch.classList.remove('nudge'),400); return; }
   } else if(!inp.reportValidity()) return;
-  if(cur<stepsEls.length-1){ cur++; renderStep(); }
+  if(cur<stepsEls.length-1){ cur++; renderStep(true); }
   else submitForm();
 }
 // tappable choice pills fill their step's hidden input
@@ -516,10 +501,11 @@ form.querySelectorAll('.choices').forEach(wrap=>{
     wrap.querySelectorAll('.choice').forEach(c=>c.classList.remove('sel'));
     b.classList.add('sel');
     wrap.parentElement.querySelector('input[type=hidden]').value=b.dataset.val;
+    advance();   // single-select → flow straight on to the next question, keyboard and all
   });
 });
 fnext.addEventListener('click', advance);
-fback.addEventListener('click', ()=>{ if(cur>0){ cur--; renderStep(); } });
+fback.addEventListener('click', ()=>{ if(cur>0){ cur--; renderStep(true); } });
 form.addEventListener('keydown', e=>{ if(e.key==='Enter' && stepsEls[cur].querySelector('textarea')===null){ e.preventDefault(); advance(); } });
 form.addEventListener('submit', e=>{ e.preventDefault(); advance(); });
 
