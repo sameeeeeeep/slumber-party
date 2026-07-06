@@ -91,7 +91,7 @@
   .beat.sky .sub{ color:var(--brand-yellow); }
   .skyline{ font-family:var(--pixel); font-size:.52em; margin-top:1.6em; color:#fff; text-transform:lowercase;
     text-shadow:2px 0 0 #4a1e30, -2px 0 0 #4a1e30, 0 2px 0 #4a1e30, 0 -2px 0 #4a1e30; }
-  .ftitle{ font-family:var(--serif); color:#fff; font-size:1.7em; line-height:1; margin-bottom:.5em; text-shadow:var(--halo); }
+  .ftitle{ font-family:var(--mono); color:#fff; font-size:2.1em; line-height:1; letter-spacing:.02em; margin-bottom:.4em; text-shadow:var(--halo); }
   .ftitle .sub{ color:var(--brand-soft); font-style:italic; }
 
   /* ---- header ---- */
@@ -130,12 +130,12 @@
   .step{ display:none; animation:stepIn .45s ease; }
   .step.on{ display:block; }
   @keyframes stepIn{ from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none} }
-  .step .q{ font-family:var(--serif); color:#fff; font-size:1.35em; line-height:1.12; margin:.3em 0 .55em; text-shadow:var(--halo); }
+  .step .q{ font-family:var(--mono); color:#fff; font-size:1.75em; line-height:1.15; letter-spacing:.01em; margin:.3em 0 .5em; text-shadow:var(--halo); }
   .step .q .sub{ color:var(--brand-soft); font-style:italic; }
   .step input, .step textarea{ width:100%; background:var(--input-bg); border:none; border-bottom:2px solid var(--input-border);
-    color:#fff; font-family:var(--sans); font-size:1.05em; padding:.45em .2em; transition:border-color .2s ease; }
+    color:#fff; font-family:var(--mono); font-size:1.4em; letter-spacing:.02em; padding:.4em .2em; transition:border-color .2s ease; }
   .choices{ display:flex; flex-wrap:wrap; gap:.5em; margin-top:.2em; }
-  .choice{ font-family:var(--sans); font-size:1em; color:#fff; cursor:pointer; border:1px solid var(--input-border);
+  .choice{ font-family:var(--mono); font-size:1.25em; color:#fff; cursor:pointer; border:1px solid var(--input-border);
     background:var(--input-bg); border-radius:100px; padding:.5em 1.1em; transition:background .15s ease, color .15s ease, border-color .15s ease; }
   .choice:hover{ border-color:var(--brand-yellow); }
   .choice.sel{ background:var(--brand-pink); color:var(--btn-fg); border-color:var(--brand-pink); }
@@ -149,15 +149,15 @@
   .dots i{ width:.6em; height:.6em; border-radius:100px; background:var(--tag-border); transition:background .2s ease, transform .2s ease; }
   .dots i.on{ background:var(--brand-yellow); transform:scale(1.25); }
   .fbtns{ display:flex; align-items:center; gap:.7em; }
-  .fback{ background:none; border:none; color:#fff; opacity:.7; font-family:var(--sans); font-size:.95em; cursor:pointer; }
+  .fback{ background:none; border:none; color:#fff; opacity:.7; font-family:var(--mono); font-size:1.15em; letter-spacing:.03em; cursor:pointer; }
   .fback:hover{ opacity:1; } .fback[hidden]{ display:none; }
-  .fnext{ border:none; border-radius:100px; cursor:pointer; font-family:var(--display); font-weight:600; text-transform:uppercase;
-    letter-spacing:.04em; font-size:.82em; color:var(--btn-fg); background:var(--btn-bg); padding:.6em 1.2em; box-shadow:0 8px 20px rgba(235,100,140,.32); transition:transform .15s ease; }
+  .fnext{ border:none; border-radius:100px; cursor:pointer; font-family:var(--mono); text-transform:uppercase;
+    letter-spacing:.1em; font-size:1.1em; color:var(--btn-fg); background:var(--btn-bg); padding:.35em 1.2em; box-shadow:0 8px 20px rgba(235,100,140,.32); transition:transform .15s ease; }
   .fnext:hover{ transform:translateY(-2px); }
   .fdone{ text-align:center; display:none; }
   .fdone.on{ display:block; animation:stepIn .5s ease; }
-  .fdone .big{ font-family:var(--script); color:var(--brand-yellow); font-size:3em; line-height:1; }
-  .fdone .q{ margin-top:.2em; color:#fff; }   /* not inside .step, so pin white explicitly */
+  .fdone .big{ font-family:var(--mono); color:var(--brand-yellow); font-size:2.4em; line-height:1; letter-spacing:.02em; }
+  .fdone .q{ font-family:var(--mono); font-size:1.4em; line-height:1.3; margin-top:.35em; color:#fff; }   /* not inside .step, so pin white explicitly */
 
   .scroll-space{ position:relative; z-index:5; pointer-events:none; }
   /* Each groove's TOP is a snap point; its height places that point on a beat's progress
@@ -173,7 +173,7 @@
   /* mobile: iOS auto-zooms the page when a focused input is <16px, which shatters the fixed
      TV illusion — pin form fields to 16px so focusing a question never zooms the viewport */
   @media (max-width:640px){
-    .step input, .step textarea{ font-size:16px; }
+    .step input, .step textarea{ font-size:18px; }   /* ≥16px so iOS never zooms; VT323 reads a touch small */
   }
 
   /* ---------- easter egg: SLUMBER SNAKE (retro game on the CRT) ---------- */
@@ -204,6 +204,24 @@
     text-shadow:3px 0 0 #eb648c,-3px 0 0 #6bc7ff; }
   .g-overlay .go-sub{ font-size:.6em; line-height:2.1; color:var(--brand-soft); margin-top:1.5em; }
   .g-overlay .go-sub b{ color:#fff; }
+  /* the arcade select screen (Nintendo-style menu) */
+  .g-menu{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:3;
+    padding:7% 6%; background:rgba(16,10,24,.35); }
+  .g-menu.off{ display:none; }
+  .g-menu.nudge{ animation:nudge .4s; }
+  .gm-title{ font-family:var(--pixel); font-size:.85em; line-height:1.5; color:var(--brand-yellow); margin-bottom:1.5em;
+    text-shadow:2px 0 0 #eb648c,-2px 0 0 #6bc7ff; }
+  .gm-list{ list-style:none; display:flex; flex-direction:column; gap:.5em; }
+  .gm-item{ font-family:var(--mono); font-size:1.5em; letter-spacing:.05em; line-height:1; color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:.45em; }
+  .gm-item .gm-ptr{ color:var(--brand-pink); opacity:0; }
+  .gm-item.sel .gm-ptr{ opacity:1; animation:gmblink 1s steps(1) infinite; }
+  .gm-item.sel .gm-name{ color:var(--brand-yellow); }
+  .gm-item.soon{ opacity:.4; }
+  .gm-tag{ font-family:var(--pixel); font-size:.4em; letter-spacing:.05em; color:var(--brand-soft);
+    border:1px solid var(--tag-border); border-radius:100px; padding:.5em .7em; }
+  .gm-foot{ font-family:var(--mono); font-size:1.05em; letter-spacing:.05em; color:rgba(255,255,255,.65); margin-top:1.9em; }
+  @keyframes gmblink{ 50%{opacity:0} }
 </style>
 </head>
 <body>
@@ -287,14 +305,21 @@
         </div>
       </div>
 
-      <!-- easter egg: retro Snake on the CRT, unlocked once the form is sent -->
+      <!-- easter egg: a little arcade on the CRT, unlocked once the form is sent -->
       <div id="game">
         <canvas id="gamecanvas"></canvas>
         <div id="gframe">
           <div class="g-scan"></div>
           <div class="g-hud"><span>pillows&nbsp;<b id="gscore">0</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
-          <div class="g-quit" id="gquit" title="leave (esc)">✕</div>
+          <div class="g-quit" id="gquit" title="back (esc)">✕</div>
           <div class="g-toast" id="gtoast"></div>
+          <div class="g-menu off" id="gmenu">
+            <div>
+              <p class="gm-title">khushi's arcade</p>
+              <ul class="gm-list" id="gmlist"></ul>
+              <p class="gm-foot" id="gmfoot"></p>
+            </div>
+          </div>
           <div class="g-overlay off" id="gover">
             <div>
               <p class="go-title" id="gotitle">slumber snake</p>
@@ -603,21 +628,67 @@ renderStep();
   const scoreEl=document.getElementById('gscore'), hiEl=document.getElementById('ghi');
   const overEl=document.getElementById('gover'), titleEl=document.getElementById('gotitle'), subEl=document.getElementById('gosub');
   const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit');
+  const hud=gframe.querySelector('.g-hud');
+  const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
   const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
   const HI_KEY='ksp-snake-hi';
   let hi=0; try{ hi=+localStorage.getItem(HI_KEY)||0; }catch(e){}
   hiEl.textContent=hi;
 
-  let unlocked=false, open=false, playing=false;
+  let unlocked=false, open=false, playing=false, mode=null, sel=0;   // mode: 'menu' | 'play' | 'over' | null
   let COLS=15, ROWS=15, snake=[], dir={x:1,y:0}, pending={x:1,y:0}, food=null, bonus=null, stars=[];
   let score=0, stepMs=150, timer=null, sinceBonus=0, muted=false;
+  // the arcade line-up — flip enabled:true (and add a play() that drives the CRT) as new games land
+  const GAMES=[
+    {name:'slumber snake', enabled:true,  play:()=>startSnake()},
+    {name:'pillow stack',  enabled:false},
+    {name:'dream maze',    enabled:false},
+    {name:'starlight pong',enabled:false}
+  ];
 
   function unlock(){
     if(unlocked) return; unlocked=true;
-    // no visible hint — it's a secret: clicking/tapping the confirmation (or a key) boots the game
-    if(fdone) fdone.addEventListener('click', startGame);
+    // no visible hint — it's a secret: clicking/tapping the confirmation (or any key) opens the arcade
+    if(fdone) fdone.addEventListener('click', openArcade);
   }
-  window.__slumberGame={ unlock, start:startGame };
+  window.__slumberGame={ unlock, start:openArcade };
+
+  // show/hide the CRT sub-screens for the current mode
+  function applyMode(){
+    gmenu.classList.toggle('off', mode!=='menu');
+    overEl.classList.toggle('off', mode!=='over');
+    hud.style.visibility = (mode==='play'||mode==='over') ? 'visible' : 'hidden';
+    if(mode!=='play') toastEl.style.opacity='0';
+    quitBtn.title = (mode==='menu'||mode===null) ? 'leave (esc)' : 'back (esc)';
+  }
+  function seedStars(){ stars=[]; for(let i=0;i<16;i++) stars.push({x:Math.random(), y:Math.random(), r:Math.random()<0.3?2:1}); }
+
+  /* ---------- the arcade menu ---------- */
+  function openArcade(){
+    if(!unlocked||open) return; open=true;
+    gameEl.classList.add('on');
+    if(masthead){ masthead.style.opacity='0'; masthead.style.pointerEvents='none'; }
+    freeze(); seedStars();
+    mode='menu'; sel=0; renderMenu(); applyMode(); draw();
+  }
+  function renderMenu(){
+    gmlist.innerHTML='';
+    GAMES.forEach((g,i)=>{
+      const li=document.createElement('li');
+      li.className='gm-item'+(i===sel?' sel':'')+(g.enabled?'':' soon');
+      li.innerHTML='<span class="gm-ptr">▸</span><span class="gm-name">'+g.name+'</span>'+(g.enabled?'':'<span class="gm-tag">soon</span>');
+      li.addEventListener('click', ()=>{ sel=i; renderMenu(); selectGame(); });
+      gmlist.appendChild(li);
+    });
+    gmfoot.innerHTML = TOUCH ? 'tap a game to play' : '↑ ↓ choose&nbsp;&nbsp;·&nbsp;&nbsp;enter play&nbsp;&nbsp;·&nbsp;&nbsp;esc exit';
+  }
+  function moveSel(d){ sel=(sel+d+GAMES.length)%GAMES.length; renderMenu(); blip('eat'); }
+  function selectGame(){
+    const g=GAMES[sel];
+    if(g&&g.enabled) g.play();
+    else { gmenu.classList.add('nudge'); blip('crash'); setTimeout(()=>gmenu.classList.remove('nudge'),400); }
+  }
+  function backToMenu(){ playing=false; clearTimeout(timer); mode='menu'; sel=0; renderMenu(); applyMode(); draw(); }
 
   // Freeze the scroll scene at the form framing (the little computer, screen facing us) while playing.
   function freeze(){ const p=(typeof curP==='number')?curP:0.96; window.__p=Math.max(p,0.94); if(typeof updateZoom==='function') updateZoom(window.__p); }
@@ -647,14 +718,11 @@ renderStep();
   function placeFood(){ let c,t=0; do{ c={x:(Math.random()*COLS)|0, y:(Math.random()*ROWS)|0}; }while(!cellFree(c.x,c.y)&&++t<300); food=c; }
   function placeBonus(){ let c,t=0; do{ c={x:(Math.random()*COLS)|0, y:(Math.random()*ROWS)|0}; }while(!cellFree(c.x,c.y)&&++t<300); bonus={x:c.x,y:c.y,t:0,life:Math.max(30,Math.round(6000/stepMs))}; }
 
-  function startGame(){
-    if(!unlocked) return;
-    open=true; playing=true;
-    gameEl.classList.add('on'); overEl.classList.add('off');
-    if(masthead){ masthead.style.opacity='0'; masthead.style.pointerEvents='none'; }
-    freeze(); reset();
+  function startSnake(){
+    open=true; playing=true; mode='play';
+    gameEl.classList.add('on'); freeze(); applyMode(); reset();
     toastEl.textContent = TOUCH ? 'swipe to steer' : 'arrow keys / wasd to steer';
-    toastEl.style.opacity='1'; clearTimeout(startGame._t); startGame._t=setTimeout(()=>toastEl.style.opacity='0', 2600);
+    toastEl.style.opacity='1'; clearTimeout(startSnake._t); startSnake._t=setTimeout(()=>toastEl.style.opacity='0', 2600);
     draw(); schedule();
   }
   function schedule(){ clearTimeout(timer); timer=setTimeout(step, stepMs); }
@@ -682,14 +750,14 @@ renderStep();
   }
 
   function gameOver(){
-    playing=false; clearTimeout(timer); blip('crash');
+    playing=false; clearTimeout(timer); blip('crash'); mode='over';
     if(score>hi){ hi=score; try{ localStorage.setItem(HI_KEY,hi); }catch(e){} hiEl.textContent=hi; titleEl.textContent='new best!'; }
     else titleEl.textContent='game over';
-    subEl.innerHTML='you gathered <b>'+score+'</b> pillow'+(score===1?'':'s')+'.<br>'+(TOUCH?'tap to play again':'press <b>P</b> to play again')+' · <b>esc</b> to leave';
-    overEl.classList.remove('off'); draw();
+    subEl.innerHTML='you gathered <b>'+score+'</b> pillow'+(score===1?'':'s')+'.<br>'+(TOUCH?'tap to replay':'press <b>enter</b> to replay')+'&nbsp;&nbsp;·&nbsp;&nbsp;<b>esc</b> for menu';
+    applyMode(); draw();
   }
-  function quitGame(){
-    playing=false; open=false; clearTimeout(timer);
+  function quitArcade(){
+    playing=false; open=false; mode=null; clearTimeout(timer);
     gameEl.classList.remove('on');
     if(masthead){ masthead.style.opacity=''; masthead.style.pointerEvents=''; }
     thaw();
@@ -702,11 +770,16 @@ renderStep();
     const W=gameEl.clientWidth, H=gameEl.clientHeight, dpr=Math.min(2, window.devicePixelRatio||1);
     if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
     const vis=layout();
-    const c=Math.floor(Math.min(vis.w/COLS, vis.h/ROWS)), fw=c*COLS, fh=c*ROWS, ox=vis.x+(vis.w-fw)/2, oy=vis.y+(vis.h-fh)/2;
     cx.setTransform(dpr,0,0,dpr,0,0); cx.clearRect(0,0,W,H);
+    // menu: the panel fills the whole screen; playing: the panel is the grid field, centred
+    const playing2=(mode==='play'||mode==='over');
+    const c=Math.floor(Math.min(vis.w/COLS, vis.h/ROWS));
+    const fw=playing2? c*COLS : vis.w, fh=playing2? c*ROWS : vis.h;
+    const ox=playing2? vis.x+(vis.w-fw)/2 : vis.x, oy=playing2? vis.y+(vis.h-fh)/2 : vis.y;
     cx.fillStyle='#191026'; rr(ox,oy,fw,fh,8); cx.fill();
     for(const s of stars){ cx.globalAlpha=0.25+0.55*Math.abs(Math.sin((s.x+s.y)*9)); cx.fillStyle='#fff0fa'; cx.fillRect(ox+s.x*fw, oy+s.y*fh, s.r, s.r); }
     cx.globalAlpha=1;
+    if(!playing2) return;   // menu backdrop only — the DOM menu draws on top
     const pad=Math.max(1, Math.floor(c*0.12)), at=(gx,gy)=>({x:ox+gx*c, y:oy+gy*c});
     if(food){ const p=at(food.x,food.y); drawPillow(p.x+pad, p.y+pad, c-2*pad); }
     if(bonus && bonus.t%2===0){ const p=at(bonus.x,bonus.y); drawStar(p.x+c/2, p.y+c/2, c*0.42); }
@@ -752,37 +825,45 @@ renderStep();
   }
 
   /* ---------- controls ---------- */
-  const START_KEYS={ 'p':1,'P':1,'Enter':1,' ':1 };
+  const MODKEYS={ 'Tab':1,'Shift':1,'Control':1,'Alt':1,'Meta':1,'CapsLock':1,'Fn':1 };
   addEventListener('keydown', e=>{
     if(!unlocked) return;
     const k=e.key;
-    if(open && (k==='ArrowUp'||k==='ArrowDown'||k==='ArrowLeft'||k==='ArrowRight'||k===' ')) e.preventDefault();
-    if(playing){
+    // secret: from the confirmation, any real key opens the arcade
+    if(!open){ if(MODKEYS[k]) return; e.preventDefault(); openArcade(); return; }
+    if(k===' '||k==='ArrowUp'||k==='ArrowDown'||k==='ArrowLeft'||k==='ArrowRight') e.preventDefault();
+    if(mode==='menu'){
+      if(k==='ArrowUp'||k==='w'||k==='W') moveSel(-1);
+      else if(k==='ArrowDown'||k==='s'||k==='S') moveSel(1);
+      else if(k==='Enter'||k===' ') selectGame();
+      else if(k==='Escape') quitArcade();
+    } else if(mode==='play'){
       if(k==='ArrowUp'||k==='w'||k==='W') setDir(0,-1);
       else if(k==='ArrowDown'||k==='s'||k==='S') setDir(0,1);
       else if(k==='ArrowLeft'||k==='a'||k==='A') setDir(-1,0);
       else if(k==='ArrowRight'||k==='d'||k==='D') setDir(1,0);
-      else if(k==='Escape') quitGame();
+      else if(k==='Escape') backToMenu();
       else if(k==='m'||k==='M') muted=!muted;
-      return;
+    } else if(mode==='over'){
+      if(k==='Enter'||k===' '||k==='p'||k==='P') startSnake();
+      else if(k==='Escape') backToMenu();
     }
-    if(k==='Escape'){ if(open) quitGame(); return; }
-    if(START_KEYS[k]){ if(!open) e.preventDefault(); startGame(); }
   });
-  quitBtn.addEventListener('click', quitGame);
-  overEl.addEventListener('click', ()=>{ if(open&&!playing) startGame(); });
-  cv.addEventListener('click', ()=>{ if(open&&!playing) startGame(); });
+  // ✕ steps back: play/over → menu, menu → leave the arcade
+  quitBtn.addEventListener('click', ()=>{ if(mode==='play'||mode==='over') backToMenu(); else quitArcade(); });
+  overEl.addEventListener('click', ()=>{ if(mode==='over') startSnake(); });
+  cv.addEventListener('click', ()=>{ if(mode==='over') startSnake(); });
 
   let tsx=0, tsy=0, tmoved=false;
   cv.addEventListener('touchstart', e=>{ const t=e.touches[0]; tsx=t.clientX; tsy=t.clientY; tmoved=false; }, {passive:true});
   cv.addEventListener('touchmove', e=>{
-    if(!open) return; e.preventDefault();
+    if(mode!=='play') return; e.preventDefault();
     const t=e.touches[0], dx=t.clientX-tsx, dy=t.clientY-tsy;
     if(Math.abs(dx)+Math.abs(dy)<22) return;
     if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?1:-1,0); else setDir(0,dy>0?1:-1);
     tsx=t.clientX; tsy=t.clientY; tmoved=true;
   }, {passive:false});
-  cv.addEventListener('touchend', ()=>{ if(open&&!playing&&!tmoved) startGame(); }, {passive:true});
+  cv.addEventListener('touchend', ()=>{ if(mode==='over'&&!tmoved) startSnake(); }, {passive:true});
   addEventListener('resize', ()=>{ if(open) draw(); });
 })();
 </script>
