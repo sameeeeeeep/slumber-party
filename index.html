@@ -157,18 +157,18 @@
   .fdone{ text-align:center; display:none; }
   .fdone.on{ display:block; animation:stepIn .5s ease; }
   .fdone .big{ font-family:var(--script); color:var(--brand-yellow); font-size:3em; line-height:1; }
-  .fdone .q{ margin-top:.2em; }
+  .fdone .q{ margin-top:.2em; color:#fff; }   /* not inside .step, so pin white explicitly */
 
   .scroll-space{ position:relative; z-index:5; pointer-events:none; }
   /* Each groove's TOP is a snap point; its height places that point on a beat's progress
-     (progress = top ÷ (totalHeight − 100vh), total = 600vh ⇒ divisor = 500vh). Proximity
-     snapping lets you scrub freely through the animation, then settles onto the nearest beat. */
+     (progress = top ÷ (totalHeight − 100vh), total = 700vh ⇒ divisor = 600vh). Every section is
+     ≥ 100vh (one viewport) so mandatory snapping can't skip a beat — notably "30 creators". */
   .snap{ scroll-snap-align:start; }
-  .s-hero { height:110vh; }  /* top 0vh   → p≈0.00  "…a secret to share" */
-  .s-party{ height:85vh;  }  /* top 110vh → p≈0.22  "a slumber party"    */
-  .s-tea  { height:90vh;  }  /* top 195vh → p≈0.39  "spill the tea"      */
-  .s-crew { height:185vh; }  /* top 285vh → p≈0.57  "30 creators…"       */
-  .s-form { height:130vh; }  /* top 470vh → p≈0.94  the application form  */
+  .s-hero { height:132vh; }  /* top 0vh   → p≈0.00  "…a secret to share" */
+  .s-party{ height:102vh; }  /* top 132vh → p≈0.22  "a slumber party"    */
+  .s-tea  { height:108vh; }  /* top 234vh → p≈0.39  "spill the tea"      */
+  .s-crew { height:222vh; }  /* top 342vh → p≈0.57  "30 creators…"       */
+  .s-form { height:136vh; }  /* top 564vh → p≈0.94  the application form  */
   @media (prefers-reduced-motion:reduce){ .scroll-cue .line{ animation:none; } }
   /* mobile: iOS auto-zooms the page when a focused input is <16px, which shatters the fixed
      TV illusion — pin form fields to 16px so focusing a question never zooms the viewport */
@@ -177,13 +177,7 @@
   }
 
   /* ---------- easter egg: SLUMBER SNAKE (retro game on the CRT) ---------- */
-  .playhint{ display:inline-block; margin-top:1.5em; font-family:var(--pixel); font-size:.5em; line-height:1.8;
-    letter-spacing:.05em; text-transform:uppercase; color:var(--brand-yellow); background:rgba(0,0,0,.28);
-    border:1px solid var(--tag-border); border-radius:100px; padding:1em 1.5em; cursor:pointer;
-    transition:transform .15s ease, background .2s ease; animation:hintpulse 2.6s ease-in-out infinite; }
-  .playhint b{ color:#fff; }
-  .playhint:hover{ transform:translateY(-2px); background:rgba(0,0,0,.42); }
-  @keyframes hintpulse{ 0%,100%{opacity:.65} 50%{opacity:1} }
+  .fdone{ cursor:pointer; }   /* secret: clicking the confirmation boots the game */
   #game{ position:absolute; inset:0; display:none; z-index:3; overflow:hidden; font-family:var(--pixel); color:#fff;
     background:radial-gradient(120% 120% at 50% 0%, #241636 0%, #160f22 62%, #100a18 100%); }
   #game.on{ display:block; pointer-events:auto; }
@@ -290,7 +284,6 @@
         <div class="fdone" id="fdone">
           <div class="big">tucked in ♡</div>
           <p class="q">your name's with khushi now.<br><span class="sub">if you're one of the thirty, we'll whisper back.</span></p>
-          <button class="playhint" id="playhint" type="button" hidden>psst — press <b>P</b> for a secret game</button>
         </div>
       </div>
 
@@ -621,8 +614,8 @@ renderStep();
 
   function unlock(){
     if(unlocked) return; unlocked=true;
-    const hint=document.getElementById('playhint');
-    if(hint){ hint.hidden=false; hint.innerHTML = TOUCH ? 'tap here for a secret game' : 'psst — press <b>P</b> for a secret game'; hint.addEventListener('click', startGame); }
+    // no visible hint — it's a secret: clicking/tapping the confirmation (or a key) boots the game
+    if(fdone) fdone.addEventListener('click', startGame);
   }
   window.__slumberGame={ unlock, start:startGame };
 
