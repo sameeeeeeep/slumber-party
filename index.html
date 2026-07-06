@@ -175,6 +175,41 @@
   @media (max-width:640px){
     .step input, .step textarea{ font-size:16px; }
   }
+
+  /* ---------- easter egg: SLUMBER SNAKE (retro game on the CRT) ---------- */
+  .playhint{ display:inline-block; margin-top:1.5em; font-family:var(--pixel); font-size:.5em; line-height:1.8;
+    letter-spacing:.05em; text-transform:uppercase; color:var(--brand-yellow); background:rgba(0,0,0,.28);
+    border:1px solid var(--tag-border); border-radius:100px; padding:1em 1.5em; cursor:pointer;
+    transition:transform .15s ease, background .2s ease; animation:hintpulse 2.6s ease-in-out infinite; }
+  .playhint b{ color:#fff; }
+  .playhint:hover{ transform:translateY(-2px); background:rgba(0,0,0,.42); }
+  @keyframes hintpulse{ 0%,100%{opacity:.65} 50%{opacity:1} }
+  #game{ position:absolute; inset:0; display:none; z-index:3; overflow:hidden; font-family:var(--pixel); color:#fff;
+    background:radial-gradient(120% 120% at 50% 0%, #241636 0%, #160f22 62%, #100a18 100%); }
+  #game.on{ display:block; pointer-events:auto; }
+  #gamecanvas{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; touch-action:none; }
+  /* UI layer, positioned by JS to the on-screen visible slice of the CRT so it never clips off a narrow phone */
+  #gframe{ position:absolute; left:0; top:0; overflow:hidden; z-index:2; }
+  .g-scan{ position:absolute; inset:0; pointer-events:none; z-index:3; opacity:.5; mix-blend-mode:overlay;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.5) 0 1px, transparent 1px 3px); }
+  .g-hud{ position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center;
+    padding:1em 1.2em; font-size:.6em; letter-spacing:.05em; color:var(--brand-soft); pointer-events:none; z-index:2;
+    text-shadow:2px 0 0 #3a1526,-2px 0 0 #3a1526,0 2px 0 #3a1526,0 -2px 0 #3a1526; }
+  .g-hud b{ color:var(--brand-yellow); }
+  .g-hud span:last-child{ margin-right:2.4em; }   /* clear the ✕ quit button in the corner */
+  .g-quit{ position:absolute; top:.55em; right:.55em; z-index:4; width:2.1em; height:2.1em; border-radius:100px;
+    display:grid; place-items:center; cursor:pointer; color:#fff; font-family:var(--sans); font-size:.9em;
+    border:1px solid rgba(255,255,255,.28); background:rgba(0,0,0,.32); }
+  .g-toast{ position:absolute; left:50%; bottom:7%; transform:translateX(-50%); z-index:2; font-size:.46em;
+    letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.85); white-space:nowrap;
+    transition:opacity .6s ease; pointer-events:none; }
+  .g-overlay{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:3; padding:8%;
+    background:rgba(16,10,24,.62); }
+  .g-overlay.off{ display:none; }
+  .g-overlay .go-title{ font-size:1.4em; line-height:1.5; color:var(--brand-yellow);
+    text-shadow:3px 0 0 #eb648c,-3px 0 0 #6bc7ff; }
+  .g-overlay .go-sub{ font-size:.6em; line-height:2.1; color:var(--brand-soft); margin-top:1.5em; }
+  .g-overlay .go-sub b{ color:#fff; }
 </style>
 </head>
 <body>
@@ -255,6 +290,24 @@
         <div class="fdone" id="fdone">
           <div class="big">tucked in ♡</div>
           <p class="q">your name's with khushi now.<br><span class="sub">if you're one of the thirty, we'll whisper back.</span></p>
+          <button class="playhint" id="playhint" type="button" hidden>psst — press <b>P</b> for a secret game</button>
+        </div>
+      </div>
+
+      <!-- easter egg: retro Snake on the CRT, unlocked once the form is sent -->
+      <div id="game">
+        <canvas id="gamecanvas"></canvas>
+        <div id="gframe">
+          <div class="g-scan"></div>
+          <div class="g-hud"><span>pillows&nbsp;<b id="gscore">0</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
+          <div class="g-quit" id="gquit" title="leave (esc)">✕</div>
+          <div class="g-toast" id="gtoast"></div>
+          <div class="g-overlay off" id="gover">
+            <div>
+              <p class="go-title" id="gotitle">slumber snake</p>
+              <p class="go-sub" id="gosub">collect the pillows.<br>don't bite your own boa.</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -541,8 +594,204 @@ async function submitForm(){
     }catch(err){ console.warn('submit failed, confirming anyway', err); }
   } else { console.log('Application (Google Form not configured yet):', data); }
   form.style.display='none'; fdone.classList.add('on');
+  if(window.__slumberGame) window.__slumberGame.unlock();   // reveal the easter-egg game
 }
 renderStep();
+
+/* ============================================================
+   Easter egg — SLUMBER SNAKE
+   Unlocked once the form is sent. Press P (or tap the hint) to play a
+   pillow-collecting snake right on the CRT. Arrows / WASD or swipe to
+   steer, Esc to leave. Freezes the scroll scene while you play.
+   ============================================================ */
+(function(){
+  const gameEl=document.getElementById('game'), gframe=document.getElementById('gframe');
+  const cv=document.getElementById('gamecanvas'), cx=cv.getContext('2d');
+  const scoreEl=document.getElementById('gscore'), hiEl=document.getElementById('ghi');
+  const overEl=document.getElementById('gover'), titleEl=document.getElementById('gotitle'), subEl=document.getElementById('gosub');
+  const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit');
+  const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+  const HI_KEY='ksp-snake-hi';
+  let hi=0; try{ hi=+localStorage.getItem(HI_KEY)||0; }catch(e){}
+  hiEl.textContent=hi;
+
+  let unlocked=false, open=false, playing=false;
+  let COLS=15, ROWS=15, snake=[], dir={x:1,y:0}, pending={x:1,y:0}, food=null, bonus=null, stars=[];
+  let score=0, stepMs=150, timer=null, sinceBonus=0, muted=false;
+
+  function unlock(){
+    if(unlocked) return; unlocked=true;
+    const hint=document.getElementById('playhint');
+    if(hint){ hint.hidden=false; hint.innerHTML = TOUCH ? 'tap here for a secret game' : 'psst — press <b>P</b> for a secret game'; hint.addEventListener('click', startGame); }
+  }
+  window.__slumberGame={ unlock, start:startGame };
+
+  // Freeze the scroll scene at the form framing (the little computer, screen facing us) while playing.
+  function freeze(){ const p=(typeof curP==='number')?curP:0.96; window.__p=Math.max(p,0.94); if(typeof updateZoom==='function') updateZoom(window.__p); }
+  function thaw(){ delete window.__p; if(typeof readScroll==='function') readScroll(); }
+  // The CRT screen can overflow a narrow viewport, so confine play + UI to the on-screen visible slice.
+  function layout(){
+    const r=gameEl.getBoundingClientRect(), W=r.width, H=r.height;
+    const lx=Math.max(0,Math.min(-r.left, W)), ty=Math.max(0,Math.min(-r.top, H));
+    const rx=Math.max(0,Math.min(innerWidth-r.left, W)), by=Math.max(0,Math.min(innerHeight-r.top, H));
+    const vis={x:lx, y:ty, w:Math.max(40,rx-lx), h:Math.max(40,by-ty)};
+    gframe.style.left=vis.x+'px'; gframe.style.top=vis.y+'px'; gframe.style.width=vis.w+'px'; gframe.style.height=vis.h+'px';
+    return vis;
+  }
+
+  function reset(){
+    const vis=layout(), W=vis.w||400, H=vis.h||300, S=15;   // ~15 cells on the short side, square-ish
+    if(W>=H){ ROWS=S; COLS=Math.min(38, Math.max(12, Math.round(S*W/H))); }
+    else    { COLS=S; ROWS=Math.min(46, Math.max(12, Math.round(S*H/W))); }
+    const mx=Math.floor(COLS/2), my=Math.floor(ROWS/2);
+    snake=[{x:mx,y:my},{x:mx-1,y:my},{x:mx-2,y:my}];
+    dir={x:1,y:0}; pending={x:1,y:0};
+    score=0; stepMs=150; sinceBonus=0; bonus=null; scoreEl.textContent='0';
+    stars=[]; for(let i=0;i<14;i++) stars.push({x:Math.random(), y:Math.random(), r:Math.random()<0.3?2:1});
+    placeFood();
+  }
+  function cellFree(x,y){ return !snake.some(s=>s.x===x&&s.y===y) && !(food&&food.x===x&&food.y===y) && !(bonus&&bonus.x===x&&bonus.y===y); }
+  function placeFood(){ let c,t=0; do{ c={x:(Math.random()*COLS)|0, y:(Math.random()*ROWS)|0}; }while(!cellFree(c.x,c.y)&&++t<300); food=c; }
+  function placeBonus(){ let c,t=0; do{ c={x:(Math.random()*COLS)|0, y:(Math.random()*ROWS)|0}; }while(!cellFree(c.x,c.y)&&++t<300); bonus={x:c.x,y:c.y,t:0,life:Math.max(30,Math.round(6000/stepMs))}; }
+
+  function startGame(){
+    if(!unlocked) return;
+    open=true; playing=true;
+    gameEl.classList.add('on'); overEl.classList.add('off');
+    if(masthead){ masthead.style.opacity='0'; masthead.style.pointerEvents='none'; }
+    freeze(); reset();
+    toastEl.textContent = TOUCH ? 'swipe to steer' : 'arrow keys / wasd to steer';
+    toastEl.style.opacity='1'; clearTimeout(startGame._t); startGame._t=setTimeout(()=>toastEl.style.opacity='0', 2600);
+    draw(); schedule();
+  }
+  function schedule(){ clearTimeout(timer); timer=setTimeout(step, stepMs); }
+  function setDir(x,y){ if(!playing) return; if(x===-dir.x&&y===-dir.y) return; pending={x,y}; }
+
+  function step(){
+    if(!playing) return;
+    if(!(pending.x===-dir.x&&pending.y===-dir.y)) dir=pending;
+    const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
+    if(head.x<0||head.y<0||head.x>=COLS||head.y>=ROWS) return gameOver();
+    const eating = food && head.x===food.x && head.y===food.y;
+    const body = eating ? snake : snake.slice(0,-1);   // tail vacates unless we grow
+    if(body.some(s=>s.x===head.x&&s.y===head.y)) return gameOver();
+    snake.unshift(head);
+    if(eating){
+      score++; scoreEl.textContent=score; blip('eat');
+      stepMs=Math.max(70, stepMs-5); placeFood();
+      if(++sinceBonus>=5 && !bonus){ sinceBonus=0; placeBonus(); }
+    } else snake.pop();
+    if(bonus){
+      if(head.x===bonus.x&&head.y===bonus.y){ score+=5; scoreEl.textContent=score; blip('bonus'); bonus=null; snake.push({...snake[snake.length-1]}); }
+      else if(++bonus.t>bonus.life) bonus=null;
+    }
+    draw(); schedule();
+  }
+
+  function gameOver(){
+    playing=false; clearTimeout(timer); blip('crash');
+    if(score>hi){ hi=score; try{ localStorage.setItem(HI_KEY,hi); }catch(e){} hiEl.textContent=hi; titleEl.textContent='new best!'; }
+    else titleEl.textContent='game over';
+    subEl.innerHTML='you gathered <b>'+score+'</b> pillow'+(score===1?'':'s')+'.<br>'+(TOUCH?'tap to play again':'press <b>P</b> to play again')+' · <b>esc</b> to leave';
+    overEl.classList.remove('off'); draw();
+  }
+  function quitGame(){
+    playing=false; open=false; clearTimeout(timer);
+    gameEl.classList.remove('on');
+    if(masthead){ masthead.style.opacity=''; masthead.style.pointerEvents=''; }
+    thaw();
+  }
+
+  /* ---------- drawing ---------- */
+  function rr(x,y,w,h,r){ r=Math.min(r,w/2,h/2); cx.beginPath(); cx.moveTo(x+r,y); cx.arcTo(x+w,y,x+w,y+h,r); cx.arcTo(x+w,y+h,x,y+h,r); cx.arcTo(x,y+h,x,y,r); cx.arcTo(x,y,x+w,y,r); cx.closePath(); }
+  function lerpCol(a,b,t){ return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')'; }
+  function draw(){
+    const W=gameEl.clientWidth, H=gameEl.clientHeight, dpr=Math.min(2, window.devicePixelRatio||1);
+    if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+    const vis=layout();
+    const c=Math.floor(Math.min(vis.w/COLS, vis.h/ROWS)), fw=c*COLS, fh=c*ROWS, ox=vis.x+(vis.w-fw)/2, oy=vis.y+(vis.h-fh)/2;
+    cx.setTransform(dpr,0,0,dpr,0,0); cx.clearRect(0,0,W,H);
+    cx.fillStyle='#191026'; rr(ox,oy,fw,fh,8); cx.fill();
+    for(const s of stars){ cx.globalAlpha=0.25+0.55*Math.abs(Math.sin((s.x+s.y)*9)); cx.fillStyle='#fff0fa'; cx.fillRect(ox+s.x*fw, oy+s.y*fh, s.r, s.r); }
+    cx.globalAlpha=1;
+    const pad=Math.max(1, Math.floor(c*0.12)), at=(gx,gy)=>({x:ox+gx*c, y:oy+gy*c});
+    if(food){ const p=at(food.x,food.y); drawPillow(p.x+pad, p.y+pad, c-2*pad); }
+    if(bonus && bonus.t%2===0){ const p=at(bonus.x,bonus.y); drawStar(p.x+c/2, p.y+c/2, c*0.42); }
+    for(let i=snake.length-1;i>=0;i--){
+      const s=snake[i], p=at(s.x,s.y), t=snake.length>1? i/(snake.length-1):0;
+      cx.fillStyle=lerpCol([235,100,140],[245,206,220], t);
+      rr(p.x+pad, p.y+pad, c-2*pad, c-2*pad, Math.max(2,c*0.3)); cx.fill();
+      if(i===0) drawEyes(p.x, p.y, c);
+    }
+  }
+  function drawPillow(x,y,s){
+    cx.fillStyle='#f7dfe8'; rr(x, y+s*0.08, s, s*0.84, s*0.3); cx.fill();
+    cx.strokeStyle='rgba(235,100,140,.55)'; cx.lineWidth=Math.max(1,s*0.06); rr(x+s*0.13, y+s*0.2, s*0.74, s*0.58, s*0.16); cx.stroke();
+    cx.fillStyle='rgba(255,255,255,.75)'; cx.fillRect(x+s*0.26, y+s*0.28, Math.max(1,s*0.13), Math.max(1,s*0.08));
+  }
+  function drawStar(px,py,r){
+    cx.save(); cx.translate(px,py); cx.fillStyle='#ffd84a'; cx.shadowColor='#ffd84a'; cx.shadowBlur=r;
+    cx.beginPath(); for(let i=0;i<10;i++){ const a=i*Math.PI/5-Math.PI/2, rad=(i%2? r*0.42:r); cx.lineTo(Math.cos(a)*rad, Math.sin(a)*rad); } cx.closePath(); cx.fill(); cx.restore();
+  }
+  function drawEyes(x,y,c){
+    const mx=x+c/2, my=y+c/2, fo=c*0.12, so=c*0.18, r=Math.max(1.3,c*0.1), px=-dir.y, py=dir.x;
+    for(const sgn of [-1,1]){
+      const ex=mx+dir.x*fo+px*so*sgn, ey=my+dir.y*fo+py*so*sgn;
+      cx.fillStyle='#fff'; cx.beginPath(); cx.arc(ex,ey,r,0,7); cx.fill();
+      cx.fillStyle='#3a1526'; cx.beginPath(); cx.arc(ex+dir.x*r*0.4, ey+dir.y*r*0.4, r*0.55, 0, 7); cx.fill();
+    }
+  }
+
+  /* ---------- sound (soft retro blips) ---------- */
+  let actx=null;
+  function blip(kind){
+    if(muted) return;
+    try{
+      actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+      const now=actx.currentTime, o=actx.createOscillator(), g=actx.createGain(); o.connect(g); g.connect(actx.destination);
+      let d=0.08;
+      if(kind==='eat'){ o.type='square'; o.frequency.setValueAtTime(600,now); o.frequency.linearRampToValueAtTime(760,now+0.05); }
+      else if(kind==='bonus'){ o.type='square'; o.frequency.setValueAtTime(660,now); o.frequency.linearRampToValueAtTime(1180,now+0.15); d=0.2; }
+      else { o.type='sawtooth'; o.frequency.setValueAtTime(300,now); o.frequency.linearRampToValueAtTime(70,now+0.3); d=0.34; }
+      g.gain.setValueAtTime(0.0001,now); g.gain.exponentialRampToValueAtTime(0.06,now+0.012); g.gain.exponentialRampToValueAtTime(0.0001,now+d);
+      o.start(now); o.stop(now+d+0.02);
+    }catch(e){}
+  }
+
+  /* ---------- controls ---------- */
+  const START_KEYS={ 'p':1,'P':1,'Enter':1,' ':1 };
+  addEventListener('keydown', e=>{
+    if(!unlocked) return;
+    const k=e.key;
+    if(open && (k==='ArrowUp'||k==='ArrowDown'||k==='ArrowLeft'||k==='ArrowRight'||k===' ')) e.preventDefault();
+    if(playing){
+      if(k==='ArrowUp'||k==='w'||k==='W') setDir(0,-1);
+      else if(k==='ArrowDown'||k==='s'||k==='S') setDir(0,1);
+      else if(k==='ArrowLeft'||k==='a'||k==='A') setDir(-1,0);
+      else if(k==='ArrowRight'||k==='d'||k==='D') setDir(1,0);
+      else if(k==='Escape') quitGame();
+      else if(k==='m'||k==='M') muted=!muted;
+      return;
+    }
+    if(k==='Escape'){ if(open) quitGame(); return; }
+    if(START_KEYS[k]){ if(!open) e.preventDefault(); startGame(); }
+  });
+  quitBtn.addEventListener('click', quitGame);
+  overEl.addEventListener('click', ()=>{ if(open&&!playing) startGame(); });
+  cv.addEventListener('click', ()=>{ if(open&&!playing) startGame(); });
+
+  let tsx=0, tsy=0, tmoved=false;
+  cv.addEventListener('touchstart', e=>{ const t=e.touches[0]; tsx=t.clientX; tsy=t.clientY; tmoved=false; }, {passive:true});
+  cv.addEventListener('touchmove', e=>{
+    if(!open) return; e.preventDefault();
+    const t=e.touches[0], dx=t.clientX-tsx, dy=t.clientY-tsy;
+    if(Math.abs(dx)+Math.abs(dy)<22) return;
+    if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?1:-1,0); else setDir(0,dy>0?1:-1);
+    tsx=t.clientX; tsy=t.clientY; tmoved=true;
+  }, {passive:false});
+  cv.addEventListener('touchend', ()=>{ if(open&&!playing&&!tmoved) startGame(); }, {passive:true});
+  addEventListener('resize', ()=>{ if(open) draw(); });
+})();
 </script>
 </body>
 </html>
