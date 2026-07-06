@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khushi's Secret Slumber Party</title>
+<meta name="description" content="An invite-only night for creators, artists & dreamers. 30 spots open by application." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fredoka:wght@500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@300;400;500;600&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+
+<style>
+  :root{
+    /* ===== brand palette ===== #f5c3cf #ebd81b #eb648c #ec642a #312f2f #fff */
+    --brand-pink:#eb648c; --brand-soft:#f5c3cf; --brand-yellow:#ebd81b;
+    --brand-orange:#ec642a; --brand-char:#312f2f;
+    --serif:'Playfair Display', Georgia, serif;
+    --sans:'Inter', system-ui, sans-serif;
+    --script:'Caveat', cursive;
+    --display:'Fredoka', var(--sans);
+    --mono:'VT323', monospace;
+    --pixel:'Press Start 2P', 'VT323', monospace;
+
+    /* ===== LIGHT theme (default) ===== */
+    --ink:#5a4650; --ink-strong:#312f2f;
+    --rose:#d4557d; --pink:#eb648c; --gold:#ec642a; --soft:#f5c3cf;
+    --bg-a:#fdeff3; --bg-b:#fbe7ee;
+    --flare-1:rgba(245,195,207,.55); --flare-2:rgba(235,100,140,.12); --flare-3:rgba(255,255,255,0);
+    --scrim:rgba(20,16,22,.34); --scrim-2:rgba(20,16,22,.12);
+    --halo:0 2px 20px rgba(0,0,0,.35);
+    --card-a:rgba(255,252,253,.9); --card-b:rgba(252,235,241,.94);
+    --tag-fg:#d4557d; --tag-border:rgba(235,100,140,.45); --tag-bg:rgba(255,252,253,.14);
+    --input-bg:rgba(255,255,255,.1); --input-border:rgba(235,100,140,.5);
+    --veil-bg:#fdeff3;
+    --head-scrim:linear-gradient(180deg, rgba(255,250,251,.6), rgba(255,250,251,0));
+    --btn-fg:#fff; --btn-bg:linear-gradient(90deg,#eb648c,#ec642a);
+    --room-dim:none;
+    --tv-tint:radial-gradient(145% 145% at 50% 44%, transparent 36%, rgba(0,0,0,.55) 100%);
+    --static-alpha:.5;
+  }
+  :root[data-theme="dark"]{
+    --ink:#eddfe4; --ink-strong:#ffffff;
+    --rose:#f88aa6; --pink:#f88aa6; --gold:#ebd81b; --soft:#f5c3cf;
+    --bg-a:#383535; --bg-b:#2a2727;
+    --flare-1:rgba(235,100,140,.22); --flare-2:rgba(245,195,207,.13); --flare-3:rgba(255,241,225,.10);
+    --scrim:rgba(6,4,8,.5); --scrim-2:rgba(6,4,8,.2);
+    --halo:0 2px 22px rgba(0,0,0,.6);
+    --card-a:rgba(46,42,44,.86); --card-b:rgba(30,27,29,.9);
+    --tag-fg:#f8b3c6; --tag-border:rgba(248,138,166,.5); --tag-bg:rgba(255,255,255,.08);
+    --input-bg:rgba(255,255,255,.08); --input-border:rgba(248,138,166,.45);
+    --veil-bg:#2a2727;
+    --head-scrim:linear-gradient(180deg, rgba(30,28,28,.62), rgba(30,28,28,0));
+    --btn-fg:#3a1526; --btn-bg:linear-gradient(90deg,#f88aa6,#ebd81b);
+    --room-dim:brightness(.82) saturate(1.02);
+    --tv-tint:radial-gradient(145% 145% at 50% 44%, transparent 34%, rgba(0,0,0,.6) 100%);
+    --static-alpha:.42;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html{ scroll-behavior:smooth; scroll-snap-type:y proximity; }
+  body{
+    background:
+      radial-gradient(1000px 760px at 74% -8%, var(--flare-1) 0%, transparent 56%),
+      radial-gradient(880px 700px at 10% 112%, var(--flare-2) 0%, transparent 54%),
+      linear-gradient(180deg, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-a) 100%);
+    color:var(--ink); font-family:var(--sans); overflow-x:clip; -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---- the bedroom; zooms toward the TV as you scroll ---- */
+  #room{ position:fixed; inset:0; z-index:1; overflow:hidden; pointer-events:none; }
+  #roomimg{ width:100%; height:100%; object-fit:cover; will-change:transform; filter:var(--room-dim); }
+
+  /* ---- the TV screen; grows from the CRT rect to the full viewport ---- */
+  #tv{ position:fixed; z-index:2; overflow:hidden; pointer-events:none; background:#1b1220;
+    border-radius:14px; box-shadow:inset 0 0 60px rgba(0,0,0,.5), inset 0 0 8px rgba(0,0,0,.7); }
+  #static{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; opacity:var(--static-alpha); }
+  #glitch{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; mix-blend-mode:screen; image-rendering:pixelated; }
+  #pixelbg{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; opacity:0; will-change:opacity,transform; }
+  #tvtint{ position:absolute; inset:0; background:var(--tv-tint); }
+  #scanlines{ position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:overlay;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.5) 0 1px, transparent 1px 3px); }
+  #tvcontent{ position:absolute; inset:0; display:grid; place-items:center; text-align:center;
+    padding:6% 7%; font-size:16px; }
+
+  /* ---- broadcast text beats (crisp; scale with the screen via em) ---- */
+  .beat{ position:absolute; max-width:82%; opacity:0; will-change:opacity,transform; }
+  .beat .inner{ position:relative; }
+  .eyebrow{ font-family:var(--mono); letter-spacing:.34em; text-transform:uppercase;
+    font-size:.92em; color:var(--gold); margin-bottom:.9em; opacity:.95; }
+  h1{ font-family:var(--serif); font-weight:400; line-height:1.02; color:#fff;
+    font-size:2.7em; letter-spacing:-.01em; text-shadow:var(--halo); }
+  h1 .script{ font-style:italic; color:var(--brand-soft); }
+  h2{ font-family:var(--serif); font-weight:400; line-height:1.08; color:#fff;
+    font-size:2.3em; letter-spacing:-.01em; text-shadow:var(--halo); }
+  .sub{ font-style:italic; color:var(--brand-soft); }
+  /* every broadcast beat is 8-bit pixel text; nowrap + hard breaks so it never reflows while zooming */
+  .beat h2{ font-family:var(--pixel); font-size:1.1em; line-height:1.9; letter-spacing:0;
+    text-transform:lowercase; white-space:nowrap; text-shadow:0 0 12px rgba(255,158,199,.45); }
+  .beat .sub{ font-style:normal; color:var(--pink); }
+  .lede{ font-weight:300; font-size:1em; line-height:1.65; color:#f3e9ee;
+    max-width:34ch; margin:1em auto 0; text-shadow:var(--halo); }
+  .tags{ display:flex; gap:.5em; flex-wrap:wrap; justify-content:center; margin-top:1.4em; }
+  .tag{ border:1px solid var(--tag-border); border-radius:100px; padding:.45em 1em;
+    font-size:.72em; letter-spacing:.06em; color:#fff; background:var(--tag-bg); }
+  /* the '30 creators' beat: smaller pixel text on the tiles, chunky dark outline for readability */
+  .beat.sky h2{ font-size:.6em; line-height:2.3; color:#fff;
+    text-shadow:2px 0 0 #4a1e30, -2px 0 0 #4a1e30, 0 2px 0 #4a1e30, 0 -2px 0 #4a1e30, 0 0 10px rgba(0,0,0,.45); }
+  .beat.sky .sub{ color:var(--brand-yellow); }
+  .skyline{ font-family:var(--pixel); font-size:.52em; margin-top:1.6em; color:#fff; text-transform:lowercase;
+    text-shadow:2px 0 0 #4a1e30, -2px 0 0 #4a1e30, 0 2px 0 #4a1e30, 0 -2px 0 #4a1e30; }
+  .ftitle{ font-family:var(--serif); color:#fff; font-size:1.7em; line-height:1; margin-bottom:.5em; text-shadow:var(--halo); }
+  .ftitle .sub{ color:var(--brand-soft); font-style:italic; }
+
+  /* ---- header ---- */
+  #masthead{ position:fixed; top:0; left:0; right:0; z-index:20; pointer-events:none;
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    padding:.85rem clamp(1.1rem,3vw,1.8rem); background:var(--head-scrim); transition:opacity .4s ease; }
+  .wordmark{ display:flex; flex-direction:column; line-height:.86; }
+  .wordmark .top{ display:flex; align-items:flex-end; gap:.34em; }
+  .wordmark .secret{ font-family:var(--script); font-weight:600; font-size:.78em; color:var(--rose); transform:rotate(-7deg); transform-origin:bottom; }
+  .wordmark .khushi{ font-family:var(--script); font-weight:700; font-size:1.7em; color:var(--ink-strong); }
+  .wordmark .slumber{ font-family:var(--display); font-weight:700; text-transform:uppercase; letter-spacing:.015em; font-size:.98em; color:var(--ink-strong); margin-top:.06em; }
+  #masthead .wordmark{ font-size:clamp(.86rem,1.7vw,1.06rem); }
+  .head-right{ display:flex; align-items:center; gap:.7rem; pointer-events:auto; }
+  .icon-btn{ display:grid; place-items:center; width:38px; height:38px; border-radius:100px; cursor:pointer;
+    color:var(--rose); border:1px solid var(--tag-border); background:var(--card-a); backdrop-filter:blur(5px);
+    transition:transform .15s ease; }
+  .icon-btn:hover{ transform:translateY(-1px); } .icon-btn:focus-visible{ outline:2px solid var(--rose); outline-offset:2px; }
+  .icon-btn svg{ width:18px; height:18px; } .i-sun{ display:none; } .i-moon{ display:block; }
+  :root[data-theme="dark"] .i-sun{ display:block; } :root[data-theme="dark"] .i-moon{ display:none; }
+  #masthead .apply-link{ font-family:var(--sans); font-size:.7rem; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--rose); text-decoration:none; white-space:nowrap; border:1px solid var(--tag-border);
+    border-radius:100px; padding:.55rem .95rem; background:var(--card-a); backdrop-filter:blur(5px); transition:background .2s ease,color .2s ease; }
+  #masthead .apply-link:hover{ background:var(--rose); color:var(--btn-fg); }
+
+  .progress{ position:fixed; top:0; left:0; height:2px; width:0%; z-index:21;
+    background:linear-gradient(90deg,var(--brand-pink),var(--brand-orange),var(--brand-yellow)); box-shadow:0 0 10px rgba(235,100,140,.5); }
+  .scroll-cue{ position:fixed; left:50%; bottom:1.6rem; transform:translateX(-50%); z-index:19;
+    color:var(--rose); font-family:var(--mono); font-size:1rem; letter-spacing:.28em; text-transform:uppercase;
+    display:flex; flex-direction:column; align-items:center; gap:.5rem; opacity:.9; transition:opacity .5s ease; pointer-events:none; }
+  .scroll-cue .line{ width:1px; height:34px; background:linear-gradient(var(--rose),transparent); animation:drop 2s infinite; }
+  @keyframes drop{ 0%{transform:scaleY(0);transform-origin:top;opacity:0} 40%{transform:scaleY(1);opacity:1} 100%{transform:scaleY(1);transform-origin:bottom;opacity:0} }
+
+  #veil{ position:fixed; inset:0; z-index:30; background:var(--veil-bg); display:grid; place-items:center; transition:opacity .8s ease; }
+  #veil .l{ font-family:var(--script); font-weight:700; color:var(--rose); font-size:2rem; animation:pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:.4} 50%{opacity:.95} }
+
+  /* ---- step-based application form (lives on the TV screen) ---- */
+  #formwrap{ position:absolute; inset:0; display:grid; place-items:center; padding:5% 7%; opacity:0; pointer-events:none; }
+  #formwrap.on{ pointer-events:auto; }   /* opacity driven by the scroll loop; font-size inherits the screen scale */
+  .fcard{ width:min(30em,94%); }
+  .fcount{ font-family:var(--mono); font-size:.85em; letter-spacing:.2em; color:var(--gold); text-transform:uppercase; }
+  .step{ display:none; animation:stepIn .45s ease; }
+  .step.on{ display:block; }
+  @keyframes stepIn{ from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none} }
+  .step .q{ font-family:var(--serif); color:#fff; font-size:1.35em; line-height:1.12; margin:.3em 0 .55em; text-shadow:var(--halo); }
+  .step .q .sub{ color:var(--brand-soft); font-style:italic; }
+  .step input, .step textarea{ width:100%; background:var(--input-bg); border:none; border-bottom:2px solid var(--input-border);
+    color:#fff; font-family:var(--sans); font-size:1.05em; padding:.45em .2em; transition:border-color .2s ease; }
+  .step input::placeholder, .step textarea::placeholder{ color:rgba(255,255,255,.45); }
+  .step input:focus, .step textarea:focus{ outline:none; border-color:var(--brand-yellow); }
+  .step textarea{ resize:none; }
+  .fnav{ display:flex; align-items:center; justify-content:space-between; gap:1em; margin-top:1.3em; }
+  .dots{ display:flex; gap:.45em; }
+  .dots i{ width:.6em; height:.6em; border-radius:100px; background:var(--tag-border); transition:background .2s ease, transform .2s ease; }
+  .dots i.on{ background:var(--brand-yellow); transform:scale(1.25); }
+  .fbtns{ display:flex; align-items:center; gap:.7em; }
+  .fback{ background:none; border:none; color:#fff; opacity:.7; font-family:var(--sans); font-size:.95em; cursor:pointer; }
+  .fback:hover{ opacity:1; } .fback[hidden]{ display:none; }
+  .fnext{ border:none; border-radius:100px; cursor:pointer; font-family:var(--display); font-weight:600; text-transform:uppercase;
+    letter-spacing:.04em; font-size:.82em; color:var(--btn-fg); background:var(--btn-bg); padding:.6em 1.2em; box-shadow:0 8px 20px rgba(235,100,140,.32); transition:transform .15s ease; }
+  .fnext:hover{ transform:translateY(-2px); }
+  .fdone{ text-align:center; display:none; }
+  .fdone.on{ display:block; animation:stepIn .5s ease; }
+  .fdone .big{ font-family:var(--script); color:var(--brand-yellow); font-size:3em; line-height:1; }
+  .fdone .q{ margin-top:.2em; }
+
+  .scroll-space{ position:relative; z-index:5; pointer-events:none; }
+  .snap{ height:100vh; scroll-snap-align:start; }
+  @media (prefers-reduced-motion:reduce){ .scroll-cue .line{ animation:none; } }
+</style>
+</head>
+<body>
+
+  <div id="room"><img id="roomimg" src="assets/computer.jpg" alt="A retro pink computer on a pastel pink background" /></div>
+
+  <div id="tv">
+    <canvas id="static"></canvas>
+    <canvas id="glitch"></canvas>
+    <canvas id="pixelbg"></canvas>
+    <div id="tvtint"></div>
+    <div id="scanlines"></div>
+    <div id="tvcontent">
+      <div class="beat" id="b1" data-in="-0.05" data-out="0.13"><div class="inner">
+        <h2>khushi has a<br><span class="sub">secret</span> to share</h2>
+      </div></div>
+
+      <div class="beat" id="b2" data-in="0.16" data-out="0.28"><div class="inner">
+        <h2>and she's hosting<br><span class="sub">a slumber party</span></h2>
+      </div></div>
+
+      <div class="beat" id="b3" data-in="0.33" data-out="0.45"><div class="inner">
+        <h2>to spill <span class="sub">the tea</span></h2>
+      </div></div>
+
+      <div class="beat sky" id="bsky" data-in="0.50" data-out="0.64"><div class="inner">
+        <h2>30 creators, artists,<br>entrepreneurs &amp; followers</h2>
+        <p class="skyline"><span class="sub">get to know it first.</span></p>
+      </div></div>
+
+      <!-- step-based application, one question at a time -->
+      <div id="formwrap">
+        <form class="fcard" id="apply" novalidate>
+          <p class="ftitle">want <span class="sub">in?</span></p>
+          <p class="fcount"><span id="stepnum">01</span> / 06</p>
+          <div class="step on" data-name="name">
+            <p class="q">what's your <span class="sub">name?</span></p>
+            <input name="name" type="text" placeholder="first & last" autocomplete="name" required />
+          </div>
+          <div class="step" data-name="age">
+            <p class="q">how <span class="sub">old</span> are you?</p>
+            <input name="age" type="number" min="18" placeholder="21" required />
+          </div>
+          <div class="step" data-name="city">
+            <p class="q">where are you <span class="sub">based?</span></p>
+            <input name="city" type="text" placeholder="mumbai" required />
+          </div>
+          <div class="step" data-name="handle">
+            <p class="q">your <span class="sub">instagram?</span></p>
+            <input name="handle" type="text" placeholder="@yourhandle" required />
+          </div>
+          <div class="step" data-name="email">
+            <p class="q">best <span class="sub">email?</span></p>
+            <input name="email" type="email" placeholder="you@email.com" required />
+          </div>
+          <div class="step" data-name="why">
+            <p class="q">why do you <span class="sub">belong</span> here?</p>
+            <textarea name="why" rows="3" placeholder="make khushi curious…" required></textarea>
+          </div>
+          <div class="fnav">
+            <div class="dots" id="dots"></div>
+            <div class="fbtns">
+              <button type="button" class="fback" id="fback" hidden>← back</button>
+              <button type="button" class="fnext" id="fnext">next →</button>
+            </div>
+          </div>
+        </form>
+        <div class="fdone" id="fdone">
+          <div class="big">tucked in ♡</div>
+          <p class="q">your name's with khushi now.<br><span class="sub">if you're one of the thirty, we'll whisper back.</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header id="masthead">
+    <div class="wordmark">
+      <span class="top"><span class="secret">(secret;)</span><span class="khushi">khushi's</span></span>
+      <span class="slumber">slumber party</span>
+    </div>
+    <div class="head-right">
+      <button id="themeToggle" class="icon-btn" aria-label="Switch between light and dark" title="Switch theme">
+        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
+      </button>
+      <a class="apply-link" href="#apply" id="applyLink">Apply</a>
+    </div>
+  </header>
+
+  <div class="progress" id="progress"></div>
+  <div class="scroll-cue" id="cue"><span>scroll</span><span class="line"></span></div>
+  <div id="veil"><div class="l">shhh…</div></div>
+
+  <!-- scroll grooves: 6 full-height snap detents, one per beat -->
+  <div class="scroll-space">
+    <section class="snap"></section><section class="snap"></section><section class="snap"></section>
+    <section class="snap"></section><section class="snap"></section><section class="snap"></section>
+  </div>
+
+<script>
+/* ============================================================
+   Khushi's Secret Slumber Party — 90s bedroom → zoom into the TV
+   Scroll zooms the room into the CRT; the broadcast text changes
+   through the beats; it lands in a step-based application.
+   ============================================================ */
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const smooth=(e0,e1,x)=>{const t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t);};
+
+/* ---------- scroll → progress ---------- */
+let targetP=0, curP=0;
+function readScroll(){
+  if(typeof window.__p==='number'){ targetP=clamp(window.__p,0,1); return; }
+  const max=document.body.scrollHeight-innerHeight;
+  targetP = max>0 ? clamp(scrollY/max,0,1) : 0;
+}
+addEventListener('scroll', readScroll, {passive:true});
+
+/* ---------- TV geometry (screen rect within the illustration) ---------- */
+const room=document.getElementById('room');
+const roomimg=document.getElementById('roomimg');
+const tv=document.getElementById('tv');
+const tvcontent=document.getElementById('tvcontent');
+const pixelbg=document.getElementById('pixelbg');
+const IMG_W=1376, IMG_H=768;
+const TVI={ cx:0.500, cy:0.362, w:0.228, h:0.318 };   // monitor screen as fractions of the image (calibrated)
+let base={cx:0.5,cy:0.48,w:0.2,h:0.25}, ZMAX=5;
+function computeBase(){
+  const Vw=innerWidth, Vh=innerHeight;
+  const scale=Math.max(Vw/IMG_W, Vh/IMG_H);
+  const dW=IMG_W*scale, dH=IMG_H*scale, ox=(Vw-dW)/2, oy=(Vh-dH)/2;
+  base={ cx:(ox+TVI.cx*dW)/Vw, cy:(oy+TVI.cy*dH)/Vh, w:(TVI.w*dW)/Vw, h:(TVI.h*dH)/Vh };
+  ZMAX=Math.max(1/base.w, 1/base.h);   // zoom until the screen fully covers the viewport (any aspect)
+  roomimg.style.transformOrigin=(base.cx*100)+'% '+(base.cy*100)+'%';
+}
+addEventListener('resize', ()=>{ readScroll(); computeBase(); sizeStatic(); sizeGlitch(); sizePixel(); });
+computeBase();
+
+const ZOOM_END=0.46;
+const ZOUT=0.10;   // how far back we pull for the on-screen form (0 = whole computer in view)
+function updateZoom(p){
+  // zoom IN (0→0.42), hold at full (0.42→0.66), then zoom OUT to ZOUT for the form (0.66→0.84)
+  const z=Math.min(smooth(0, 0.42, p), lerp(1, ZOUT, smooth(0.66, 0.84, p)));
+  const Vw=innerWidth, Vh=innerHeight;
+  const s=lerp(1, ZMAX, z);
+  const cx=lerp(base.cx, 0.5, z), cy=lerp(base.cy, 0.5, z);  // screen centre pans to viewport centre
+  const w=base.w*s, h=base.h*s;                              // exactly the drawn screen at this zoom
+  tv.style.width=(w*Vw)+'px'; tv.style.height=(h*Vh)+'px';
+  tv.style.left=((cx-w/2)*Vw)+'px'; tv.style.top=((cy-h/2)*Vh)+'px';
+  tv.style.borderRadius = lerp(10, 0, z)+'px';
+  // room scales ABOUT the screen centre and pans so the screen lands dead-centre — keeps #tv locked to it
+  const Tx=z*(0.5-base.cx)*Vw, Ty=z*(0.5-base.cy)*Vh;
+  roomimg.style.transform=`translate(${Tx}px, ${Ty}px) scale(${s})`;
+  room.style.opacity='1';                                     // computer stays put; #tv covers it at full zoom
+  tvcontent.style.fontSize=Math.min(34, Math.max(11, Math.min(w*Vw, h*Vh)*0.05))+'px';  // scales with the screen
+  // grey static while "tuning in", then it clears for the pink noise
+  scv.style.opacity=String(lerp(0.5, 0.15, smooth(0.02, 0.14, p)) * (1 - smooth(0.46, 0.54, p)));
+  // pink noise fills the screen at full zoom, stays for the form (dimmed so the form reads)
+  pixelbg.style.opacity=String(smooth(0.44, 0.54, p) * lerp(0.7, 0.28, smooth(0.80, 0.9, p)));
+  pixelbg.style.transform='';
+}
+
+/* ---------- TV static ---------- */
+const scv=document.getElementById('static'), sctx=scv.getContext('2d');
+let SW=0, SH=0;
+function sizeStatic(){
+  SW=scv.width=Math.min(360, Math.max(120, Math.round((innerWidth||1280)/4)));
+  SH=scv.height=Math.max(80, Math.round(SW*0.62));
+}
+sizeStatic();
+let noise=null;
+function drawStatic(){
+  if(SW<1||SH<1) return;
+  if(!noise || noise.width!==SW){ noise=sctx.createImageData(SW,SH); }
+  const d=noise.data;
+  for(let i=0;i<d.length;i+=4){ const v=(Math.random()*255)|0; d[i]=d[i+1]=d[i+2]=v; d[i+3]=255; }
+  sctx.putImageData(noise,0,0);
+}
+
+/* ---------- glitch: RGB horizontal-streak signal breakup between beats ---------- */
+const glc=document.getElementById('glitch'), gctx=glc.getContext('2d');
+let GW=0, GH=0;
+function sizeGlitch(){ GW=glc.width=Math.min(640, Math.max(220, Math.round((innerWidth||1280)/2))); GH=glc.height=Math.max(140, Math.round(GW*0.6)); }
+sizeGlitch();
+const GCOLS=['rgba(255,60,120,','rgba(90,220,255,','rgba(255,235,120,','rgba(255,255,255,'];
+// glitch spikes right at each text swap (and the swap to clouds)
+function glitchAt(p){
+  const peaks=[0.135, 0.30, 0.47]; let g=0;
+  for(const c of peaks) g=Math.max(g, Math.max(0, 1-Math.abs(p-c)/0.045));
+  return g;
+}
+function drawGlitch(g){
+  gctx.clearRect(0,0,GW,GH);
+  if(g<=0.02) return;
+  const bands=Math.floor(4+g*26);
+  for(let i=0;i<bands;i++){
+    const y=Math.random()*GH, h=1+Math.random()*7*g, x=(Math.random()-0.5)*70*g;
+    gctx.fillStyle=GCOLS[(Math.random()*4)|0]+(0.35+Math.random()*0.5)+')';
+    gctx.fillRect(x, y, GW, h);
+  }
+  if(Math.random()<g*0.6){ gctx.fillStyle='rgba(255,255,255,'+(0.32*g)+')'; gctx.fillRect(0, Math.random()*GH, GW, 2+Math.random()*12*g); }
+}
+
+/* ---------- fine PINK NOISE that fills the screen once we've tuned in ---------- */
+const pxc=document.getElementById('pixelbg'), pxctx=pxc.getContext('2d');
+let PXW=0, PXH=0, pnoise=null;
+function sizePixel(){ PXW=pxc.width=Math.min(420, Math.max(200, Math.round((innerWidth||1280)/3.2))); PXH=pxc.height=Math.max(120, Math.round(PXW*0.62)); pnoise=null; }
+sizePixel();
+function drawPixelBg(){
+  if(PXW<1) return;
+  if(!pnoise) pnoise=pxctx.createImageData(PXW,PXH);
+  const d=pnoise.data;
+  for(let i=0;i<d.length;i+=4){
+    const n=Math.random();                       // every pixel a random shade of pink
+    d[i]=238+n*17; d[i+1]=120+n*100; d[i+2]=172+n*58; d[i+3]=255;
+  }
+  pxctx.putImageData(pnoise,0,0);
+}
+
+/* ---------- beats + form gating ---------- */
+const beats=[...document.querySelectorAll('.beat')].map(el=>({
+  el, a:+el.dataset.in, b:+el.dataset.in+0.05, c:+el.dataset.out-0.05, d:+el.dataset.out
+}));
+const bar=document.getElementById('progress');
+const cue=document.getElementById('cue');
+const masthead=document.getElementById('masthead');
+const formwrap=document.getElementById('formwrap');
+function updateBeats(p){
+  for(const s of beats){
+    let o;
+    if(p<s.a||p>s.d) o=0; else if(p<s.b) o=(p-s.a)/(s.b-s.a);
+    else if(p>s.c) o=1-(p-s.c)/(s.d-s.c); else o=1;
+    o=clamp(o,0,1);
+    s.el.style.opacity=o; s.el.style.transform=`translateY(${(1-o)*14}px)`;
+  }
+  formwrap.style.opacity = String(smooth(0.85, 0.93, p));  // appears once we've zoomed back out
+  formwrap.classList.toggle('on', p>0.87);                 // interactive once it's up
+  cue.style.opacity = p>0.04 ? 0 : 0.9;
+  bar.style.width=(p*100)+'%';
+}
+
+/* ---------- main loop ---------- */
+let tt=0, sf=0;
+function tick(){
+  requestAnimationFrame(tick);
+  tt+=0.016;
+  if(typeof window.__p==='number'){ targetP=clamp(window.__p,0,1); curP=targetP; }
+  else curP += (targetP-curP)*0.2;
+  updateZoom(curP);
+  updateBeats(curP);
+  if((sf++ & 1)===0) drawStatic();   // ~30fps static is plenty
+  if(curP>0.42) drawPixelBg();                   // pink noise from full-zoom through the form
+  // glitch: draw RGB streaks + chromatically split the pixel text at each swap
+  const g=glitchAt(curP);
+  drawGlitch(g);
+  if(g>0.02){
+    const gx=(g*g)*12;
+    tvcontent.style.textShadow=`${gx}px 0 rgba(255,40,100,.9), ${-gx}px 0 rgba(60,225,255,.85)`;
+    tvcontent.style.transform=`translate(${(Math.random()-0.5)*g*22}px, ${(Math.random()-0.5)*g*7}px)`;
+  } else if(tvcontent.style.textShadow){ tvcontent.style.textShadow=''; tvcontent.style.transform=''; }
+}
+readScroll(); tick();
+
+/* ---------- loading veil ---------- */
+let veilGone=false;
+function hideVeil(){ if(veilGone)return; veilGone=true; const v=document.getElementById('veil'); v.style.opacity='0'; setTimeout(()=>v.remove(),900); }
+roomimg.complete ? hideVeil() : roomimg.addEventListener('load', hideVeil);
+addEventListener('load', hideVeil); setTimeout(hideVeil, 2000);
+
+/* ---------- theme toggle ---------- */
+const THEME_KEY='ksp-theme';
+function applyTheme(t){ if(t==='dark') document.documentElement.setAttribute('data-theme','dark'); else document.documentElement.removeAttribute('data-theme'); }
+let theme='light'; try{ theme=localStorage.getItem(THEME_KEY)||'light'; }catch(e){}
+applyTheme(theme);
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  theme = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+  applyTheme(theme); try{ localStorage.setItem(THEME_KEY,theme); }catch(e){}
+});
+
+/* ---------- header "Apply" jumps to the form ---------- */
+document.getElementById('applyLink').addEventListener('click', e=>{
+  e.preventDefault(); window.scrollTo({ top:document.body.scrollHeight, behavior:'smooth' });
+});
+
+/* ---------- step-based form ---------- */
+const form=document.getElementById('apply');
+const stepsEls=[...form.querySelectorAll('.step')];
+const dotsWrap=document.getElementById('dots');
+const stepnum=document.getElementById('stepnum');
+const fback=document.getElementById('fback');
+const fnext=document.getElementById('fnext');
+const fdone=document.getElementById('fdone');
+let cur=0;
+stepsEls.forEach((_,i)=>{ const d=document.createElement('i'); dotsWrap.appendChild(d); });
+const dots=[...dotsWrap.children];
+function renderStep(){
+  stepsEls.forEach((s,i)=>s.classList.toggle('on', i===cur));
+  dots.forEach((d,i)=>d.classList.toggle('on', i===cur));
+  stepnum.textContent=String(cur+1).padStart(2,'0');
+  fback.hidden = cur===0;
+  fnext.textContent = cur===stepsEls.length-1 ? ('send it '+String.fromCharCode(9825)) : ('next '+String.fromCharCode(8594));  // ASCII source survives artifact entity-encoding
+  const inp=stepsEls[cur].querySelector('input,textarea');
+  setTimeout(()=>{ try{ inp.focus(); }catch(e){} }, 60);
+}
+function advance(){
+  const inp=stepsEls[cur].querySelector('input,textarea');
+  if(!inp.reportValidity()) return;
+  if(cur<stepsEls.length-1){ cur++; renderStep(); }
+  else submitForm();
+}
+fnext.addEventListener('click', advance);
+fback.addEventListener('click', ()=>{ if(cur>0){ cur--; renderStep(); } });
+form.addEventListener('keydown', e=>{ if(e.key==='Enter' && stepsEls[cur].querySelector('textarea')===null){ e.preventDefault(); advance(); } });
+form.addEventListener('submit', e=>{ e.preventDefault(); advance(); });
+
+const ENDPOINT=''; // set to a Formspree/Basin/your endpoint to actually collect entries
+async function submitForm(){
+  const data=Object.fromEntries(new FormData(form).entries());
+  try{ if(ENDPOINT){ await fetch(ENDPOINT,{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json'},body:JSON.stringify(data)}); } else { console.log('Application:', data); } }
+  catch(err){ console.warn('submit failed, confirming anyway', err); }
+  form.style.display='none'; fdone.classList.add('on');
+}
+renderStep();
+</script>
+</body>
+</html>
