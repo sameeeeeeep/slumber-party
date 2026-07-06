@@ -204,7 +204,9 @@
     text-shadow:3px 0 0 #eb648c,-3px 0 0 #6bc7ff; }
   .g-overlay .go-sub{ font-size:.6em; line-height:2.1; color:var(--brand-soft); margin-top:1.5em; }
   .g-overlay .go-sub b{ color:#fff; }
-  .g-overlay .go-note{ display:inline-block; margin:.4em 0; color:var(--brand-yellow); font-size:.9em; }
+  .g-overlay .go-note{ display:inline-block; margin:.35em 0 .1em; color:var(--brand-yellow); font-size:.9em; }
+  .g-overlay .go-verify{ display:inline-block; margin:.1em 0 .5em; font-size:.8em; line-height:1.6; color:var(--brand-soft); }
+  .g-overlay .go-verify .go-code{ color:var(--brand-yellow); letter-spacing:.14em; }
   /* the arcade select screen (Nintendo-style menu) */
   .g-menu{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:3;
     padding:7% 6%; background:rgba(16,10,24,.35); }
@@ -606,23 +608,45 @@ const GFORM = {
 /* ---- Leaderboard wiring (SECOND Google Form) ----
    When a player beats their best in the arcade, we quietly post their instagram
    (reused from the application above — no re-asking) + score into a SECOND form/sheet.
+
+   ONE form covers EVERY game (now and future): each new best posts a row
+   {instagram, game, score, code, approved:"no"}. For a game's board, filter by
+   `game` and take MAX(score) per instagram — no separate score column per game.
+
+   ANTI-IMPERSONATION: we also send a random `code` (shown to the player). The player
+   DMs that code to your insta FROM their own account; you match code→row and flip
+   `approved` to "yes". Only approved rows go public, so nobody can farm someone else's @.
+
    HOW TO CONNECT (same trick as GFORM):
-   1. Make a 2nd Google Form with short-answer questions: instagram, score (add name if you like).
+   1. Make a 2nd Google Form, short-answer questions: instagram, game, score, code
+      (add name / approved if you want those columns too).
    2. ⋮ → "Get pre-filled link", type each field's own name as the answer, "Get link", copy.
-   3. Put its FORM_ID in `id` and map each entry.NNN below. Leave id:'' to keep it off. */
+   3. Put its FORM_ID in `id`, set `insta`, and map each entry.NNN below. Leave id:'' to keep it off. */
 const GLEADER = {
   id: '',                       // <-- paste the 2nd form's FORM_ID here to switch the leaderboard on
-  fields: {
-    handle: 'entry.',           // instagram
-    score:  'entry.',           // best score
-    name:   'entry.'            // optional
+  insta: '@yourpartyinsta',     // <-- the account players DM their code to, to verify
+  fields: {                     // map each to its entry.NNN id (only the mapped ones get sent)
+    handle:  'entry.',          // instagram
+    game:    'entry.',          // which game, e.g. "snake"
+    score:   'entry.',          // that game's score
+    code:    'entry.',          // silent verification code (enables the "DM to verify" prompt)
+    name:    'entry.',          // optional
+    approved:'entry.'           // optional — we send "no"; you flip to "yes" after checking the DM
   }
 };
 let PLAYER = null;              // the submitted application, so the game knows who's playing
-// returns true if a score row was actually posted (i.e. leaderboard configured + we know the player)
-function postScore(score){
+// a stable per-browser code the player DMs from their insta, so you can prove they own that @
+const VKEY='ksp-verify';
+function verifyCode(){
+  let c=null; try{ c=localStorage.getItem(VKEY); }catch(e){}
+  if(!c){ c=String(1000+Math.floor(Math.random()*9000)); try{ localStorage.setItem(VKEY,c); }catch(e){} }
+  return c;
+}
+function codeMapped(){ return /^entry\.\d+$/.test(GLEADER.fields.code||''); }
+// returns true if a score row was actually posted (leaderboard configured + we know the player)
+function postScore(game, score){
   if(!GLEADER.id || !PLAYER) return false;
-  const payload = { handle:PLAYER.handle, name:PLAYER.name, score:String(score) };
+  const payload = { handle:PLAYER.handle, name:PLAYER.name, game:game, score:String(score), code:verifyCode(), approved:'no' };
   const body=new URLSearchParams(); let sent=false;
   for(const k in payload){
     const id=GLEADER.fields[k];
@@ -672,7 +696,7 @@ renderStep();
 
   let unlocked=false, open=false, playing=false, mode=null, sel=0;   // mode: 'menu' | 'play' | 'over' | null
   let COLS=15, ROWS=15, snake=[], dir={x:1,y:0}, pending={x:1,y:0}, food=null, bonus=null, stars=[];
-  let score=0, stepMs=150, timer=null, sinceBonus=0, muted=false;
+  let score=0, stepMs=150, timer=null, sinceBonus=0, muted=false, curGame='snake';
   // the arcade line-up — flip enabled:true (and add a play() that drives the CRT) as new games land
   const GAMES=[
     {name:'slumber snake', enabled:true,  play:()=>startSnake()},
@@ -754,7 +778,7 @@ renderStep();
   function placeBonus(){ let c,t=0; do{ c={x:(Math.random()*COLS)|0, y:(Math.random()*ROWS)|0}; }while(!cellFree(c.x,c.y)&&++t<300); bonus={x:c.x,y:c.y,t:0,life:Math.max(30,Math.round(6000/stepMs))}; }
 
   function startSnake(){
-    open=true; playing=true; mode='play';
+    open=true; playing=true; mode='play'; curGame='snake';
     gameEl.classList.add('on'); freeze(); applyMode(); reset();
     toastEl.textContent = TOUCH ? 'swipe to steer' : 'arrow keys / wasd to steer';
     toastEl.style.opacity='1'; clearTimeout(startSnake._t); startSnake._t=setTimeout(()=>toastEl.style.opacity='0', 2600);
@@ -790,7 +814,10 @@ renderStep();
     if(isBest){ hi=score; try{ localStorage.setItem(HI_KEY,hi); }catch(e){} hiEl.textContent=hi; titleEl.textContent='new best!'; }
     else titleEl.textContent='game over';
     let note='';
-    if(isBest && score>0 && typeof postScore==='function' && postScore(score)) note='<span class="go-note">▸ added to the leaderboard</span><br>';   // reuse their insta for the high-score board
+    if(isBest && score>0 && typeof postScore==='function' && postScore(curGame, score)){   // reuse their insta for the high-score board
+      note='<span class="go-note">▸ score saved</span><br>';
+      if(codeMapped()) note+='<span class="go-verify">go public: DM <b class="go-code">'+verifyCode()+'</b> to '+(GLEADER.insta||'@us')+' from your insta</span><br>';
+    }
     subEl.innerHTML='you gathered <b>'+score+'</b> pillow'+(score===1?'':'s')+'.<br>'+note+(TOUCH?'tap to replay':'press <b>enter</b> to replay')+'&nbsp;&nbsp;·&nbsp;&nbsp;<b>esc</b> for menu';
     applyMode(); draw();
   }
