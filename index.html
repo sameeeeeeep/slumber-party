@@ -197,16 +197,29 @@
   .g-toast{ position:absolute; left:50%; bottom:7%; transform:translateX(-50%); z-index:2; font-size:.46em;
     letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.85); white-space:nowrap;
     transition:opacity .6s ease; pointer-events:none; }
-  .g-overlay{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:3; padding:8%;
+  .g-overlay{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:3; padding:4% 6%;
     background:rgba(16,10,24,.62); }
   .g-overlay.off{ display:none; }
-  .g-overlay .go-title{ font-size:1.4em; line-height:1.5; color:var(--brand-yellow);
+  .go-inner{ max-height:100%; overflow-y:auto; width:100%; }
+  .g-overlay .go-title{ font-size:1.15em; line-height:1.3; color:var(--brand-yellow);
     text-shadow:3px 0 0 #eb648c,-3px 0 0 #6bc7ff; }
-  .g-overlay .go-sub{ font-size:.6em; line-height:2.1; color:var(--brand-soft); margin-top:1.5em; }
+  .g-overlay .go-sub{ font-family:var(--mono); font-size:.95em; line-height:1.3; color:var(--brand-soft); margin-top:.45em; }
   .g-overlay .go-sub b{ color:#fff; }
-  .g-overlay .go-note{ display:inline-block; margin:.35em 0 .1em; color:var(--brand-yellow); font-size:.9em; }
-  .g-overlay .go-verify{ display:inline-block; margin:.1em 0 .5em; font-size:.8em; line-height:1.6; color:var(--brand-soft); }
-  .g-overlay .go-verify .go-code{ color:var(--brand-yellow); letter-spacing:.14em; }
+  .g-overlay .go-foot{ font-family:var(--mono); font-size:.9em; line-height:1.4; color:rgba(255,255,255,.7); margin-top:.6em; }
+  .g-overlay .go-foot b{ color:#fff; }
+  /* the on-CRT board */
+  .go-board{ margin:.55em auto 0; max-width:14em; }
+  .go-board .gb-list{ list-style:none; font-family:var(--mono); font-size:.95em; }
+  .go-board .gb-list li{ display:flex; align-items:center; gap:.5em; padding:.03em 0; color:#fff; }
+  .go-board .gb-rank{ width:1.4em; text-align:right; color:var(--brand-soft); }
+  .go-board .gb-h{ flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .go-board .gb-s{ font-variant-numeric:tabular-nums; color:var(--brand-yellow); }
+  .go-board .gb-list li.gb-me .gb-rank, .go-board .gb-list li.gb-me .gb-h{ color:var(--brand-yellow); }
+  .go-board .gb-you{ font-family:var(--mono); font-size:.92em; color:var(--brand-yellow); margin-top:.3em; }
+  .go-board .gb-you i{ color:var(--brand-soft); font-style:normal; opacity:.85; }
+  .go-board .gb-empty{ font-family:var(--mono); font-size:.95em; color:var(--brand-soft); }
+  .g-overlay .go-verify2{ font-family:var(--mono); font-size:.82em; line-height:1.35; color:var(--brand-soft); margin-top:.55em; }
+  .g-overlay .go-verify2 .go-code{ color:var(--brand-yellow); letter-spacing:.14em; }
   /* the arcade select screen (Nintendo-style menu) */
   .g-menu{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:3;
     padding:7% 6%; background:rgba(16,10,24,.35); }
@@ -324,9 +337,12 @@
             </div>
           </div>
           <div class="g-overlay off" id="gover">
-            <div>
+            <div class="go-inner">
               <p class="go-title" id="gotitle">slumber snake</p>
               <p class="go-sub" id="gosub">collect the pillows.<br>don't bite your own boa.</p>
+              <div class="go-board" id="goboard"></div>
+              <p class="go-verify2" id="goverify"></p>
+              <p class="go-foot" id="gofoot"></p>
             </div>
           </div>
         </div>
@@ -606,57 +622,100 @@ const GFORM = {
 };
 
 /* ---- Leaderboard wiring (SECOND Google Form) ----
-   When a player beats their best in the arcade, we quietly post their instagram
-   (reused from the application above — no re-asking) + score into a SECOND form/sheet.
+   When a player beats their best, we quietly post their instagram (reused from the
+   application — no re-asking) + score into a SECOND form/sheet. The form is WIDE:
+   one score column per game ("game 1 score" … "game 5 score"); each game maps to its own.
 
-   ONE form covers EVERY game (now and future): each new best posts a row
-   {instagram, game, score, code, approved:"no"}. For a game's board, filter by
-   `game` and take MAX(score) per instagram — no separate score column per game.
+   ANTI-IMPERSONATION: we also send a random `code` (shown to the player) and "verified?: No".
+   The player DMs that code to your insta FROM their own account; you match code→row and flip
+   verified to "Yes". Only verified rows go on the public board, so nobody can farm someone else's @.
 
-   ANTI-IMPERSONATION: we also send a random `code` (shown to the player). The player
-   DMs that code to your insta FROM their own account; you match code→row and flip
-   `approved` to "yes". Only approved rows go public, so nobody can farm someone else's @.
-
-   HOW TO CONNECT (same trick as GFORM):
-   1. Make a 2nd Google Form, short-answer questions: instagram, game, score, code
-      (add name / approved if you want those columns too).
-   2. ⋮ → "Get pre-filled link", type each field's own name as the answer, "Get link", copy.
-   3. Put its FORM_ID in `id`, set `insta`, and map each entry.NNN below. Leave id:'' to keep it off. */
+   TO SHOW THE ON-CRT BOARD: File → Share → Publish to web the linked responses sheet as CSV,
+   and paste that url into `sheetCsv` below. (`field` = form entry id for posting; `col` = the
+   sheet's column header for reading.) */
 const GLEADER = {
-  id: '',                       // <-- paste the 2nd form's FORM_ID here to switch the leaderboard on
-  insta: '@yourpartyinsta',     // <-- the account players DM their code to, to verify
-  fields: {                     // map each to its entry.NNN id (only the mapped ones get sent)
-    handle:  'entry.',          // instagram
-    game:    'entry.',          // which game, e.g. "snake"
-    score:   'entry.',          // that game's score
-    code:    'entry.',          // silent verification code (enables the "DM to verify" prompt)
-    name:    'entry.',          // optional
-    approved:'entry.'           // optional — we send "no"; you flip to "yes" after checking the DM
+  id: '1FAIpQLScJjLXC8DX-_TYZr2elp5QYmmzma3LYM_B9IivlaMN6HZ3nkA',
+  insta: '@secretslumberparty',
+  sheetCsv: '',                              // <-- published-to-web CSV url of the responses sheet
+  handleField: 'entry.434204412', handleCol: 'instagram',
+  codeField:   'entry.1112728021',
+  verifiedField:'entry.846556357', verifiedCol: 'verified?',
+  games: {                                   // gameKey -> { post-field, sheet-column }
+    snake: { field:'entry.1350983856', col:'game 1 score' }
+    // game 2..5 slots ready: entry.1683579071, entry.1649898258, entry.1469487080, entry.522284106
   }
 };
 let PLAYER = null;              // the submitted application, so the game knows who's playing
-// a stable per-browser code the player DMs from their insta, so you can prove they own that @
+// a stable per-browser 5-digit code the player DMs from their insta, so you can prove they own that @
 const VKEY='ksp-verify';
 function verifyCode(){
   let c=null; try{ c=localStorage.getItem(VKEY); }catch(e){}
-  if(!c){ c=String(1000+Math.floor(Math.random()*9000)); try{ localStorage.setItem(VKEY,c); }catch(e){} }
+  if(!c){ c=String(10000+Math.floor(Math.random()*90000)); try{ localStorage.setItem(VKEY,c); }catch(e){} }
   return c;
 }
-function codeMapped(){ return /^entry\.\d+$/.test(GLEADER.fields.code||''); }
-// returns true if a score row was actually posted (leaderboard configured + we know the player)
+function codeMapped(){ return /^entry\.\d+$/.test(GLEADER.codeField||''); }
+// returns true if a score row was actually posted (leaderboard configured + player + game known)
 function postScore(game, score){
-  if(!GLEADER.id || !PLAYER) return false;
-  const payload = { handle:PLAYER.handle, name:PLAYER.name, game:game, score:String(score), code:verifyCode(), approved:'no' };
-  const body=new URLSearchParams(); let sent=false;
-  for(const k in payload){
-    const id=GLEADER.fields[k];
-    if(id && /^entry\.\d+$/.test(id) && payload[k]!=null && payload[k]!==''){ body.append(id, payload[k]); sent=true; }
-  }
-  if(!sent) return false;
+  const g=GLEADER.games&&GLEADER.games[game];
+  if(!GLEADER.id || !PLAYER || !g || !/^entry\.\d+$/.test(g.field||'')) return false;
+  const body=new URLSearchParams();
+  const add=(id,val)=>{ if(id && /^entry\.\d+$/.test(id) && val!=null && val!=='') body.append(id,val); };
+  add(GLEADER.handleField, PLAYER.handle);
+  add(g.field, String(score));
+  add(GLEADER.codeField, verifyCode());
+  add(GLEADER.verifiedField, 'No');
+  if(![...body.keys()].length) return false;
   try{ fetch(`https://docs.google.com/forms/d/e/${GLEADER.id}/formResponse`,
     { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body }); }
   catch(err){ return false; }
   return true;
+}
+
+/* ---- reading the published sheet for the on-CRT board ---- */
+let SCORES_CACHE=null, SCORES_AT=0;
+function parseCSV(text){
+  const rows=[]; let i=0, f='', row=[], inq=false;
+  while(i<text.length){ const ch=text[i];
+    if(inq){ if(ch==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else inq=false; } else f+=ch; }
+    else if(ch==='"') inq=true; else if(ch===','){ row.push(f); f=''; }
+    else if(ch==='\n'){ row.push(f); rows.push(row); row=[]; f=''; }
+    else if(ch!=='\r') f+=ch;
+    i++;
+  }
+  if(f.length||row.length){ row.push(f); rows.push(row); }
+  if(!rows.length) return [];
+  const head=rows.shift().map(h=>h.trim());
+  return rows.filter(r=>r.length>1).map(r=>{ const o={}; head.forEach((h,idx)=>o[h]=(r[idx]||'').trim()); return o; });
+}
+async function loadScores(force){
+  if(!GLEADER.sheetCsv) return null;
+  const now=Date.now();
+  if(!force && SCORES_CACHE && (now-SCORES_AT)<15000) return SCORES_CACHE;
+  try{ const r=await fetch(GLEADER.sheetCsv, {cache:'no-store'}); SCORES_CACHE=parseCSV(await r.text()); SCORES_AT=now; return SCORES_CACHE; }
+  catch(e){ return SCORES_CACHE; }
+}
+// build a game's board from sheet rows: verified-only, MAX score per instagram, plus the player's standing
+function computeBoard(rows, gameKey, myHandle, myScore){
+  const g=GLEADER.games&&GLEADER.games[gameKey]; if(!g||!rows) return null;
+  const norm=h=>String(h||'').trim().replace(/^@/,'').toLowerCase();
+  const ok=v=>/^(y|yes|true|1|✓|approved)$/i.test(String(v||'').trim());
+  const best={};
+  for(const r of rows){
+    if(!ok(r[GLEADER.verifiedCol])) continue;
+    const h=norm(r[GLEADER.handleCol]); if(!h) continue;
+    const s=parseInt(r[g.col],10); if(!isFinite(s)) continue;
+    if(!(h in best) || s>best[h]) best[h]=s;
+  }
+  const arr=Object.keys(best).map(h=>({handle:h,score:best[h]})).sort((a,b)=>b.score-a.score);
+  arr.forEach((e,idx)=>e.rank=idx+1);
+  const me=norm(myHandle), mine=arr.find(e=>e.handle===me)||null;
+  const myBest=Math.max(myScore||0, mine?mine.score:0);
+  let you=null;
+  if(myBest>0){
+    if(mine && mine.score>=myBest) you={rank:mine.rank, score:myBest, handle:me, pending:false};
+    else you={rank:arr.filter(e=>e.handle!==me && e.score>myBest).length+1, score:myBest, handle:me, pending:true};
+  }
+  return { top:arr.slice(0,6), you };
 }
 
 async function submitForm(){
@@ -686,6 +745,7 @@ renderStep();
   const cv=document.getElementById('gamecanvas'), cx=cv.getContext('2d');
   const scoreEl=document.getElementById('gscore'), hiEl=document.getElementById('ghi');
   const overEl=document.getElementById('gover'), titleEl=document.getElementById('gotitle'), subEl=document.getElementById('gosub');
+  const boardEl=document.getElementById('goboard'), verifyEl=document.getElementById('goverify'), footEl=document.getElementById('gofoot');
   const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit');
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
@@ -808,18 +868,38 @@ renderStep();
     draw(); schedule();
   }
 
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function gameOver(){
     playing=false; clearTimeout(timer); blip('crash'); mode='over';
     const isBest = score>hi;
-    if(isBest){ hi=score; try{ localStorage.setItem(HI_KEY,hi); }catch(e){} hiEl.textContent=hi; titleEl.textContent='new best!'; }
-    else titleEl.textContent='game over';
-    let note='';
-    if(isBest && score>0 && typeof postScore==='function' && postScore(curGame, score)){   // reuse their insta for the high-score board
-      note='<span class="go-note">▸ score saved</span><br>';
-      if(codeMapped()) note+='<span class="go-verify">go public: DM <b class="go-code">'+verifyCode()+'</b> to '+(GLEADER.insta||'@us')+' from your insta</span><br>';
-    }
-    subEl.innerHTML='you gathered <b>'+score+'</b> pillow'+(score===1?'':'s')+'.<br>'+note+(TOUCH?'tap to replay':'press <b>enter</b> to replay')+'&nbsp;&nbsp;·&nbsp;&nbsp;<b>esc</b> for menu';
+    if(isBest){ hi=score; try{ localStorage.setItem(HI_KEY,hi); }catch(e){} hiEl.textContent=hi; }
+    titleEl.textContent = isBest ? 'new best!' : 'game over';
+    if(isBest && score>0 && typeof postScore==='function') postScore(curGame, score);   // reuse their insta for the board
+    subEl.innerHTML='you gathered <b>'+score+'</b> pillow'+(score===1?'':'s')+'.';
+    footEl.innerHTML=(TOUCH?'tap to replay':'press <b>enter</b> to replay')+'&nbsp;&nbsp;·&nbsp;&nbsp;<b>esc</b> for menu';
+    boardEl.innerHTML=''; verifyEl.innerHTML='';
     applyMode(); draw();
+    renderBoard();   // async: fills the leaderboard + verify prompt
+  }
+  // draws the on-CRT leaderboard for the current game (+ the player's standing + verify prompt)
+  async function renderBoard(){
+    const showVerify=()=>{ if(codeMapped() && hi>0) verifyEl.innerHTML='verify to add to leaderboard — DM <b class="go-code">'+verifyCode()+'</b> to '+esc(GLEADER.insta||'@us')+' from your ID'; };
+    if(!GLEADER.sheetCsv){ showVerify(); return; }                 // board not published yet — still nudge to verify
+    boardEl.innerHTML='<span class="gb-empty">loading the board…</span>';
+    const rows = (typeof loadScores==='function') ? await loadScores() : null;
+    if(mode!=='over') return;                                       // player already left
+    const board = rows ? computeBoard(rows, curGame, PLAYER&&PLAYER.handle, hi) : null;
+    if(!board || (!board.top.length && !board.you)){ boardEl.innerHTML='<span class="gb-empty">be the first on the board ✦</span>'; showVerify(); return; }
+    let h='<ol class="gb-list">';
+    for(const e of board.top){
+      const mine = board.you && !board.you.pending && e.handle===board.you.handle;
+      h+='<li class="'+(mine?'gb-me':'')+'"><span class="gb-rank">'+e.rank+'</span><span class="gb-h">@'+esc(e.handle)+'</span><span class="gb-s">'+e.score+'</span></li>';
+    }
+    h+='</ol>';
+    if(board.you && (board.you.pending || board.you.rank>board.top.length))
+      h+='<p class="gb-you">you · #'+board.you.rank+' · '+board.you.score+(board.you.pending?' <i>(pending)</i>':'')+'</p>';
+    boardEl.innerHTML=h;
+    if(!board.you || board.you.pending) showVerify();               // only nudge if not already public
   }
   function quitArcade(){
     playing=false; open=false; mode=null; clearTimeout(timer);
