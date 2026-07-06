@@ -204,6 +204,7 @@
     text-shadow:3px 0 0 #eb648c,-3px 0 0 #6bc7ff; }
   .g-overlay .go-sub{ font-size:.6em; line-height:2.1; color:var(--brand-soft); margin-top:1.5em; }
   .g-overlay .go-sub b{ color:#fff; }
+  .g-overlay .go-note{ display:inline-block; margin:.4em 0; color:var(--brand-yellow); font-size:.9em; }
   /* the arcade select screen (Nintendo-style menu) */
   .g-menu{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:3;
     padding:7% 6%; background:rgba(16,10,24,.35); }
@@ -601,8 +602,42 @@ const GFORM = {
     why:   'entry.1553029635'
   }
 };
+
+/* ---- Leaderboard wiring (SECOND Google Form) ----
+   When a player beats their best in the arcade, we quietly post their instagram
+   (reused from the application above — no re-asking) + score into a SECOND form/sheet.
+   HOW TO CONNECT (same trick as GFORM):
+   1. Make a 2nd Google Form with short-answer questions: instagram, score (add name if you like).
+   2. ⋮ → "Get pre-filled link", type each field's own name as the answer, "Get link", copy.
+   3. Put its FORM_ID in `id` and map each entry.NNN below. Leave id:'' to keep it off. */
+const GLEADER = {
+  id: '',                       // <-- paste the 2nd form's FORM_ID here to switch the leaderboard on
+  fields: {
+    handle: 'entry.',           // instagram
+    score:  'entry.',           // best score
+    name:   'entry.'            // optional
+  }
+};
+let PLAYER = null;              // the submitted application, so the game knows who's playing
+// returns true if a score row was actually posted (i.e. leaderboard configured + we know the player)
+function postScore(score){
+  if(!GLEADER.id || !PLAYER) return false;
+  const payload = { handle:PLAYER.handle, name:PLAYER.name, score:String(score) };
+  const body=new URLSearchParams(); let sent=false;
+  for(const k in payload){
+    const id=GLEADER.fields[k];
+    if(id && /^entry\.\d+$/.test(id) && payload[k]!=null && payload[k]!==''){ body.append(id, payload[k]); sent=true; }
+  }
+  if(!sent) return false;
+  try{ fetch(`https://docs.google.com/forms/d/e/${GLEADER.id}/formResponse`,
+    { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body }); }
+  catch(err){ return false; }
+  return true;
+}
+
 async function submitForm(){
   const data=Object.fromEntries(new FormData(form).entries());
+  PLAYER = data;                                        // remember the player for the leaderboard
   if(GFORM.id){
     const body=new URLSearchParams();
     for(const k in data){ if(GFORM.fields[k]) body.append(GFORM.fields[k], data[k]); }
@@ -751,9 +786,12 @@ renderStep();
 
   function gameOver(){
     playing=false; clearTimeout(timer); blip('crash'); mode='over';
-    if(score>hi){ hi=score; try{ localStorage.setItem(HI_KEY,hi); }catch(e){} hiEl.textContent=hi; titleEl.textContent='new best!'; }
+    const isBest = score>hi;
+    if(isBest){ hi=score; try{ localStorage.setItem(HI_KEY,hi); }catch(e){} hiEl.textContent=hi; titleEl.textContent='new best!'; }
     else titleEl.textContent='game over';
-    subEl.innerHTML='you gathered <b>'+score+'</b> pillow'+(score===1?'':'s')+'.<br>'+(TOUCH?'tap to replay':'press <b>enter</b> to replay')+'&nbsp;&nbsp;·&nbsp;&nbsp;<b>esc</b> for menu';
+    let note='';
+    if(isBest && score>0 && typeof postScore==='function' && postScore(score)) note='<span class="go-note">▸ added to the leaderboard</span><br>';   // reuse their insta for the high-score board
+    subEl.innerHTML='you gathered <b>'+score+'</b> pillow'+(score===1?'':'s')+'.<br>'+note+(TOUCH?'tap to replay':'press <b>enter</b> to replay')+'&nbsp;&nbsp;·&nbsp;&nbsp;<b>esc</b> for menu';
     applyMode(); draw();
   }
   function quitArcade(){
