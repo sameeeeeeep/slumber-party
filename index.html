@@ -760,6 +760,8 @@ renderStep();
   let unlocked=false, open=false, mode=null, sel=0;   // mode: 'menu' | 'play' | 'over' | null
   let curGame='snake', score=0, hi=0, muted=false, stars=[];
   let G=null, view=null, loopTimer=null, lastT=0;     // active game instance + frame loop
+  const held={left:false,right:false,up:false,down:false};   // held arrow/wasd state (smooth paddle etc.)
+  const KEYDIR={ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right',ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down'};
 
   /* ---------- the arcade line-up (add a game: give it a make() and a GLEADER.games entry) ---------- */
   const GAMES=[
@@ -838,6 +840,7 @@ renderStep();
   function startGame(key){
     const def=GAMES.find(g=>g.key===key); if(!def) return;
     curGame=key; open=true; mode='play';
+    held.left=held.right=held.up=held.down=false;
     gameEl.classList.add('on');
     if(masthead){ masthead.style.opacity='0'; masthead.style.pointerEvents='none'; }
     freeze();
@@ -1084,29 +1087,34 @@ renderStep();
   /* ================= GAME 4 · STARLIGHT PONG ================= */
   function makePong(api){
     // normalised coords in [0,1] over the panel; paddle at the bottom
-    let bx,by,vx,vy,pxc,phw,speed,pad,rallies,started;
-    const PY=0.9;
-    function launch(){ const ang=(-0.35+Math.random()*0.7); vx=Math.sin(ang); vy=Math.cos(ang)*0.9; norm(); }
-    function norm(){ const m=Math.hypot(vx,vy)||1; vx=vx/m*speed; vy=vy/m*speed; }
+    let bx,by,vx,vy,pxc,phw,speed;
+    const PY=0.9, R=0.024, MAXSPD=0.0016;
+    function setV(ux,uy){ const m=Math.hypot(ux,uy)||1; vx=ux/m*speed; vy=uy/m*speed; keepSteep(); }
+    // never let the ball go too horizontal — keeps at least ~50% vertical so it can't get "stuck sideways"
+    function keepSteep(){ const minVy=speed*0.55; if(Math.abs(vy)<minVy){ vy=(vy<0?-1:1)*minVy; vx=(vx<0?-1:1)*Math.sqrt(Math.max(0,speed*speed-vy*vy)); } }
+    function launch(){ setV((Math.random()<0.5?-1:1)*(0.4+Math.random()*0.4), 1); }
     return {
-      unit:'rallies', hint:TOUCH?'drag to move the paddle':'← → move the paddle', drag:true,
-      reset(){ bx=0.5; by=0.4; speed=0.00075; pxc=0.5; phw=0.14; rallies=0; started=false; launch(); },
+      unit:'rallies', hint:TOUCH?'drag to move · keep the ball up':'hold ← → to move the paddle', drag:true,
+      reset(){ bx=0.5; by=0.45; speed=0.00072; pxc=0.5; phw=0.15; launch(); },
       frame(dt){
         bx+=vx*dt; by+=vy*dt;
-        const r=0.022;
-        if(bx<r){ bx=r; vx=Math.abs(vx); api.blip('eat'); }
-        if(bx>1-r){ bx=1-r; vx=-Math.abs(vx); api.blip('eat'); }
-        if(by<r){ by=r; vy=Math.abs(vy); api.blip('eat'); }
-        if(vy>0 && by>=PY-r && by<=PY+0.02){
-          if(Math.abs(bx-pxc)<=phw+r){ by=PY-r; vy=-Math.abs(vy); const off=(bx-pxc)/phw; vx+=off*0.6; speed*=1.06; norm(); rallies++; api.addScore(1); api.blip('bonus'); }
+        // paddle follows held arrow keys smoothly (desktop); drag/pointer sets it directly
+        const pv=0.0026*dt; if(held.left) pxc-=pv; if(held.right) pxc+=pv;
+        pxc=Math.max(phw,Math.min(1-phw,pxc));
+        if(bx<R){ bx=R; vx=Math.abs(vx); api.blip('eat'); }
+        if(bx>1-R){ bx=1-R; vx=-Math.abs(vx); api.blip('eat'); }
+        if(by<R){ by=R; vy=Math.abs(vy); api.blip('eat'); }
+        // paddle: bounce whenever the ball reaches the paddle plane moving down (no upper bound → no tunnelling at speed)
+        if(vy>0 && by>=PY-R){
+          if(Math.abs(bx-pxc)<=phw+R){ by=PY-R; speed=Math.min(MAXSPD, speed*1.05); setV((bx-pxc)/phw*1.1, -1); api.addScore(1); api.blip('bonus'); }
+          else if(by>1.06) return api.over();
         }
-        if(by>1.05) return api.over();
       },
-      input(a){ if(a==='left') pxc=Math.max(phw,pxc-0.06); else if(a==='right') pxc=Math.min(1-phw,pxc+0.06); },
+      input(a){ if(a==='left') pxc=Math.max(phw,pxc-0.05); else if(a==='right') pxc=Math.min(1-phw,pxc+0.05); },  // tap nudge; holding uses `held`
       pointer(xf){ pxc=Math.max(phw,Math.min(1-phw,xf)); },
       draw(){
         const v=view; drawPanel(v.x,v.y,v.w,v.h);
-        const X=f=>v.x+f*v.w, Y=f=>v.y+f*v.h, r=0.022*Math.min(v.w,v.h);
+        const X=f=>v.x+f*v.w, Y=f=>v.y+f*v.h, r=R*Math.min(v.w,v.h);
         // paddle
         cx.fillStyle='#eb648c'; const pw=phw*2*v.w, pxpx=X(pxc)-pw/2, pypx=Y(PY);
         rr(pxpx,pypx,pw,Math.max(6,v.h*0.03),Math.max(3,v.h*0.015)); cx.fill();
@@ -1146,10 +1154,8 @@ renderStep();
       else if(k==='Enter'||k===' ') selectGame();
       else if(k==='Escape') quitArcade();
     } else if(mode==='play' && G){
-      if(k==='ArrowUp'||k==='w'||k==='W') G.input&&G.input('up');
-      else if(k==='ArrowDown'||k==='s'||k==='S') G.input&&G.input('down');
-      else if(k==='ArrowLeft'||k==='a'||k==='A') G.input&&G.input('left');
-      else if(k==='ArrowRight'||k==='d'||k==='D') G.input&&G.input('right');
+      const d=KEYDIR[k];
+      if(d){ held[d]=true; G.input&&G.input(d); }
       else if(k===' '||k==='Enter') G.input&&G.input('action');
       else if(k==='Escape') backToMenu();
       else if(k==='m'||k==='M') muted=!muted;
@@ -1158,6 +1164,7 @@ renderStep();
       else if(k==='Escape') backToMenu();
     }
   });
+  addEventListener('keyup', e=>{ const d=KEYDIR[e.key]; if(d) held[d]=false; });
   quitBtn.addEventListener('click', ()=>{ if(mode==='play'||mode==='over') backToMenu(); else quitArcade(); });
   overEl.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
   cv.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
