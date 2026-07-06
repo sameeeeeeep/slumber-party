@@ -190,6 +190,7 @@
     padding:1em 1.2em; font-size:.6em; letter-spacing:.05em; color:var(--brand-soft); pointer-events:none; z-index:2;
     text-shadow:2px 0 0 #3a1526,-2px 0 0 #3a1526,0 2px 0 #3a1526,0 -2px 0 #3a1526; }
   .g-hud b{ color:var(--brand-yellow); }
+  .g-hud i{ font-style:normal; }
   .g-hud span:last-child{ margin-right:2.4em; }   /* clear the ✕ quit button in the corner */
   .g-quit{ position:absolute; top:.55em; right:.55em; z-index:4; width:2.1em; height:2.1em; border-radius:100px;
     display:grid; place-items:center; cursor:pointer; color:#fff; font-family:var(--sans); font-size:.9em;
@@ -326,7 +327,7 @@
         <canvas id="gamecanvas"></canvas>
         <div id="gframe">
           <div class="g-scan"></div>
-          <div class="g-hud"><span>pillows&nbsp;<b id="gscore">0</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
+          <div class="g-hud"><span><i id="gunit">pillows</i>&nbsp;<b id="gscore">0</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
           <div class="g-quit" id="gquit" title="back (esc)">✕</div>
           <div class="g-toast" id="gtoast"></div>
           <div class="g-menu off" id="gmenu">
@@ -641,8 +642,11 @@ const GLEADER = {
   codeField:   'entry.1112728021',
   verifiedField:'entry.846556357', verifiedCol: 'verified?',
   games: {                                   // gameKey -> { post-field, sheet-column }
-    snake: { field:'entry.1350983856', col:'game 1 score' }
-    // game 2..5 slots ready: entry.1683579071, entry.1649898258, entry.1469487080, entry.522284106
+    snake:       { field:'entry.1350983856', col:'game 1 score' },
+    pillowstack: { field:'entry.1683579071', col:'game 2 score' },
+    dreammaze:   { field:'entry.1649898258', col:'game 3 score' },
+    pong:        { field:'entry.1469487080', col:'game 4 score' }
+    // game 5 slot ready: entry.522284106
   }
 };
 let PLAYER = null;              // the submitted application, so the game knows who's playing
@@ -735,44 +739,55 @@ async function submitForm(){
 renderStep();
 
 /* ============================================================
-   Easter egg — SLUMBER SNAKE
-   Unlocked once the form is sent. Press P (or tap the hint) to play a
-   pillow-collecting snake right on the CRT. Arrows / WASD or swipe to
-   steer, Esc to leave. Freezes the scroll scene while you play.
+   Easter egg — KHUSHI'S ARCADE
+   Unlocked once the form is sent. A tiny arcade on the CRT with a
+   pluggable game harness: each game plugs into shared framing, HUD,
+   controls and the leaderboard. Arrows/WASD or swipe/tap to play,
+   Esc to step back. Freezes the scroll scene while you play.
    ============================================================ */
 (function(){
   const gameEl=document.getElementById('game'), gframe=document.getElementById('gframe');
   const cv=document.getElementById('gamecanvas'), cx=cv.getContext('2d');
-  const scoreEl=document.getElementById('gscore'), hiEl=document.getElementById('ghi');
+  const scoreEl=document.getElementById('gscore'), hiEl=document.getElementById('ghi'), unitEl=document.getElementById('gunit');
   const overEl=document.getElementById('gover'), titleEl=document.getElementById('gotitle'), subEl=document.getElementById('gosub');
   const boardEl=document.getElementById('goboard'), verifyEl=document.getElementById('goverify'), footEl=document.getElementById('gofoot');
   const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit');
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
   const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
-  const HI_KEY='ksp-snake-hi';
-  let hi=0; try{ hi=+localStorage.getItem(HI_KEY)||0; }catch(e){}
-  hiEl.textContent=hi;
+  const rnd=n=>(Math.random()*n)|0;
 
-  let unlocked=false, open=false, playing=false, mode=null, sel=0;   // mode: 'menu' | 'play' | 'over' | null
-  let COLS=15, ROWS=15, snake=[], dir={x:1,y:0}, pending={x:1,y:0}, food=null, bonus=null, stars=[];
-  let score=0, stepMs=150, timer=null, sinceBonus=0, muted=false, curGame='snake';
-  // the arcade line-up — flip enabled:true (and add a play() that drives the CRT) as new games land
+  let unlocked=false, open=false, mode=null, sel=0;   // mode: 'menu' | 'play' | 'over' | null
+  let curGame='snake', score=0, hi=0, muted=false, stars=[];
+  let G=null, view=null, loopTimer=null, lastT=0;     // active game instance + frame loop
+
+  /* ---------- the arcade line-up (add a game: give it a make() and a GLEADER.games entry) ---------- */
   const GAMES=[
-    {name:'slumber snake', enabled:true,  play:()=>startSnake()},
-    {name:'pillow stack',  enabled:false},
-    {name:'dream maze',    enabled:false},
-    {name:'starlight pong',enabled:false}
+    { key:'snake',       name:'slumber snake', unit:'pillows', make:makeSnake },
+    { key:'pillowstack', name:'pillow stack',  unit:'lines',   make:makeStack },
+    { key:'dreammaze',   name:'dream maze',    unit:'stars',   make:makeMaze  },
+    { key:'pong',        name:'starlight pong',unit:'rallies', make:makePong  }
   ];
+  const hiKey=k=>'ksp-hi-'+k;
+  function hiFor(k){ try{ return +localStorage.getItem(hiKey(k))||0; }catch(e){ return 0; } }
+  function setHi(k,v){ try{ localStorage.setItem(hiKey(k),v); }catch(e){} }
+
+  // the small API each game gets — drawing helpers live in closure (rr, drawPillow, blip …)
+  const api={
+    addScore(n){ score+=n; scoreEl.textContent=score; },
+    setScore(n){ score=n; scoreEl.textContent=score; },
+    getScore(){ return score; },
+    over(){ gameOver(); },
+    alive(){ return mode==='play'; },
+    blip(k){ blip(k); }
+  };
 
   function unlock(){
     if(unlocked) return; unlocked=true;
-    // no visible hint — it's a secret: clicking/tapping the confirmation (or any key) opens the arcade
-    if(fdone) fdone.addEventListener('click', openArcade);
+    if(fdone) fdone.addEventListener('click', openArcade);   // secret: click/tap the confirmation (or any key)
   }
   window.__slumberGame={ unlock, start:openArcade };
 
-  // show/hide the CRT sub-screens for the current mode
   function applyMode(){
     gmenu.classList.toggle('off', mode!=='menu');
     overEl.classList.toggle('off', mode!=='over');
@@ -781,33 +796,30 @@ renderStep();
     quitBtn.title = (mode==='menu'||mode===null) ? 'leave (esc)' : 'back (esc)';
   }
   function seedStars(){ stars=[]; for(let i=0;i<16;i++) stars.push({x:Math.random(), y:Math.random(), r:Math.random()<0.3?2:1}); }
+  function showToast(txt){ toastEl.textContent=txt||''; toastEl.style.opacity='1'; clearTimeout(showToast._t); showToast._t=setTimeout(()=>toastEl.style.opacity='0', 2600); }
 
-  /* ---------- the arcade menu ---------- */
+  /* ---------- arcade menu ---------- */
   function openArcade(){
     if(!unlocked||open) return; open=true;
     gameEl.classList.add('on');
     if(masthead){ masthead.style.opacity='0'; masthead.style.pointerEvents='none'; }
     freeze(); seedStars();
-    mode='menu'; sel=0; renderMenu(); applyMode(); draw();
+    mode='menu'; sel=0; renderMenu(); applyMode(); drawFrame();
   }
   function renderMenu(){
     gmlist.innerHTML='';
     GAMES.forEach((g,i)=>{
       const li=document.createElement('li');
-      li.className='gm-item'+(i===sel?' sel':'')+(g.enabled?'':' soon');
-      li.innerHTML='<span class="gm-ptr">▸</span><span class="gm-name">'+g.name+'</span>'+(g.enabled?'':'<span class="gm-tag">soon</span>');
+      li.className='gm-item'+(i===sel?' sel':'');
+      li.innerHTML='<span class="gm-ptr">▸</span><span class="gm-name">'+g.name+'</span>';
       li.addEventListener('click', ()=>{ sel=i; renderMenu(); selectGame(); });
       gmlist.appendChild(li);
     });
     gmfoot.innerHTML = TOUCH ? 'tap a game to play' : '↑ ↓ choose&nbsp;&nbsp;·&nbsp;&nbsp;enter play&nbsp;&nbsp;·&nbsp;&nbsp;esc exit';
   }
   function moveSel(d){ sel=(sel+d+GAMES.length)%GAMES.length; renderMenu(); blip('eat'); }
-  function selectGame(){
-    const g=GAMES[sel];
-    if(g&&g.enabled) g.play();
-    else { gmenu.classList.add('nudge'); blip('crash'); setTimeout(()=>gmenu.classList.remove('nudge'),400); }
-  }
-  function backToMenu(){ playing=false; clearTimeout(timer); mode='menu'; sel=0; renderMenu(); applyMode(); draw(); }
+  function selectGame(){ const g=GAMES[sel]; if(g) startGame(g.key); }
+  function backToMenu(){ mode='menu'; clearTimeout(loopTimer); sel=0; renderMenu(); applyMode(); drawFrame(); }
 
   // Freeze the scroll scene at the form framing (the little computer, screen facing us) while playing.
   function freeze(){ const p=(typeof curP==='number')?curP:0.96; window.__p=Math.max(p,0.94); if(typeof updateZoom==='function') updateZoom(window.__p); }
@@ -822,72 +834,52 @@ renderStep();
     return vis;
   }
 
-  function reset(){
-    const vis=layout(), W=vis.w||400, H=vis.h||300, S=15;   // ~15 cells on the short side, square-ish
-    if(W>=H){ ROWS=S; COLS=Math.min(38, Math.max(12, Math.round(S*W/H))); }
-    else    { COLS=S; ROWS=Math.min(46, Math.max(12, Math.round(S*H/W))); }
-    const mx=Math.floor(COLS/2), my=Math.floor(ROWS/2);
-    snake=[{x:mx,y:my},{x:mx-1,y:my},{x:mx-2,y:my}];
-    dir={x:1,y:0}; pending={x:1,y:0};
-    score=0; stepMs=150; sinceBonus=0; bonus=null; scoreEl.textContent='0';
-    stars=[]; for(let i=0;i<14;i++) stars.push({x:Math.random(), y:Math.random(), r:Math.random()<0.3?2:1});
-    placeFood();
+  /* ---------- game lifecycle ---------- */
+  function startGame(key){
+    const def=GAMES.find(g=>g.key===key); if(!def) return;
+    curGame=key; open=true; mode='play';
+    gameEl.classList.add('on');
+    if(masthead){ masthead.style.opacity='0'; masthead.style.pointerEvents='none'; }
+    freeze();
+    score=0; scoreEl.textContent='0';
+    hi=hiFor(key); hiEl.textContent=hi;
+    unitEl.textContent=def.unit;
+    view=layout();
+    G=def.make(api);
+    if(G.reset) G.reset();
+    applyMode();
+    showToast(G.hint||'');
+    lastT=Date.now(); clearTimeout(loopTimer); loop();
   }
-  function cellFree(x,y){ return !snake.some(s=>s.x===x&&s.y===y) && !(food&&food.x===x&&food.y===y) && !(bonus&&bonus.x===x&&bonus.y===y); }
-  function placeFood(){ let c,t=0; do{ c={x:(Math.random()*COLS)|0, y:(Math.random()*ROWS)|0}; }while(!cellFree(c.x,c.y)&&++t<300); food=c; }
-  function placeBonus(){ let c,t=0; do{ c={x:(Math.random()*COLS)|0, y:(Math.random()*ROWS)|0}; }while(!cellFree(c.x,c.y)&&++t<300); bonus={x:c.x,y:c.y,t:0,life:Math.max(30,Math.round(6000/stepMs))}; }
-
-  function startSnake(){
-    open=true; playing=true; mode='play'; curGame='snake';
-    gameEl.classList.add('on'); freeze(); applyMode(); reset();
-    toastEl.textContent = TOUCH ? 'swipe to steer' : 'arrow keys / wasd to steer';
-    toastEl.style.opacity='1'; clearTimeout(startSnake._t); startSnake._t=setTimeout(()=>toastEl.style.opacity='0', 2600);
-    draw(); schedule();
-  }
-  function schedule(){ clearTimeout(timer); timer=setTimeout(step, stepMs); }
-  function setDir(x,y){ if(!playing) return; if(x===-dir.x&&y===-dir.y) return; pending={x,y}; }
-
-  function step(){
-    if(!playing) return;
-    if(!(pending.x===-dir.x&&pending.y===-dir.y)) dir=pending;
-    const head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
-    if(head.x<0||head.y<0||head.x>=COLS||head.y>=ROWS) return gameOver();
-    const eating = food && head.x===food.x && head.y===food.y;
-    const body = eating ? snake : snake.slice(0,-1);   // tail vacates unless we grow
-    if(body.some(s=>s.x===head.x&&s.y===head.y)) return gameOver();
-    snake.unshift(head);
-    if(eating){
-      score++; scoreEl.textContent=score; blip('eat');
-      stepMs=Math.max(70, stepMs-5); placeFood();
-      if(++sinceBonus>=5 && !bonus){ sinceBonus=0; placeBonus(); }
-    } else snake.pop();
-    if(bonus){
-      if(head.x===bonus.x&&head.y===bonus.y){ score+=5; scoreEl.textContent=score; blip('bonus'); bonus=null; snake.push({...snake[snake.length-1]}); }
-      else if(++bonus.t>bonus.life) bonus=null;
-    }
-    draw(); schedule();
+  function loop(){
+    if(mode!=='play'||!G) return;
+    const t=Date.now(), dt=Math.min(60, t-lastT); lastT=t;
+    if(G.frame) G.frame(dt);
+    drawFrame();
+    loopTimer=setTimeout(loop, 26);
   }
 
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function gameOver(){
-    playing=false; clearTimeout(timer); blip('crash'); mode='over';
+    if(mode==='over') return;
+    mode='over'; clearTimeout(loopTimer); blip('crash');
     const isBest = score>hi;
-    if(isBest){ hi=score; try{ localStorage.setItem(HI_KEY,hi); }catch(e){} hiEl.textContent=hi; }
+    if(isBest){ hi=score; setHi(curGame,score); hiEl.textContent=hi; }
     titleEl.textContent = isBest ? 'new best!' : 'game over';
-    if(isBest && score>0 && typeof postScore==='function') postScore(curGame, score);   // reuse their insta for the board
-    subEl.innerHTML='you gathered <b>'+score+'</b> pillow'+(score===1?'':'s')+'.';
+    if(isBest && score>0 && typeof postScore==='function') postScore(curGame, score);
+    subEl.innerHTML = (G&&G.overText) ? G.overText(score) : ('you scored <b>'+score+'</b>.');
     footEl.innerHTML=(TOUCH?'tap to replay':'press <b>enter</b> to replay')+'&nbsp;&nbsp;·&nbsp;&nbsp;<b>esc</b> for menu';
     boardEl.innerHTML=''; verifyEl.innerHTML='';
-    applyMode(); draw();
-    renderBoard();   // async: fills the leaderboard + verify prompt
+    applyMode(); drawFrame();
+    renderBoard();
   }
-  // draws the on-CRT leaderboard for the current game (+ the player's standing + verify prompt)
+  // on-CRT leaderboard for the current game (+ player standing + verify prompt)
   async function renderBoard(){
     const showVerify=()=>{ if(codeMapped() && hi>0) verifyEl.innerHTML='verify to add to leaderboard — DM <b class="go-code">'+verifyCode()+'</b> to '+esc(GLEADER.insta||'@us')+' from your ID'; };
-    if(!GLEADER.sheetCsv){ showVerify(); return; }                 // board not published yet — still nudge to verify
+    if(!GLEADER.sheetCsv){ showVerify(); return; }
     boardEl.innerHTML='<span class="gb-empty">loading the board…</span>';
     const rows = (typeof loadScores==='function') ? await loadScores() : null;
-    if(mode!=='over') return;                                       // player already left
+    if(mode!=='over') return;
     const board = rows ? computeBoard(rows, curGame, PLAYER&&PLAYER.handle, hi) : null;
     if(!board || !board.top.length){ boardEl.innerHTML='<span class="gb-empty">be the first on the board ✦</span>'; showVerify(); return; }
     let h='<ol class="gb-list">';
@@ -899,58 +891,230 @@ renderStep();
     if(board.you && (board.you.pending || board.you.rank>board.top.length))
       h+='<p class="gb-you">you · #'+board.you.rank+' · '+board.you.score+(board.you.pending?' <i>(pending)</i>':'')+'</p>';
     boardEl.innerHTML=h;
-    if(!board.you || board.you.pending) showVerify();               // only nudge if not already public
+    if(!board.you || board.you.pending) showVerify();
   }
   function quitArcade(){
-    playing=false; open=false; mode=null; clearTimeout(timer);
+    open=false; mode=null; clearTimeout(loopTimer); G=null;
     gameEl.classList.remove('on');
     if(masthead){ masthead.style.opacity=''; masthead.style.pointerEvents=''; }
     thaw();
   }
 
-  /* ---------- drawing ---------- */
+  /* ---------- shared drawing ---------- */
   function rr(x,y,w,h,r){ r=Math.min(r,w/2,h/2); cx.beginPath(); cx.moveTo(x+r,y); cx.arcTo(x+w,y,x+w,y+h,r); cx.arcTo(x+w,y+h,x,y+h,r); cx.arcTo(x,y+h,x,y,r); cx.arcTo(x,y,x+w,y,r); cx.closePath(); }
   function lerpCol(a,b,t){ return 'rgb('+Math.round(a[0]+(b[0]-a[0])*t)+','+Math.round(a[1]+(b[1]-a[1])*t)+','+Math.round(a[2]+(b[2]-a[2])*t)+')'; }
-  function draw(){
+  // a centred square-cell grid inside the current view
+  function fieldGeom(cols,rows){ const v=view, c=Math.floor(Math.min(v.w/cols, v.h/rows)), fw=c*cols, fh=c*rows; return {cell:c, fw, fh, ox:v.x+(v.w-fw)/2, oy:v.y+(v.h-fh)/2}; }
+  function drawPanel(x,y,w,h){
+    cx.fillStyle='#191026'; rr(x,y,w,h,8); cx.fill();
+    for(const s of stars){ cx.globalAlpha=0.25+0.55*Math.abs(Math.sin((s.x+s.y)*9)); cx.fillStyle='#fff0fa'; cx.fillRect(x+s.x*w, y+s.y*h, s.r, s.r); }
+    cx.globalAlpha=1;
+  }
+  function drawFrame(){
     const W=gameEl.clientWidth, H=gameEl.clientHeight, dpr=Math.min(2, window.devicePixelRatio||1);
     if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
-    const vis=layout();
+    view=layout();
     cx.setTransform(dpr,0,0,dpr,0,0); cx.clearRect(0,0,W,H);
-    // menu: the panel fills the whole screen; playing: the panel is the grid field, centred
-    const playing2=(mode==='play'||mode==='over');
-    const c=Math.floor(Math.min(vis.w/COLS, vis.h/ROWS));
-    const fw=playing2? c*COLS : vis.w, fh=playing2? c*ROWS : vis.h;
-    const ox=playing2? vis.x+(vis.w-fw)/2 : vis.x, oy=playing2? vis.y+(vis.h-fh)/2 : vis.y;
-    cx.fillStyle='#191026'; rr(ox,oy,fw,fh,8); cx.fill();
-    for(const s of stars){ cx.globalAlpha=0.25+0.55*Math.abs(Math.sin((s.x+s.y)*9)); cx.fillStyle='#fff0fa'; cx.fillRect(ox+s.x*fw, oy+s.y*fh, s.r, s.r); }
-    cx.globalAlpha=1;
-    if(!playing2) return;   // menu backdrop only — the DOM menu draws on top
-    const pad=Math.max(1, Math.floor(c*0.12)), at=(gx,gy)=>({x:ox+gx*c, y:oy+gy*c});
-    if(food){ const p=at(food.x,food.y); drawPillow(p.x+pad, p.y+pad, c-2*pad); }
-    if(bonus && bonus.t%2===0){ const p=at(bonus.x,bonus.y); drawStar(p.x+c/2, p.y+c/2, c*0.42); }
-    for(let i=snake.length-1;i>=0;i--){
-      const s=snake[i], p=at(s.x,s.y), t=snake.length>1? i/(snake.length-1):0;
-      cx.fillStyle=lerpCol([235,100,140],[245,206,220], t);
-      rr(p.x+pad, p.y+pad, c-2*pad, c-2*pad, Math.max(2,c*0.3)); cx.fill();
-      if(i===0) drawEyes(p.x, p.y, c);
-    }
+    if((mode==='play'||mode==='over') && G && G.draw) G.draw();
+    else drawPanel(view.x, view.y, view.w, view.h);   // menu backdrop
   }
-  function drawPillow(x,y,s){
-    cx.fillStyle='#f7dfe8'; rr(x, y+s*0.08, s, s*0.84, s*0.3); cx.fill();
-    cx.strokeStyle='rgba(235,100,140,.55)'; cx.lineWidth=Math.max(1,s*0.06); rr(x+s*0.13, y+s*0.2, s*0.74, s*0.58, s*0.16); cx.stroke();
-    cx.fillStyle='rgba(255,255,255,.75)'; cx.fillRect(x+s*0.26, y+s*0.28, Math.max(1,s*0.13), Math.max(1,s*0.08));
+  function drawPillow(x,y,s,fill){
+    cx.fillStyle=fill||'#f7dfe8'; rr(x, y+s*0.08, s, s*0.84, s*0.3); cx.fill();
+    cx.strokeStyle='rgba(60,20,40,.28)'; cx.lineWidth=Math.max(1,s*0.06); rr(x+s*0.13, y+s*0.2, s*0.74, s*0.58, s*0.16); cx.stroke();
+    cx.fillStyle='rgba(255,255,255,.6)'; cx.fillRect(x+s*0.26, y+s*0.28, Math.max(1,s*0.13), Math.max(1,s*0.08));
   }
-  function drawStar(px,py,r){
-    cx.save(); cx.translate(px,py); cx.fillStyle='#ffd84a'; cx.shadowColor='#ffd84a'; cx.shadowBlur=r;
+  function drawStar(px,py,r,col){
+    cx.save(); cx.translate(px,py); cx.fillStyle=col||'#ffd84a'; cx.shadowColor=col||'#ffd84a'; cx.shadowBlur=r;
     cx.beginPath(); for(let i=0;i<10;i++){ const a=i*Math.PI/5-Math.PI/2, rad=(i%2? r*0.42:r); cx.lineTo(Math.cos(a)*rad, Math.sin(a)*rad); } cx.closePath(); cx.fill(); cx.restore();
   }
-  function drawEyes(x,y,c){
+  function drawEyes(x,y,c,dir){
     const mx=x+c/2, my=y+c/2, fo=c*0.12, so=c*0.18, r=Math.max(1.3,c*0.1), px=-dir.y, py=dir.x;
     for(const sgn of [-1,1]){
       const ex=mx+dir.x*fo+px*so*sgn, ey=my+dir.y*fo+py*so*sgn;
       cx.fillStyle='#fff'; cx.beginPath(); cx.arc(ex,ey,r,0,7); cx.fill();
       cx.fillStyle='#3a1526'; cx.beginPath(); cx.arc(ex+dir.x*r*0.4, ey+dir.y*r*0.4, r*0.55, 0, 7); cx.fill();
     }
+  }
+
+  /* ================= GAME 1 · SLUMBER SNAKE ================= */
+  function makeSnake(api){
+    let COLS,ROWS,snake,dir,pending,food,bonus,stepMs,acc,sinceBonus;
+    function reset(){
+      const W=view.w,H=view.h,S=15;
+      if(W>=H){ ROWS=S; COLS=Math.min(38,Math.max(12,Math.round(S*W/H))); }
+      else    { COLS=S; ROWS=Math.min(46,Math.max(12,Math.round(S*H/W))); }
+      const mx=COLS>>1,my=ROWS>>1;
+      snake=[{x:mx,y:my},{x:mx-1,y:my},{x:mx-2,y:my}];
+      dir={x:1,y:0}; pending={x:1,y:0}; stepMs=150; acc=0; sinceBonus=0; bonus=null; food=null; placeFood();
+    }
+    const cf=(x,y)=>!snake.some(s=>s.x===x&&s.y===y)&&!(food&&food.x===x&&food.y===y)&&!(bonus&&bonus.x===x&&bonus.y===y);
+    function placeFood(){ let c,t=0; do{ c={x:rnd(COLS),y:rnd(ROWS)}; }while(!cf(c.x,c.y)&&++t<300); food=c; }
+    function placeBonus(){ let c,t=0; do{ c={x:rnd(COLS),y:rnd(ROWS)}; }while(!cf(c.x,c.y)&&++t<300); bonus={x:c.x,y:c.y,t:0,life:Math.max(30,Math.round(6000/stepMs))}; }
+    function tick(){
+      if(!(pending.x===-dir.x&&pending.y===-dir.y)) dir=pending;
+      const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+      if(head.x<0||head.y<0||head.x>=COLS||head.y>=ROWS) return api.over();
+      const eat=food&&head.x===food.x&&head.y===food.y, body=eat?snake:snake.slice(0,-1);
+      if(body.some(s=>s.x===head.x&&s.y===head.y)) return api.over();
+      snake.unshift(head);
+      if(eat){ api.addScore(1); api.blip('eat'); stepMs=Math.max(70,stepMs-5); placeFood(); if(++sinceBonus>=5&&!bonus){ sinceBonus=0; placeBonus(); } }
+      else snake.pop();
+      if(bonus){ if(head.x===bonus.x&&head.y===bonus.y){ api.addScore(5); api.blip('bonus'); bonus=null; snake.push({...snake[snake.length-1]}); } else if(++bonus.t>bonus.life) bonus=null; }
+    }
+    const turn=(x,y)=>{ if(x===-dir.x&&y===-dir.y)return; pending={x,y}; };
+    return {
+      unit:'pillows', hint:TOUCH?'swipe to steer':'arrows / wasd to steer',
+      reset,
+      frame(dt){ acc+=dt; let n=0; while(acc>=stepMs && api.alive() && n++<4){ acc-=stepMs; tick(); } },
+      input(a){ if(a==='left')turn(-1,0); else if(a==='right')turn(1,0); else if(a==='up')turn(0,-1); else if(a==='down')turn(0,1); },
+      draw(){
+        const g=fieldGeom(COLS,ROWS); drawPanel(g.ox,g.oy,g.fw,g.fh);
+        const c=g.cell,pad=Math.max(1,(c*0.12)|0),at=(x,y)=>({x:g.ox+x*c,y:g.oy+y*c});
+        if(food){ const p=at(food.x,food.y); drawPillow(p.x+pad,p.y+pad,c-2*pad); }
+        if(bonus&&bonus.t%2===0){ const p=at(bonus.x,bonus.y); drawStar(p.x+c/2,p.y+c/2,c*0.42); }
+        for(let i=snake.length-1;i>=0;i--){ const s=snake[i],p=at(s.x,s.y),t=snake.length>1?i/(snake.length-1):0;
+          cx.fillStyle=lerpCol([235,100,140],[245,206,220],t); rr(p.x+pad,p.y+pad,c-2*pad,c-2*pad,Math.max(2,c*0.3)); cx.fill();
+          if(i===0) drawEyes(p.x,p.y,c,dir); }
+      },
+      overText(s){ return 'you gathered <b>'+s+'</b> pillow'+(s===1?'':'s')+'.'; }
+    };
+  }
+
+  /* ================= GAME 2 · PILLOW STACK (tetris) ================= */
+  const TET={
+    I:{n:4,c:'#8fd7ff',cells:[[0,1],[1,1],[2,1],[3,1]]},
+    O:{n:2,c:'#ffe08a',cells:[[0,0],[1,0],[0,1],[1,1]]},
+    T:{n:3,c:'#eb9cff',cells:[[1,0],[0,1],[1,1],[2,1]]},
+    S:{n:3,c:'#a6f0c0',cells:[[1,0],[2,0],[0,1],[1,1]]},
+    Z:{n:3,c:'#ff9ab0',cells:[[0,0],[1,0],[1,1],[2,1]]},
+    J:{n:3,c:'#9ab0ff',cells:[[0,0],[0,1],[1,1],[2,1]]},
+    L:{n:3,c:'#ffc48a',cells:[[2,0],[0,1],[1,1],[2,1]]}
+  };
+  const TYPES=Object.keys(TET);
+  function rotCells(base,n,rot){ let cs=base.map(c=>[c[0],c[1]]); rot=((rot%4)+4)%4; for(let r=0;r<rot;r++) cs=cs.map(([x,y])=>[n-1-y,x]); return cs; }
+  function makeStack(api){
+    const COLS=10, ROWS=18;
+    let grid, piece, dropMs, acc, lines;
+    function newGrid(){ grid=Array.from({length:ROWS},()=>Array(COLS).fill(null)); }
+    function cellsOf(p){ return rotCells(TET[p.type].cells,TET[p.type].n,p.rot).map(([x,y])=>[p.x+x,p.y+y]); }
+    function collide(p){ return cellsOf(p).some(([x,y])=> x<0||x>=COLS||y>=ROWS || (y>=0 && grid[y][x])); }
+    function spawn(){ const type=TYPES[rnd(TYPES.length)], n=TET[type].n; piece={type,rot:0,x:((COLS-n)/2)|0,y:0}; if(collide(piece)) return api.over(); }
+    function move(dx,dy){ const np={...piece,x:piece.x+dx,y:piece.y+dy}; if(collide(np)) return false; piece=np; return true; }
+    function rotate(){ const np={...piece,rot:piece.rot+1}; for(const dx of [0,-1,1,-2,2]){ const t={...np,x:np.x+dx}; if(!collide(t)){ piece=t; api.blip('eat'); return; } } }
+    function lock(){
+      for(const [x,y] of cellsOf(piece)) if(y>=0) grid[y][x]=TET[piece.type].c;
+      let cleared=0;
+      for(let y=ROWS-1;y>=0;){ if(grid[y].every(c=>c)){ grid.splice(y,1); grid.unshift(Array(COLS).fill(null)); cleared++; } else y--; }
+      if(cleared){ api.addScore(cleared); lines+=cleared; dropMs=Math.max(120,700-lines*22); api.blip(cleared>=3?'bonus':'eat'); }
+      spawn();
+    }
+    function hardDrop(){ while(move(0,1)){} lock(); acc=0; }
+    return {
+      unit:'lines', hint:TOUCH?'swipe move · tap rotate · swipe down = drop':'← → move · ↑ rotate · ↓ drop',
+      reset(){ newGrid(); dropMs=700; acc=0; lines=0; spawn(); },
+      frame(dt){ acc+=dt; while(acc>=dropMs && api.alive()){ acc-=dropMs; if(!move(0,1)) lock(); } },
+      input(a){ if(a==='left')move(-1,0); else if(a==='right')move(1,0); else if(a==='up'||a==='action')rotate(); else if(a==='down')hardDrop(); },
+      draw(){
+        const g=fieldGeom(COLS,ROWS); drawPanel(g.ox,g.oy,g.fw,g.fh);
+        const c=g.cell,pad=Math.max(1,(c*0.08)|0),at=(x,y)=>({x:g.ox+x*c,y:g.oy+y*c});
+        for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++) if(grid[y][x]){ const p=at(x,y); drawPillow(p.x+pad,p.y+pad,c-2*pad,grid[y][x]); }
+        if(piece){
+          // ghost
+          let gp={...piece}; while(!collide({...gp,y:gp.y+1})) gp.y++;
+          cx.globalAlpha=0.25; for(const [x,y] of cellsOf(gp)) if(y>=0){ const p=at(x,y); drawPillow(p.x+pad,p.y+pad,c-2*pad,TET[piece.type].c); } cx.globalAlpha=1;
+          for(const [x,y] of cellsOf(piece)) if(y>=0){ const p=at(x,y); drawPillow(p.x+pad,p.y+pad,c-2*pad,TET[piece.type].c); }
+        }
+      },
+      overText(s){ return 'you cleared <b>'+s+'</b> line'+(s===1?'':'s')+'.'; }
+    };
+  }
+
+  /* ================= GAME 3 · DREAM MAZE ================= */
+  function makeMaze(api){
+    let COLS,ROWS,grid,px,py,dir,pending,acc,stepMs,gems,timeLeft,levelMs,level;
+    function gen(mc,mr){
+      COLS=2*mc+1; ROWS=2*mr+1;
+      grid=Array.from({length:ROWS},()=>Array(COLS).fill(1));
+      const vis=Array.from({length:mr},()=>Array(mc).fill(false)), st=[[0,0]]; vis[0][0]=true; grid[1][1]=0;
+      while(st.length){ const [cx0,cy0]=st[st.length-1];
+        const opts=[[0,-1],[0,1],[-1,0],[1,0]].filter(([dx,dy])=>{const nx=cx0+dx,ny=cy0+dy;return nx>=0&&nx<mc&&ny>=0&&ny<mr&&!vis[ny][nx];});
+        if(!opts.length){ st.pop(); continue; }
+        const [dx,dy]=opts[rnd(opts.length)], nx=cx0+dx, ny=cy0+dy;
+        vis[ny][nx]=true; grid[2*ny+1][2*nx+1]=0; grid[cy0*2+1+dy][cx0*2+1+dx]=0; st.push([nx,ny]);
+      }
+    }
+    function openCells(){ const a=[]; for(let y=1;y<ROWS;y+=2)for(let x=1;x<COLS;x+=2) a.push([x,y]); return a; }
+    function newLevel(){
+      const mc=6+Math.min(4,level), mr=4+Math.min(3,level); gen(mc,mr);
+      px=1; py=1; dir={x:0,y:0}; pending={x:0,y:0}; acc=0; stepMs=Math.max(70,110-level*4);
+      const cells=openCells().filter(([x,y])=>!(x===1&&y===1));
+      gems=[]; const n=Math.min(cells.length, 4+level);
+      for(let i=0;i<n && cells.length;i++){ gems.push(cells.splice(rnd(cells.length),1)[0]); }
+      timeLeft=levelMs;
+    }
+    const openAt=(x,y)=> x>=0&&x<COLS&&y>=0&&y<ROWS&&grid[y][x]===0;
+    function tick(){
+      if((pending.x||pending.y) && openAt(px+pending.x,py+pending.y)) dir=pending;
+      if((dir.x||dir.y) && openAt(px+dir.x,py+dir.y)){ px+=dir.x; py+=dir.y; }
+      else dir={x:0,y:0};
+      for(let i=gems.length-1;i>=0;i--) if(gems[i][0]===px&&gems[i][1]===py){ gems.splice(i,1); api.addScore(1); api.blip('bonus'); timeLeft=Math.min(levelMs,timeLeft+1500); }
+      if(!gems.length){ level++; api.blip('eat'); newLevel(); }
+    }
+    return {
+      unit:'stars', hint:TOUCH?'swipe to move · grab the stars':'arrows / wasd · grab the stars',
+      reset(){ level=0; levelMs=24000; newLevel(); },
+      frame(dt){ timeLeft-=dt; if(timeLeft<=0) return api.over(); acc+=dt; while(acc>=stepMs && api.alive()){ acc-=stepMs; tick(); } },
+      input(a){ if(a==='left')pending={x:-1,y:0}; else if(a==='right')pending={x:1,y:0}; else if(a==='up')pending={x:0,y:-1}; else if(a==='down')pending={x:0,y:1}; },
+      draw(){
+        const g=fieldGeom(COLS,ROWS); drawPanel(g.ox,g.oy,g.fw,g.fh);
+        const c=g.cell,at=(x,y)=>({x:g.ox+x*c,y:g.oy+y*c});
+        cx.fillStyle='#3a2c52';
+        for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++) if(grid[y][x]){ const p=at(x,y); rr(p.x,p.y,c,c,Math.max(1,c*0.18)); cx.fill(); }
+        for(const [x,y] of gems){ const p=at(x,y); drawStar(p.x+c/2,p.y+c/2,c*0.34,'#ffd84a'); }
+        const p=at(px,py); cx.fillStyle='#eb648c'; cx.beginPath(); cx.arc(p.x+c/2,p.y+c/2,c*0.34,0,7); cx.fill();
+        // time bar
+        const bw=g.fw*0.9, bx=g.ox+g.fw*0.05, by=g.oy+g.fh+Math.max(3,c*0.18);
+        cx.fillStyle='rgba(255,255,255,.15)'; cx.fillRect(bx,by,bw,Math.max(2,c*0.12));
+        cx.fillStyle='#f5c3cf'; cx.fillRect(bx,by,bw*Math.max(0,timeLeft/levelMs),Math.max(2,c*0.12));
+      },
+      overText(s){ return 'you gathered <b>'+s+'</b> star'+(s===1?'':'s')+'.'; }
+    };
+  }
+
+  /* ================= GAME 4 · STARLIGHT PONG ================= */
+  function makePong(api){
+    // normalised coords in [0,1] over the panel; paddle at the bottom
+    let bx,by,vx,vy,pxc,phw,speed,pad,rallies,started;
+    const PY=0.9;
+    function launch(){ const ang=(-0.35+Math.random()*0.7); vx=Math.sin(ang); vy=Math.cos(ang)*0.9; norm(); }
+    function norm(){ const m=Math.hypot(vx,vy)||1; vx=vx/m*speed; vy=vy/m*speed; }
+    return {
+      unit:'rallies', hint:TOUCH?'drag to move the paddle':'← → move the paddle', drag:true,
+      reset(){ bx=0.5; by=0.4; speed=0.00075; pxc=0.5; phw=0.14; rallies=0; started=false; launch(); },
+      frame(dt){
+        bx+=vx*dt; by+=vy*dt;
+        const r=0.022;
+        if(bx<r){ bx=r; vx=Math.abs(vx); api.blip('eat'); }
+        if(bx>1-r){ bx=1-r; vx=-Math.abs(vx); api.blip('eat'); }
+        if(by<r){ by=r; vy=Math.abs(vy); api.blip('eat'); }
+        if(vy>0 && by>=PY-r && by<=PY+0.02){
+          if(Math.abs(bx-pxc)<=phw+r){ by=PY-r; vy=-Math.abs(vy); const off=(bx-pxc)/phw; vx+=off*0.6; speed*=1.06; norm(); rallies++; api.addScore(1); api.blip('bonus'); }
+        }
+        if(by>1.05) return api.over();
+      },
+      input(a){ if(a==='left') pxc=Math.max(phw,pxc-0.06); else if(a==='right') pxc=Math.min(1-phw,pxc+0.06); },
+      pointer(xf){ pxc=Math.max(phw,Math.min(1-phw,xf)); },
+      draw(){
+        const v=view; drawPanel(v.x,v.y,v.w,v.h);
+        const X=f=>v.x+f*v.w, Y=f=>v.y+f*v.h, r=0.022*Math.min(v.w,v.h);
+        // paddle
+        cx.fillStyle='#eb648c'; const pw=phw*2*v.w, pxpx=X(pxc)-pw/2, pypx=Y(PY);
+        rr(pxpx,pypx,pw,Math.max(6,v.h*0.03),Math.max(3,v.h*0.015)); cx.fill();
+        // ball as starlight
+        drawStar(X(bx),Y(by),r,'#fff0b0');
+      },
+      overText(s){ return 'you kept <b>'+s+'</b> rall'+(s===1?'y':'ies')+' going.'; }
+    };
   }
 
   /* ---------- sound (soft retro blips) ---------- */
@@ -974,42 +1138,47 @@ renderStep();
   addEventListener('keydown', e=>{
     if(!unlocked) return;
     const k=e.key;
-    // secret: from the confirmation, any real key opens the arcade
-    if(!open){ if(MODKEYS[k]) return; e.preventDefault(); openArcade(); return; }
+    if(!open){ if(MODKEYS[k]) return; e.preventDefault(); openArcade(); return; }   // secret: any key opens the arcade
     if(k===' '||k==='ArrowUp'||k==='ArrowDown'||k==='ArrowLeft'||k==='ArrowRight') e.preventDefault();
     if(mode==='menu'){
       if(k==='ArrowUp'||k==='w'||k==='W') moveSel(-1);
       else if(k==='ArrowDown'||k==='s'||k==='S') moveSel(1);
       else if(k==='Enter'||k===' ') selectGame();
       else if(k==='Escape') quitArcade();
-    } else if(mode==='play'){
-      if(k==='ArrowUp'||k==='w'||k==='W') setDir(0,-1);
-      else if(k==='ArrowDown'||k==='s'||k==='S') setDir(0,1);
-      else if(k==='ArrowLeft'||k==='a'||k==='A') setDir(-1,0);
-      else if(k==='ArrowRight'||k==='d'||k==='D') setDir(1,0);
+    } else if(mode==='play' && G){
+      if(k==='ArrowUp'||k==='w'||k==='W') G.input&&G.input('up');
+      else if(k==='ArrowDown'||k==='s'||k==='S') G.input&&G.input('down');
+      else if(k==='ArrowLeft'||k==='a'||k==='A') G.input&&G.input('left');
+      else if(k==='ArrowRight'||k==='d'||k==='D') G.input&&G.input('right');
+      else if(k===' '||k==='Enter') G.input&&G.input('action');
       else if(k==='Escape') backToMenu();
       else if(k==='m'||k==='M') muted=!muted;
     } else if(mode==='over'){
-      if(k==='Enter'||k===' '||k==='p'||k==='P') startSnake();
+      if(k==='Enter'||k===' '||k==='p'||k==='P') startGame(curGame);
       else if(k==='Escape') backToMenu();
     }
   });
-  // ✕ steps back: play/over → menu, menu → leave the arcade
   quitBtn.addEventListener('click', ()=>{ if(mode==='play'||mode==='over') backToMenu(); else quitArcade(); });
-  overEl.addEventListener('click', ()=>{ if(mode==='over') startSnake(); });
-  cv.addEventListener('click', ()=>{ if(mode==='over') startSnake(); });
+  overEl.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
+  cv.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
+
+  function relX(clientX){ const r=cv.getBoundingClientRect(); return (clientX-r.left)/r.width; }
+  // pointer for paddle games on desktop
+  cv.addEventListener('mousemove', e=>{ if(mode==='play' && G && G.drag && G.pointer) G.pointer(relX(e.clientX)); });
 
   let tsx=0, tsy=0, tmoved=false;
   cv.addEventListener('touchstart', e=>{ const t=e.touches[0]; tsx=t.clientX; tsy=t.clientY; tmoved=false; }, {passive:true});
   cv.addEventListener('touchmove', e=>{
-    if(mode!=='play') return; e.preventDefault();
-    const t=e.touches[0], dx=t.clientX-tsx, dy=t.clientY-tsy;
+    if(mode!=='play'||!G) return; e.preventDefault();
+    const t=e.touches[0];
+    if(G.drag && G.pointer){ G.pointer(relX(t.clientX)); tmoved=true; return; }
+    const dx=t.clientX-tsx, dy=t.clientY-tsy;
     if(Math.abs(dx)+Math.abs(dy)<22) return;
-    if(Math.abs(dx)>Math.abs(dy)) setDir(dx>0?1:-1,0); else setDir(0,dy>0?1:-1);
+    if(Math.abs(dx)>Math.abs(dy)) G.input&&G.input(dx>0?'right':'left'); else G.input&&G.input(dy>0?'down':'up');
     tsx=t.clientX; tsy=t.clientY; tmoved=true;
   }, {passive:false});
-  cv.addEventListener('touchend', ()=>{ if(mode==='over'&&!tmoved) startSnake(); }, {passive:true});
-  addEventListener('resize', ()=>{ if(open) draw(); });
+  cv.addEventListener('touchend', ()=>{ if(mode==='over'&&!tmoved) startGame(curGame); else if(mode==='play'&&!tmoved&&G&&G.input) G.input('action'); }, {passive:true});
+  addEventListener('resize', ()=>{ if(open) drawFrame(); });
 })();
 </script>
 </body>
