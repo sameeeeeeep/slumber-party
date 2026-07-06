@@ -636,7 +636,7 @@ const GFORM = {
 const GLEADER = {
   id: '1FAIpQLScJjLXC8DX-_TYZr2elp5QYmmzma3LYM_B9IivlaMN6HZ3nkA',
   insta: '@secretslumberparty',
-  sheetCsv: '',                              // <-- published-to-web CSV url of the responses sheet
+  sheetCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSa3ZUjT8BzU-f-s56em5fiKcdvIgXPwk3JHM2VYSRSIpIpxiNL7nvooXm7DhIJC-T-twIcrYoCXcED/pub?output=csv',
   handleField: 'entry.434204412', handleCol: 'instagram',
   codeField:   'entry.1112728021',
   verifiedField:'entry.846556357', verifiedCol: 'verified?',
@@ -889,7 +889,7 @@ renderStep();
     const rows = (typeof loadScores==='function') ? await loadScores() : null;
     if(mode!=='over') return;                                       // player already left
     const board = rows ? computeBoard(rows, curGame, PLAYER&&PLAYER.handle, hi) : null;
-    if(!board || (!board.top.length && !board.you)){ boardEl.innerHTML='<span class="gb-empty">be the first on the board ✦</span>'; showVerify(); return; }
+    if(!board || !board.top.length){ boardEl.innerHTML='<span class="gb-empty">be the first on the board ✦</span>'; showVerify(); return; }
     let h='<ol class="gb-list">';
     for(const e of board.top){
       const mine = board.you && !board.you.pending && e.handle===board.you.handle;
