@@ -117,6 +117,15 @@
     display:flex; flex-direction:column; align-items:center; gap:.5rem; opacity:.9; transition:opacity .5s ease; pointer-events:none; }
   .scroll-cue .line{ width:1px; height:34px; background:linear-gradient(var(--rose),transparent); animation:drop 2s infinite; }
   @keyframes drop{ 0%{transform:scaleY(0);transform-origin:top;opacity:0} 40%{transform:scaleY(1);opacity:1} 100%{transform:scaleY(1);transform-origin:bottom;opacity:0} }
+  .navarrows{ position:fixed; right:clamp(.8rem,2.6vw,1.5rem); bottom:clamp(1rem,4vh,1.8rem); z-index:19;
+    display:flex; flex-direction:column; gap:.55rem; transition:opacity .4s ease; }
+  .navbtn{ width:44px; height:44px; border-radius:100px; display:grid; place-items:center; cursor:pointer;
+    color:var(--rose); border:1px solid var(--tag-border); background:var(--card-a); backdrop-filter:blur(5px);
+    transition:transform .15s ease, background .2s ease, color .2s ease, opacity .3s ease; }
+  .navbtn svg{ width:20px; height:20px; }
+  .navbtn:hover{ transform:translateY(-1px); background:var(--rose); color:#fff; }
+  .navbtn:focus-visible{ outline:2px solid var(--rose); outline-offset:2px; }
+  .navbtn[disabled]{ opacity:.32; pointer-events:none; }
 
   #veil{ position:fixed; inset:0; z-index:30; background:var(--veil-bg); display:grid; place-items:center; transition:opacity .8s ease; }
   #veil .l{ font-family:var(--script); font-weight:700; color:var(--rose); font-size:2rem; animation:pulse 1.6s ease-in-out infinite; }
@@ -134,6 +143,11 @@
   .step .q .sub{ color:var(--brand-soft); font-style:italic; }
   .step input, .step textarea{ width:100%; background:var(--input-bg); border:none; border-bottom:2px solid var(--input-border);
     color:#fff; font-family:var(--mono); font-size:1.4em; letter-spacing:.02em; padding:.4em .2em; transition:border-color .2s ease; }
+  /* instagram field: fixed "@" prefix, user types only their handle */
+  .at-field{ display:flex; align-items:baseline; border-bottom:2px solid var(--input-border); transition:border-color .2s ease; }
+  .at-field:focus-within{ border-color:var(--brand-yellow); }
+  .at-field .at{ font-family:var(--mono); font-size:1.4em; color:var(--brand-soft); padding:.4em .05em .4em .2em; }
+  .at-field input[name="handle"]{ border:none; flex:1; padding-left:.05em; }
   .choices{ display:flex; flex-wrap:wrap; gap:.5em; margin-top:.2em; }
   .choice{ font-family:var(--mono); font-size:1.25em; color:#fff; cursor:pointer; border:1px solid var(--input-border);
     background:var(--input-bg); border-radius:100px; padding:.5em 1.1em; transition:background .15s ease, color .15s ease, border-color .15s ease; }
@@ -298,7 +312,7 @@
           </div>
           <div class="step" data-name="handle">
             <p class="q">your <span class="sub">instagram?</span></p>
-            <input name="handle" type="text" placeholder="@yourhandle" required />
+            <div class="at-field"><span class="at">@</span><input name="handle" type="text" placeholder="yourhandle" autocapitalize="off" autocorrect="off" spellcheck="false" required /></div>
           </div>
           <div class="step" data-name="email">
             <p class="q">best <span class="sub">email?</span></p>
@@ -363,6 +377,15 @@
 
   <div class="progress" id="progress"></div>
   <div class="scroll-cue" id="cue"><span>scroll</span><span class="line"></span></div>
+  <!-- for anyone who doesn't scroll: step through the beats -->
+  <div class="navarrows" id="navArrows">
+    <button class="navbtn" id="navUp" aria-label="Previous">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
+    </button>
+    <button class="navbtn" id="navDown" aria-label="Next">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  </div>
   <div id="veil"><div class="l">shhh…</div></div>
 
   <!-- scroll grooves: one snap detent per beat + the form (heights defined in CSS place each point) -->
@@ -551,6 +574,32 @@ document.getElementById('applyLink').addEventListener('click', e=>{
   e.preventDefault(); window.scrollTo({ top:document.body.scrollHeight, behavior:'smooth' });
 });
 
+/* ---------- next / back arrows: step through the snap grooves (for anyone who doesn't scroll) ---------- */
+const navUp=document.getElementById('navUp'), navDown=document.getElementById('navDown');
+const snapTops=()=>[...document.querySelectorAll('.scroll-space section')].map(s=>s.offsetTop);
+let snapRestore=0;
+function goSnap(dir){
+  const tops=snapTops(), y=scrollY, eps=12, maxY=document.body.scrollHeight-innerHeight;
+  let target;
+  if(dir>0){ target=tops.find(v=>v>y+eps); if(target==null) target=maxY; }
+  else { const before=tops.filter(v=>v<y-eps); target=before.length? before[before.length-1] : 0; }
+  target=Math.max(0, Math.min(target,maxY));
+  // mandatory scroll-snap fights a programmatic scroll — turn it off for the animation, restore after
+  const root=document.documentElement;
+  root.style.scrollSnapType='none';
+  window.scrollTo({ top:target, behavior:'smooth' });
+  clearTimeout(snapRestore); snapRestore=setTimeout(()=>{ root.style.scrollSnapType=''; }, 900);
+}
+navUp && navUp.addEventListener('click', ()=>goSnap(-1));
+navDown && navDown.addEventListener('click', ()=>goSnap(1));
+// dim each arrow at the ends
+function syncNav(){
+  const y=scrollY, maxY=document.body.scrollHeight-innerHeight;
+  if(navUp) navUp.disabled = y<12;
+  if(navDown) navDown.disabled = y>maxY-12;
+}
+addEventListener('scroll', syncNav, {passive:true}); addEventListener('resize', syncNav); syncNav();
+
 /* ---------- step-based form ---------- */
 const form=document.getElementById('apply');
 const stepsEls=[...form.querySelectorAll('.step')];
@@ -724,6 +773,7 @@ function computeBoard(rows, gameKey, myHandle, myScore){
 
 async function submitForm(){
   const data=Object.fromEntries(new FormData(form).entries());
+  if(data.handle!=null) data.handle='@'+String(data.handle).trim().replace(/^@+/,'');   // store as @handle (the "@" is shown in the field)
   PLAYER = data;                                        // remember the player for the leaderboard
   if(GFORM.id){
     const body=new URLSearchParams();
@@ -754,8 +804,13 @@ renderStep();
   const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit');
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
+  const navArrows=document.getElementById('navArrows');
   const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
   const rnd=n=>(Math.random()*n)|0;
+  // hide the page chrome (masthead + scroll arrows) while the frozen arcade is up
+  function setChrome(show){
+    for(const el of [masthead, navArrows]){ if(!el) continue; el.style.opacity=show?'':'0'; el.style.pointerEvents=show?'':'none'; }
+  }
 
   let unlocked=false, open=false, mode=null, sel=0;   // mode: 'menu' | 'play' | 'over' | null
   let curGame='snake', score=0, hi=0, muted=false, stars=[];
@@ -804,7 +859,7 @@ renderStep();
   function openArcade(){
     if(!unlocked||open) return; open=true;
     gameEl.classList.add('on');
-    if(masthead){ masthead.style.opacity='0'; masthead.style.pointerEvents='none'; }
+    setChrome(false);
     freeze(); seedStars();
     mode='menu'; sel=0; renderMenu(); applyMode(); drawFrame();
   }
@@ -842,7 +897,7 @@ renderStep();
     curGame=key; open=true; mode='play';
     held.left=held.right=held.up=held.down=false;
     gameEl.classList.add('on');
-    if(masthead){ masthead.style.opacity='0'; masthead.style.pointerEvents='none'; }
+    setChrome(false);
     freeze();
     score=0; scoreEl.textContent='0';
     hi=hiFor(key); hiEl.textContent=hi;
@@ -899,7 +954,7 @@ renderStep();
   function quitArcade(){
     open=false; mode=null; clearTimeout(loopTimer); G=null;
     gameEl.classList.remove('on');
-    if(masthead){ masthead.style.opacity=''; masthead.style.pointerEvents=''; }
+    setChrome(true);
     thaw();
   }
 
