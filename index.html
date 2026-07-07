@@ -1444,8 +1444,11 @@ renderStep();
 
   /* ---------- controls ---------- */
   addEventListener('keydown', e=>{
-    // bypass hotkey: jump straight into the arcade from anywhere (skips the form). "`" or Shift+~
-    if(e.key==='`' || e.key==='~'){ e.preventDefault(); if(!open){ unlock(); openArcade(); } return; }
+    // bypass hotkey: press "k" to jump straight into the arcade (skips the form) — ignored while typing in a field
+    if((e.key==='k'||e.key==='K') && !open){
+      const el=document.activeElement;
+      if(!(el && /^(INPUT|TEXTAREA)$/.test(el.tagName))){ e.preventDefault(); unlock(); openArcade(); return; }
+    }
     if(!unlocked || !open) return;   // otherwise keys only act inside the arcade (enter via the button/hotkey)
     const k=e.key;
     if(k===' '||k==='ArrowUp'||k==='ArrowDown'||k==='ArrowLeft'||k==='ArrowRight') e.preventDefault();
