@@ -259,6 +259,26 @@
   .go-board .gb-you{ font-family:var(--mono); font-size:.92em; color:var(--brand-yellow); margin-top:.3em; }
   .go-board .gb-you i{ color:var(--brand-soft); font-style:normal; opacity:.85; }
   .go-board .gb-empty{ font-family:var(--mono); font-size:.95em; color:var(--brand-soft); }
+  .go-board .see-all{ display:inline-block; margin-top:.5em; font-family:var(--mono); font-size:.95em; color:var(--brand-yellow);
+    cursor:pointer; border-bottom:1px dotted var(--brand-yellow); }
+  /* full paginated leaderboard */
+  #gboard .lb-inner{ width:min(20em,96%); max-height:100%; overflow-y:auto; text-align:center; }
+  .lb-title{ font-family:var(--pixel); font-size:.62em; color:var(--brand-yellow); line-height:1.4; margin-bottom:.6em;
+    text-shadow:2px 0 0 #eb648c,-2px 0 0 #6bc7ff; text-transform:lowercase; }
+  .lb-list{ font-family:var(--mono); font-size:.92em; }
+  .lb-row{ display:flex; align-items:center; gap:.5em; padding:.03em .2em; line-height:1.15; color:#fff; border-radius:.3em; }
+  .lb-row .lb-rank{ width:1.8em; text-align:right; color:var(--brand-soft); }
+  .lb-row .lb-h{ flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-row .lb-s{ color:var(--brand-yellow); font-variant-numeric:tabular-nums; }
+  .lb-row.lb-top .lb-rank{ color:var(--brand-yellow); }             /* the coveted top ranks */
+  .lb-row.lb-me{ background:rgba(235,100,140,.22); }
+  .lb-row.lb-me .lb-h, .lb-row.lb-me .lb-rank{ color:var(--brand-yellow); }
+  .lb-nav{ display:flex; align-items:center; justify-content:center; gap:1.2em; margin-top:.55em; }
+  .lb-btn{ font-family:var(--mono); font-size:1.3em; color:#fff; background:none; border:none; cursor:pointer; padding:0 .2em; line-height:1; }
+  .lb-btn[disabled]{ opacity:.3; pointer-events:none; }
+  .lb-page{ font-family:var(--mono); font-size:.9em; color:var(--brand-soft); min-width:4em; }
+  .lb-foot{ font-family:var(--mono); font-size:.78em; line-height:1.35; color:rgba(255,255,255,.7); margin-top:.5em; }
+  .lb-foot b{ color:var(--brand-yellow); }
   .g-overlay .go-verify2{ font-family:var(--mono); font-size:.82em; line-height:1.35; color:var(--brand-soft); margin-top:.55em; }
   .g-overlay .go-verify2 .go-code{ color:var(--brand-yellow); letter-spacing:.14em; }
   /* the arcade select screen (Nintendo-style menu) */
@@ -383,6 +403,18 @@
               <div class="go-board" id="goboard"></div>
               <p class="go-verify2" id="goverify"></p>
               <p class="go-foot" id="gofoot"></p>
+            </div>
+          </div>
+          <div class="g-overlay off" id="gboard">
+            <div class="lb-inner">
+              <p class="lb-title" id="lbtitle">leaderboard</p>
+              <div class="lb-list" id="lblist"></div>
+              <div class="lb-nav">
+                <button class="lb-btn" id="lbprev" aria-label="previous page">◂</button>
+                <span class="lb-page" id="lbpage">1 / 1</span>
+                <button class="lb-btn" id="lbnext" aria-label="next page">▸</button>
+              </div>
+              <p class="lb-foot" id="lbfoot"></p>
             </div>
           </div>
         </div>
@@ -810,7 +842,7 @@ function computeBoard(rows, gameKey, myHandle, myScore){
     if(mine && mine.score>=myBest) you={rank:mine.rank, score:myBest, handle:me, pending:false};
     else you={rank:arr.filter(e=>e.handle!==me && e.score>myBest).length+1, score:myBest, handle:me, pending:true};
   }
-  return { top:arr.slice(0,6), you };
+  return { top:arr.slice(0,5), all:arr, you };   // top = inline preview; all = full paginated board
 }
 
 async function submitForm(){
@@ -843,6 +875,9 @@ renderStep();
   const scoreEl=document.getElementById('gscore'), hiEl=document.getElementById('ghi'), unitEl=document.getElementById('gunit');
   const overEl=document.getElementById('gover'), titleEl=document.getElementById('gotitle'), subEl=document.getElementById('gosub');
   const boardEl=document.getElementById('goboard'), verifyEl=document.getElementById('goverify'), footEl=document.getElementById('gofoot');
+  const gboard=document.getElementById('gboard'), lblist=document.getElementById('lblist'), lbtitle=document.getElementById('lbtitle'),
+        lbpage=document.getElementById('lbpage'), lbprev=document.getElementById('lbprev'), lbnext=document.getElementById('lbnext'), lbfoot=document.getElementById('lbfoot');
+  let lastBoard=null, lbPage=0;
   const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit'), muteBtn=document.getElementById('gmute');
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
@@ -892,9 +927,10 @@ renderStep();
   function applyMode(){
     gmenu.classList.toggle('off', mode!=='menu');
     overEl.classList.toggle('off', mode!=='over');
+    gboard.classList.toggle('off', mode!=='board');
     hud.style.visibility = (mode==='play'||mode==='over') ? 'visible' : 'hidden';
     if(mode!=='play') toastEl.style.opacity='0';
-    quitBtn.title = (mode==='menu'||mode===null) ? 'leave the arcade' : 'back to menu';
+    quitBtn.title = (mode==='board') ? 'back' : (mode==='menu'||mode===null) ? 'leave the arcade' : 'back to menu';
     if(gamepad){ const show=(mode==='play' && useGamepad()); gamepad.classList.toggle('on', show); gamepad.setAttribute('aria-hidden', show?'false':'true'); if(show) layoutGamepad(); }
   }
   // the pink deck starts right below the CRT screen, covering the floppy + keyboard
@@ -912,7 +948,7 @@ renderStep();
     gameEl.classList.add('on');
     setChrome(false);
     if(arcadeChrome) arcadeChrome.classList.add('on');   // page-level leave + mute, top-right
-    freeze(); seedStars(); startMusic();
+    freeze(); seedStars(); playTrack('menu');
     mode='menu'; sel=0; renderMenu(); applyMode(); drawFrame();
   }
   function renderMenu(){
@@ -928,7 +964,7 @@ renderStep();
   }
   function moveSel(d){ sel=(sel+d+GAMES.length)%GAMES.length; renderMenu(); blip('eat'); }
   function selectGame(){ const g=GAMES[sel]; if(g) startGame(g.key); }
-  function backToMenu(){ mode='menu'; clearTimeout(loopTimer); sel=0; renderMenu(); applyMode(); drawFrame(); }
+  function backToMenu(){ mode='menu'; clearTimeout(loopTimer); sel=0; renderMenu(); applyMode(); drawFrame(); playTrack('menu'); }
 
   // Freeze the scroll scene at the form framing (the little computer, screen facing us) while playing.
   function freeze(){ const p=(typeof curP==='number')?curP:0.96; window.__p=Math.max(p,0.94); if(typeof updateZoom==='function') updateZoom(window.__p); }
@@ -958,7 +994,7 @@ renderStep();
     G=def.make(api);
     if(G.reset) G.reset();
     applyMode();
-    showToast(G.hint||'');
+    showToast(G.hint||''); playTrack(key);   // each game its own tune
     lastT=Date.now(); clearTimeout(loopTimer); loop();
   }
   function loop(){
@@ -976,6 +1012,7 @@ renderStep();
     const isBest = score>hi;
     if(isBest){ hi=score; setHi(curGame,score); hiEl.textContent=hi; }
     titleEl.textContent = isBest ? 'new best!' : 'game over';
+    playTrack('menu'); sting(isBest && score>0 ? 'win' : 'lose');   // switch to ambient + a win/lose jingle
     if(isBest && score>0 && typeof postScore==='function') postScore(curGame, score);
     subEl.innerHTML = (G&&G.overText) ? G.overText(score) : ('you scored <b>'+score+'</b>.');
     footEl.innerHTML=(TOUCH?'tap to replay':'press <b>enter</b> to replay')+'&nbsp;&nbsp;·&nbsp;&nbsp;'+(TOUCH?'✕ for menu':'<b>esc</b> for menu');
@@ -985,12 +1022,14 @@ renderStep();
   }
   // on-CRT leaderboard for the current game (+ player standing + verify prompt)
   async function renderBoard(){
+    lastBoard=null;
     const showVerify=()=>{ if(codeMapped() && hi>0) verifyEl.innerHTML='verify to add to leaderboard — DM <b class="go-code">'+verifyCode()+'</b> to '+esc(GLEADER.insta||'@us')+' from your ID'; };
     if(!GLEADER.sheetCsv){ showVerify(); return; }
     boardEl.innerHTML='<span class="gb-empty">loading the board…</span>';
     const rows = (typeof loadScores==='function') ? await loadScores() : null;
     if(mode!=='over') return;
     const board = rows ? computeBoard(rows, curGame, PLAYER&&PLAYER.handle, hi) : null;
+    lastBoard=board;
     if(!board || !board.top.length){ boardEl.innerHTML='<span class="gb-empty">be the first on the board ✦</span>'; showVerify(); return; }
     let h='<ol class="gb-list">';
     for(const e of board.top){
@@ -1000,9 +1039,33 @@ renderStep();
     h+='</ol>';
     if(board.you && (board.you.pending || board.you.rank>board.top.length))
       h+='<p class="gb-you">you · #'+board.you.rank+' · '+board.you.score+(board.you.pending?' <i>(pending)</i>':'')+'</p>';
+    if(board.all.length>board.top.length) h+='<span class="see-all">see all '+board.all.length+' ▸</span>';
     boardEl.innerHTML=h;
     if(!board.you || board.you.pending) showVerify();
   }
+  /* ---------- full paginated leaderboard ---------- */
+  function openLeaderboard(){
+    if(!lastBoard || !lastBoard.all || !lastBoard.all.length) return;
+    lbPage = lastBoard.you ? Math.floor((lastBoard.you.rank-1)/10) : 0;   // jump to the player's page
+    mode='board'; applyMode(); renderLBPage(); drawFrame();
+  }
+  function renderLBPage(){
+    const all=(lastBoard&&lastBoard.all)||[], you=lastBoard&&lastBoard.you, per=10;
+    const pages=Math.max(1, Math.ceil(all.length/per)); lbPage=Math.max(0, Math.min(lbPage, pages-1));
+    const slice=all.slice(lbPage*per, lbPage*per+per);
+    let h='';
+    for(const e of slice){
+      const mine = you && !you.pending && e.handle===you.handle;
+      h+='<div class="lb-row'+(mine?' lb-me':'')+(e.rank<=10?' lb-top':'')+'"><span class="lb-rank">'+e.rank+'</span><span class="lb-h">@'+esc(e.handle)+'</span><span class="lb-s">'+e.score+'</span></div>';
+    }
+    lblist.innerHTML=h;
+    lbtitle.textContent=((GAMES.find(g=>g.key===curGame)||{}).name||'leaderboard');
+    lbpage.textContent=(lbPage+1)+' / '+pages;
+    lbprev.disabled=lbPage<=0; lbnext.disabled=lbPage>=pages-1;
+    lbfoot.innerHTML=(you? 'you · #<b>'+you.rank+'</b> · '+you.score+(you.pending?' (pending)':'')+'&nbsp;&nbsp;·&nbsp;&nbsp;':'')+(TOUCH?'✕ to go back':'esc to go back');
+  }
+  function lbNav(d){ lbPage+=d; renderLBPage(); blip('eat'); }
+  function closeLeaderboard(){ mode='over'; applyMode(); drawFrame(); }
   function quitArcade(){
     open=false; mode=null; clearTimeout(loopTimer); G=null;
     gameEl.classList.remove('on');
@@ -1250,40 +1313,57 @@ renderStep();
     }catch(e){}
   }
 
-  /* ---------- arcade music (a gentle looping chiptune: C–Am–F–G arpeggio + bass) ---------- */
-  let music=null;
-  const MEL=[262,330,392,523, 220,262,330,440, 175,220,262,349, 196,247,294,392];  // 16 steps
-  const BASS={0:131, 4:110, 8:87, 12:98};                                            // root per chord
+  /* ---------- arcade music (a distinct looping chiptune per screen/game + win/lose stings) ---------- */
+  let music=null, curTrack='menu';
+  const TRACKS={
+    menu:        { spb:.26, wave:'triangle', mel:[262,330,392,523,220,262,330,440,175,220,262,349,196,247,294,392], bass:{0:131,4:110,8:87,12:98}, peak:.9,  bpeak:.34, vol:.075 },  // dreamy C–Am–F–G
+    snake:       { spb:.17, wave:'square',   mel:[523,659,587,784,659,523,587,440], bass:{0:131,4:196}, peak:.7,  bpeak:.3,  vol:.06 },   // bouncy, bright
+    pillowstack: { spb:.19, wave:'square',   mel:[440,523,494,587,523,440,392,330], bass:{0:110,4:165}, peak:.7,  bpeak:.32, vol:.06 },   // minor, marchy
+    dreammaze:   { spb:.23, wave:'triangle', mel:[294,349,392,440,392,349,330,294], bass:{0:147,4:110}, peak:.75, bpeak:.3,  vol:.06 },   // wandering, mysterious
+    pong:        { spb:.28, wave:'sine',     mel:[523,392,659,523,784,659,523,392], bass:{0:131,4:98},  peak:.85, bpeak:.3,  vol:.06 }    // sparse, spacey
+  };
   function note(dest, freq, t, dur, type, peak){
     const o=actx.createOscillator(), g=actx.createGain(); o.type=type; o.frequency.value=freq;
     o.connect(g); g.connect(dest);
     g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.95);
     o.start(t); o.stop(t+dur+0.02);
   }
-  function startMusic(){
-    if(music||muted) return;
+  function startLoop(key){
+    const T=TRACKS[key]||TRACKS.menu;
     try{
       const c=ac(); const master=c.createGain(); master.gain.value=0.0001; master.connect(c.destination);
-      master.gain.exponentialRampToValueAtTime(0.075, c.currentTime+0.8);   // gentle fade-in
-      const spb=0.26; let step=0, next=c.currentTime+0.15;
+      master.gain.exponentialRampToValueAtTime(T.vol, c.currentTime+0.6);
+      const L=T.mel.length; let step=0, next=c.currentTime+0.12;
       const tick=()=>{
         while(next < c.currentTime + 0.35){
-          note(master, MEL[step%MEL.length], next, spb*0.9, 'triangle', 0.9);
-          const b=BASS[step%16]; if(b) note(master, b, next, spb*3.6, 'square', 0.35);
-          step++; next+=spb;
+          note(master, T.mel[step%L], next, T.spb*0.9, T.wave, T.peak);
+          const b=T.bass[step%L]; if(b) note(master, b, next, T.spb*3.2, 'square', T.bpeak);
+          step++; next+=T.spb;
         }
       };
-      tick(); const timer=setInterval(tick, 60);
-      music={master, timer};
+      tick(); music={key, master, timer:setInterval(tick,60)};
     }catch(e){}
   }
-  function stopMusic(){
+  function stopLoop(){
     if(!music) return; const m=music; music=null; clearInterval(m.timer);
-    try{ m.master.gain.setTargetAtTime(0.0001, actx.currentTime, 0.25); setTimeout(()=>{ try{ m.master.disconnect(); }catch(e){} }, 700); }catch(e){}
+    try{ m.master.gain.setTargetAtTime(0.0001, actx.currentTime, 0.18); setTimeout(()=>{ try{ m.master.disconnect(); }catch(e){} }, 600); }catch(e){}
+  }
+  function playTrack(key){ curTrack=key; if(muted) return; if(music&&music.key===key) return; stopLoop(); startLoop(key); }
+  function stopMusic(){ curTrack=null; stopLoop(); }
+  // one-shot jingle when a game ends
+  function sting(kind){
+    if(muted) return;
+    try{
+      const c=ac(); const g=c.createGain(); g.gain.value=0.09; g.connect(c.destination); const t0=c.currentTime+0.02;
+      const seq = kind==='win' ? [[523,0,.13],[659,.1,.13],[784,.2,.13],[1047,.3,.2],[880,.52,.12],[1047,.62,.28]]
+                                : [[392,0,.2],[330,.16,.2],[262,.32,.22],[196,.5,.4]];
+      for(const [f,dt,d] of seq) note(g, f, t0+dt, d, kind==='win'?'square':'triangle', 0.9);
+      setTimeout(()=>{ try{ g.disconnect(); }catch(e){} }, 1600);
+    }catch(e){}
   }
   function toggleMute(){
     muted=!muted;
-    if(muted) stopMusic(); else if(open) startMusic();
+    if(muted) stopLoop(); else if(open) startLoop(curTrack||'menu');
     if(muteBtn){ muteBtn.classList.toggle('off', muted); muteBtn.title = muted?'sound off':'sound on'; }
   }
 
@@ -1308,13 +1388,22 @@ renderStep();
     } else if(mode==='over'){
       if(k==='Enter'||k===' '||k==='p'||k==='P') startGame(curGame);
       else if(k==='Escape') backToMenu();
+    } else if(mode==='board'){
+      if(k==='ArrowLeft'||k==='a'||k==='A') lbNav(-1);
+      else if(k==='ArrowRight'||k==='d'||k==='D') lbNav(1);
+      else if(k==='Escape') closeLeaderboard();
     }
   });
   addEventListener('keyup', e=>{ const d=KEYDIR[e.key]; if(d) held[d]=false; });
-  quitBtn.addEventListener('click', ()=>{ if(mode==='play'||mode==='over') backToMenu(); else quitArcade(); });
+  function goBack(){ if(mode==='board') closeLeaderboard(); else if(mode==='play'||mode==='over') backToMenu(); else quitArcade(); }
+  quitBtn.addEventListener('click', goBack);
   if(muteBtn) muteBtn.addEventListener('click', toggleMute);
   overEl.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
   cv.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
+  // "see all" opens the paginated board; its own click must not also trigger a replay
+  boardEl.addEventListener('click', e=>{ if(e.target.closest('.see-all')){ e.stopPropagation(); openLeaderboard(); } });
+  lbprev.addEventListener('click', ()=>lbNav(-1));
+  lbnext.addEventListener('click', ()=>lbNav(1));
 
   function relX(clientX){ const r=cv.getBoundingClientRect(); return (clientX-r.left)/r.width; }
   // pointer for paddle games on desktop
