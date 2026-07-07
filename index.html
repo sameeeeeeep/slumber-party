@@ -71,6 +71,8 @@
   #tvtint{ position:absolute; inset:0; background:var(--tv-tint); }
   #scanlines{ position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:overlay;
     background:repeating-linear-gradient(0deg, rgba(0,0,0,.5) 0 1px, transparent 1px 3px); }
+  /* dark scrim over the static/noise so the text reads clearly (sits below #tvcontent) */
+  #noisescrim{ position:absolute; inset:0; pointer-events:none; background:rgba(18,10,22,.42); }
   #tvcontent{ position:absolute; inset:0; display:grid; place-items:center; text-align:center;
     padding:6% 7%; font-size:16px; }
 
@@ -343,6 +345,7 @@
     <canvas id="pixelbg"></canvas>
     <div id="tvtint"></div>
     <div id="scanlines"></div>
+    <div id="noisescrim"></div>
     <div id="tvcontent">
       <div class="beat" id="b1" data-in="-0.05" data-out="0.13"><div class="inner">
         <h2>khushi has a<br><span class="sub">secret</span> to share</h2>
@@ -959,8 +962,7 @@ renderStep();
 
   function unlock(){
     if(unlocked) return; unlocked=true;
-    const eb=document.getElementById('enterArcade'); if(eb) eb.addEventListener('click', e=>{ e.stopPropagation(); openArcade(); });
-    if(fdone) fdone.addEventListener('click', openArcade);   // clicking the confirmation (or any key) also enters
+    const eb=document.getElementById('enterArcade'); if(eb) eb.addEventListener('click', e=>{ e.stopPropagation(); openArcade(); });   // the CTA is the only visible way in
   }
   window.__slumberGame={ unlock, start:openArcade };
 
@@ -1451,11 +1453,11 @@ renderStep();
   }
 
   /* ---------- controls ---------- */
-  const MODKEYS={ 'Tab':1,'Shift':1,'Control':1,'Alt':1,'Meta':1,'CapsLock':1,'Fn':1 };
   addEventListener('keydown', e=>{
-    if(!unlocked) return;
+    // bypass hotkey: jump straight into the arcade from anywhere (skips the form). "`" or Shift+~
+    if(e.key==='`' || e.key==='~'){ e.preventDefault(); if(!open){ unlock(); openArcade(); } return; }
+    if(!unlocked || !open) return;   // otherwise keys only act inside the arcade (enter via the button/hotkey)
     const k=e.key;
-    if(!open){ if(MODKEYS[k]) return; e.preventDefault(); openArcade(); return; }   // secret: any key opens the arcade
     if(k===' '||k==='ArrowUp'||k==='ArrowDown'||k==='ArrowLeft'||k==='ArrowRight') e.preventDefault();
     if(mode==='menu'){
       if(k==='ArrowUp'||k==='w'||k==='W') moveSel(-1);
