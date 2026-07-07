@@ -54,13 +54,13 @@
   #roomimg{ width:100%; height:100%; object-fit:cover; will-change:transform; filter:var(--room-dim); }
   /* neon + stickers, locked to the computer (rect + transform set in JS to mirror #roomimg) */
   #roomdeco{ position:absolute; left:0; top:0; will-change:transform; pointer-events:none; }
-  #roomdeco > span{ position:absolute; transform:translate(-50%,-50%) rotate(var(--rot,0deg)); line-height:1; white-space:nowrap; }
+  #roomdeco > *{ position:absolute; transform:translate(-50%,-50%) rotate(var(--rot,0deg)); line-height:1; white-space:nowrap; }
   .neon{ font-family:var(--display); font-weight:700; text-transform:lowercase; color:#fff; font-size:2.1vw; animation:neonFlicker 5s infinite; }
   .n-star,.n-bolt{ text-shadow:0 0 3px #fff,0 0 9px #f88aa6,0 0 18px #eb648c,0 0 30px #eb648c; }
   .n-arcade{ font-family:var(--pixel); font-size:1.25vw; letter-spacing:.12em; text-shadow:0 0 3px #fff,0 0 9px #6bc7ff,0 0 20px #6bc7ff,0 0 32px #6bc7ff; }
   .n-heart{ text-shadow:0 0 3px #fff,0 0 9px #ffd84a,0 0 18px #ec642a,0 0 30px #ec642a; }
   @keyframes neonFlicker{ 0%,17%,19%,55%,57%,100%{opacity:.92} 18%{opacity:.35} 56%{opacity:.55} 80%{opacity:1} }
-  .sticker{ font-size:2.5vw; filter:drop-shadow(0 2px 3px rgba(80,30,50,.4)); }
+  .sticker{ width:5vw; height:auto; filter:drop-shadow(0 2px 4px rgba(80,30,50,.32)); }
 
   /* ---- the TV screen; grows from the CRT rect to the full viewport ---- */
   #tv{ position:fixed; z-index:2; overflow:hidden; pointer-events:none; background:#1b1220;
@@ -331,11 +331,13 @@
       <span class="neon n-arcade" style="left:76%;top:10%">arcade</span>
       <span class="neon n-heart" style="left:88%;top:46%">♥</span>
       <span class="neon n-bolt" style="left:9%;top:52%">✧</span>
-      <span class="sticker" style="left:39.5%;top:19%;--rot:-14deg">⭐</span>
-      <span class="sticker" style="left:61.5%;top:22.5%;--rot:12deg">✨</span>
-      <span class="sticker" style="left:40%;top:55%;--rot:-8deg">💖</span>
-      <span class="sticker" style="left:60.5%;top:57%;--rot:10deg">🕹️</span>
-      <span class="sticker" style="left:50%;top:62.5%;--rot:-5deg">🌙</span>
+      <img class="sticker" src="assets/sticker-star.png"    alt="" style="left:39%;top:18.5%;--rot:-12deg;width:5vw">
+      <img class="sticker" src="assets/sticker-sparkle.png" alt="" style="left:61.5%;top:20.5%;--rot:13deg;width:4.6vw">
+      <img class="sticker" src="assets/sticker-bow.png"     alt="" style="left:35%;top:33%;--rot:-14deg;width:5.4vw">
+      <img class="sticker" src="assets/sticker-flower.png"  alt="" style="left:65%;top:35%;--rot:11deg;width:5vw">
+      <img class="sticker" src="assets/sticker-heart.png"   alt="" style="left:40.5%;top:57%;--rot:-8deg;width:5vw">
+      <img class="sticker" src="assets/sticker-peach.png"   alt="" style="left:60%;top:58.5%;--rot:9deg;width:4.6vw">
+      <img class="sticker" src="assets/sticker-pillow.png"  alt="" style="left:49%;top:66%;--rot:-4deg;width:6vw">
     </div>
   </div>
 
