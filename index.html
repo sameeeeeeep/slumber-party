@@ -931,7 +931,7 @@ renderStep();
     hud.style.visibility = (mode==='play'||mode==='over') ? 'visible' : 'hidden';
     if(mode!=='play') toastEl.style.opacity='0';
     quitBtn.title = (mode==='board') ? 'back' : (mode==='menu'||mode===null) ? 'leave the arcade' : 'back to menu';
-    if(gamepad){ const show=(mode==='play' && useGamepad()); gamepad.classList.toggle('on', show); gamepad.setAttribute('aria-hidden', show?'false':'true'); if(show) layoutGamepad(); }
+    if(gamepad){ const show=(mode!==null && useGamepad()); gamepad.classList.toggle('on', show); gamepad.setAttribute('aria-hidden', show?'false':'true'); if(show) layoutGamepad(); }
   }
   // the pink deck starts right below the CRT screen, covering the floppy + keyboard
   function layoutGamepad(){
@@ -960,7 +960,7 @@ renderStep();
       li.addEventListener('click', ()=>{ sel=i; renderMenu(); selectGame(); });
       gmlist.appendChild(li);
     });
-    gmfoot.innerHTML = TOUCH ? 'tap a game to play' : '↑ ↓ choose&nbsp;&nbsp;·&nbsp;&nbsp;enter play&nbsp;&nbsp;·&nbsp;&nbsp;esc exit';
+    gmfoot.innerHTML = TOUCH ? 'tap a game · or use the pad' : '↑ ↓ choose&nbsp;&nbsp;·&nbsp;&nbsp;enter play&nbsp;&nbsp;·&nbsp;&nbsp;esc exit';
   }
   function moveSel(d){ sel=(sel+d+GAMES.length)%GAMES.length; renderMenu(); blip('eat'); }
   function selectGame(){ const g=GAMES[sel]; if(g) startGame(g.key); }
@@ -1422,13 +1422,20 @@ renderStep();
   }, {passive:false});
   cv.addEventListener('touchend', ()=>{ if(mode==='over'&&!tmoved) startGame(curGame); else if(mode==='play'&&!tmoved&&G&&G.input) G.input('action'); }, {passive:true});
 
-  /* ---------- mobile handheld: D-pad + A button drive the same inputs ---------- */
+  /* ---------- mobile handheld: D-pad + A button, routed to whatever screen is up ---------- */
+  // menu → navigate + pick; game → steer/act; game-over → replay; leaderboard → page + back
+  function padInput(a){
+    if(mode==='menu'){ if(a==='up') moveSel(-1); else if(a==='down') moveSel(1); else if(a==='action') selectGame(); }
+    else if(mode==='play' && G){ G.input && G.input(a); }
+    else if(mode==='over'){ if(a==='action') startGame(curGame); }
+    else if(mode==='board'){ if(a==='left') lbNav(-1); else if(a==='right') lbNav(1); else if(a==='action') closeLeaderboard(); }
+  }
   let padRepeat=0, padDir=null;
   function padPress(dir){
-    if(mode!=='play'||!G) return;
-    held[dir]=true; G.input&&G.input(dir);
-    padDir=dir; clearInterval(padRepeat);
-    if(!G.drag) padRepeat=setInterval(()=>{ if(mode==='play'&&G&&G.input) G.input(dir); else { clearInterval(padRepeat); } }, 110);  // auto-repeat for grid games
+    if(mode==='play' && G){   // in-game: held (smooth paddle) + auto-repeat (grid games)
+      held[dir]=true; G.input&&G.input(dir); padDir=dir; clearInterval(padRepeat);
+      if(!G.drag) padRepeat=setInterval(()=>{ if(mode==='play'&&G&&G.input) G.input(dir); else clearInterval(padRepeat); }, 110);
+    } else padInput(dir);     // menu/over/board: a single discrete press
   }
   function padRelease(dir){ if(dir) held[dir]=false; else if(padDir) held[padDir]=false; clearInterval(padRepeat); padDir=null; }
   gamepad.querySelectorAll('.gp[data-dir]').forEach(btn=>{
@@ -1442,7 +1449,7 @@ renderStep();
   });
   const aBtn=gamepad.querySelector('.gp-a');
   if(aBtn){
-    const act=e=>{ e.preventDefault(); if(mode==='play'&&G&&G.input) G.input('action'); };
+    const act=e=>{ e.preventDefault(); padInput('action'); };
     aBtn.addEventListener('touchstart', act, {passive:false});
     aBtn.addEventListener('mousedown', act);
   }
