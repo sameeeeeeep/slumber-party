@@ -126,21 +126,25 @@
   .navbtn:hover{ transform:translateY(-1px); background:var(--rose); color:#fff; }
   .navbtn:focus-visible{ outline:2px solid var(--rose); outline-offset:2px; }
   .navbtn[disabled]{ opacity:.32; pointer-events:none; }
-  /* mobile handheld controls (shown only while playing on a touch/narrow device) */
-  #gamepad{ position:fixed; left:0; right:0; bottom:clamp(1rem,4vh,2.2rem); z-index:22; display:none;
-    justify-content:space-between; align-items:flex-end; padding:0 clamp(1rem,5vw,2rem); pointer-events:none; }
+  /* mobile handheld controls: a pink console deck (matching the computer) with the buttons on it */
+  #gamepad{ position:fixed; left:0; right:0; bottom:0; z-index:22; display:none;
+    justify-content:space-between; align-items:center;
+    padding:1.3em clamp(1.1rem,6vw,2.2rem) calc(1.5em + env(safe-area-inset-bottom,0px));
+    background:linear-gradient(180deg, #f0cbd3 0%, #e7c1ca 60%, #e2bbc4 100%);
+    box-shadow:0 -3px 18px rgba(120,60,80,.22), inset 0 2px 0 rgba(255,255,255,.45); pointer-events:auto; }
   #gamepad.on{ display:flex; }
-  #gamepad .dpad{ position:relative; width:9.6em; height:9.6em; font-size:14px; pointer-events:auto; }
+  #gamepad .dpad{ position:relative; width:9.6em; height:9.6em; font-size:14px; }
   #gamepad .gp{ position:absolute; width:3.1em; height:3.1em; display:grid; place-items:center; cursor:pointer;
-    color:#fff; font-size:1em; border:1px solid var(--tag-border); border-radius:.7em; background:rgba(30,18,38,.66);
-    backdrop-filter:blur(5px); box-shadow:0 3px 10px rgba(0,0,0,.3); -webkit-user-select:none; user-select:none;
+    color:#fff; font-size:1em; border:1px solid rgba(60,20,40,.25); border-radius:.7em; background:#3c2f35;
+    box-shadow:0 2px 3px rgba(80,30,50,.35), inset 0 1px 0 rgba(255,255,255,.18); -webkit-user-select:none; user-select:none;
     -webkit-tap-highlight-color:transparent; touch-action:none; transition:background .1s ease, transform .1s ease; }
-  #gamepad .gp:active{ background:var(--brand-pink); transform:scale(.94); }
+  #gamepad .gp:active{ background:var(--brand-pink); transform:scale(.92); }
   #gamepad .gp-u{ left:3.25em; top:0; } #gamepad .gp-d{ left:3.25em; bottom:0; }
   #gamepad .gp-l{ left:0; top:3.25em; } #gamepad .gp-r{ right:0; top:3.25em; }
   #gamepad .gp-a{ position:relative; width:4.4em; height:4.4em; border-radius:100px; font-family:var(--pixel);
-    font-size:16px; color:var(--btn-fg); background:var(--btn-bg); border:none; pointer-events:auto; align-self:center;
-    box-shadow:0 6px 16px rgba(235,100,140,.4); }
+    font-size:16px; color:var(--btn-fg); background:var(--btn-bg); border:none; align-self:center;
+    box-shadow:0 5px 14px rgba(235,100,140,.45), inset 0 1px 0 rgba(255,255,255,.3); }
+  #gamepad .gp-a:active{ transform:scale(.94); }
 
   #veil{ position:fixed; inset:0; z-index:30; background:var(--veil-bg); display:grid; place-items:center; transition:opacity .8s ease; }
   #veil .l{ font-family:var(--script); font-weight:700; color:var(--rose); font-size:2rem; animation:pulse 1.6s ease-in-out infinite; }
@@ -220,10 +224,13 @@
     text-shadow:2px 0 0 #3a1526,-2px 0 0 #3a1526,0 2px 0 #3a1526,0 -2px 0 #3a1526; }
   .g-hud b{ color:var(--brand-yellow); }
   .g-hud i{ font-style:normal; }
-  .g-hud span:last-child{ margin-right:2.4em; }   /* clear the ✕ quit button in the corner */
+  .g-hud span:last-child{ margin-right:5.2em; }   /* clear the ♪ + ✕ buttons in the corner */
   .g-quit{ position:absolute; top:.55em; right:.55em; z-index:4; width:2.1em; height:2.1em; border-radius:100px;
     display:grid; place-items:center; cursor:pointer; color:#fff; font-family:var(--sans); font-size:.9em;
     border:1px solid rgba(255,255,255,.28); background:rgba(0,0,0,.32); }
+  .g-mute{ right:3em; }   /* sits just left of the ✕ */
+  .g-mute.off{ opacity:.55; }
+  .g-mute.off::after{ content:''; position:absolute; left:50%; top:50%; width:78%; height:2px; background:currentColor; transform:translate(-50%,-50%) rotate(-45deg); border-radius:2px; }
   .g-toast{ position:absolute; left:50%; bottom:7%; transform:translateX(-50%); z-index:2; font-size:.46em;
     letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.85); white-space:nowrap;
     transition:opacity .6s ease; pointer-events:none; }
@@ -357,6 +364,7 @@
         <div id="gframe">
           <div class="g-scan"></div>
           <div class="g-hud"><span><i id="gunit">pillows</i>&nbsp;<b id="gscore">0</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
+          <div class="g-quit g-mute" id="gmute" title="sound on/off">♪</div>
           <div class="g-quit" id="gquit" title="back (esc)">✕</div>
           <div class="g-toast" id="gtoast"></div>
           <div class="g-menu off" id="gmenu">
@@ -828,7 +836,7 @@ renderStep();
   const scoreEl=document.getElementById('gscore'), hiEl=document.getElementById('ghi'), unitEl=document.getElementById('gunit');
   const overEl=document.getElementById('gover'), titleEl=document.getElementById('gotitle'), subEl=document.getElementById('gosub');
   const boardEl=document.getElementById('goboard'), verifyEl=document.getElementById('goverify'), footEl=document.getElementById('gofoot');
-  const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit');
+  const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit'), muteBtn=document.getElementById('gmute');
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
   const navArrows=document.getElementById('navArrows');
@@ -890,7 +898,7 @@ renderStep();
     if(!unlocked||open) return; open=true;
     gameEl.classList.add('on');
     setChrome(false);
-    freeze(); seedStars();
+    freeze(); seedStars(); startMusic();
     mode='menu'; sel=0; renderMenu(); applyMode(); drawFrame();
   }
   function renderMenu(){
@@ -984,7 +992,7 @@ renderStep();
   function quitArcade(){
     open=false; mode=null; clearTimeout(loopTimer); G=null;
     gameEl.classList.remove('on');
-    setChrome(true);
+    setChrome(true); stopMusic();
     thaw();
   }
 
@@ -1212,11 +1220,12 @@ renderStep();
 
   /* ---------- sound (soft retro blips) ---------- */
   let actx=null;
+  function ac(){ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); return actx; }
   function blip(kind){
     if(muted) return;
     try{
-      actx=actx||new (window.AudioContext||window.webkitAudioContext)();
-      const now=actx.currentTime, o=actx.createOscillator(), g=actx.createGain(); o.connect(g); g.connect(actx.destination);
+      const c=ac();
+      const now=c.currentTime, o=c.createOscillator(), g=c.createGain(); o.connect(g); g.connect(c.destination);
       let d=0.08;
       if(kind==='eat'){ o.type='square'; o.frequency.setValueAtTime(600,now); o.frequency.linearRampToValueAtTime(760,now+0.05); }
       else if(kind==='bonus'){ o.type='square'; o.frequency.setValueAtTime(660,now); o.frequency.linearRampToValueAtTime(1180,now+0.15); d=0.2; }
@@ -1224,6 +1233,43 @@ renderStep();
       g.gain.setValueAtTime(0.0001,now); g.gain.exponentialRampToValueAtTime(0.06,now+0.012); g.gain.exponentialRampToValueAtTime(0.0001,now+d);
       o.start(now); o.stop(now+d+0.02);
     }catch(e){}
+  }
+
+  /* ---------- arcade music (a gentle looping chiptune: C–Am–F–G arpeggio + bass) ---------- */
+  let music=null;
+  const MEL=[262,330,392,523, 220,262,330,440, 175,220,262,349, 196,247,294,392];  // 16 steps
+  const BASS={0:131, 4:110, 8:87, 12:98};                                            // root per chord
+  function note(dest, freq, t, dur, type, peak){
+    const o=actx.createOscillator(), g=actx.createGain(); o.type=type; o.frequency.value=freq;
+    o.connect(g); g.connect(dest);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.95);
+    o.start(t); o.stop(t+dur+0.02);
+  }
+  function startMusic(){
+    if(music||muted) return;
+    try{
+      const c=ac(); const master=c.createGain(); master.gain.value=0.0001; master.connect(c.destination);
+      master.gain.exponentialRampToValueAtTime(0.075, c.currentTime+0.8);   // gentle fade-in
+      const spb=0.26; let step=0, next=c.currentTime+0.15;
+      const tick=()=>{
+        while(next < c.currentTime + 0.35){
+          note(master, MEL[step%MEL.length], next, spb*0.9, 'triangle', 0.9);
+          const b=BASS[step%16]; if(b) note(master, b, next, spb*3.6, 'square', 0.35);
+          step++; next+=spb;
+        }
+      };
+      tick(); const timer=setInterval(tick, 60);
+      music={master, timer};
+    }catch(e){}
+  }
+  function stopMusic(){
+    if(!music) return; const m=music; music=null; clearInterval(m.timer);
+    try{ m.master.gain.setTargetAtTime(0.0001, actx.currentTime, 0.25); setTimeout(()=>{ try{ m.master.disconnect(); }catch(e){} }, 700); }catch(e){}
+  }
+  function toggleMute(){
+    muted=!muted;
+    if(muted) stopMusic(); else if(open) startMusic();
+    if(muteBtn){ muteBtn.classList.toggle('off', muted); muteBtn.title = muted?'sound off':'sound on'; }
   }
 
   /* ---------- controls ---------- */
@@ -1243,7 +1289,7 @@ renderStep();
       if(d){ held[d]=true; G.input&&G.input(d); }
       else if(k===' '||k==='Enter') G.input&&G.input('action');
       else if(k==='Escape') backToMenu();
-      else if(k==='m'||k==='M') muted=!muted;
+      else if(k==='m'||k==='M') toggleMute();
     } else if(mode==='over'){
       if(k==='Enter'||k===' '||k==='p'||k==='P') startGame(curGame);
       else if(k==='Escape') backToMenu();
@@ -1251,6 +1297,7 @@ renderStep();
   });
   addEventListener('keyup', e=>{ const d=KEYDIR[e.key]; if(d) held[d]=false; });
   quitBtn.addEventListener('click', ()=>{ if(mode==='play'||mode==='over') backToMenu(); else quitArcade(); });
+  if(muteBtn) muteBtn.addEventListener('click', toggleMute);
   overEl.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
   cv.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
 
