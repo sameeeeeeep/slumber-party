@@ -52,6 +52,15 @@
   /* ---- the bedroom; zooms toward the TV as you scroll ---- */
   #room{ position:fixed; inset:0; z-index:1; overflow:hidden; pointer-events:none; }
   #roomimg{ width:100%; height:100%; object-fit:cover; will-change:transform; filter:var(--room-dim); }
+  /* neon + stickers, locked to the computer (rect + transform set in JS to mirror #roomimg) */
+  #roomdeco{ position:absolute; left:0; top:0; will-change:transform; pointer-events:none; }
+  #roomdeco > span{ position:absolute; transform:translate(-50%,-50%) rotate(var(--rot,0deg)); line-height:1; white-space:nowrap; }
+  .neon{ font-family:var(--display); font-weight:700; text-transform:lowercase; color:#fff; font-size:2.1vw; animation:neonFlicker 5s infinite; }
+  .n-star,.n-bolt{ text-shadow:0 0 3px #fff,0 0 9px #f88aa6,0 0 18px #eb648c,0 0 30px #eb648c; }
+  .n-arcade{ font-family:var(--pixel); font-size:1.25vw; letter-spacing:.12em; text-shadow:0 0 3px #fff,0 0 9px #6bc7ff,0 0 20px #6bc7ff,0 0 32px #6bc7ff; }
+  .n-heart{ text-shadow:0 0 3px #fff,0 0 9px #ffd84a,0 0 18px #ec642a,0 0 30px #ec642a; }
+  @keyframes neonFlicker{ 0%,17%,19%,55%,57%,100%{opacity:.92} 18%{opacity:.35} 56%{opacity:.55} 80%{opacity:1} }
+  .sticker{ font-size:2.5vw; filter:drop-shadow(0 2px 3px rgba(80,30,50,.4)); }
 
   /* ---- the TV screen; grows from the CRT rect to the full viewport ---- */
   #tv{ position:fixed; z-index:2; overflow:hidden; pointer-events:none; background:#1b1220;
@@ -129,11 +138,12 @@
   /* mobile handheld controls: a pink console deck (exact monitor pink) covering everything below
      the screen (floppy + keyboard), with the buttons on it. `top` is set in JS to the CRT bottom. */
   #gamepad{ position:fixed; left:0; right:0; top:60vh; bottom:0; z-index:22; display:none;
-    justify-content:space-between; align-items:flex-end;
-    padding:1.3em clamp(1.1rem,6vw,2.2rem) calc(1.6em + env(safe-area-inset-bottom,0px));
+    justify-content:center; align-items:flex-end;
+    padding:1.3em clamp(1.1rem,6vw,2.2rem) calc(1.9em + env(safe-area-inset-bottom,0px));
     background:rgb(222,184,187); box-shadow:inset 0 1px 0 rgba(255,255,255,.28); pointer-events:auto; }
   #gamepad.on{ display:flex; }
-  #gamepad .dpad{ position:relative; width:9.6em; height:9.6em; font-size:14px; }
+  #gamepad .gp-row{ width:100%; display:flex; justify-content:space-between; align-items:center; }   /* D-pad and A level with each other */
+  #gamepad .dpad{ position:relative; width:9.6em; height:9.6em; font-size:14px; flex:none; }
   #gamepad .gp{ position:absolute; width:3.1em; height:3.1em; display:grid; place-items:center; cursor:pointer;
     color:#fff; font-size:1em; border:1px solid rgba(60,20,40,.25); border-radius:.7em; background:#3c2f35;
     box-shadow:0 2px 3px rgba(80,30,50,.35), inset 0 1px 0 rgba(255,255,255,.18); -webkit-user-select:none; user-select:none;
@@ -142,7 +152,7 @@
   #gamepad .gp-u{ left:3.25em; top:0; } #gamepad .gp-d{ left:3.25em; bottom:0; }
   #gamepad .gp-l{ left:0; top:3.25em; } #gamepad .gp-r{ right:0; top:3.25em; }
   #gamepad .gp-a{ position:relative; width:4.4em; height:4.4em; border-radius:100px; font-family:var(--pixel);
-    font-size:16px; color:var(--btn-fg); background:var(--btn-bg); border:none; align-self:center;
+    font-size:16px; color:var(--btn-fg); background:var(--btn-bg); border:none; flex:none;
     box-shadow:0 5px 14px rgba(235,100,140,.45), inset 0 1px 0 rgba(255,255,255,.3); }
   #gamepad .gp-a:active{ transform:scale(.94); }
 
@@ -191,6 +201,14 @@
   .fdone.on{ display:block; animation:stepIn .5s ease; }
   .fdone .big{ font-family:var(--mono); color:var(--brand-yellow); font-size:2.4em; line-height:1; letter-spacing:.02em; }
   .fdone .q{ font-family:var(--mono); font-size:1.4em; line-height:1.3; margin-top:.35em; color:#fff; }   /* not inside .step, so pin white explicitly */
+  .arcade-cta{ display:inline-block; margin-top:1.4em; font-family:var(--pixel); font-size:.62em; line-height:1.5;
+    letter-spacing:.06em; text-transform:lowercase; color:#fff; cursor:pointer; padding:1em 1.3em; border-radius:.7em;
+    background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
+    box-shadow:0 0 10px rgba(235,100,140,.7), 0 0 22px rgba(235,100,140,.45), inset 0 0 8px rgba(255,255,255,.25);
+    animation:ctaGlow 1.8s ease-in-out infinite; transition:transform .15s ease; }
+  .arcade-cta:hover{ transform:translateY(-2px); }
+  @keyframes ctaGlow{ 0%,100%{box-shadow:0 0 10px rgba(235,100,140,.7),0 0 22px rgba(235,100,140,.4),inset 0 0 8px rgba(255,255,255,.25)}
+    50%{box-shadow:0 0 16px rgba(235,216,27,.8),0 0 30px rgba(235,100,140,.6),inset 0 0 10px rgba(255,255,255,.35)} }
 
   .scroll-space{ position:relative; z-index:5; pointer-events:none; }
   /* Each groove's TOP is a snap point; its height places that point on a beat's progress
@@ -303,7 +321,21 @@
 </head>
 <body>
 
-  <div id="room"><img id="roomimg" src="assets/computer.jpg" alt="A retro pink computer on a pastel pink background" /></div>
+  <div id="room">
+    <img id="roomimg" src="assets/computer.jpg" alt="A retro pink computer on a pastel pink background" />
+    <!-- neon + stickers, locked to the computer (transform mirrors the room image) -->
+    <div id="roomdeco">
+      <span class="neon n-star" style="left:11%;top:12%">✦</span>
+      <span class="neon n-arcade" style="left:76%;top:10%">arcade</span>
+      <span class="neon n-heart" style="left:88%;top:46%">♥</span>
+      <span class="neon n-bolt" style="left:9%;top:52%">✧</span>
+      <span class="sticker" style="left:39.5%;top:19%;--rot:-14deg">⭐</span>
+      <span class="sticker" style="left:61.5%;top:22.5%;--rot:12deg">✨</span>
+      <span class="sticker" style="left:40%;top:55%;--rot:-8deg">💖</span>
+      <span class="sticker" style="left:60.5%;top:57%;--rot:10deg">🕹️</span>
+      <span class="sticker" style="left:50%;top:62.5%;--rot:-5deg">🌙</span>
+    </div>
+  </div>
 
   <div id="tv">
     <canvas id="static"></canvas>
@@ -379,6 +411,7 @@
         <div class="fdone" id="fdone">
           <div class="big">tucked in ♡</div>
           <p class="q">your name's with khushi now.<br><span class="sub">if you're one of the thirty, we'll whisper back.</span></p>
+          <button class="arcade-cta" id="enterArcade" type="button">▸ enter khushi's arcade</button>
         </div>
       </div>
 
@@ -445,13 +478,15 @@
   </div>
   <!-- mobile arcade controls: the CRT becomes a little handheld console -->
   <div id="gamepad" aria-hidden="true">
-    <div class="dpad">
-      <button class="gp gp-u" data-dir="up" aria-label="up">▲</button>
-      <button class="gp gp-l" data-dir="left" aria-label="left">◀</button>
-      <button class="gp gp-r" data-dir="right" aria-label="right">▶</button>
-      <button class="gp gp-d" data-dir="down" aria-label="down">▼</button>
+    <div class="gp-row">
+      <div class="dpad">
+        <button class="gp gp-u" data-dir="up" aria-label="up">▲</button>
+        <button class="gp gp-l" data-dir="left" aria-label="left">◀</button>
+        <button class="gp gp-r" data-dir="right" aria-label="right">▶</button>
+        <button class="gp gp-d" data-dir="down" aria-label="down">▼</button>
+      </div>
+      <button class="gp gp-a" data-act="action" aria-label="action">A</button>
     </div>
-    <button class="gp gp-a" data-act="action" aria-label="action">A</button>
   </div>
   <!-- arcade page chrome: mute + leave, top-right of the page (the arcade takes over the whole page) -->
   <div id="arcadeChrome">
@@ -491,6 +526,7 @@ addEventListener('scroll', readScroll, {passive:true});
 /* ---------- TV geometry (screen rect within the illustration) ---------- */
 const room=document.getElementById('room');
 const roomimg=document.getElementById('roomimg');
+const roomdeco=document.getElementById('roomdeco');
 const tv=document.getElementById('tv');
 const tvcontent=document.getElementById('tvcontent');
 const pixelbg=document.getElementById('pixelbg');
@@ -504,6 +540,8 @@ function computeBase(){
   base={ cx:(ox+TVI.cx*dW)/Vw, cy:(oy+TVI.cy*dH)/Vh, w:(TVI.w*dW)/Vw, h:(TVI.h*dH)/Vh };
   ZMAX=Math.max(1/base.w, 1/base.h);   // zoom until the screen fully covers the viewport (any aspect)
   roomimg.style.transformOrigin=(base.cx*100)+'% '+(base.cy*100)+'%';
+  if(roomdeco){ roomdeco.style.left=ox+'px'; roomdeco.style.top=oy+'px'; roomdeco.style.width=dW+'px'; roomdeco.style.height=dH+'px';
+    roomdeco.style.transformOrigin=(TVI.cx*100)+'% '+(TVI.cy*100)+'%'; }   // origin = screen centre, so it scales locked to the room
 }
 addEventListener('resize', ()=>{ readScroll(); computeBase(); sizeStatic(); sizeGlitch(); sizePixel(); });
 computeBase();
@@ -523,6 +561,7 @@ function updateZoom(p){
   // room scales ABOUT the screen centre and pans so the screen lands dead-centre — keeps #tv locked to it
   const Tx=z*(0.5-base.cx)*Vw, Ty=z*(0.5-base.cy)*Vh;
   roomimg.style.transform=`translate(${Tx}px, ${Ty}px) scale(${s})`;
+  if(roomdeco) roomdeco.style.transform=roomimg.style.transform;   // stickers + neon ride along with the computer
   room.style.opacity='1';                                     // computer stays put; #tv covers it at full zoom
   // scales with the screen — but also capped by viewport WIDTH so the nowrap pixel beats
   // never overflow a narrow (mobile) screen (they're tuned to fit the widest line at ~0.046·vw)
@@ -901,7 +940,7 @@ renderStep();
   const GAMES=[
     { key:'snake',       name:'slumber snake', unit:'pillows', make:makeSnake },
     { key:'pillowstack', name:'pillow stack',  unit:'lines',   make:makeStack },
-    { key:'dreammaze',   name:'dream maze',    unit:'stars',   make:makeMaze  },
+    { key:'dreammaze',   name:'dream maze',    unit:'dots',    make:makeMaze  },
     { key:'pong',        name:'starlight pong',unit:'rallies', make:makePong  }
   ];
   const hiKey=k=>'ksp-hi-'+k;
@@ -920,7 +959,8 @@ renderStep();
 
   function unlock(){
     if(unlocked) return; unlocked=true;
-    if(fdone) fdone.addEventListener('click', openArcade);   // secret: click/tap the confirmation (or any key)
+    const eb=document.getElementById('enterArcade'); if(eb) eb.addEventListener('click', e=>{ e.stopPropagation(); openArcade(); });
+    if(fdone) fdone.addEventListener('click', openArcade);   // clicking the confirmation (or any key) also enters
   }
   window.__slumberGame={ unlock, start:openArcade };
 
@@ -1070,6 +1110,7 @@ renderStep();
     open=false; mode=null; clearTimeout(loopTimer); G=null;
     gameEl.classList.remove('on');
     if(arcadeChrome) arcadeChrome.classList.remove('on');
+    if(gamepad) gamepad.classList.remove('on');   // hide the console deck when leaving
     setChrome(true); stopMusic();
     thaw();
   }
@@ -1205,7 +1246,9 @@ renderStep();
 
   /* ================= GAME 3 · DREAM MAZE ================= */
   function makeMaze(api){
-    let COLS,ROWS,grid,px,py,dir,pending,acc,stepMs,gems,timeLeft,levelMs,level;
+    // pac-man-lite: eat every dot, dodge the ghosts, grab a star to turn the tables
+    let COLS,ROWS,grid,px,py,dir,pending, pellets, powers, ghosts, level, pAcc,gAcc, pStep,gStep, fright, mouth;
+    const GCOLS=['#ff9ab0','#8fd7ff','#eb9cff','#ffe08a'];
     function gen(mc,mr){
       COLS=2*mc+1; ROWS=2*mr+1;
       grid=Array.from({length:ROWS},()=>Array(COLS).fill(1));
@@ -1217,56 +1260,96 @@ renderStep();
         vis[ny][nx]=true; grid[2*ny+1][2*nx+1]=0; grid[cy0*2+1+dy][cx0*2+1+dx]=0; st.push([nx,ny]);
       }
     }
-    function openCells(){ const a=[]; for(let y=1;y<ROWS;y+=2)for(let x=1;x<COLS;x+=2) a.push([x,y]); return a; }
+    const openAt=(x,y)=> x>=0&&x<COLS&&y>=0&&y<ROWS&&grid[y][x]===0;
+    function openList(){ const a=[]; for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++) if(grid[y][x]===0) a.push([x,y]); return a; }
+    const remaining=()=>Object.keys(pellets).length+Object.keys(powers).length;
+    const K=(x,y)=>x+','+y;
     function newLevel(){
       const mc=6+Math.min(4,level), mr=4+Math.min(3,level); gen(mc,mr);
-      px=1; py=1; dir={x:0,y:0}; pending={x:0,y:0}; acc=0; stepMs=Math.max(70,110-level*4);
-      const cells=openCells().filter(([x,y])=>!(x===1&&y===1));
-      gems=[]; const n=Math.min(cells.length, 4+level);
-      for(let i=0;i<n && cells.length;i++){ gems.push(cells.splice(rnd(cells.length),1)[0]); }
-      timeLeft=levelMs;
+      px=1; py=1; dir={x:1,y:0}; pending={x:0,y:0}; pAcc=0; gAcc=0; mouth=0;
+      pStep=Math.max(85,120-level*4); gStep=Math.max(120,165-level*6); fright=0;
+      pellets={}; powers={};
+      for(const [x,y] of openList()) if(!(x===1&&y===1)) pellets[K(x,y)]=1;
+      const cells=openList().filter(([x,y])=>!(x<=2&&y<=2));
+      for(let i=0;i<4 && cells.length;i++){ const c=cells.splice(rnd(cells.length),1)[0]; powers[K(c[0],c[1])]=1; delete pellets[K(c[0],c[1])]; }
+      const far=openList().sort((a,b)=>(b[0]+b[1])-(a[0]+a[1]));   // spawn ghosts far from the start
+      ghosts=[]; const gn=2+Math.min(2,level);
+      for(let i=0;i<gn;i++){ const c=far[i%far.length]; ghosts.push({x:c[0],y:c[1],dx:0,dy:0,col:GCOLS[i%4]}); }
     }
-    const openAt=(x,y)=> x>=0&&x<COLS&&y>=0&&y<ROWS&&grid[y][x]===0;
-    function tick(){
+    function eatCell(){
+      const k=K(px,py);
+      if(pellets[k]){ delete pellets[k]; api.addScore(1); api.blip('eat'); }
+      if(powers[k]){ delete powers[k]; api.addScore(5); api.blip('bonus'); fright=6000; }
+      if(remaining()<=0){ level++; api.blip('bonus'); newLevel(); }
+    }
+    function movePlayer(){
       if((pending.x||pending.y) && openAt(px+pending.x,py+pending.y)) dir=pending;
-      if((dir.x||dir.y) && openAt(px+dir.x,py+dir.y)){ px+=dir.x; py+=dir.y; }
-      else dir={x:0,y:0};
-      for(let i=gems.length-1;i>=0;i--) if(gems[i][0]===px&&gems[i][1]===py){ gems.splice(i,1); api.addScore(1); api.blip('bonus'); timeLeft=Math.min(levelMs,timeLeft+1500); }
-      if(!gems.length){ level++; api.blip('eat'); newLevel(); }
+      if((dir.x||dir.y) && openAt(px+dir.x,py+dir.y)){ px+=dir.x; py+=dir.y; mouth^=1; } else dir={x:0,y:0};
+      eatCell(); checkCatch();
+    }
+    function moveGhosts(){
+      for(const g of ghosts){
+        let opts=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=> openAt(g.x+dx,g.y+dy) && !(dx===-g.dx&&dy===-g.dy));
+        if(!opts.length) opts=[[-g.dx,-g.dy]].filter(([dx,dy])=>openAt(g.x+dx,g.y+dy));
+        if(!opts.length) continue;
+        opts.sort((a,b)=>{ const da=Math.abs(g.x+a[0]-px)+Math.abs(g.y+a[1]-py), db=Math.abs(g.x+b[0]-px)+Math.abs(g.y+b[1]-py); return fright>0? db-da : da-db; });
+        const pick=(opts.length>1 && Math.random()<0.2)? opts[1] : opts[0];
+        g.dx=pick[0]; g.dy=pick[1]; g.x+=g.dx; g.y+=g.dy;
+      }
+      checkCatch();
+    }
+    function checkCatch(){
+      for(const g of ghosts){ if(g.x===px&&g.y===py){
+        if(fright>0){ api.addScore(20); api.blip('bonus'); const far=openList().sort((a,b)=>(b[0]+b[1])-(a[0]+a[1]))[0]; g.x=far[0]; g.y=far[1]; g.dx=0; g.dy=0; }
+        else return api.over();
+      } }
     }
     return {
-      unit:'stars', hint:TOUCH?'use the pad · grab the stars':'arrows / wasd · grab the stars',
-      reset(){ level=0; levelMs=24000; newLevel(); },
-      frame(dt){ timeLeft-=dt; if(timeLeft<=0) return api.over(); acc+=dt; while(acc>=stepMs && api.alive()){ acc-=stepMs; tick(); } },
+      unit:'dots', hint:TOUCH?'use the pad · eat dots · dodge ghosts':'arrows / wasd · eat dots · dodge ghosts',
+      reset(){ level=0; newLevel(); },
+      frame(dt){
+        if(fright>0) fright=Math.max(0,fright-dt);
+        pAcc+=dt; while(pAcc>=pStep && api.alive()){ pAcc-=pStep; movePlayer(); }
+        gAcc+=dt; while(gAcc>=gStep && api.alive()){ gAcc-=gStep; moveGhosts(); }
+      },
       input(a){ if(a==='left')pending={x:-1,y:0}; else if(a==='right')pending={x:1,y:0}; else if(a==='up')pending={x:0,y:-1}; else if(a==='down')pending={x:0,y:1}; },
       draw(){
-        const g=fieldGeom(COLS,ROWS); drawPanel(g.ox,g.oy,g.fw,g.fh);
-        const c=g.cell,at=(x,y)=>({x:g.ox+x*c,y:g.oy+y*c});
+        const gg=fieldGeom(COLS,ROWS); drawPanel(gg.ox,gg.oy,gg.fw,gg.fh);
+        const c=gg.cell,at=(x,y)=>({x:gg.ox+x*c,y:gg.oy+y*c});
         cx.fillStyle='#3a2c52';
-        for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++) if(grid[y][x]){ const p=at(x,y); rr(p.x,p.y,c,c,Math.max(1,c*0.18)); cx.fill(); }
-        for(const [x,y] of gems){ const p=at(x,y); drawStar(p.x+c/2,p.y+c/2,c*0.34,'#ffd84a'); }
-        const p=at(px,py); cx.fillStyle='#eb648c'; cx.beginPath(); cx.arc(p.x+c/2,p.y+c/2,c*0.34,0,7); cx.fill();
-        // time bar
-        const bw=g.fw*0.9, bx=g.ox+g.fw*0.05, by=g.oy+g.fh+Math.max(3,c*0.18);
-        cx.fillStyle='rgba(255,255,255,.15)'; cx.fillRect(bx,by,bw,Math.max(2,c*0.12));
-        cx.fillStyle='#f5c3cf'; cx.fillRect(bx,by,bw*Math.max(0,timeLeft/levelMs),Math.max(2,c*0.12));
+        for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++) if(grid[y][x]){ const p=at(x,y); rr(p.x,p.y,c,c,Math.max(1,c*0.16)); cx.fill(); }
+        cx.fillStyle='#f5c3cf';
+        for(const k in pellets){ const [x,y]=k.split(',').map(Number),p=at(x,y); cx.beginPath(); cx.arc(p.x+c/2,p.y+c/2,Math.max(1,c*0.1),0,7); cx.fill(); }
+        for(const k in powers){ const [x,y]=k.split(',').map(Number),p=at(x,y); drawStar(p.x+c/2,p.y+c/2,c*0.3,'#ffd84a'); }
+        // pac
+        const pp=at(px,py), a=fright>0?'#ffd84a':'#ffe08a', ang=Math.atan2(dir.y||0, dir.x||1), m=mouth?0.28:0.06;
+        cx.fillStyle=a; cx.beginPath(); cx.moveTo(pp.x+c/2,pp.y+c/2);
+        cx.arc(pp.x+c/2,pp.y+c/2,c*0.38, ang+m*Math.PI, ang-m*Math.PI); cx.closePath(); cx.fill();
+        for(const g of ghosts) drawGhost(at(g.x,g.y).x+c/2, at(g.x,g.y).y+c/2, c*0.4, fright>0?(fright<2000&&Math.floor(fright/250)%2?'#fff':'#6b7bd6'):g.col);
       },
-      overText(s){ return 'you gathered <b>'+s+'</b> star'+(s===1?'':'s')+'.'; }
+      overText(s){ return 'you ate <b>'+s+'</b> dot'+(s===1?'':'s')+'.'; }
     };
+    function drawGhost(cxp,cyp,r,col){
+      cx.fillStyle=col; cx.beginPath(); cx.arc(cxp,cyp-r*0.12,r*0.82,Math.PI,0);
+      cx.lineTo(cxp+r*0.82,cyp+r*0.62); cx.lineTo(cxp+r*0.4,cyp+r*0.38); cx.lineTo(cxp,cyp+r*0.62); cx.lineTo(cxp-r*0.4,cyp+r*0.38); cx.lineTo(cxp-r*0.82,cyp+r*0.62);
+      cx.closePath(); cx.fill();
+      cx.fillStyle='#fff'; cx.beginPath(); cx.arc(cxp-r*0.3,cyp-r*0.12,r*0.2,0,7); cx.arc(cxp+r*0.3,cyp-r*0.12,r*0.2,0,7); cx.fill();
+      cx.fillStyle='#3a1526'; cx.beginPath(); cx.arc(cxp-r*0.3,cyp-r*0.12,r*0.09,0,7); cx.arc(cxp+r*0.3,cyp-r*0.12,r*0.09,0,7); cx.fill();
+    }
   }
 
   /* ================= GAME 4 · STARLIGHT PONG ================= */
   function makePong(api){
     // normalised coords in [0,1] over the panel; paddle at the bottom
     let bx,by,vx,vy,pxc,phw,speed;
-    const PY=0.9, R=0.024, MAXSPD=0.0016;
+    const PY=0.84, R=0.024, MAXSPD=0.0016;
     function setV(ux,uy){ const m=Math.hypot(ux,uy)||1; vx=ux/m*speed; vy=uy/m*speed; keepSteep(); }
     // never let the ball go too horizontal — keeps at least ~50% vertical so it can't get "stuck sideways"
     function keepSteep(){ const minVy=speed*0.55; if(Math.abs(vy)<minVy){ vy=(vy<0?-1:1)*minVy; vx=(vx<0?-1:1)*Math.sqrt(Math.max(0,speed*speed-vy*vy)); } }
     function launch(){ setV((Math.random()<0.5?-1:1)*(0.4+Math.random()*0.4), 1); }
     return {
       unit:'rallies', hint:TOUCH?'◀ ▶ or drag · keep the ball up':'hold ← → to move the paddle', drag:true,
-      reset(){ bx=0.5; by=0.45; speed=0.00072; pxc=0.5; phw=0.15; launch(); },
+      reset(){ bx=0.5; by=0.45; speed=0.00072; pxc=0.5; phw=0.1; launch(); },
       frame(dt){
         bx+=vx*dt; by+=vy*dt;
         // paddle follows held arrow keys smoothly (desktop); drag/pointer sets it directly
