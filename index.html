@@ -126,12 +126,12 @@
   .navbtn:hover{ transform:translateY(-1px); background:var(--rose); color:#fff; }
   .navbtn:focus-visible{ outline:2px solid var(--rose); outline-offset:2px; }
   .navbtn[disabled]{ opacity:.32; pointer-events:none; }
-  /* mobile handheld controls: a pink console deck (matching the computer) with the buttons on it */
-  #gamepad{ position:fixed; left:0; right:0; bottom:0; z-index:22; display:none;
-    justify-content:space-between; align-items:center;
-    padding:1.3em clamp(1.1rem,6vw,2.2rem) calc(1.5em + env(safe-area-inset-bottom,0px));
-    background:linear-gradient(180deg, #f0cbd3 0%, #e7c1ca 60%, #e2bbc4 100%);
-    box-shadow:0 -3px 18px rgba(120,60,80,.22), inset 0 2px 0 rgba(255,255,255,.45); pointer-events:auto; }
+  /* mobile handheld controls: a pink console deck (exact monitor pink) covering everything below
+     the screen (floppy + keyboard), with the buttons on it. `top` is set in JS to the CRT bottom. */
+  #gamepad{ position:fixed; left:0; right:0; top:60vh; bottom:0; z-index:22; display:none;
+    justify-content:space-between; align-items:flex-end;
+    padding:1.3em clamp(1.1rem,6vw,2.2rem) calc(1.6em + env(safe-area-inset-bottom,0px));
+    background:rgb(222,184,187); box-shadow:inset 0 1px 0 rgba(255,255,255,.28); pointer-events:auto; }
   #gamepad.on{ display:flex; }
   #gamepad .dpad{ position:relative; width:9.6em; height:9.6em; font-size:14px; }
   #gamepad .gp{ position:absolute; width:3.1em; height:3.1em; display:grid; place-items:center; cursor:pointer;
@@ -224,13 +224,17 @@
     text-shadow:2px 0 0 #3a1526,-2px 0 0 #3a1526,0 2px 0 #3a1526,0 -2px 0 #3a1526; }
   .g-hud b{ color:var(--brand-yellow); }
   .g-hud i{ font-style:normal; }
-  .g-hud span:last-child{ margin-right:5.2em; }   /* clear the ♪ + ✕ buttons in the corner */
-  .g-quit{ position:absolute; top:.55em; right:.55em; z-index:4; width:2.1em; height:2.1em; border-radius:100px;
-    display:grid; place-items:center; cursor:pointer; color:#fff; font-family:var(--sans); font-size:.9em;
-    border:1px solid rgba(255,255,255,.28); background:rgba(0,0,0,.32); }
-  .g-mute{ right:3em; }   /* sits just left of the ✕ */
-  .g-mute.off{ opacity:.55; }
-  .g-mute.off::after{ content:''; position:absolute; left:50%; top:50%; width:78%; height:2px; background:currentColor; transform:translate(-50%,-50%) rotate(-45deg); border-radius:2px; }
+  /* arcade page chrome (leave + mute) — top-right of the page while the arcade is up */
+  #arcadeChrome{ position:fixed; top:clamp(.8rem,2.6vw,1.4rem); right:clamp(.8rem,2.6vw,1.5rem); z-index:26; display:none; gap:.55rem; }
+  #arcadeChrome.on{ display:flex; }
+  .acbtn{ position:relative; width:44px; height:44px; border-radius:100px; display:grid; place-items:center; cursor:pointer;
+    color:var(--rose); border:1px solid var(--tag-border); background:var(--card-a); backdrop-filter:blur(5px); font-size:1.05rem;
+    transition:transform .15s ease, background .2s ease, color .2s ease; }
+  .acbtn:hover{ transform:translateY(-1px); background:var(--rose); color:#fff; }
+  .acbtn:focus-visible{ outline:2px solid var(--rose); outline-offset:2px; }
+  #gmute.off{ opacity:.6; }
+  #gmute.off::after{ content:''; position:absolute; left:50%; top:50%; width:60%; height:2px; background:currentColor;
+    transform:translate(-50%,-50%) rotate(-45deg); border-radius:2px; }
   .g-toast{ position:absolute; left:50%; bottom:7%; transform:translateX(-50%); z-index:2; font-size:.46em;
     letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.85); white-space:nowrap;
     transition:opacity .6s ease; pointer-events:none; }
@@ -364,8 +368,6 @@
         <div id="gframe">
           <div class="g-scan"></div>
           <div class="g-hud"><span><i id="gunit">pillows</i>&nbsp;<b id="gscore">0</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
-          <div class="g-quit g-mute" id="gmute" title="sound on/off">♪</div>
-          <div class="g-quit" id="gquit" title="back (esc)">✕</div>
           <div class="g-toast" id="gtoast"></div>
           <div class="g-menu off" id="gmenu">
             <div>
@@ -418,6 +420,11 @@
       <button class="gp gp-d" data-dir="down" aria-label="down">▼</button>
     </div>
     <button class="gp gp-a" data-act="action" aria-label="action">A</button>
+  </div>
+  <!-- arcade page chrome: mute + leave, top-right of the page (the arcade takes over the whole page) -->
+  <div id="arcadeChrome">
+    <button class="acbtn" id="gmute" title="sound on/off">♪</button>
+    <button class="acbtn" id="gquit" title="leave the arcade">✕</button>
   </div>
   <div id="veil"><div class="l">shhh…</div></div>
 
@@ -840,7 +847,7 @@ renderStep();
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
   const navArrows=document.getElementById('navArrows');
-  const gamepad=document.getElementById('gamepad');
+  const gamepad=document.getElementById('gamepad'), arcadeChrome=document.getElementById('arcadeChrome');
   const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
   const useGamepad=()=>TOUCH||innerWidth<=640;   // on-screen buttons for phones (keyboard elsewhere)
   const rnd=n=>(Math.random()*n)|0;
@@ -887,8 +894,14 @@ renderStep();
     overEl.classList.toggle('off', mode!=='over');
     hud.style.visibility = (mode==='play'||mode==='over') ? 'visible' : 'hidden';
     if(mode!=='play') toastEl.style.opacity='0';
-    quitBtn.title = (mode==='menu'||mode===null) ? 'leave (esc)' : 'back (esc)';
-    if(gamepad){ gamepad.classList.toggle('on', mode==='play' && useGamepad()); gamepad.setAttribute('aria-hidden', mode==='play'?'false':'true'); }
+    quitBtn.title = (mode==='menu'||mode===null) ? 'leave the arcade' : 'back to menu';
+    if(gamepad){ const show=(mode==='play' && useGamepad()); gamepad.classList.toggle('on', show); gamepad.setAttribute('aria-hidden', show?'false':'true'); if(show) layoutGamepad(); }
+  }
+  // the pink deck starts right below the CRT screen, covering the floppy + keyboard
+  function layoutGamepad(){
+    if(!gamepad || !gamepad.classList.contains('on')) return;
+    const b=gameEl.getBoundingClientRect().bottom;
+    gamepad.style.top=Math.max(80, Math.min(innerHeight-96, b-1))+'px';
   }
   function seedStars(){ stars=[]; for(let i=0;i<16;i++) stars.push({x:Math.random(), y:Math.random(), r:Math.random()<0.3?2:1}); }
   function showToast(txt){ toastEl.textContent=txt||''; toastEl.style.opacity='1'; clearTimeout(showToast._t); showToast._t=setTimeout(()=>toastEl.style.opacity='0', 2600); }
@@ -898,6 +911,7 @@ renderStep();
     if(!unlocked||open) return; open=true;
     gameEl.classList.add('on');
     setChrome(false);
+    if(arcadeChrome) arcadeChrome.classList.add('on');   // page-level leave + mute, top-right
     freeze(); seedStars(); startMusic();
     mode='menu'; sel=0; renderMenu(); applyMode(); drawFrame();
   }
@@ -992,6 +1006,7 @@ renderStep();
   function quitArcade(){
     open=false; mode=null; clearTimeout(loopTimer); G=null;
     gameEl.classList.remove('on');
+    if(arcadeChrome) arcadeChrome.classList.remove('on');
     setChrome(true); stopMusic();
     thaw();
   }
