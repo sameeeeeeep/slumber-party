@@ -40,7 +40,7 @@
     --static-alpha:.5;
   }
   *{ margin:0; padding:0; box-sizing:border-box; }
-  html{ scroll-behavior:smooth; scroll-snap-type:y mandatory; overscroll-behavior-y:none; }
+  html{ scroll-behavior:smooth; scroll-snap-type:y mandatory; overscroll-behavior-y:none; background:var(--bg-a); }
   body{
     background:
       radial-gradient(1000px 760px at 74% -8%, var(--flare-1) 0%, transparent 56%),
@@ -109,7 +109,7 @@
     text-shadow:.16em 0 0 #2b1220, -.16em 0 0 #2b1220, 0 .16em 0 #2b1220, 0 -.16em 0 #2b1220,
       .11em .11em 0 #2b1220, -.11em .11em 0 #2b1220, .11em -.11em 0 #2b1220, -.11em -.11em 0 #2b1220; }
   /* "next" button under each broadcast beat (JS flips pointer-events on while its beat is up) */
-  .beat-next{ pointer-events:none; display:inline-block; margin-top:1.7em; font-family:var(--pixel); font-size:.6em;
+  .beat-next{ pointer-events:none; display:inline-block; margin-top:2.8em; font-family:var(--pixel); font-size:.6em;
     letter-spacing:.08em; text-transform:lowercase; text-align:center; color:#fff; cursor:pointer; padding:1em 1.6em; border-radius:.6em;
     background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
     box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2); transition:transform .15s ease; }
@@ -588,6 +588,19 @@ function updateZoom(p){
   // pink noise fills the screen at full zoom, stays for the form (dimmed so the form reads)
   pixelbg.style.opacity=String(smooth(0.44, 0.54, p) * lerp(0.7, 0.28, smooth(0.80, 0.9, p)));
   pixelbg.style.transform='';
+  // mobile form mode: the computer disappears (plain pink page behind) and the screen becomes
+  // a top-anchored card sized to the visual viewport, so the keyboard never covers the question
+  const card = window.__formLock && window.__formLock.active() && innerWidth<=640;
+  if(card !== updateZoom._card){ updateZoom._card=card; room.style.visibility = card ? 'hidden' : ''; }
+  if(card){
+    const vv=window.visualViewport, vh=(vv&&vv.height)||innerHeight;   // shrinks live with the keyboard
+    const L=Math.round(innerWidth*0.04), T=76;                         // just below the masthead
+    const H=Math.max(210, Math.min(420, vh-T-12));
+    tv.style.left=L+'px'; tv.style.top=T+'px';
+    tv.style.width=(innerWidth-2*L)+'px'; tv.style.height=H+'px';
+    tv.style.borderRadius='16px';
+    tvcontent.style.fontSize='15px';
+  }
 }
 
 /* ---------- TV static ---------- */
@@ -757,6 +770,9 @@ function enterFormLock(){
   document.documentElement.style.overflow='hidden';         // desktop: no wheel/keys scrolling
   document.body.style.position='fixed'; document.body.style.inset='0';   // mobile: really no touch scrolling
   formChromeOn(true);
+  // pull the keyboard up right away — the card layout keeps the question above it
+  const inp=form.querySelector('.step.on input, .step.on textarea');
+  if(inp) try{ inp.focus({preventScroll:true}); }catch(e){}
 }
 function exitFormLock(){
   if(!formLocked) return; formLocked=false;
