@@ -40,7 +40,7 @@
     --static-alpha:.5;
   }
   *{ margin:0; padding:0; box-sizing:border-box; }
-  html{ scroll-behavior:smooth; scroll-snap-type:y mandatory; }
+  html{ scroll-behavior:smooth; scroll-snap-type:y mandatory; overscroll-behavior-y:none; }
   body{
     background:
       radial-gradient(1000px 760px at 74% -8%, var(--flare-1) 0%, transparent 56%),
@@ -50,7 +50,9 @@
   }
 
   /* ---- the bedroom; zooms toward the TV as you scroll ---- */
-  #room{ position:fixed; inset:0; z-index:1; overflow:hidden; pointer-events:none; }
+  /* sized to the LARGE viewport (lvh) so the mobile url bar sliding in/out on a scroll-back
+     never resizes the room — all zoom geometry reads this box, keeping the scene rock-steady */
+  #room{ position:fixed; left:0; right:0; top:0; height:100vh; height:100lvh; z-index:1; overflow:hidden; pointer-events:none; }
   #roomimg{ width:100%; height:100%; object-fit:cover; will-change:transform; filter:var(--room-dim); }
   /* neon + stickers, locked to the computer (rect + transform set in JS to mirror #roomimg) */
   #roomdeco{ position:absolute; left:0; top:0; will-change:transform; pointer-events:none; }
@@ -96,12 +98,23 @@
   .tags{ display:flex; gap:.5em; flex-wrap:wrap; justify-content:center; margin-top:1.4em; }
   .tag{ border:1px solid var(--tag-border); border-radius:100px; padding:.45em 1em;
     font-size:.72em; letter-spacing:.06em; color:#fff; background:var(--tag-bg); }
-  /* the '30 creators' beat: smaller pixel text on the tiles, chunky dark outline for readability */
-  .beat.sky h2{ font-size:.6em; line-height:2.3; color:#fff;
-    text-shadow:2px 0 0 #4a1e30, -2px 0 0 #4a1e30, 0 2px 0 #4a1e30, 0 -2px 0 #4a1e30, 0 0 10px rgba(0,0,0,.45); }
+  /* the '30 creators' beat: readability comes from a chunky 8-way stroke (the noise scrim is
+     faded out for this beat in JS), so the outline is thick and scales with the text */
+  .beat.sky h2{ font-size:.64em; line-height:2.3; color:#fff;
+    text-shadow:.16em 0 0 #2b1220, -.16em 0 0 #2b1220, 0 .16em 0 #2b1220, 0 -.16em 0 #2b1220,
+      .11em .11em 0 #2b1220, -.11em .11em 0 #2b1220, .11em -.11em 0 #2b1220, -.11em -.11em 0 #2b1220,
+      0 .25em .6em rgba(0,0,0,.55); }
   .beat.sky .sub{ color:var(--brand-yellow); }
-  .skyline{ font-family:var(--pixel); font-size:.52em; margin-top:1.6em; color:#fff; text-transform:lowercase;
-    text-shadow:2px 0 0 #4a1e30, -2px 0 0 #4a1e30, 0 2px 0 #4a1e30, 0 -2px 0 #4a1e30; }
+  .skyline{ font-family:var(--pixel); font-size:.56em; margin-top:1.6em; color:#fff; text-transform:lowercase;
+    text-shadow:.16em 0 0 #2b1220, -.16em 0 0 #2b1220, 0 .16em 0 #2b1220, 0 -.16em 0 #2b1220,
+      .11em .11em 0 #2b1220, -.11em .11em 0 #2b1220, .11em -.11em 0 #2b1220, -.11em -.11em 0 #2b1220; }
+  /* "next" button under each broadcast beat (JS flips pointer-events on while its beat is up) */
+  .beat-next{ pointer-events:none; display:inline-block; margin-top:1.7em; font-family:var(--pixel); font-size:.6em;
+    letter-spacing:.08em; text-transform:lowercase; text-align:center; color:#fff; cursor:pointer; padding:1em 1.6em; border-radius:.6em;
+    background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
+    box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2); transition:transform .15s ease; }
+  .beat-next:hover{ transform:translateY(-2px); }
+  .beat-next:focus-visible{ outline:2px solid var(--brand-yellow); outline-offset:2px; }
   .ftitle{ font-family:var(--mono); color:#fff; font-size:2.1em; line-height:1; letter-spacing:.02em; margin-bottom:.4em; text-shadow:var(--halo); }
   .ftitle .sub{ color:var(--brand-soft); font-style:italic; }
 
@@ -109,12 +122,7 @@
   #masthead{ position:fixed; top:0; left:0; right:0; z-index:20; pointer-events:none;
     display:flex; align-items:center; justify-content:space-between; gap:1rem;
     padding:.85rem clamp(1.1rem,3vw,1.8rem); background:var(--head-scrim); transition:opacity .4s ease; }
-  .wordmark{ display:flex; flex-direction:column; line-height:.86; }
-  .wordmark .top{ display:flex; align-items:flex-end; gap:.34em; }
-  .wordmark .secret{ font-family:var(--script); font-weight:600; font-size:.78em; color:var(--rose); transform:rotate(-7deg); transform-origin:bottom; }
-  .wordmark .khushi{ font-family:var(--script); font-weight:700; font-size:1.7em; color:var(--ink-strong); }
-  .wordmark .slumber{ font-family:var(--display); font-weight:700; text-transform:uppercase; letter-spacing:.015em; font-size:.98em; color:var(--ink-strong); margin-top:.06em; }
-  #masthead .wordmark{ font-size:clamp(.86rem,1.7vw,1.06rem); }
+  .logo{ display:block; height:clamp(2.7rem,7vw,3.9rem); width:auto; }
   .head-right{ display:flex; align-items:center; gap:.7rem; pointer-events:auto; }
   #masthead .apply-link{ font-family:var(--sans); font-size:.7rem; letter-spacing:.2em; text-transform:uppercase;
     color:var(--rose); text-decoration:none; white-space:nowrap; border:1px solid var(--tag-border);
@@ -244,9 +252,10 @@
     text-shadow:2px 0 0 #3a1526,-2px 0 0 #3a1526,0 2px 0 #3a1526,0 -2px 0 #3a1526; }
   .g-hud b{ color:var(--brand-yellow); }
   .g-hud i{ font-style:normal; }
-  /* arcade page chrome (leave + mute) — top-right of the page while the arcade is up */
-  #arcadeChrome{ position:fixed; top:clamp(.8rem,2.6vw,1.4rem); right:clamp(.8rem,2.6vw,1.5rem); z-index:26; display:none; gap:.55rem; }
-  #arcadeChrome.on{ display:flex; }
+  /* arcade page chrome (leave + mute) — top-right of the page while the arcade is up;
+     the form-mode ✕ shares the same spot and styling */
+  #arcadeChrome, #formChrome{ position:fixed; top:clamp(.8rem,2.6vw,1.4rem); right:clamp(.8rem,2.6vw,1.5rem); z-index:26; display:none; gap:.55rem; }
+  #arcadeChrome.on, #formChrome.on{ display:flex; }
   .acbtn{ position:relative; width:44px; height:44px; border-radius:100px; display:grid; place-items:center; cursor:pointer;
     color:var(--rose); border:1px solid var(--tag-border); background:var(--card-a); backdrop-filter:blur(5px); font-size:1.05rem;
     transition:transform .15s ease, background .2s ease, color .2s ease; }
@@ -339,19 +348,23 @@
     <div id="tvcontent">
       <div class="beat" id="b1" data-in="-0.05" data-out="0.13"><div class="inner">
         <h2>khushi has a<br><span class="sub">secret</span> to share</h2>
+        <button class="beat-next" type="button">next</button>
       </div></div>
 
       <div class="beat" id="b2" data-in="0.16" data-out="0.28"><div class="inner">
         <h2>and she's hosting<br><span class="sub">a slumber party</span></h2>
+        <button class="beat-next" type="button">next</button>
       </div></div>
 
       <div class="beat" id="b3" data-in="0.33" data-out="0.45"><div class="inner">
         <h2>to spill <span class="sub">the tea</span></h2>
+        <button class="beat-next" type="button">next</button>
       </div></div>
 
       <div class="beat sky" id="bsky" data-in="0.50" data-out="0.64"><div class="inner">
         <h2>30 creators, artists,<br>entrepreneurs &amp; followers</h2>
         <p class="skyline"><span class="sub">get to know it first.</span></p>
+        <button class="beat-next" type="button">next</button>
       </div></div>
 
       <!-- step-based application, one question at a time -->
@@ -449,10 +462,7 @@
   </div>
 
   <header id="masthead">
-    <div class="wordmark">
-      <span class="top"><span class="secret">(secret;)</span><span class="khushi">khushi's</span></span>
-      <span class="slumber">slumber party</span>
-    </div>
+    <img class="logo" src="assets/logo.png" alt="(secret;) khushi's slumber party" />
     <div class="head-right">
       <a class="apply-link" href="#apply" id="applyLink">Apply</a>
     </div>
@@ -486,6 +496,10 @@
     <button class="acbtn" id="gmute" title="sound on/off">♪</button>
     <button class="acbtn" id="gquit" title="leave the arcade">✕</button>
   </div>
+  <!-- form-mode chrome: the form locks the page (like the arcade), this ✕ is the only way out -->
+  <div id="formChrome">
+    <button class="acbtn" id="formExit" title="close the form">✕</button>
+  </div>
   <div id="veil"><div class="l">shhh…</div></div>
 
   <!-- scroll grooves: one snap detent per beat + the form (heights defined in CSS place each point) -->
@@ -511,7 +525,9 @@ const smooth=(e0,e1,x)=>{const t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t);};
 let targetP=0, curP=0;
 function readScroll(){
   if(typeof window.__p==='number'){ targetP=clamp(window.__p,0,1); return; }
-  const max=document.body.scrollHeight-innerHeight;
+  // divide by the stable room height (100lvh), not live innerHeight — the mobile toolbar
+  // sliding on a scroll-back changes innerHeight and would nudge p (a visible stutter)
+  const max=document.body.scrollHeight-room.clientHeight;
   targetP = max>0 ? clamp(scrollY/max,0,1) : 0;
 }
 addEventListener('scroll', readScroll, {passive:true});
@@ -527,7 +543,7 @@ const IMG_W=1376, IMG_H=768;
 const TVI={ cx:0.500, cy:0.362, w:0.228, h:0.318 };   // monitor screen as fractions of the image (calibrated)
 let base={cx:0.5,cy:0.48,w:0.2,h:0.25}, ZMAX=5;
 function computeBase(){
-  const Vw=innerWidth, Vh=innerHeight;
+  const Vw=room.clientWidth, Vh=room.clientHeight;   // the lvh-stable room box, not the live viewport
   const scale=Math.max(Vw/IMG_W, Vh/IMG_H);
   const dW=IMG_W*scale, dH=IMG_H*scale, ox=(Vw-dW)/2, oy=(Vh-dH)/2;
   base={ cx:(ox+TVI.cx*dW)/Vw, cy:(oy+TVI.cy*dH)/Vh, w:(TVI.w*dW)/Vw, h:(TVI.h*dH)/Vh };
@@ -536,15 +552,23 @@ function computeBase(){
   if(roomdeco){ roomdeco.style.left=ox+'px'; roomdeco.style.top=oy+'px'; roomdeco.style.width=dW+'px'; roomdeco.style.height=dH+'px';
     roomdeco.style.transformOrigin=(TVI.cx*100)+'% '+(TVI.cy*100)+'%'; }   // origin = screen centre, so it scales locked to the room
 }
-addEventListener('resize', ()=>{ readScroll(); computeBase(); sizeStatic(); sizeGlitch(); sizePixel(); });
-computeBase();
+// mobile toolbars fire resize as they slide in/out on a scroll-back; the room box is lvh-stable,
+// so only react when its size actually changed (rotation, real window resize)
+let lastVW=0, lastVH=0;
+addEventListener('resize', ()=>{
+  const w=room.clientWidth, h=room.clientHeight;
+  if(w===lastVW && h===lastVH) return;
+  lastVW=w; lastVH=h;
+  readScroll(); computeBase(); sizeStatic(); sizeGlitch(); sizePixel();
+});
+computeBase(); lastVW=room.clientWidth; lastVH=room.clientHeight;
 
 const ZOOM_END=0.46;
 const ZOUT=0.10;   // how far back we pull for the on-screen form (0 = whole computer in view)
 function updateZoom(p){
   // zoom IN (0→0.42), hold at full (0.42→0.66), then zoom OUT to ZOUT for the form (0.66→0.84)
   const z=Math.min(smooth(0, 0.42, p), lerp(1, ZOUT, smooth(0.66, 0.84, p)));
-  const Vw=innerWidth, Vh=innerHeight;
+  const Vw=room.clientWidth, Vh=room.clientHeight;   // lvh-stable, same box computeBase used
   const s=lerp(1, ZMAX, z);
   const cx=lerp(base.cx, 0.5, z), cy=lerp(base.cy, 0.5, z);  // screen centre pans to viewport centre
   const w=base.w*s, h=base.h*s;                              // exactly the drawn screen at this zoom
@@ -625,20 +649,25 @@ function drawPixelBg(){
 
 /* ---------- beats + form gating ---------- */
 const beats=[...document.querySelectorAll('.beat')].map(el=>({
-  el, a:+el.dataset.in, b:+el.dataset.in+0.05, c:+el.dataset.out-0.05, d:+el.dataset.out
+  el, btn:el.querySelector('.beat-next'), a:+el.dataset.in, b:+el.dataset.in+0.05, c:+el.dataset.out-0.05, d:+el.dataset.out
 }));
 const bar=document.getElementById('progress');
 const cue=document.getElementById('cue');
 const masthead=document.getElementById('masthead');
 const formwrap=document.getElementById('formwrap');
+const noisescrim=document.getElementById('noisescrim');
 function updateBeats(p){
+  let skyO=0;
   for(const s of beats){
     let o;
     if(p<s.a||p>s.d) o=0; else if(p<s.b) o=(p-s.a)/(s.b-s.a);
     else if(p>s.c) o=1-(p-s.c)/(s.d-s.c); else o=1;
     o=clamp(o,0,1);
     s.el.style.opacity=o; s.el.style.transform=`translateY(${(1-o)*14}px)`;
+    if(s.btn) s.btn.style.pointerEvents = o>0.6 ? 'auto' : 'none';   // the beats overlap; only the visible one's button is tappable
+    if(s.el.id==='bsky') skyO=o;
   }
+  noisescrim.style.opacity=String(1-skyO);   // "30 creators" reads via its stroke — the scrim gets out of the way
   formwrap.style.opacity = String(smooth(0.85, 0.93, p));  // appears once we've zoomed back out
   formwrap.classList.toggle('on', p>0.87);                 // interactive once it's up
   cue.style.opacity = p>0.04 ? 0 : 0.9;
@@ -652,6 +681,7 @@ function tick(){
   tt+=0.016;
   if(typeof window.__p==='number'){ targetP=clamp(window.__p,0,1); curP=targetP; }
   else curP += (targetP-curP)*0.2;
+  if(window.__p===undefined && targetP>0.92 && curP>0.92) enterFormLock();   // reaching the form locks the page
   updateZoom(curP);
   updateBeats(curP);
   if((sf++ & 1)===0) drawStatic();   // ~30fps static is plenty
@@ -705,6 +735,47 @@ function syncNav(){
   if(navDown) navDown.disabled = y>maxY-12;
 }
 addEventListener('scroll', syncNav, {passive:true}); addEventListener('resize', syncNav); syncNav();
+// the "next" button under each broadcast beat steps to the next groove (same as the ▼ arrow)
+document.querySelectorAll('.beat-next').forEach(b=>b.addEventListener('click', ()=>goSnap(1)));
+
+/* ---------- form mode: reaching the form locks the page (like the arcade) ----------
+   Scroll momentum + the keyboard shatter the fixed-TV illusion on mobile, so once the form
+   is up we pin the scene (window.__p) and freeze the body; the ✕ is the only way out. */
+const navArrows=document.getElementById('navArrows');
+const formChrome=document.getElementById('formChrome');
+const FORM_P=0.94;                                 // the .s-form snap point (564vh ÷ 600vh)
+let formLocked=false;
+function formChromeOn(on){
+  formChrome.classList.toggle('on', on);
+  navArrows.style.opacity=on?'0':''; navArrows.style.pointerEvents=on?'none':'';
+  const al=document.getElementById('applyLink');
+  if(al){ al.style.opacity=on?'0':''; al.style.pointerEvents=on?'none':''; }
+}
+function enterFormLock(){
+  if(formLocked) return; formLocked=true;
+  window.__p=FORM_P;
+  document.documentElement.style.overflow='hidden';         // desktop: no wheel/keys scrolling
+  document.body.style.position='fixed'; document.body.style.inset='0';   // mobile: really no touch scrolling
+  formChromeOn(true);
+}
+function exitFormLock(){
+  if(!formLocked) return; formLocked=false;
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();   // put the keyboard away
+  delete window.__p;
+  document.documentElement.style.overflow='';
+  document.body.style.position=''; document.body.style.inset='';
+  formChromeOn(false);
+  // step back out to the last beat — an instant jump (the scene itself eases via the curP lerp),
+  // so restoring mandatory snap can never interrupt a scroll still in flight
+  const root=document.documentElement, crew=document.querySelector('.s-crew');
+  root.style.scrollSnapType='none';
+  window.scrollTo({ top: crew ? crew.offsetTop : 0, behavior:'instant' });
+  setTimeout(()=>{ root.style.scrollSnapType=''; }, 400);
+  readScroll(); syncNav();
+}
+document.getElementById('formExit').addEventListener('click', exitFormLock);
+// the arcade opens on top of the locked form; when it thaws, the form re-pins instead
+window.__formLock={ active:()=>formLocked, repin(){ window.__p=FORM_P; formChromeOn(true); } };
 
 /* ---------- step-based form ---------- */
 const form=document.getElementById('apply');
@@ -918,9 +989,9 @@ renderStep();
   const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
   const useGamepad=()=>TOUCH||innerWidth<=640;   // on-screen buttons for phones (keyboard elsewhere)
   const rnd=n=>(Math.random()*n)|0;
-  // hide the page chrome (masthead + scroll arrows) while the frozen arcade is up
+  // hide the page chrome (masthead + scroll arrows + form ✕) while the frozen arcade is up
   function setChrome(show){
-    for(const el of [masthead, navArrows]){ if(!el) continue; el.style.opacity=show?'':'0'; el.style.pointerEvents=show?'':'none'; }
+    for(const el of [masthead, navArrows, document.getElementById('formChrome')]){ if(!el) continue; el.style.opacity=show?'':'0'; el.style.pointerEvents=show?'':'none'; }
   }
 
   let unlocked=false, open=false, mode=null, sel=0;   // mode: 'menu' | 'play' | 'over' | null
@@ -1000,7 +1071,10 @@ renderStep();
 
   // Freeze the scroll scene at the form framing (the little computer, screen facing us) while playing.
   function freeze(){ const p=(typeof curP==='number')?curP:0.96; window.__p=Math.max(p,0.94); if(typeof updateZoom==='function') updateZoom(window.__p); }
-  function thaw(){ delete window.__p; if(typeof readScroll==='function') readScroll(); }
+  function thaw(){
+    if(window.__formLock && window.__formLock.active()){ window.__formLock.repin(); return; }   // leaving the arcade lands back in the locked form
+    delete window.__p; if(typeof readScroll==='function') readScroll();
+  }
   // The CRT screen can overflow a narrow viewport, so confine play + UI to the on-screen visible slice.
   function layout(){
     const r=gameEl.getBoundingClientRect(), W=r.width, H=r.height;
