@@ -52,7 +52,8 @@
   /* ---- the bedroom; zooms toward the TV as you scroll ---- */
   /* sized to the LARGE viewport (lvh) so the mobile url bar sliding in/out on a scroll-back
      never resizes the room — all zoom geometry reads this box, keeping the scene rock-steady */
-  #room{ position:fixed; left:0; right:0; top:0; height:100vh; height:100lvh; z-index:1; overflow:hidden; pointer-events:none; }
+  #room{ position:fixed; left:0; right:0; top:0; height:100vh; height:100lvh; z-index:1; overflow:hidden; pointer-events:none;
+    transition:opacity .45s ease; }   /* the computer fades (not pops) when mobile form mode takes over */
   #roomimg{ width:100%; height:100%; object-fit:cover; will-change:transform; filter:var(--room-dim); }
   /* neon + stickers, locked to the computer (rect + transform set in JS to mirror #roomimg) */
   #roomdeco{ position:absolute; left:0; top:0; will-change:transform; pointer-events:none; }
@@ -67,6 +68,8 @@
   /* ---- the TV screen; grows from the CRT rect to the full viewport ---- */
   #tv{ position:fixed; z-index:2; overflow:hidden; pointer-events:none; background:#1b1220;
     border-radius:14px; box-shadow:inset 0 0 60px rgba(0,0,0,.5), inset 0 0 8px rgba(0,0,0,.7); }
+  /* on while mobile form mode takes over / releases the screen, so the rect eases instead of snapping */
+  #tv.tvease{ transition:left .45s ease, top .45s ease, width .45s ease, height .45s ease, border-radius .45s ease; }
   #static{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; opacity:var(--static-alpha); }
   #glitch{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; mix-blend-mode:screen; image-rendering:pixelated; }
   #pixelbg{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; opacity:0; will-change:opacity,transform; }
@@ -594,22 +597,28 @@ function updateZoom(p){
   pixelbg.style.opacity=String(smooth(0.44, 0.54, p) * lerp(0.7, 0.28, smooth(0.80, 0.9, p)));
   pixelbg.style.transform='';
   // mobile form mode: the whole page becomes the CRT screen (dark + noise + scanlines) — the
-  // computer and the masthead go away, and the questions centre in the VISIBLE area (the
-  // visual viewport shrinks live with the keyboard, so the form always sits above it)
+  // computer and the masthead fade away, and the questions centre in the VISIBLE area (the
+  // visual viewport shrinks with the keyboard, and PANS when iOS raises it — track both)
   const card = window.__formLock && window.__formLock.active() && innerWidth<=640;
   if(card !== updateZoom._card){
     updateZoom._card=card;
-    room.style.visibility = card ? 'hidden' : '';
-    masthead.style.visibility = card ? 'hidden' : '';   // the dark logo can't sit on the dark screen
-    if(!card) formwrap.style.height='';
+    tv.classList.add('tvease');                     // ease the takeover/release instead of snapping…
+    clearTimeout(updateZoom._ease);
+    updateZoom._ease=setTimeout(()=>tv.classList.remove('tvease'), 500);   // …then back to per-frame control
+    if(!card){ masthead.style.opacity=''; masthead.style.pointerEvents='';
+      formwrap.style.top=''; formwrap.style.height=''; formChrome.style.transform=''; }
   }
   if(card){
-    const vv=window.visualViewport, vh=(vv&&vv.height)||innerHeight;
+    const vv=window.visualViewport, vvh=(vv&&vv.height)||innerHeight, vvt=(vv&&vv.offsetTop)||0;
+    room.style.opacity='0';                         // the computer fades out under the screen
+    masthead.style.opacity='0'; masthead.style.pointerEvents='none';   // dark logo can't sit on the dark screen
     tv.style.left='0px'; tv.style.top='0px';
     tv.style.width=innerWidth+'px'; tv.style.height=room.clientHeight+'px';   // full page (lvh-stable)
     tv.style.borderRadius='0px';
     tvcontent.style.fontSize='15px';
-    formwrap.style.height=Math.max(210, vh)+'px';   // keyboard-aware slice the questions centre in
+    formwrap.style.top=vvt+'px';                    // centre the questions in the slice that's
+    formwrap.style.height=Math.max(210, vvh)+'px';  // actually visible above the keyboard
+    formChrome.style.transform='translateY('+vvt+'px)';   // keep the ✕ on-screen when iOS pans
   }
 }
 
