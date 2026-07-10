@@ -136,20 +136,6 @@
 
   .progress{ position:fixed; top:0; left:0; height:2px; width:0%; z-index:21;
     background:linear-gradient(90deg,var(--brand-pink),var(--brand-orange),var(--brand-yellow)); box-shadow:0 0 10px rgba(235,100,140,.5); }
-  .scroll-cue{ position:fixed; left:50%; bottom:1.6rem; transform:translateX(-50%); z-index:19;
-    color:var(--rose); font-family:var(--mono); font-size:1rem; letter-spacing:.28em; text-transform:uppercase;
-    display:flex; flex-direction:column; align-items:center; gap:.5rem; opacity:.9; transition:opacity .5s ease; pointer-events:none; }
-  .scroll-cue .line{ width:1px; height:34px; background:linear-gradient(var(--rose),transparent); animation:drop 2s infinite; }
-  @keyframes drop{ 0%{transform:scaleY(0);transform-origin:top;opacity:0} 40%{transform:scaleY(1);opacity:1} 100%{transform:scaleY(1);transform-origin:bottom;opacity:0} }
-  .navarrows{ position:fixed; right:clamp(.8rem,2.6vw,1.5rem); bottom:clamp(1rem,4vh,1.8rem); z-index:19;
-    display:flex; flex-direction:column; gap:.55rem; transition:opacity .4s ease; }
-  .navbtn{ width:44px; height:44px; border-radius:100px; display:grid; place-items:center; cursor:pointer;
-    color:var(--rose); border:1px solid var(--tag-border); background:var(--card-a); backdrop-filter:blur(5px);
-    transition:transform .15s ease, background .2s ease, color .2s ease, opacity .3s ease; }
-  .navbtn svg{ width:20px; height:20px; }
-  .navbtn:hover{ transform:translateY(-1px); background:var(--rose); color:#fff; }
-  .navbtn:focus-visible{ outline:2px solid var(--rose); outline-offset:2px; }
-  .navbtn[disabled]{ opacity:.32; pointer-events:none; }
   /* mobile handheld controls: a pink console deck (exact monitor pink) covering everything below
      the screen (floppy + keyboard), with the buttons on it. `top` is set in JS to the CRT bottom. */
   #gamepad{ position:fixed; left:0; right:0; top:60vh; bottom:0; z-index:22; display:none;
@@ -238,7 +224,6 @@
   .s-tea  { height:108vh; }  /* top 234vh → p≈0.39  "spill the tea"      */
   .s-crew { height:222vh; }  /* top 342vh → p≈0.57  "30 creators…"       */
   .s-form { height:136vh; }  /* top 564vh → p≈0.94  the application form  */
-  @media (prefers-reduced-motion:reduce){ .scroll-cue .line{ animation:none; } }
   /* mobile: iOS auto-zooms the page when a focused input is <16px, which shatters the fixed
      TV illusion — pin form fields to 16px so focusing a question never zooms the viewport */
   @media (max-width:640px){
@@ -479,16 +464,6 @@
   </header>
 
   <div class="progress" id="progress"></div>
-  <div class="scroll-cue" id="cue"><span>scroll</span><span class="line"></span></div>
-  <!-- for anyone who doesn't scroll: step through the beats -->
-  <div class="navarrows" id="navArrows">
-    <button class="navbtn" id="navUp" aria-label="Previous">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
-    </button>
-    <button class="navbtn" id="navDown" aria-label="Next">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-    </button>
-  </div>
   <!-- mobile arcade controls: the CRT becomes a little handheld console -->
   <div id="gamepad" aria-hidden="true">
     <div class="gp-row">
@@ -686,7 +661,6 @@ const beats=[...document.querySelectorAll('.beat')].map(el=>({
   el, btn:el.querySelector('.beat-next'), a:+el.dataset.in, b:+el.dataset.in+0.05, c:+el.dataset.out-0.05, d:+el.dataset.out
 }));
 const bar=document.getElementById('progress');
-const cue=document.getElementById('cue');
 const masthead=document.getElementById('masthead');
 const formwrap=document.getElementById('formwrap');
 const noisescrim=document.getElementById('noisescrim');
@@ -704,7 +678,6 @@ function updateBeats(p){
   noisescrim.style.opacity=String(1-skyO);   // "30 creators" reads via its stroke — the scrim gets out of the way
   formwrap.style.opacity = String(smooth(0.85, 0.93, p));  // appears once we've zoomed back out
   formwrap.classList.toggle('on', p>0.87);                 // interactive once it's up
-  cue.style.opacity = p>0.04 ? 0 : 0.9;
   bar.style.width=(p*100)+'%';
 }
 
@@ -744,8 +717,7 @@ document.getElementById('applyLink').addEventListener('click', e=>{
   e.preventDefault(); window.scrollTo({ top:document.body.scrollHeight, behavior:'smooth' });
 });
 
-/* ---------- next / back arrows: step through the snap grooves (for anyone who doesn't scroll) ---------- */
-const navUp=document.getElementById('navUp'), navDown=document.getElementById('navDown');
+/* ---------- stepping through the snap grooves (the beats' "next" buttons) ---------- */
 const snapTops=()=>[...document.querySelectorAll('.scroll-space section')].map(s=>s.offsetTop);
 let snapRestore=0;
 function goSnap(dir){
@@ -760,16 +732,7 @@ function goSnap(dir){
   window.scrollTo({ top:target, behavior:'smooth' });
   clearTimeout(snapRestore); snapRestore=setTimeout(()=>{ root.style.scrollSnapType=''; }, 900);
 }
-navUp && navUp.addEventListener('click', ()=>goSnap(-1));
-navDown && navDown.addEventListener('click', ()=>goSnap(1));
-// dim each arrow at the ends
-function syncNav(){
-  const y=scrollY, maxY=document.body.scrollHeight-innerHeight;
-  if(navUp) navUp.disabled = y<12;
-  if(navDown) navDown.disabled = y>maxY-12;
-}
-addEventListener('scroll', syncNav, {passive:true}); addEventListener('resize', syncNav); syncNav();
-// the "next" button under each broadcast beat steps to the next groove (same as the ▼ arrow)
+// the "next" button under each broadcast beat steps to the next groove
 document.querySelectorAll('.beat-next').forEach(b=>b.addEventListener('click', ()=>{
   // the sky beat's "next" lands on the form — grab the keyboard inside this tap, because iOS
   // only raises it for focus() calls made within a user gesture (the lock re-focuses later anyway)
@@ -783,13 +746,11 @@ document.querySelectorAll('.beat-next').forEach(b=>b.addEventListener('click', (
 /* ---------- form mode: reaching the form locks the page (like the arcade) ----------
    Scroll momentum + the keyboard shatter the fixed-TV illusion on mobile, so once the form
    is up we pin the scene (window.__p) and freeze the body; the ✕ is the only way out. */
-const navArrows=document.getElementById('navArrows');
 const formChrome=document.getElementById('formChrome');
 const FORM_P=0.94;                                 // the .s-form snap point (564vh ÷ 600vh)
 let formLocked=false;
 function formChromeOn(on){
   formChrome.classList.toggle('on', on);
-  navArrows.style.opacity=on?'0':''; navArrows.style.pointerEvents=on?'none':'';
   const al=document.getElementById('applyLink');
   if(al){ al.style.opacity=on?'0':''; al.style.pointerEvents=on?'none':''; }
 }
@@ -816,7 +777,7 @@ function exitFormLock(){
   root.style.scrollSnapType='none';
   window.scrollTo({ top: crew ? crew.offsetTop : 0, behavior:'instant' });
   setTimeout(()=>{ root.style.scrollSnapType=''; }, 400);
-  readScroll(); syncNav();
+  readScroll();
 }
 document.getElementById('formExit').addEventListener('click', exitFormLock);
 // the arcade opens on top of the locked form; when it thaws, the form re-pins instead
@@ -1029,14 +990,13 @@ renderStep();
   const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit'), muteBtn=document.getElementById('gmute');
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
-  const navArrows=document.getElementById('navArrows');
   const gamepad=document.getElementById('gamepad'), arcadeChrome=document.getElementById('arcadeChrome');
   const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
   const useGamepad=()=>TOUCH||innerWidth<=640;   // on-screen buttons for phones (keyboard elsewhere)
   const rnd=n=>(Math.random()*n)|0;
-  // hide the page chrome (masthead + scroll arrows + form ✕) while the frozen arcade is up
+  // hide the page chrome (masthead + form ✕) while the frozen arcade is up
   function setChrome(show){
-    for(const el of [masthead, navArrows, document.getElementById('formChrome')]){ if(!el) continue; el.style.opacity=show?'':'0'; el.style.pointerEvents=show?'':'none'; }
+    for(const el of [masthead, document.getElementById('formChrome')]){ if(!el) continue; el.style.opacity=show?'':'0'; el.style.pointerEvents=show?'':'none'; }
   }
 
   let unlocked=false, open=false, mode=null, sel=0;   // mode: 'menu' | 'play' | 'over' | null
