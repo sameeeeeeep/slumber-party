@@ -112,7 +112,9 @@
     text-shadow:.16em 0 0 #2b1220, -.16em 0 0 #2b1220, 0 .16em 0 #2b1220, 0 -.16em 0 #2b1220,
       .11em .11em 0 #2b1220, -.11em .11em 0 #2b1220, .11em -.11em 0 #2b1220, -.11em -.11em 0 #2b1220; }
   /* "next" button under each broadcast beat (JS flips pointer-events on while its beat is up) */
-  .beat-next{ pointer-events:none; display:inline-block; margin-top:2.8em; font-family:var(--pixel); font-size:.6em;
+  /* the font floor keeps the hero's button (tiny CRT rect → tiny em base) the same size as the
+     buttons on the zoomed-in screens */
+  .beat-next{ pointer-events:none; display:inline-block; margin-top:2.8em; font-family:var(--pixel); font-size:max(.6em, 10px);
     letter-spacing:.08em; text-transform:lowercase; text-align:center; color:#fff; cursor:pointer; padding:1em 1.6em; border-radius:.6em;
     background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
     box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2); transition:transform .15s ease; }
