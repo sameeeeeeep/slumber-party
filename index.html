@@ -204,8 +204,11 @@
   .fbtns{ display:flex; align-items:center; gap:.7em; }
   .fback{ background:none; border:none; color:#fff; opacity:.7; font-family:var(--mono); font-size:1.15em; letter-spacing:.03em; cursor:pointer; }
   .fback:hover{ opacity:1; } .fback[hidden]{ display:none; }
-  .fnext{ border:none; border-radius:100px; cursor:pointer; font-family:var(--mono); text-transform:uppercase;
-    letter-spacing:.1em; font-size:1.1em; color:var(--btn-fg); background:var(--btn-bg); padding:.35em 1.2em; box-shadow:0 8px 20px rgba(235,100,140,.32); transition:transform .15s ease; }
+  /* same recipe as .beat-next so the form's button matches the broadcast beats' */
+  .fnext{ cursor:pointer; font-family:var(--pixel); font-size:.7em; letter-spacing:.08em; text-transform:lowercase;
+    text-align:center; color:#fff; padding:1em 1.5em; border-radius:.6em;
+    background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
+    box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2); transition:transform .15s ease; }
   .fnext:hover{ transform:translateY(-2px); }
   .fdone{ text-align:center; display:none; }
   .fdone.on{ display:block; animation:stepIn .5s ease; }
@@ -235,6 +238,8 @@
      TV illusion — pin form fields to 16px so focusing a question never zooms the viewport */
   @media (max-width:640px){
     .step input, .step textarea{ font-size:18px; }   /* ≥16px so iOS never zooms; VT323 reads a touch small */
+    #masthead{ justify-content:center; }             /* just the logo, centred */
+    #masthead .head-right{ display:none; }           /* the beats' "next" buttons carry you to the form */
   }
 
   /* ---------- easter egg: SLUMBER SNAKE (retro game on the CRT) ---------- */
@@ -588,18 +593,23 @@ function updateZoom(p){
   // pink noise fills the screen at full zoom, stays for the form (dimmed so the form reads)
   pixelbg.style.opacity=String(smooth(0.44, 0.54, p) * lerp(0.7, 0.28, smooth(0.80, 0.9, p)));
   pixelbg.style.transform='';
-  // mobile form mode: the computer disappears (plain pink page behind) and the screen becomes
-  // a top-anchored card sized to the visual viewport, so the keyboard never covers the question
+  // mobile form mode: the whole page becomes the CRT screen (dark + noise + scanlines) — the
+  // computer and the masthead go away, and the questions centre in the VISIBLE area (the
+  // visual viewport shrinks live with the keyboard, so the form always sits above it)
   const card = window.__formLock && window.__formLock.active() && innerWidth<=640;
-  if(card !== updateZoom._card){ updateZoom._card=card; room.style.visibility = card ? 'hidden' : ''; }
+  if(card !== updateZoom._card){
+    updateZoom._card=card;
+    room.style.visibility = card ? 'hidden' : '';
+    masthead.style.visibility = card ? 'hidden' : '';   // the dark logo can't sit on the dark screen
+    if(!card) formwrap.style.height='';
+  }
   if(card){
-    const vv=window.visualViewport, vh=(vv&&vv.height)||innerHeight;   // shrinks live with the keyboard
-    const L=Math.round(innerWidth*0.04), T=76;                         // just below the masthead
-    const H=Math.max(210, Math.min(420, vh-T-12));
-    tv.style.left=L+'px'; tv.style.top=T+'px';
-    tv.style.width=(innerWidth-2*L)+'px'; tv.style.height=H+'px';
-    tv.style.borderRadius='16px';
+    const vv=window.visualViewport, vh=(vv&&vv.height)||innerHeight;
+    tv.style.left='0px'; tv.style.top='0px';
+    tv.style.width=innerWidth+'px'; tv.style.height=room.clientHeight+'px';   // full page (lvh-stable)
+    tv.style.borderRadius='0px';
     tvcontent.style.fontSize='15px';
+    formwrap.style.height=Math.max(210, vh)+'px';   // keyboard-aware slice the questions centre in
   }
 }
 
@@ -749,7 +759,15 @@ function syncNav(){
 }
 addEventListener('scroll', syncNav, {passive:true}); addEventListener('resize', syncNav); syncNav();
 // the "next" button under each broadcast beat steps to the next groove (same as the ▼ arrow)
-document.querySelectorAll('.beat-next').forEach(b=>b.addEventListener('click', ()=>goSnap(1)));
+document.querySelectorAll('.beat-next').forEach(b=>b.addEventListener('click', ()=>{
+  // the sky beat's "next" lands on the form — grab the keyboard inside this tap, because iOS
+  // only raises it for focus() calls made within a user gesture (the lock re-focuses later anyway)
+  if(b.closest('.beat').id==='bsky'){
+    const inp=document.querySelector('#apply .step.on input, #apply .step.on textarea');
+    if(inp) try{ inp.focus({preventScroll:true}); }catch(e){}
+  }
+  goSnap(1);
+}));
 
 /* ---------- form mode: reaching the form locks the page (like the arcade) ----------
    Scroll momentum + the keyboard shatter the fixed-TV illusion on mobile, so once the form
@@ -811,7 +829,7 @@ function renderStep(focusNow){
   dots.forEach((d,i)=>d.classList.toggle('on', i===cur));
   stepnum.textContent=String(cur+1).padStart(2,'0');
   fback.hidden = cur===0;
-  fnext.textContent = cur===stepsEls.length-1 ? ('send it '+String.fromCharCode(9825)) : ('next '+String.fromCharCode(8594));  // ASCII source survives artifact entity-encoding
+  fnext.textContent = cur===stepsEls.length-1 ? ('send it '+String.fromCharCode(9825)) : 'next';  // plain "next", matching the beat buttons
   // focus SYNCHRONOUSLY inside the tap/keydown that changed the step (no setTimeout) — otherwise
   // mobile loses the user-gesture and dismisses the keyboard, forcing a re-tap on every question
   if(focusNow){
