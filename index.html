@@ -99,7 +99,10 @@
   .ci-label{ font-family:var(--mono); font-size:1.1em; letter-spacing:.14em; text-transform:lowercase;
     color:var(--brand-soft); padding:.9em 1em .3em; opacity:.8; }
   .ci-row{ display:flex; align-items:center; gap:.7em; width:100%; text-align:left; cursor:pointer;
-    background:none; border:none; color:inherit; padding:.7em 1em; transition:background .15s ease; }
+    background:none; border:none; color:inherit; padding:.7em 1em; opacity:0; transform:translateY(-.7em);
+    transition:background .15s ease, opacity .5s ease, transform .5s cubic-bezier(.2,.85,.3,1.3); }
+  #chatInbox.ready .ci-row{ opacity:1; transform:none; }             /* the unread DM lands like a notification */
+  #chatInbox:not(.ready) .ci-hint{ opacity:0; animation:none; }      /* "tap to open" waits for the message */
   .ci-row:hover{ background:rgba(255,255,255,.06); }
   .ci-row:focus-visible{ outline:2px solid var(--brand-yellow); outline-offset:-2px; }
   .ci-av{ width:2.6em; height:2.6em; font-size:.82em; }
@@ -150,7 +153,10 @@
   .ct-send{ flex:none; cursor:pointer; font-family:var(--pixel); font-size:.62em; letter-spacing:.06em;
     text-transform:lowercase; color:#fff; padding:.95em 1.1em; border-radius:.6em;
     background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
-    box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2); transition:transform .15s ease; }
+    box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2);
+    opacity:0; visibility:hidden; transform:scale(.85);      /* surfaces only once the reply is typed (space reserved, no shift) */
+    transition:opacity .25s ease, transform .25s cubic-bezier(.2,.85,.3,1.3); }
+  .ct-send.show{ opacity:1; visibility:visible; transform:none; }
   .ct-send:hover{ transform:translateY(-2px); }
   .ct-send:focus-visible{ outline:2px solid var(--brand-yellow); outline-offset:2px; }
   /* the CRT is pointer-events:none — re-enable just the clickable chat controls (and cut them once the form takes over) */
@@ -710,52 +716,67 @@ const chatThread=document.getElementById('chatThread');
 const ctBody=document.getElementById('ctBody');
 const ctCompose=document.getElementById('ctCompose');
 const ctDraft=document.getElementById('ctDraft');
+const ctSend=document.getElementById('ctSend');
+const ciRow=document.getElementById('ciRow');
 // the conversation: each turn is one of her lines + the reply we pre-draft for you to send.
 // hitting "send" (or just scrolling) advances one snap groove → the next turn appears.
 const CHAT=[
   { her:'i have a secret to share 🤫',                            draft:'whaaat? tell me' },
   { her:"nooo, i'm hosting a slumber party to spill the tea ☕",   draft:"who's going to be there?" },
-  { her:'a group of thirty folks — my friends, a few creators, artists, entrepreneurs & some of you girlies ✨', draft:'how can i get in?' },
-  { her:"eee ok — fill this out & i'll see you on the list ♡",    draft:null }
+  { her:'a group of thirty folks — my friends, a few creators, artists, entrepreneurs & some of you girlies ✨', draft:'how can i get in?' }
 ];
-// the 5 snap grooves map 1:1 to stages 0–4 (inbox, then one turn each; 4 hands off to the form)
+// the 5 snap grooves map to stages 0–4: inbox, three DM turns, then the form. stage 4 has no
+// new line of hers — sending "how can i get in?" just lands you on the application form.
 function chatStage(p){ return p<0.11?0 : p<0.30?1 : p<0.48?2 : p<0.72?3 : 4; }
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const bubble=(who,t)=>'<div class="msg '+who+'">'+esc(t)+'</div>';
 const TYPING='<div class="msg typing"><i></i><i></i><i></i></div>';
 // thread up through `stage`: her line then your sent reply, turn by turn (the newest her line can "type")
 function buildThread(stage, typing){
+  const turns=Math.min(stage, CHAT.length);   // her lines cap at the last turn; stage 4 only sends your final reply
   let h='';
-  for(let i=1;i<=stage;i++){
+  for(let i=1;i<=turns;i++){
     h += (i===stage && typing) ? TYPING : bubble('her', CHAT[i-1].her);
     if(i<stage) h += bubble('you', CHAT[i-1].draft);
   }
   return h;
 }
-// your pre-drafted reply types itself into the compose field, char by char, left-aligned
+// your pre-drafted reply types itself into the compose field, char by char, left-aligned;
+// the send button only surfaces once the reply has finished typing
 function typeDraft(text){
   clearInterval(typeDraft._t);
+  ctSend.classList.remove('show');                          // hide send while you're "typing"
   ctDraft.classList.add('caret'); ctDraft.textContent='';
   let i=0;
   typeDraft._t=setInterval(()=>{
     ctDraft.textContent=text.slice(0, ++i);
-    if(i>=text.length){ clearInterval(typeDraft._t); ctDraft.classList.remove('caret'); }
+    if(i>=text.length){ clearInterval(typeDraft._t); ctDraft.classList.remove('caret'); ctSend.classList.add('show'); }
   }, 72);
 }
-let lastStage=-1, chatTimer=0;
+let lastStage=-1, chatTimer=0, notifReady=false;
+// the unread teaser drops in like a push notification, a beat after the screen tunes in
+function showNotif(){
+  clearTimeout(showNotif._t);
+  chatInbox.classList.remove('ready');
+  showNotif._t=setTimeout(()=>{ if(lastStage===0) chatInbox.classList.add('ready'); }, 650);
+}
 function renderChat(stage){
   if(stage===lastStage) return;
   const forward = stage>lastStage;
   lastStage=stage; clearTimeout(chatTimer); clearInterval(typeDraft._t);
   chatInbox.hidden = stage!==0;
   chatThread.hidden = stage===0;
-  if(stage===0) return;
-  const draft = stage<=3 ? CHAT[stage-1].draft : null;
+  if(stage===0){
+    chatInbox.classList.remove('ready');
+    if(notifReady) showNotif();      // else the veil-clear handler fires it once you can see the screen
+    return;
+  }
+  const draft = stage<=CHAT.length ? CHAT[stage-1].draft : null;
   const compose=typed=>{
     if(!draft){ ctCompose.hidden=true; return; }
     ctCompose.hidden=false;
-    if(typed) typeDraft(draft);                              // reached it live → type it out
-    else { ctDraft.classList.remove('caret'); ctDraft.textContent=draft; }   // scrubbed back → just show it
+    if(typed) typeDraft(draft);                              // reached it live → type it out, send follows
+    else { ctDraft.classList.remove('caret'); ctDraft.textContent=draft; ctSend.classList.add('show'); }   // scrubbed back → just show it
   };
   const toBottom=()=>{ ctBody.scrollTop=ctBody.scrollHeight; };
   if(forward){
@@ -809,7 +830,8 @@ readScroll(); tick();
 /* ---------- loading veil ("shhh…") — let it linger a beat, it's the invite ---------- */
 const MIN_VEIL=3200, MAX_VEIL=7000;
 let veilGone=false;
-function hideVeil(){ if(veilGone)return; veilGone=true; const v=document.getElementById('veil'); if(v){ v.style.opacity='0'; setTimeout(()=>v.remove(),900); } }
+function hideVeil(){ if(veilGone)return; veilGone=true; const v=document.getElementById('veil'); if(v){ v.style.opacity='0'; setTimeout(()=>v.remove(),900); }
+  notifReady=true; if(lastStage===0) showNotif(); }   // now the screen's visible, let the unread DM land
 function maybeHideVeil(){ if(veilGone)return; setTimeout(hideVeil, Math.max(0, MIN_VEIL-performance.now())); }  // hold at least MIN_VEIL
 roomimg.complete ? maybeHideVeil() : roomimg.addEventListener('load', maybeHideVeil);
 addEventListener('load', maybeHideVeil); setTimeout(hideVeil, MAX_VEIL);   // hard cap so it never sticks
@@ -844,9 +866,9 @@ function chatSend(){
   }
   goSnap(1);
 }
-document.getElementById('ciRow').addEventListener('click', ()=>goSnap(1));
-document.getElementById('ctSend').addEventListener('click', chatSend);
-document.getElementById('ctDraft').addEventListener('click', chatSend);
+ciRow.addEventListener('click', ()=>goSnap(1));
+ctSend.addEventListener('click', chatSend);
+ctDraft.addEventListener('click', chatSend);
 
 /* ---------- form mode: reaching the form locks the page (like the arcade) ----------
    Scroll momentum + the keyboard shatter the fixed-TV illusion on mobile, so once the form
