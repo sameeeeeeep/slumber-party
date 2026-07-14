@@ -130,8 +130,10 @@
     border-radius:1.1em; animation:msgIn .34s ease; word-wrap:break-word; }
   @keyframes msgIn{ from{opacity:0; transform:translateY(.5em) scale(.98)} to{opacity:1; transform:none} }
   .msg.her{ align-self:flex-start; background:rgba(255,252,253,.95); color:var(--ink-strong); border-bottom-left-radius:.35em; }
-  .msg.you{ align-self:flex-end; color:#fff; background:linear-gradient(120deg,#eb648c,#ec642a);
-    border-bottom-right-radius:.35em; box-shadow:0 2px 8px rgba(235,100,140,.35); }
+  /* a flat solid bubble — deliberately NOT the send button's gradient+glow, so a sent line
+     never reads as a button */
+  .msg.you{ align-self:flex-end; color:#fff; background:var(--brand-pink);
+    border-bottom-right-radius:.35em; box-shadow:0 2px 6px rgba(0,0,0,.22); }
   .msg.typing{ align-self:flex-start; background:rgba(255,252,253,.95); display:flex; gap:.28em;
     padding:.75em .9em; border-bottom-left-radius:.35em; }
   .msg.typing i{ width:.42em; height:.42em; border-radius:100px; background:#b28; opacity:.5; animation:typedot 1s infinite; }
@@ -139,9 +141,11 @@
   @keyframes typedot{ 0%,60%,100%{opacity:.3; transform:translateY(0)} 30%{opacity:1; transform:translateY(-.22em)} }
   .ct-compose{ flex:none; display:flex; align-items:center; gap:.6em; padding:.7em .8em;
     border-top:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); }
-  .ct-draft{ flex:1; min-width:0; font-family:var(--mono); font-size:1.1em; color:#fff; cursor:pointer; padding:.5em .9em;
-    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:100px;
+  .ct-draft{ flex:1; min-width:0; font-family:var(--mono); font-size:1.1em; color:#fff; cursor:pointer; text-align:left;
+    padding:.5em .9em; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:100px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ct-draft.caret::after{ content:'▋'; color:var(--brand-soft); animation:caretBlink .8s steps(1) infinite; }
+  @keyframes caretBlink{ 50%{opacity:0} }
   /* same recipe as the form's button so the send matches the rest of the site */
   .ct-send{ flex:none; cursor:pointer; font-family:var(--pixel); font-size:.62em; letter-spacing:.06em;
     text-transform:lowercase; color:#fff; padding:.95em 1.1em; border-radius:.6em;
@@ -728,26 +732,41 @@ function buildThread(stage, typing){
   }
   return h;
 }
+// your pre-drafted reply types itself into the compose field, char by char, left-aligned
+function typeDraft(text){
+  clearInterval(typeDraft._t);
+  ctDraft.classList.add('caret'); ctDraft.textContent='';
+  let i=0;
+  typeDraft._t=setInterval(()=>{
+    ctDraft.textContent=text.slice(0, ++i);
+    if(i>=text.length){ clearInterval(typeDraft._t); ctDraft.classList.remove('caret'); }
+  }, 42);
+}
 let lastStage=-1, chatTimer=0;
 function renderChat(stage){
   if(stage===lastStage) return;
   const forward = stage>lastStage;
-  lastStage=stage; clearTimeout(chatTimer);
+  lastStage=stage; clearTimeout(chatTimer); clearInterval(typeDraft._t);
   chatInbox.hidden = stage!==0;
   chatThread.hidden = stage===0;
   if(stage===0) return;
   const draft = stage<=3 ? CHAT[stage-1].draft : null;
-  const compose=show=>{ if(draft && show){ ctDraft.textContent=draft; ctCompose.hidden=false; } else ctCompose.hidden=true; };
+  const compose=typed=>{
+    if(!draft){ ctCompose.hidden=true; return; }
+    ctCompose.hidden=false;
+    if(typed) typeDraft(draft);                              // reached it live → type it out
+    else { ctDraft.classList.remove('caret'); ctDraft.textContent=draft; }   // scrubbed back → just show it
+  };
   const toBottom=()=>{ ctBody.scrollTop=ctBody.scrollHeight; };
   if(forward){
-    // her newest line "types" for a beat, then lands — and the reply draft slides in after
-    ctBody.innerHTML=buildThread(stage, true); compose(false); toBottom();
+    // her newest line runs a "typing" loader first, then lands — then your reply types itself out
+    ctBody.innerHTML=buildThread(stage, true); ctCompose.hidden=true; toBottom();
     chatTimer=setTimeout(()=>{
       if(lastStage!==stage) return;
-      ctBody.innerHTML=buildThread(stage, false); compose(true); toBottom();
-    }, 720);
+      ctBody.innerHTML=buildThread(stage, false); toBottom(); compose(true);
+    }, 900);
   } else {                                        // scrubbing back — no typing, land straight on the turn
-    ctBody.innerHTML=buildThread(stage, false); compose(true); toBottom();
+    ctBody.innerHTML=buildThread(stage, false); compose(false); toBottom();
   }
 }
 function updateChat(p){
