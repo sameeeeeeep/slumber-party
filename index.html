@@ -85,12 +85,17 @@
 
   /* ---- the screen plays out as a DM from khushi: an unread teaser, then a thread that
          fills in as you hit send. everything scales with the CRT via em (tvcontent font-size). ---- */
-  #chat{ position:absolute; inset:0; display:grid; place-items:center; padding:5% 6%; opacity:1; will-change:opacity; }
+  #chat{ position:absolute; inset:0; display:grid; place-items:center; padding:5% 6%; opacity:1; will-change:opacity;
+    transform:translateY(var(--cardY,0px)); }   /* --cardY nudges the card into the visible middle on mobile (set in JS) */
   .chat-card{ width:min(23em,96%); max-height:100%; display:flex; flex-direction:column;
     background:rgba(24,15,30,.74); border:1px solid rgba(255,255,255,.12); border-radius:1.1em;
     box-shadow:0 .5em 2em rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08); overflow:hidden; }
   #chat [hidden]{ display:none !important; }   /* our display:flex cards override the UA hidden rule — pin it back */
   #chatThread{ height:min(17em,100%); }   /* a stable phone-ish screen; the body scrolls to the latest */
+  /* the unread teaser: just static on the CRT, then the whole notification window drops in as one */
+  #chatInbox{ opacity:0; transform:translateY(-.7em) scale(.97);
+    transition:opacity .45s ease, transform .5s cubic-bezier(.2,.85,.3,1.25); }
+  #chatInbox.ready{ opacity:1; transform:none; }
   .ci-av,.ct-av{ flex:none; border-radius:100px; display:grid; place-items:center;
     font-family:var(--pixel); color:#fff;
     background:linear-gradient(135deg,#eb648c,#ec642a); box-shadow:inset 0 1px 0 rgba(255,255,255,.3); }
@@ -99,10 +104,7 @@
   .ci-label{ font-family:var(--mono); font-size:1.1em; letter-spacing:.14em; text-transform:lowercase;
     color:var(--brand-soft); padding:.9em 1em .3em; opacity:.8; }
   .ci-row{ display:flex; align-items:center; gap:.7em; width:100%; text-align:left; cursor:pointer;
-    background:none; border:none; color:inherit; padding:.7em 1em; opacity:0; transform:translateY(-.7em);
-    transition:background .15s ease, opacity .5s ease, transform .5s cubic-bezier(.2,.85,.3,1.3); }
-  #chatInbox.ready .ci-row{ opacity:1; transform:none; }             /* the unread DM lands like a notification */
-  #chatInbox:not(.ready) .ci-hint{ opacity:0; animation:none; }      /* "tap to open" waits for the message */
+    background:none; border:none; color:inherit; padding:.7em 1em; transition:background .15s ease; }
   .ci-row:hover{ background:rgba(255,255,255,.06); }
   .ci-row:focus-visible{ outline:2px solid var(--brand-yellow); outline-offset:-2px; }
   .ci-av{ width:2.6em; height:2.6em; font-size:.82em; }
@@ -149,15 +151,15 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ct-draft.caret::after{ content:'▋'; color:var(--brand-soft); animation:caretBlink .8s steps(1) infinite; }
   @keyframes caretBlink{ 50%{opacity:0} }
+  .ct-draft:empty::before{ content:'message…'; color:rgba(255,255,255,.4); }   /* the field waits, like a real chat app */
   /* same recipe as the form's button so the send matches the rest of the site */
   .ct-send{ flex:none; cursor:pointer; font-family:var(--pixel); font-size:.62em; letter-spacing:.06em;
     text-transform:lowercase; color:#fff; padding:.95em 1.1em; border-radius:.6em;
     background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
     box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2);
-    opacity:0; visibility:hidden; transform:scale(.85);      /* surfaces only once the reply is typed (space reserved, no shift) */
-    transition:opacity .25s ease, transform .25s cubic-bezier(.2,.85,.3,1.3); }
-  .ct-send.show{ opacity:1; visibility:visible; transform:none; }
-  .ct-send:hover{ transform:translateY(-2px); }
+    transition:opacity .25s ease, transform .2s ease, box-shadow .25s ease, filter .25s ease; }
+  .ct-send:disabled{ cursor:default; opacity:.4; filter:saturate(.35); box-shadow:none; }   /* greyed until your reply is typed */
+  .ct-send:not(:disabled):hover{ transform:translateY(-2px); }
   .ct-send:focus-visible{ outline:2px solid var(--brand-yellow); outline-offset:2px; }
   /* the CRT is pointer-events:none — re-enable just the clickable chat controls (and cut them once the form takes over) */
   #chat .ci-row, #chat .ct-send, #chat .ct-draft{ pointer-events:auto; }
@@ -600,8 +602,11 @@ computeBase(); lastVW=room.clientWidth; lastVH=room.clientHeight;
 const ZOOM_END=0.46;
 const ZOUT=0.10;   // how far back we pull for the on-screen form (0 = whole computer in view)
 function updateZoom(p){
-  // zoom IN (0→0.42), hold at full (0.42→0.66), then zoom OUT to ZOUT for the form (0.66→0.84)
-  const z=Math.min(smooth(0, 0.42, p), lerp(1, ZOUT, smooth(0.66, 0.84, p)));
+  // zoom IN (0→0.42), hold at full (0.42→0.66), then (desktop) zoom OUT to ZOUT for the form (0.66→0.84).
+  // on mobile the form takes over fullscreen anyway, so we DON'T pull back — staying full avoids the
+  // shrink-then-expand jump when the fullscreen form snaps in.
+  const zoomOut = innerWidth<=640 ? 1 : lerp(1, ZOUT, smooth(0.66, 0.84, p));
+  const z=Math.min(smooth(0, 0.42, p), zoomOut);
   const Vw=room.clientWidth, Vh=room.clientHeight;   // lvh-stable, same box computeBase used
   const s=lerp(1, ZMAX, z);
   const cx=lerp(base.cx, 0.5, z), cy=lerp(base.cy, 0.5, z);  // screen centre pans to viewport centre
@@ -745,12 +750,12 @@ function buildThread(stage, typing){
 // the send button only surfaces once the reply has finished typing
 function typeDraft(text){
   clearInterval(typeDraft._t);
-  ctSend.classList.remove('show');                          // hide send while you're "typing"
+  ctSend.disabled=true;                                     // send stays disabled while your reply types in
   ctDraft.classList.add('caret'); ctDraft.textContent='';
   let i=0;
   typeDraft._t=setInterval(()=>{
     ctDraft.textContent=text.slice(0, ++i);
-    if(i>=text.length){ clearInterval(typeDraft._t); ctDraft.classList.remove('caret'); ctSend.classList.add('show'); }
+    if(i>=text.length){ clearInterval(typeDraft._t); ctDraft.classList.remove('caret'); ctSend.disabled=false; }  // …then enables
   }, 72);
 }
 let lastStage=-1, chatTimer=0, notifReady=false;
@@ -772,22 +777,24 @@ function renderChat(stage){
     return;
   }
   const draft = stage<=CHAT.length ? CHAT[stage-1].draft : null;
-  const compose=typed=>{
+  // the compose field is always present while there's a reply to send (like a real chat app):
+  // pass the text to prefill it (send enabled), or null for an empty field with send disabled
+  const field=text=>{
     if(!draft){ ctCompose.hidden=true; return; }
-    ctCompose.hidden=false;
-    if(typed) typeDraft(draft);                              // reached it live → type it out, send follows
-    else { ctDraft.classList.remove('caret'); ctDraft.textContent=draft; ctSend.classList.add('show'); }   // scrubbed back → just show it
+    ctCompose.hidden=false; clearInterval(typeDraft._t); ctDraft.classList.remove('caret');
+    ctDraft.textContent=text||''; ctSend.disabled=(text==null);
   };
   const toBottom=()=>{ ctBody.scrollTop=ctBody.scrollHeight; };
   if(forward){
-    // her newest line runs a "typing" loader first, then lands — then your reply types itself out
-    ctBody.innerHTML=buildThread(stage, true); ctCompose.hidden=true; toBottom();
+    // her line runs a "typing" loader → lands → a beat passes → then your reply types into the (already-there) field
+    ctBody.innerHTML=buildThread(stage, true); toBottom(); field(null);   // field present, empty, send disabled
     chatTimer=setTimeout(()=>{
       if(lastStage!==stage) return;
-      ctBody.innerHTML=buildThread(stage, false); toBottom(); compose(true);
+      ctBody.innerHTML=buildThread(stage, false); toBottom();                                    // her message arrives
+      if(draft) chatTimer=setTimeout(()=>{ if(lastStage===stage) typeDraft(draft); }, 650);      // a beat, then you type
     }, 1300);
-  } else {                                        // scrubbing back — no typing, land straight on the turn
-    ctBody.innerHTML=buildThread(stage, false); compose(false); toBottom();
+  } else {                                        // scrubbing back — land straight on the turn, ready to send
+    ctBody.innerHTML=buildThread(stage, false); toBottom(); field(draft);
   }
 }
 function updateChat(p){
@@ -796,6 +803,16 @@ function updateChat(p){
   // content height as the scene zooms, so a one-shot scroll can go stale (body is overflow:hidden,
   // so the reader never scrolls it by hand). short threads sit at the top; full ones stick to bottom.
   if(!chatThread.hidden) ctBody.scrollTop=ctBody.scrollHeight;
+  // mobile: recentre the card in the actually-visible slice. the room is sized to the LARGE
+  // viewport (lvh) for zoom stability, so with the browser's url bar up a room-centred card sits
+  // low. scale the nudge by how fullscreen the CRT is, so the tiny inbox isn't shoved off-screen.
+  let cardY=0;
+  if(innerWidth<=640){
+    const vv=window.visualViewport;
+    if(vv){ const full=Math.min(1, tv.getBoundingClientRect().height/room.clientHeight);
+      cardY=((vv.offsetTop + vv.height/2) - room.clientHeight/2)*full; }
+  }
+  chat.style.setProperty('--cardY', cardY.toFixed(1)+'px');
   chat.style.opacity=String(1 - smooth(0.80, 0.90, p));   // the DM hands off to the form
   chat.classList.toggle('locked', p>0.85);
   noisescrim.style.opacity='1';                            // keep the screen legible under the noise
@@ -858,6 +875,7 @@ function goSnap(dir){
 }
 // opening the unread teaser + each "send" steps to the next snap groove (the DM advances by scroll or tap)
 function chatSend(){
+  if(ctSend.disabled) return;                    // send only works once your reply has typed in
   // the last reply lands on the form — grab the keyboard inside this tap, because iOS only raises
   // it for focus() calls made within a user gesture (the lock re-focuses later anyway)
   if(chatStage(curP)===3){
