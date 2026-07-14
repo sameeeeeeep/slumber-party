@@ -740,7 +740,7 @@ function typeDraft(text){
   typeDraft._t=setInterval(()=>{
     ctDraft.textContent=text.slice(0, ++i);
     if(i>=text.length){ clearInterval(typeDraft._t); ctDraft.classList.remove('caret'); }
-  }, 42);
+  }, 72);
 }
 let lastStage=-1, chatTimer=0;
 function renderChat(stage){
@@ -764,7 +764,7 @@ function renderChat(stage){
     chatTimer=setTimeout(()=>{
       if(lastStage!==stage) return;
       ctBody.innerHTML=buildThread(stage, false); toBottom(); compose(true);
-    }, 900);
+    }, 1300);
   } else {                                        // scrubbing back — no typing, land straight on the turn
     ctBody.innerHTML=buildThread(stage, false); compose(false); toBottom();
   }
