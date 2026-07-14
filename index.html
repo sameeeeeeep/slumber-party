@@ -92,7 +92,7 @@
   #chat [hidden]{ display:none !important; }   /* our display:flex cards override the UA hidden rule — pin it back */
   #chatThread{ height:min(17em,100%); }   /* a stable phone-ish screen; the body scrolls to the latest */
   .ci-av,.ct-av{ flex:none; border-radius:100px; display:grid; place-items:center;
-    font-family:var(--display); font-weight:700; color:#fff;
+    font-family:var(--pixel); color:#fff;
     background:linear-gradient(135deg,#eb648c,#ec642a); box-shadow:inset 0 1px 0 rgba(255,255,255,.3); }
 
   /* --- stage 0: the unread teaser sitting in the inbox --- */
@@ -102,15 +102,15 @@
     background:none; border:none; color:inherit; padding:.7em 1em; transition:background .15s ease; }
   .ci-row:hover{ background:rgba(255,255,255,.06); }
   .ci-row:focus-visible{ outline:2px solid var(--brand-yellow); outline-offset:-2px; }
-  .ci-av{ width:2.6em; height:2.6em; font-size:1em; }
+  .ci-av{ width:2.6em; height:2.6em; font-size:.82em; }
   .ci-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:.15em; }
   .ci-top{ display:flex; align-items:baseline; gap:.5em; }
-  .ci-name{ font-family:var(--sans); font-weight:600; font-size:1em; color:#fff; }
-  .ci-handle{ font-family:var(--sans); font-size:.78em; color:rgba(255,255,255,.5); white-space:nowrap; }
-  .ci-prev{ font-family:var(--sans); font-weight:600; font-size:.9em; color:#fff;
+  .ci-name{ font-family:var(--mono); font-size:1.2em; color:#fff; }
+  .ci-handle{ font-family:var(--mono); font-size:1em; color:rgba(255,255,255,.5); white-space:nowrap; }
+  .ci-prev{ font-family:var(--mono); font-size:1.15em; color:#fff;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ci-meta{ flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:.45em; }
-  .ci-time{ font-family:var(--sans); font-size:.72em; color:var(--brand-pink); }
+  .ci-time{ font-family:var(--mono); font-size:.95em; color:var(--brand-pink); }
   .ci-dot{ width:.6em; height:.6em; border-radius:100px; background:var(--brand-pink); box-shadow:0 0 .5em rgba(235,100,140,.85); }
   .ci-hint{ font-family:var(--pixel); font-size:.6em; letter-spacing:.06em; text-transform:lowercase;
     color:rgba(255,255,255,.55); text-align:center; padding:.7em 0 1.1em; animation:ciPulse 1.8s ease-in-out infinite; }
@@ -119,14 +119,14 @@
   /* --- stages 1–4: the thread (header · scrolling messages · pre-drafted reply + send) --- */
   .ct-head{ flex:none; display:flex; align-items:center; gap:.6em; padding:.7em 1em;
     border-bottom:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); }
-  .ct-back{ font-family:var(--sans); font-size:1.4em; line-height:1; color:var(--brand-soft); opacity:.7; }
-  .ct-av{ width:2.1em; height:2.1em; font-size:.9em; }
-  .ct-id{ display:flex; flex-direction:column; line-height:1.25; min-width:0; }
-  .ct-id b{ font-family:var(--sans); font-weight:600; font-size:.95em; color:#fff; }
-  .ct-id i{ font-family:var(--sans); font-style:normal; font-size:.72em; color:rgba(255,255,255,.5);
+  .ct-back{ font-family:var(--mono); font-size:1.4em; line-height:1; color:var(--brand-soft); opacity:.7; }
+  .ct-av{ width:2.1em; height:2.1em; font-size:.72em; }
+  .ct-id{ display:flex; flex-direction:column; line-height:1.2; min-width:0; }
+  .ct-id b{ font-family:var(--mono); font-weight:400; font-size:1.15em; color:#fff; }
+  .ct-id i{ font-family:var(--mono); font-style:normal; font-size:.92em; color:rgba(255,255,255,.5);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ct-body{ flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:.5em; padding:1em; }
-  .msg{ max-width:80%; font-family:var(--sans); font-size:.92em; line-height:1.4; padding:.55em .85em;
+  .msg{ max-width:82%; font-family:var(--mono); font-size:1.18em; line-height:1.25; padding:.5em .8em;
     border-radius:1.1em; animation:msgIn .34s ease; word-wrap:break-word; }
   @keyframes msgIn{ from{opacity:0; transform:translateY(.5em) scale(.98)} to{opacity:1; transform:none} }
   .msg.her{ align-self:flex-start; background:rgba(255,252,253,.95); color:var(--ink-strong); border-bottom-left-radius:.35em; }
@@ -139,7 +139,7 @@
   @keyframes typedot{ 0%,60%,100%{opacity:.3; transform:translateY(0)} 30%{opacity:1; transform:translateY(-.22em)} }
   .ct-compose{ flex:none; display:flex; align-items:center; gap:.6em; padding:.7em .8em;
     border-top:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); }
-  .ct-draft{ flex:1; min-width:0; font-family:var(--sans); font-size:.9em; color:#fff; cursor:pointer; padding:.6em .9em;
+  .ct-draft{ flex:1; min-width:0; font-family:var(--mono); font-size:1.1em; color:#fff; cursor:pointer; padding:.5em .9em;
     background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:100px;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   /* same recipe as the form's button so the send matches the rest of the site */
