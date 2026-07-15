@@ -112,7 +112,7 @@
   .ci-top{ display:flex; align-items:baseline; gap:.5em; }
   .ci-name{ font-family:var(--mono); font-size:1.2em; color:#fff; }
   .ci-handle{ font-family:var(--mono); font-size:1em; color:rgba(255,255,255,.5); white-space:nowrap; }
-  .ci-prev{ font-family:var(--mono); font-size:1.15em; color:#fff;
+  .ci-prev{ font-family:var(--mono); font-size:1.4em; color:#fff;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ci-meta{ flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:.45em; }
   .ci-time{ font-family:var(--mono); font-size:.95em; color:var(--brand-pink); }
@@ -131,7 +131,7 @@
   .ct-id i{ font-family:var(--mono); font-style:normal; font-size:.92em; color:rgba(255,255,255,.5);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ct-body{ flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:.5em; padding:1em; }
-  .msg{ max-width:82%; font-family:var(--mono); font-size:1.18em; line-height:1.25; padding:.5em .8em;
+  .msg{ max-width:82%; font-family:var(--mono); font-size:1.4em; line-height:1.25; padding:.5em .8em; text-align:left;
     border-radius:1.1em; animation:msgIn .34s ease; word-wrap:break-word; }
   @keyframes msgIn{ from{opacity:0; transform:translateY(.5em) scale(.98)} to{opacity:1; transform:none} }
   .msg.her{ align-self:flex-start; background:rgba(255,252,253,.95); color:var(--ink-strong); border-bottom-left-radius:.35em; }
@@ -177,6 +177,14 @@
     color:var(--rose); text-decoration:none; white-space:nowrap; border:1px solid var(--tag-border);
     border-radius:100px; padding:.55rem .95rem; background:var(--card-a); backdrop-filter:blur(5px); transition:background .2s ease,color .2s ease; }
   #masthead .apply-link:hover{ background:var(--rose); color:var(--btn-fg); }
+  /* countdown to the party — retro (VT323) digits in a pill matching the Apply chip */
+  .countdown{ display:inline-flex; align-items:baseline; gap:.5rem; white-space:nowrap; pointer-events:auto;
+    border:1px solid var(--tag-border); border-radius:100px; padding:.4rem .85rem;
+    background:var(--card-a); backdrop-filter:blur(5px); }
+  .countdown .cd-label{ font-family:var(--mono); font-size:.8rem; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--rose); opacity:.75; }
+  .countdown .cd-time{ font-family:var(--mono); font-size:1.15rem; line-height:1; letter-spacing:.06em;
+    color:var(--rose); font-variant-numeric:tabular-nums; }
 
   .progress{ position:fixed; top:0; left:0; height:2px; width:0%; z-index:21;
     background:linear-gradient(90deg,var(--brand-pink),var(--brand-orange),var(--brand-yellow)); box-shadow:0 0 10px rgba(235,100,140,.5); }
@@ -272,8 +280,12 @@
      TV illusion — pin form fields to 16px so focusing a question never zooms the viewport */
   @media (max-width:640px){
     .step input, .step textarea{ font-size:18px; }   /* ≥16px so iOS never zooms; VT323 reads a touch small */
-    #masthead{ justify-content:center; }             /* just the logo, centred */
-    #masthead .head-right{ display:none; }           /* the DM's send buttons carry you to the form */
+    #masthead{ justify-content:space-between; }       /* logo left, countdown right */
+    #masthead .head-right{ display:flex; }            /* keep the countdown… */
+    #masthead .apply-link{ display:none; }            /* …just hide Apply (the DM's send buttons carry you to the form) */
+    #masthead .countdown{ padding:.35rem .6rem; gap:.35rem; }
+    #masthead .countdown .cd-label{ font-size:.62rem; letter-spacing:.1em; }
+    #masthead .countdown .cd-time{ font-size:.95rem; }
   }
 
   /* ---------- easter egg: SLUMBER SNAKE (retro game on the CRT) ---------- */
@@ -444,13 +456,17 @@
             <p class="q">your <span class="sub">instagram?</span></p>
             <div class="at-field"><span class="at">@</span><input name="handle" type="text" placeholder="yourhandle" autocapitalize="off" autocorrect="off" spellcheck="false" required /></div>
           </div>
+          <div class="step" data-name="phone">
+            <p class="q">your <span class="sub">number?</span></p>
+            <input name="phone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" required />
+          </div>
           <div class="step" data-name="email">
             <p class="q">best <span class="sub">email?</span></p>
             <input name="email" type="email" placeholder="you@email.com" required />
           </div>
           <div class="step" data-name="why">
-            <p class="q">why do you <span class="sub">belong</span> here?</p>
-            <textarea name="why" rows="3" placeholder="make khushi curious…" required></textarea>
+            <p class="q">your idea of a <span class="sub">perfect slumber party?</span></p>
+            <textarea name="why" rows="3" placeholder="face masks, ghost stories, chaos…" required></textarea>
           </div>
           <div class="fnav">
             <div class="dots" id="dots"></div>
@@ -508,8 +524,9 @@
   </div>
 
   <header id="masthead">
-    <img class="logo" src="assets/logo.png" alt="(secret;) khushi's slumber party" />
+    <img class="logo" src="assets/logo2.png" alt="(secret;) khushi's slumber party" />
     <div class="head-right">
+      <span class="countdown" id="countdown" aria-label="countdown to the party"></span>
       <a class="apply-link" href="#apply" id="applyLink">Apply</a>
     </div>
   </header>
@@ -858,6 +875,19 @@ document.getElementById('applyLink').addEventListener('click', e=>{
   e.preventDefault(); window.scrollTo({ top:document.body.scrollHeight, behavior:'smooth' });
 });
 
+/* ---------- header countdown to the party ---------- */
+const PARTY = new Date('2026-07-25T00:00:00');   // 25 Jul 2026, 12am (local) — placeholder, change anytime
+const cdEl = document.getElementById('countdown');
+function renderCountdown(){
+  if(!cdEl) return;
+  const s = Math.max(0, Math.floor((PARTY - new Date())/1000));
+  const d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60), sec = s%60;
+  const p = n => String(n).padStart(2,'0');
+  const t = (d>0 ? d+'d ' : '') + p(h)+':'+p(m)+':'+p(sec);
+  cdEl.innerHTML = '<span class="cd-label">party in</span><span class="cd-time">'+t+'</span>';
+}
+renderCountdown(); setInterval(renderCountdown, 1000);
+
 /* ---------- stepping through the snap grooves (the DM's send buttons) ---------- */
 const snapTops=()=>[...document.querySelectorAll('.scroll-space section')].map(s=>s.offsetTop);
 let snapRestore=0;
@@ -884,7 +914,12 @@ function chatSend(){
   }
   goSnap(1);
 }
-ciRow.addEventListener('click', ()=>goSnap(1));
+// in the hero, tapping ANYWHERE on the computer opens the DM (not just the message card)
+addEventListener('click', e=>{
+  if(!veilGone || formLocked || chatStage(curP)!==0) return;   // only during the unread-teaser beat
+  if(e.target.closest('#masthead')) return;                    // leave the header (apply / countdown) alone
+  goSnap(1);
+});
 ctSend.addEventListener('click', chatSend);
 ctDraft.addEventListener('click', chatSend);
 
@@ -994,6 +1029,7 @@ const GFORM = {
     city:  'entry.1303070172',
     role:  'entry.2090027833',   // "who are you?"
     handle:'entry.1679267567',
+    phone: 'entry.1398897030',
     email: 'entry.1473309531',
     why:   'entry.1553029635'
   }
