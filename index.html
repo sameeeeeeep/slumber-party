@@ -1825,8 +1825,8 @@ renderStep();
     if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
     view=layout();
     cx.setTransform(dpr,0,0,dpr,0,0); cx.clearRect(0,0,W,H);
-    if((mode==='play'||mode==='over') && G && G.draw) G.draw();
-    else drawPanel(view.x, view.y, view.w, view.h);   // menu backdrop
+    if(mode==='play' && G && G.draw) G.draw();
+    else drawPanel(view.x, view.y, view.w, view.h);   // menu / over / board backdrop — clean starfield, no live game bleeding through
   }
   function drawPillow(x,y,s,fill){
     cx.fillStyle=fill||'#f7dfe8'; rr(x, y+s*0.08, s, s*0.84, s*0.3); cx.fill();
