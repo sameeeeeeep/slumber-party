@@ -171,11 +171,18 @@
   @keyframes caretBlink{ 50%{opacity:0} }
   .ct-draft:empty::before{ content:'message…'; color:rgba(255,255,255,.4); }   /* the field waits, like a real chat app */
   /* same recipe as the form's button so the send matches the rest of the site */
-  .ct-send{ flex:none; cursor:pointer; font-family:var(--pixel); font-size:.62em; letter-spacing:.06em;
+  .ct-send{ position:relative; overflow:hidden; flex:none; cursor:pointer; font-family:var(--pixel); font-size:.62em; letter-spacing:.06em;
     text-transform:lowercase; color:#fff; padding:.95em 1.1em; border-radius:.6em;
     background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
     box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2);
     transition:opacity .25s ease, transform .2s ease, box-shadow .25s ease, filter .25s ease; }
+  /* a light sweeps across the live send button (and the arcade CTA) so it reads as "tap me" */
+  .ct-send::after, .ct-chip.cta::after{ content:''; position:absolute; top:0; bottom:0; left:0; width:55%; pointer-events:none;
+    background:linear-gradient(105deg, transparent 18%, rgba(255,255,255,.6) 50%, transparent 82%);
+    transform:translateX(-200%) skewX(-14deg); }
+  .ct-send:not(:disabled)::after, .ct-chip.cta::after{ animation:sendShimmer 2.6s ease-in-out infinite; }
+  .ct-send:disabled::after{ display:none; }   /* no shimmer while greyed out */
+  @keyframes sendShimmer{ 0%{ transform:translateX(-200%) skewX(-14deg); } 55%,100%{ transform:translateX(320%) skewX(-14deg); } }
   .ct-send:disabled{ cursor:default; opacity:.4; filter:saturate(.35); box-shadow:none; }   /* greyed until your reply is typed */
   .ct-send:not(:disabled):hover{ transform:translateY(-2px); }
   .ct-send:focus-visible{ outline:2px solid var(--brand-yellow); outline-offset:2px; }
@@ -194,7 +201,7 @@
     transition:background .15s ease, border-color .15s ease, transform .15s ease; }
   .ct-chip:hover{ border-color:var(--brand-yellow); }
   .ct-chip:active{ transform:scale(.95); background:var(--brand-pink); }
-  .ct-chip.cta{ font-family:var(--pixel); font-size:.7em; letter-spacing:.05em; color:#fff; border-color:rgba(255,255,255,.5);
+  .ct-chip.cta{ position:relative; overflow:hidden; font-family:var(--pixel); font-size:.7em; letter-spacing:.05em; color:#fff; border-color:rgba(255,255,255,.5);
     background:linear-gradient(90deg,#eb648c,#ec642a); box-shadow:0 0 10px rgba(235,100,140,.6); animation:ctaGlow 1.8s ease-in-out infinite; }
   /* the city suggestions — a slim strip of tappable chips right above the field */
   .ct-suggest{ flex:none; display:flex; flex-wrap:wrap; gap:.4em; padding:.5em .8em 0; }
@@ -816,12 +823,18 @@ const CHATFX=(function(){
   function fxUnlock(){
     try{
       fxCtx=fxCtx||new (window.AudioContext||window.webkitAudioContext)();
-      if(fxCtx.state==='suspended') fxCtx.resume();
+      if(fxCtx.state!=='running') fxCtx.resume();
+      // iOS parks a fresh (and idle) context in 'suspended' until a sound actually runs inside a
+      // gesture — a 1-sample silent blip nudges it awake so the next real sound isn't dropped
+      const b=fxCtx.createBuffer(1,1,22050), s=fxCtx.createBufferSource(); s.buffer=b; s.connect(fxCtx.destination); s.start(0);
       // the unread ping that fired before audio was allowed — let it land now, if we're still on the teaser
       setTimeout(()=>{ if(fxPending && !fxMuted && lastStage===0){ fxPending=false; nokiaTone(); } }, 150);
     }catch(e){}
   }
-  ['pointerdown','touchstart','keydown'].forEach(ev=>window.addEventListener(ev, fxUnlock, {once:true, passive:true}));
+  // resume on EVERY gesture, NOT once — iOS re-suspends the context whenever the page goes idle or
+  // backgrounds, and a one-shot unlock leaves every later ping silently dropped ("sometimes there,
+  // sometimes not"). re-arming on each tap keeps it awake through the whole conversation.
+  ['pointerdown','touchstart','touchend','keydown','click'].forEach(ev=>window.addEventListener(ev, fxUnlock, {passive:true}));
   function fxOk(){ return fxCtx && fxCtx.state==='running'; }        // not unlocked yet → stay silent
   function noiseBuf(){                                               // one shared second of white noise
     if(!fxNoise){
