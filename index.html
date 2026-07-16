@@ -55,6 +55,10 @@
   #room{ position:fixed; left:0; right:0; top:0; height:100vh; height:100lvh; z-index:1; overflow:hidden; pointer-events:none;
     transition:opacity .45s ease; }   /* the computer fades (not pops) when mobile form mode takes over */
   #roomimg{ width:100%; height:100%; object-fit:cover; will-change:transform; filter:var(--room-dim); }
+  /* the flip-open intro clip (phone version) — covers the scene, then fades to reveal it (same last frame) */
+  #flipintro{ position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:3; display:none;
+    opacity:0; pointer-events:none; background:var(--bg-a); transition:opacity .38s ease; }
+  #flipintro.on{ opacity:1; }   /* display is set in JS so the fade-out actually animates (display can't transition) */
   /* neon + stickers, locked to the computer (rect + transform set in JS to mirror #roomimg) */
   #roomdeco{ position:absolute; left:0; top:0; will-change:transform; pointer-events:none; }
   #roomdeco > *{ position:absolute; transform:translate(-50%,-50%) rotate(var(--rot,0deg)); line-height:1; white-space:nowrap; }
@@ -120,6 +124,17 @@
   .ci-hint{ font-family:var(--pixel); font-size:.6em; letter-spacing:.06em; text-transform:lowercase;
     color:rgba(255,255,255,.55); text-align:center; padding:.7em 0 1.1em; animation:ciPulse 1.8s ease-in-out infinite; }
   @keyframes ciPulse{ 0%,100%{opacity:.5} 50%{opacity:1} }
+  /* the flip phone's screen is small & portrait — pare the teaser down so nothing crops:
+     drop the handle + timestamp, keep name · preview · unread dot, and tighten everything */
+  html.dev-phone .ci-handle, html.dev-phone .ci-time{ display:none; }
+  html.dev-phone .ci-label{ font-size:.95em; letter-spacing:.1em; padding:.7em 1em .2em; }
+  html.dev-phone .ci-row{ gap:.5em; padding:.5em .8em; }
+  html.dev-phone .ci-av{ width:2.1em; height:2.1em; font-size:.7em; }
+  html.dev-phone .ci-name{ font-size:1em; }
+  html.dev-phone .ci-prev{ font-size:1em; white-space:normal; line-height:1.25; }   /* wrap, don't crop the teaser */
+  html.dev-phone .ci-hint{ font-size:.55em; padding:.5em 0 .9em; }
+  /* on the phone the thread fills the portrait screen (not a wide card) */
+  html.dev-phone #chatThread{ width:94%; height:94%; }
 
   /* --- stages 1–4: the thread (header · scrolling messages · pre-drafted reply + send) --- */
   .ct-head{ flex:none; display:flex; align-items:center; gap:.6em; padding:.7em 1em;
@@ -162,8 +177,26 @@
   .ct-send:not(:disabled):hover{ transform:translateY(-2px); }
   .ct-send:focus-visible{ outline:2px solid var(--brand-yellow); outline-offset:2px; }
   /* the CRT is pointer-events:none — re-enable just the clickable chat controls (and cut them once the form takes over) */
-  #chat .ci-row, #chat .ct-send, #chat .ct-draft{ pointer-events:auto; }
+  /* the real input the user types into once khushi starts asking the application questions */
+  .ct-at{ font-family:var(--mono); font-size:1.1em; color:var(--brand-soft); padding-left:.15em; }
+  .ct-input{ flex:1; min-width:0; font-family:var(--mono); font-size:1.1em; color:#fff; text-align:left; outline:none;
+    padding:.5em .9em; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:100px; }
+  .ct-input::placeholder{ color:rgba(255,255,255,.4); }
+  .ct-input:focus{ border-color:rgba(235,216,27,.5); }
+  .ct-at:not([hidden]) + .ct-draft + .ct-input{ padding-left:.3em; }
+  /* tap-to-answer chips (the "who are you?" question + the final arcade CTA) */
+  .ct-chips{ flex:none; display:flex; flex-wrap:wrap; gap:.5em; justify-content:center; padding:.2em 1em 1em; }
+  .ct-chip{ font-family:var(--mono); font-size:1.1em; color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent;
+    border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08); border-radius:100px; padding:.45em 1.1em;
+    transition:background .15s ease, border-color .15s ease, transform .15s ease; }
+  .ct-chip:hover{ border-color:var(--brand-yellow); }
+  .ct-chip:active{ transform:scale(.95); background:var(--brand-pink); }
+  .ct-chip.cta{ font-family:var(--pixel); font-size:.7em; letter-spacing:.05em; color:#fff; border-color:rgba(255,255,255,.5);
+    background:linear-gradient(90deg,#eb648c,#ec642a); box-shadow:0 0 10px rgba(235,100,140,.6); animation:ctaGlow 1.8s ease-in-out infinite; }
+  .ct-input.nudge, .ct-chips.nudge{ animation:nudge .42s; }
+  #chat .ci-row, #chat .ct-send, #chat .ct-draft, #chat .ct-input, #chat .ct-chip{ pointer-events:auto; }
   #chat.locked .ci-row, #chat.locked .ct-send, #chat.locked .ct-draft{ pointer-events:none; }
+  @media (max-width:640px){ .ct-input{ font-size:16px; } }   /* ≥16px so iOS never zooms the fixed CRT on focus */
   .ftitle{ font-family:var(--mono); color:#fff; font-size:2.1em; line-height:1; letter-spacing:.02em; margin-bottom:.4em; text-shadow:var(--halo); }
   .ftitle .sub{ color:var(--brand-soft); font-style:italic; }
 
@@ -389,6 +422,10 @@
     <div id="roomdeco"></div>
   </div>
 
+  <!-- flip-phone version only: a short clip of the phone flipping open, played as the intro.
+       its last frame matches assets/phone.png, so it dissolves seamlessly into the live scene. -->
+  <video id="flipintro" muted playsinline preload="auto"></video>
+
   <div id="tv">
     <canvas id="static"></canvas>
     <canvas id="glitch"></canvas>
@@ -418,8 +455,11 @@
             <span class="ct-id"><b>khushi</b><i>@khushikapoor · active now</i></span>
           </div>
           <div class="ct-body" id="ctBody"></div>
+          <div class="ct-chips" id="ctChips" hidden></div>
           <div class="ct-compose" id="ctCompose" hidden>
+            <span class="ct-at" id="ctAt" hidden>@</span>
             <span class="ct-draft" id="ctDraft"></span>
+            <input class="ct-input" id="ctInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" hidden />
             <button class="ct-send" type="button" id="ctSend">send</button>
           </div>
         </div>
@@ -592,15 +632,27 @@ const roomdeco=document.getElementById('roomdeco');
 const tv=document.getElementById('tv');
 const tvcontent=document.getElementById('tvcontent');
 const pixelbg=document.getElementById('pixelbg');
+/* ---- device: the Mac (default) or the flip phone (?device=phone) — same engine, swap the
+   illustration + its screen rectangle. everything downstream reads TVI, so nothing else changes. ---- */
+const DEVICES={
+  mac:   { img:'assets/computer.jpg', TVI:{ cx:0.500, cy:0.362, w:0.228, h:0.318 } },   // landscape CRT
+  phone: { img:'assets/phone.png',    TVI:{ cx:0.499, cy:0.289, w:0.118, h:0.281 } }    // portrait flip-phone screen
+};
+const DEVICE = (new URLSearchParams(location.search).get('device')==='phone') ? 'phone' : 'mac';
+if(DEVICE!=='mac') roomimg.src=DEVICES[DEVICE].img;   // the veil covers the swap; no visible flash
+document.documentElement.classList.add('dev-'+DEVICE);   // lets CSS tune per device (e.g. the phone's tiny screen)
+if(DEVICE==='phone'){ const fi=document.getElementById('flipintro'); if(fi){ fi.src='assets/flip.mp4'; fi.load(); } }   // preload the flip-open clip under the veil
 const IMG_W=1376, IMG_H=768;
-const TVI={ cx:0.500, cy:0.362, w:0.228, h:0.318 };   // monitor screen as fractions of the image (calibrated)
+const TVI=DEVICES[DEVICE].TVI;   // monitor / phone screen as fractions of the image (calibrated)
 let base={cx:0.5,cy:0.48,w:0.2,h:0.25}, ZMAX=5;
 function computeBase(){
   const Vw=room.clientWidth, Vh=room.clientHeight;   // the lvh-stable room box, not the live viewport
   const scale=Math.max(Vw/IMG_W, Vh/IMG_H);
   const dW=IMG_W*scale, dH=IMG_H*scale, ox=(Vw-dW)/2, oy=(Vh-dH)/2;
   base={ cx:(ox+TVI.cx*dW)/Vw, cy:(oy+TVI.cy*dH)/Vh, w:(TVI.w*dW)/Vw, h:(TVI.h*dH)/Vh };
-  ZMAX=Math.max(1/base.w, 1/base.h);   // zoom until the screen fully covers the viewport (any aspect)
+  // mac: COVER the viewport (the landscape CRT fills any screen). phone: FIT the portrait screen,
+  // so it lands as a portrait phone-shaped panel (pink handset showing around it) instead of stretching wide.
+  ZMAX = DEVICE==='phone' ? Math.min(1/base.w, 1/base.h) : Math.max(1/base.w, 1/base.h);
   roomimg.style.transformOrigin=(base.cx*100)+'% '+(base.cy*100)+'%';
   if(roomdeco){ roomdeco.style.left=ox+'px'; roomdeco.style.top=oy+'px'; roomdeco.style.width=dW+'px'; roomdeco.style.height=dH+'px';
     roomdeco.style.transformOrigin=(TVI.cx*100)+'% '+(TVI.cy*100)+'%'; }   // origin = screen centre, so it scales locked to the room
@@ -622,7 +674,9 @@ function updateZoom(p){
   // zoom IN (0→0.42), hold at full (0.42→0.66), then (desktop) zoom OUT to ZOUT for the form (0.66→0.84).
   // on mobile the form takes over fullscreen anyway, so we DON'T pull back — staying full avoids the
   // shrink-then-expand jump when the fullscreen form snaps in.
-  const zoomOut = innerWidth<=640 ? 1 : lerp(1, ZOUT, smooth(0.66, 0.84, p));
+  // stay fullscreen on mobile AND on the flip phone (its screen is too small to pull back to) —
+  // only the Mac on desktop pulls back to show the computer with the chat on its screen
+  const zoomOut = (innerWidth<=640 || DEVICE==='phone') ? 1 : lerp(1, ZOUT, smooth(0.66, 0.84, p));
   const z=Math.min(smooth(0, 0.42, p), zoomOut);
   const Vw=room.clientWidth, Vh=room.clientHeight;   // lvh-stable, same box computeBase used
   const s=lerp(1, ZMAX, z);
@@ -644,30 +698,8 @@ function updateZoom(p){
   // pink noise fills the screen at full zoom, stays for the form (dimmed so the form reads)
   pixelbg.style.opacity=String(smooth(0.44, 0.54, p) * lerp(0.7, 0.28, smooth(0.80, 0.9, p)));
   pixelbg.style.transform='';
-  // mobile form mode: the whole page becomes the CRT screen (dark + noise + scanlines) — the
-  // computer and the masthead fade away, and the questions centre in the VISIBLE area (the
-  // visual viewport shrinks with the keyboard, and PANS when iOS raises it — track both)
-  const card = window.__formLock && window.__formLock.active() && innerWidth<=640;
-  if(card !== updateZoom._card){
-    updateZoom._card=card;
-    tv.classList.add('tvease');                     // ease the takeover/release instead of snapping…
-    clearTimeout(updateZoom._ease);
-    updateZoom._ease=setTimeout(()=>tv.classList.remove('tvease'), 500);   // …then back to per-frame control
-    if(!card){ masthead.style.opacity=''; masthead.style.pointerEvents='';
-      formwrap.style.top=''; formwrap.style.height=''; formChrome.style.transform=''; }
-  }
-  if(card){
-    const vv=window.visualViewport, vvh=(vv&&vv.height)||innerHeight, vvt=(vv&&vv.offsetTop)||0;
-    room.style.opacity='0';                         // the computer fades out under the screen
-    masthead.style.opacity='0'; masthead.style.pointerEvents='none';   // dark logo can't sit on the dark screen
-    tv.style.left='0px'; tv.style.top='0px';
-    tv.style.width=innerWidth+'px'; tv.style.height=room.clientHeight+'px';   // full page (lvh-stable)
-    tv.style.borderRadius='0px';
-    tvcontent.style.fontSize='15px';
-    formwrap.style.top=vvt+'px';                    // centre the questions in the slice that's
-    formwrap.style.height=Math.max(210, vvh)+'px';  // actually visible above the keyboard
-    formChrome.style.transform='translateY('+vvt+'px)';   // keep the ✕ on-screen when iOS pans
-  }
+  // (the old fullscreen-form takeover is retired — the application now happens in the chat, which
+  //  keeps the CRT full on mobile via the zoom + recentres itself for the keyboard through --cardY)
 }
 
 /* ---------- TV static ---------- */
@@ -740,6 +772,9 @@ const ctCompose=document.getElementById('ctCompose');
 const ctDraft=document.getElementById('ctDraft');
 const ctSend=document.getElementById('ctSend');
 const ciRow=document.getElementById('ciRow');
+const ctInput=document.getElementById('ctInput');
+const ctChips=document.getElementById('ctChips');
+const ctAt=document.getElementById('ctAt');
 // the conversation: each turn is one of her lines + the reply we pre-draft for you to send.
 // hitting "send" (or just scrolling) advances one snap groove → the next turn appears.
 const CHAT=[
@@ -763,6 +798,116 @@ function buildThread(stage, typing){
   }
   return h;
 }
+/* ---------- the application, asked in-chat ----------
+   once you send "how can i get in?", the page locks and khushi keeps the conversation going,
+   asking each question; you type real answers (the "who are you?" step is tap-chips), then it
+   posts to the same Google Form and unlocks the arcade — all inside the thread. */
+const APPLY_Q=[
+  { name:'name',   ask:"eee ok! let me get you on the list ♡ what's your name?", type:'text',   ph:'first & last' },
+  { name:'age',    ask:"how old are you?",                         type:'number', ph:'21' },
+  { name:'city',   ask:"where are you based?",                     type:'text',   ph:'mumbai' },
+  { name:'role',   ask:"and who are you?",                         type:'choice', choices:['creator','artist','entrepreneur','follower'] },
+  { name:'handle', ask:"your instagram?",                          type:'handle', ph:'yourhandle' },
+  { name:'phone',  ask:"drop your number?",                        type:'tel',    ph:'+91 98765 43210' },
+  { name:'email',  ask:"best email?",                              type:'email',  ph:'you@email.com' },
+  { name:'why',    ask:"last one — what's your idea of a perfect slumber party?", type:'text', ph:'face masks, ghost stories, chaos…' }
+];
+let qIndex=-1, qAns={}, qBusy=false;
+function pinChat(){ ctBody.scrollTop=ctBody.scrollHeight; }
+function addTyping(){ ctBody.insertAdjacentHTML('beforeend', TYPING); pinChat(); }
+function clearTyping(){ const t=ctBody.querySelector('.msg.typing'); if(t) t.remove(); }
+function addBubble(who,text){ ctBody.insertAdjacentHTML('beforeend', bubble(who,text)); pinChat(); }
+function nudgeField(){ const el=(!ctChips.hidden)?ctChips:ctInput; el.classList.add('nudge'); setTimeout(()=>el.classList.remove('nudge'),420); }
+// which bit of the compose is live: pre-drafted span | real input | tap-chips | nothing
+function composeMode(m){   // 'draft' | 'type' | 'choice' | 'none'
+  ctCompose.hidden = (m==='choice' || m==='none');
+  ctChips.hidden   = (m!=='choice');
+  ctDraft.hidden   = (m!=='draft');
+  ctInput.hidden   = (m!=='type');
+  if(m!=='type') ctAt.hidden=true;
+}
+function startApply(){                       // called from enterFormLock (page is now frozen)
+  qAns={}; qIndex=-1; qBusy=false;
+  clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
+  askQuestion(0);
+}
+function askQuestion(i){
+  if(i>=APPLY_Q.length){ finishApply(); return; }
+  qIndex=i; qBusy=true;
+  const q=APPLY_Q[i];
+  addTyping();                               // khushi "types", then the question lands
+  clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
+  askQuestion._t1=setTimeout(()=>{
+    clearTyping(); addBubble('her', q.ask);
+    askQuestion._t2=setTimeout(()=>readyAnswer(q), 550);
+  }, 1100);
+}
+function readyAnswer(q){
+  qBusy=false;
+  if(q.type==='choice'){
+    ctChips.innerHTML=q.choices.map(c=>'<button type="button" class="ct-chip" data-val="'+esc(c)+'">'+esc(c)+'</button>').join('');
+    composeMode('choice'); pinChat(); return;
+  }
+  composeMode('type');
+  ctInput.type = q.type==='number'?'number' : q.type==='email'?'email' : q.type==='tel'?'tel' : 'text';
+  ctInput.inputMode = q.type==='number'?'numeric' : q.type==='tel'?'tel' : q.type==='email'?'email' : 'text';
+  ctInput.placeholder = q.ph||'message…';
+  ctAt.hidden = q.type!=='handle';
+  ctSend.disabled = ctInput.value.trim()==='';
+  try{ ctInput.focus({preventScroll:true}); }catch(e){}
+  pinChat();
+}
+function submitAnswer(rawVal){
+  if(qBusy || qIndex<0) return;
+  const q=APPLY_Q[qIndex];
+  let val=String(rawVal==null?ctInput.value:rawVal).trim();
+  if(q.type==='number'){ const n=parseInt(val,10); if(!(n>=18)){ return nudgeField(); } val=String(n); }
+  else if(q.type==='email'){ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)){ return nudgeField(); } }
+  else if(!val){ return nudgeField(); }
+  let store=val, disp=val;
+  if(q.type==='handle'){ store='@'+val.replace(/^@+/,''); disp=store; }
+  qAns[q.name]=store; addBubble('you', disp);
+  const next=qIndex+1;
+  // keep the mobile keyboard alive across typed questions by re-focusing inside this tap
+  if(next<APPLY_Q.length && APPLY_Q[next].type!=='choice'){
+    composeMode('type'); ctInput.value=''; ctInput.placeholder='message…'; ctSend.disabled=true;
+    try{ ctInput.focus({preventScroll:true}); }catch(e){}
+  } else { composeMode('none'); if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }
+  askQuestion(next);
+}
+async function submitApplication(data){
+  PLAYER = {...data};                        // remember the applicant for the leaderboard
+  if(GFORM.id){
+    const body=new URLSearchParams();
+    for(const k in data){ if(GFORM.fields[k]) body.append(GFORM.fields[k], data[k]); }
+    try{ await fetch(`https://docs.google.com/forms/d/e/${GFORM.id}/formResponse`,
+      { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body }); }
+    catch(err){ console.warn('submit failed, confirming anyway', err); }
+  } else { console.log('Application (Google Form not configured yet):', data); }
+}
+function finishApply(){
+  qBusy=true; qIndex=-1; composeMode('none');
+  submitApplication(qAns);            // fire-and-forget — it's a no-cors POST, we can't read the reply anyway
+  addTyping();                        // khushi "sends" the confirmation after a beat, regardless of the network
+  setTimeout(()=>{
+    clearTyping();
+    addBubble('her', "tucked in ♡ your name's with khushi now.");
+    setTimeout(()=>{
+      addBubble('her', "if you're one of the thirty, i'll whisper back 🤫");
+      setTimeout(()=>{
+        ctChips.innerHTML='<button type="button" class="ct-chip cta" id="chatArcade">▸ enter khushi’s arcade</button>';
+        composeMode('choice'); pinChat();
+        if(window.__slumberGame) window.__slumberGame.unlock();
+        const b=document.getElementById('chatArcade');
+        if(b) b.addEventListener('click', ()=>{ if(window.__slumberGame) window.__slumberGame.start(); });
+      }, 800);
+    }, 700);
+  }, 1200);
+}
+ctInput.addEventListener('input', ()=>{ if(qIndex>=0 && !qBusy) ctSend.disabled = ctInput.value.trim()===''; });
+ctInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(!ctSend.disabled) submitAnswer(); } });
+ctChips.addEventListener('click', e=>{ const b=e.target.closest('.ct-chip'); if(b && b.dataset.val!=null) submitAnswer(b.dataset.val); });
+
 // your pre-drafted reply types itself into the compose field, char by char, left-aligned;
 // the send button only surfaces once the reply has finished typing
 function typeDraft(text){
@@ -793,12 +938,20 @@ function renderChat(stage){
     if(notifReady) showNotif();      // else the veil-clear handler fires it once you can see the screen
     return;
   }
-  const draft = stage<=CHAT.length ? CHAT[stage-1].draft : null;
+  if(stage>CHAT.length){            // stage 4 — the application: render the intro convo; the Q&A
+    qIndex=-1;                      // begins once the page locks (enterFormLock → startApply)
+    clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
+    ctBody.innerHTML=buildThread(stage, false); ctBody.scrollTop=ctBody.scrollHeight;
+    composeMode('none');
+    return;
+  }
+  qIndex=-1;                        // any intro turn — reset the Q&A (e.g. after exiting the lock)
+  const draft = CHAT[stage-1].draft;
   // the compose field is always present while there's a reply to send (like a real chat app):
   // pass the text to prefill it (send enabled), or null for an empty field with send disabled
   const field=text=>{
-    if(!draft){ ctCompose.hidden=true; return; }
-    ctCompose.hidden=false; clearInterval(typeDraft._t); ctDraft.classList.remove('caret');
+    if(!draft){ composeMode('none'); return; }
+    composeMode('draft'); clearInterval(typeDraft._t); ctDraft.classList.remove('caret');
     ctDraft.textContent=text||''; ctSend.disabled=(text==null);
   };
   const toBottom=()=>{ ctBody.scrollTop=ctBody.scrollHeight; };
@@ -830,11 +983,8 @@ function updateChat(p){
       cardY=((vv.offsetTop + vv.height/2) - room.clientHeight/2)*full; }
   }
   chat.style.setProperty('--cardY', cardY.toFixed(1)+'px');
-  chat.style.opacity=String(1 - smooth(0.80, 0.90, p));   // the DM hands off to the form
-  chat.classList.toggle('locked', p>0.85);
+  chat.style.opacity='1';                                  // the chat IS the form now — it never hands off
   noisescrim.style.opacity='1';                            // keep the screen legible under the noise
-  formwrap.style.opacity = String(smooth(0.85, 0.93, p)); // the form appears once we've zoomed back out
-  formwrap.classList.toggle('on', p>0.87);                 // interactive once it's up
   bar.style.width=(p*100)+'%';
 }
 
@@ -865,7 +1015,47 @@ readScroll(); tick();
 const MIN_VEIL=3200, MAX_VEIL=7000;
 let veilGone=false;
 function hideVeil(){ if(veilGone)return; veilGone=true; const v=document.getElementById('veil'); if(v){ v.style.opacity='0'; setTimeout(()=>v.remove(),900); }
-  notifReady=true; if(lastStage===0) showNotif(); }   // now the screen's visible, let the unread DM land
+  if(DEVICE==='phone'){ startPhoneIntro(); return; }   // the phone flips open first, then the DM lands
+  notifReady=true; if(lastStage===0) showNotif(); }     // (mac) the screen's visible, let the unread DM land
+
+/* ---------- flip-phone intro: closed phone flips open (video) → a little zoom → the DM pings in ---------- */
+function startPhoneIntro(){
+  const fi=document.getElementById('flipintro');
+  if(!fi || !fi.src){ zoomNudgeThenNotify(); return; }   // no clip → just do the zoom + message
+  fi.style.display='block'; fi.classList.add('on');       // cover the scene with the flip clip
+  let handed=false;
+  const handoff=()=>{ if(handed) return; handed=true;
+    try{ fi.pause(); }catch(e){}                          // freeze on the final open-phone frame
+    fi.classList.remove('on');                            // cross-dissolve into the identical live phone (opacity, .38s)…
+    setTimeout(()=>{ fi.style.display='none'; zoomNudgeThenNotify(); }, 380);   // …then zoom + DM — nothing moves during the dissolve
+  };
+  fi.addEventListener('ended', handoff, {once:true});
+  fi.addEventListener('error', handoff, {once:true});
+  setTimeout(handoff, 5200);                               // safety: never get stuck if 'ended' doesn't fire
+  try{ const p=fi.play(); if(p&&p.catch) p.catch(()=>handoff()); }catch(e){ handoff(); }
+}
+function zoomNudgeThenNotify(){
+  // ease a gentle zoom-in, then reveal the unread DM; hold there until the first scroll takes over
+  const t0=performance.now(), TARGET=0.06, DUR=850;
+  window.__p=0;
+  (function step(now){
+    const k=Math.min(1,(now-t0)/DUR), e=k*k*(3-2*k);
+    window.__p=TARGET*e;
+    if(k<1) requestAnimationFrame(step);
+    else { notifReady=true; if(lastStage===0) showNotif(); armIntroRelease(TARGET); }
+  })(t0);
+}
+function armIntroRelease(atP){
+  const rel=()=>{
+    removeEventListener('wheel', rel); removeEventListener('touchmove', rel); removeEventListener('keydown', rel);
+    if(window.__p===undefined) return;
+    const max=document.body.scrollHeight-room.clientHeight;   // land the scroll where the nudge left off — no jump
+    delete window.__p; window.scrollTo(0, Math.round(atP*max)); readScroll();
+  };
+  addEventListener('wheel', rel, {passive:true});
+  addEventListener('touchmove', rel, {passive:true});
+  addEventListener('keydown', rel);
+}
 function maybeHideVeil(){ if(veilGone)return; setTimeout(hideVeil, Math.max(0, MIN_VEIL-performance.now())); }  // hold at least MIN_VEIL
 roomimg.complete ? maybeHideVeil() : roomimg.addEventListener('load', maybeHideVeil);
 addEventListener('load', maybeHideVeil); setTimeout(hideVeil, MAX_VEIL);   // hard cap so it never sticks
@@ -905,14 +1095,9 @@ function goSnap(dir){
 }
 // opening the unread teaser + each "send" steps to the next snap groove (the DM advances by scroll or tap)
 function chatSend(){
-  if(ctSend.disabled) return;                    // send only works once your reply has typed in
-  // the last reply lands on the form — grab the keyboard inside this tap, because iOS only raises
-  // it for focus() calls made within a user gesture (the lock re-focuses later anyway)
-  if(chatStage(curP)===3){
-    const inp=document.querySelector('#apply .step.on input, #apply .step.on textarea');
-    if(inp) try{ inp.focus({preventScroll:true}); }catch(e){}
-  }
-  goSnap(1);
+  if(ctSend.disabled) return;                    // send only works once there's something to send
+  if(qIndex>=0){ submitAnswer(); return; }        // answering one of khushi's application questions
+  goSnap(1);                                       // an intro turn — step to the next groove
 }
 // in the hero, tapping ANYWHERE on the computer opens the DM (not just the message card)
 addEventListener('click', e=>{
@@ -940,9 +1125,7 @@ function enterFormLock(){
   document.documentElement.style.overflow='hidden';         // desktop: no wheel/keys scrolling
   document.body.style.position='fixed'; document.body.style.inset='0';   // mobile: really no touch scrolling
   formChromeOn(true);
-  // pull the keyboard up right away — the card layout keeps the question above it
-  const inp=form.querySelector('.step.on input, .step.on textarea');
-  if(inp) try{ inp.focus({preventScroll:true}); }catch(e){}
+  startApply();          // khushi begins asking the application questions right in the thread
 }
 function exitFormLock(){
   if(!formLocked) return; formLocked=false;
