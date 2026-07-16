@@ -1124,10 +1124,18 @@ function typeDraft(text){
 }
 let lastStage=-1, chatTimer=0, notifReady=false;
 // the unread teaser drops in like a push notification, a beat after the screen tunes in
+// the drop-in animation length (opacity .45s / transform .5s in CSS) — the tone lands with it
+const NOTIF_DROP_MS = 470;
 function showNotif(){
-  clearTimeout(showNotif._t);
+  clearTimeout(showNotif._t); clearTimeout(showNotif._t2);
   chatInbox.classList.remove('ready');
-  showNotif._t=setTimeout(()=>{ if(lastStage===0){ chatInbox.classList.add('ready'); CHATFX.nokia(); } }, 650);
+  showNotif._t=setTimeout(()=>{
+    if(lastStage!==0) return;
+    chatInbox.classList.add('ready');               // the card starts dropping in
+    // fire the nokia tone as the card LANDS, not as it starts sliding in — otherwise the beep
+    // leads the visual by the ~0.5s drop-in animation
+    showNotif._t2=setTimeout(()=>{ if(lastStage===0) CHATFX.nokia(); }, NOTIF_DROP_MS);
+  }, 650);
 }
 function renderChat(stage){
   if(stage===lastStage) return;
