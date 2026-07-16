@@ -428,22 +428,36 @@
   .g-overlay .go-verify2{ font-family:var(--mono); font-size:.82em; line-height:1.35; color:var(--brand-soft); margin-top:.55em; }
   .g-overlay .go-verify2 .go-code{ color:var(--brand-yellow); letter-spacing:.14em; }
   /* the arcade select screen (Nintendo-style menu) */
-  .g-menu{ position:absolute; inset:0; display:grid; place-items:center; text-align:center; z-index:3;
-    padding:7% 6%; background:rgba(16,10,24,.35); }
+  .g-menu{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; z-index:3; padding:4% 5%; background:rgba(16,10,24,.55); }
   .g-menu.off{ display:none; }
   .g-menu.nudge{ animation:nudge .4s; }
-  .gm-title{ font-family:var(--pixel); font-size:.85em; line-height:1.5; color:var(--brand-yellow); margin-bottom:1.5em;
+  /* left: the game list · right: the selected game's high scores (the FOMO) */
+  .gm-wrap{ display:flex; gap:1.3em; align-items:stretch; justify-content:center; width:100%; max-width:30em; }
+  .gm-side{ flex:0 0 auto; text-align:left; }
+  .gm-board{ flex:1 1 auto; min-width:0; text-align:left; border-left:1px solid rgba(255,255,255,.16); padding-left:1.25em; }
+  .gm-title{ font-family:var(--pixel); font-size:.66em; line-height:1.5; color:var(--brand-yellow); margin-bottom:1.1em;
     text-shadow:2px 0 0 #eb648c,-2px 0 0 #6bc7ff; }
-  .gm-list{ list-style:none; display:flex; flex-direction:column; gap:.5em; }
-  .gm-item{ font-family:var(--mono); font-size:1.5em; letter-spacing:.05em; line-height:1; color:#fff; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; gap:.45em; }
+  .gm-list{ list-style:none; display:flex; flex-direction:column; gap:.55em; }
+  .gm-item{ font-family:var(--mono); font-size:1.12em; letter-spacing:.04em; line-height:1; color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:flex-start; gap:.4em; white-space:nowrap; }
   .gm-item .gm-ptr{ color:var(--brand-pink); opacity:0; }
   .gm-item.sel .gm-ptr{ opacity:1; animation:gmblink 1s steps(1) infinite; }
   .gm-item.sel .gm-name{ color:var(--brand-yellow); }
   .gm-item.soon{ opacity:.4; }
   .gm-tag{ font-family:var(--pixel); font-size:.4em; letter-spacing:.05em; color:var(--brand-soft);
     border:1px solid var(--tag-border); border-radius:100px; padding:.5em .7em; }
-  .gm-foot{ font-family:var(--mono); font-size:1.05em; letter-spacing:.05em; color:rgba(255,255,255,.65); margin-top:1.9em; }
+  .gm-board-title{ font-family:var(--mono); font-size:.78em; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--brand-soft); opacity:.85; margin-bottom:.7em; }
+  .gm-scores{ list-style:none; display:flex; flex-direction:column; gap:.42em; font-family:var(--mono); font-size:.98em; }
+  .gm-scores li{ display:flex; align-items:baseline; gap:.5em; }
+  .gm-rank{ color:var(--brand-pink); flex:none; width:1.5em; }
+  .gm-h{ flex:1; min-width:0; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .gm-s{ color:var(--brand-yellow); flex:none; font-variant-numeric:tabular-nums; }
+  .gm-you{ border-top:1px dashed rgba(255,255,255,.22); padding-top:.4em; margin-top:.25em; }
+  .gm-you .gm-h{ color:var(--brand-soft); }
+  .gm-empty{ color:rgba(255,255,255,.5); font-size:.95em; }
+  .gm-foot{ font-family:var(--mono); font-size:.98em; letter-spacing:.04em; color:rgba(255,255,255,.6); margin-top:1.5em; }
   @keyframes gmblink{ 50%{opacity:0} }
 </style>
 </head>
@@ -570,11 +584,17 @@
           <div class="g-hud"><span><i id="gunit">pillows</i>&nbsp;<b id="gscore">0</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
           <div class="g-toast" id="gtoast"></div>
           <div class="g-menu off" id="gmenu">
-            <div>
-              <p class="gm-title">khushi's arcade</p>
-              <ul class="gm-list" id="gmlist"></ul>
-              <p class="gm-foot" id="gmfoot"></p>
+            <div class="gm-wrap">
+              <div class="gm-side">
+                <p class="gm-title">khushi's arcade</p>
+                <ul class="gm-list" id="gmlist"></ul>
+              </div>
+              <div class="gm-board">
+                <p class="gm-board-title" id="gmBoardTitle">high scores</p>
+                <ol class="gm-scores" id="gmScores"></ol>
+              </div>
             </div>
+            <p class="gm-foot" id="gmfoot"></p>
           </div>
           <div class="g-overlay off" id="gover">
             <div class="go-inner">
@@ -1599,6 +1619,7 @@ renderStep();
   const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit'), muteBtn=document.getElementById('gmute');
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
+  const gmBoardTitle=document.getElementById('gmBoardTitle'), gmScores=document.getElementById('gmScores');
   const gamepad=document.getElementById('gamepad'), arcadeChrome=document.getElementById('arcadeChrome');
   const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
   const useGamepad=()=>TOUCH||innerWidth<=640;   // on-screen buttons for phones (keyboard elsewhere)
@@ -1685,18 +1706,35 @@ renderStep();
     setChrome(false);
     if(arcadeChrome) arcadeChrome.classList.add('on');   // page-level leave + mute, top-right
     freeze(); seedStars(); playTrack('menu');
-    mode='menu'; sel=0; renderMenu(); applyMode(); drawFrame();
+    mode='menu'; sel=0; renderMenu(); applyMode(); drawFrame(); loadMenuScores();
   }
+  let MENU_ROWS=null;
   function renderMenu(){
     gmlist.innerHTML='';
     GAMES.forEach((g,i)=>{
       const li=document.createElement('li');
       li.className='gm-item'+(i===sel?' sel':'');
       li.innerHTML='<span class="gm-ptr">▸</span><span class="gm-name">'+g.name+'</span>';
-      li.addEventListener('click', ()=>{ sel=i; renderMenu(); selectGame(); });
+      // first tap selects a game (revealing its high scores); tapping the already-selected one plays it
+      li.addEventListener('click', ()=>{ if(sel===i){ selectGame(); } else { sel=i; renderMenu(); blip('eat'); } });
       gmlist.appendChild(li);
     });
-    gmfoot.innerHTML = TOUCH ? 'tap a game · or use the pad' : '↑ ↓ choose&nbsp;&nbsp;·&nbsp;&nbsp;enter play&nbsp;&nbsp;·&nbsp;&nbsp;esc exit';
+    gmfoot.innerHTML = TOUCH ? 'tap a game for its scores&nbsp;·&nbsp;tap again to play' : '↑ ↓ browse&nbsp;&nbsp;·&nbsp;&nbsp;enter play&nbsp;&nbsp;·&nbsp;&nbsp;esc exit';
+    renderMenuBoard();
+  }
+  // the selected game's leaderboard, shown in the menu so you see the celebs' scores before you play
+  async function loadMenuScores(){
+    try{ MENU_ROWS = await loadScores(); }catch(e){}
+    if(mode==='menu') renderMenuBoard();
+  }
+  function renderMenuBoard(){
+    const g=GAMES[sel]; if(!g||!gmScores) return;
+    if(!MENU_ROWS){ gmScores.innerHTML='<li class="gm-empty">loading the board…</li>'; return; }
+    let board=null; try{ board=computeBoard(MENU_ROWS, g.key, PLAYER&&PLAYER.handle, hiFor(g.key)); }catch(e){}
+    if(!board || !board.top.length){ gmScores.innerHTML='<li class="gm-empty">no scores yet — be the first ✨</li>'; return; }
+    let html=board.top.map(e=>'<li><span class="gm-rank">'+e.rank+'</span><span class="gm-h">@'+esc(e.handle)+'</span><span class="gm-s">'+e.score+'</span></li>').join('');
+    if(board.you) html+='<li class="gm-you"><span class="gm-rank">#'+board.you.rank+'</span><span class="gm-h">you</span><span class="gm-s">'+board.you.score+(board.you.pending?'*':'')+'</span></li>';
+    gmScores.innerHTML=html;
   }
   function moveSel(d){ sel=(sel+d+GAMES.length)%GAMES.length; renderMenu(); blip('eat'); }
   function selectGame(){ const g=GAMES[sel]; if(!g) return; if(g.external && g.launch) launchExternal(g); else startGame(g.key); }
