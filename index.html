@@ -100,9 +100,10 @@
   #chatInbox{ opacity:0; transform:translateY(-.7em) scale(.97);
     transition:opacity .45s ease, transform .5s cubic-bezier(.2,.85,.3,1.25); }
   #chatInbox.ready{ opacity:1; transform:none; }
-  .ci-av,.ct-av{ flex:none; border-radius:100px; display:grid; place-items:center;
+  .ci-av,.ct-av{ flex:none; border-radius:100px; display:grid; place-items:center; overflow:hidden;
     font-family:var(--pixel); color:#fff;
     background:linear-gradient(135deg,#eb648c,#ec642a); box-shadow:inset 0 1px 0 rgba(255,255,255,.3); }
+  .ci-av img,.ct-av img{ width:100%; height:100%; object-fit:cover; object-position:50% 22%; display:block; }   /* khushi's headshot */
 
   /* --- stage 0: the unread teaser sitting in the inbox --- */
   .ci-label{ font-family:var(--mono); font-size:1.1em; letter-spacing:.14em; text-transform:lowercase;
@@ -139,7 +140,9 @@
   /* --- stages 1–4: the thread (header · scrolling messages · pre-drafted reply + send) --- */
   .ct-head{ flex:none; display:flex; align-items:center; gap:.6em; padding:.7em 1em;
     border-bottom:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); }
-  .ct-back{ font-family:var(--mono); font-size:1.4em; line-height:1; color:var(--brand-soft); opacity:.7; }
+  .ct-back{ font-family:var(--mono); font-size:1.4em; line-height:1; color:var(--brand-soft); opacity:.7;
+    background:none; border:0; cursor:pointer; padding:.1em .35em; -webkit-tap-highlight-color:transparent; }
+  .ct-back:active{ opacity:1; transform:scale(.92); }
   .ct-av{ width:2.1em; height:2.1em; font-size:.72em; }
   .ct-id{ display:flex; flex-direction:column; line-height:1.2; min-width:0; }
   .ct-id b{ font-family:var(--mono); font-weight:400; font-size:1.15em; color:#fff; }
@@ -193,9 +196,19 @@
   .ct-chip:active{ transform:scale(.95); background:var(--brand-pink); }
   .ct-chip.cta{ font-family:var(--pixel); font-size:.7em; letter-spacing:.05em; color:#fff; border-color:rgba(255,255,255,.5);
     background:linear-gradient(90deg,#eb648c,#ec642a); box-shadow:0 0 10px rgba(235,100,140,.6); animation:ctaGlow 1.8s ease-in-out infinite; }
-  .ct-input.nudge, .ct-chips.nudge{ animation:nudge .42s; }
-  #chat .ci-row, #chat .ct-send, #chat .ct-draft, #chat .ct-input, #chat .ct-chip{ pointer-events:auto; }
-  #chat.locked .ci-row, #chat.locked .ct-send, #chat.locked .ct-draft{ pointer-events:none; }
+  /* the city suggestions — a slim strip of tappable chips right above the field */
+  .ct-suggest{ flex:none; display:flex; flex-wrap:wrap; gap:.4em; padding:.5em .8em 0; }
+  .ct-suggest .ct-chip{ font-size:.95em; padding:.3em .8em; }
+  /* the birthday pickers — three little pixel selects in the compose row */
+  .ct-date{ flex:1; min-width:0; display:flex; gap:.4em; }
+  .ct-date select{ flex:1; min-width:0; font-family:var(--mono); font-size:1.05em; color:#fff; outline:none;
+    padding:.45em .4em; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:.8em; }
+  .ct-date select:focus{ border-color:rgba(235,216,27,.5); }
+  .ct-date select option{ color:#2a1a2e; }   /* the native list renders light */
+  @media (max-width:640px){ .ct-date select{ font-size:16px; } }   /* no iOS zoom */
+  .ct-input.nudge, .ct-chips.nudge, .ct-date.nudge{ animation:nudge .42s; }
+  #chat .ci-row, #chat .ct-send, #chat .ct-draft, #chat .ct-input, #chat .ct-chip, #chat .ct-date select, #chat .ct-back{ pointer-events:auto; }
+  #chat.locked .ci-row, #chat.locked .ct-send, #chat.locked .ct-draft, #chat.locked .ct-back{ pointer-events:none; }
   @media (max-width:640px){ .ct-input{ font-size:16px; } }   /* ≥16px so iOS never zooms the fixed CRT on focus */
   .ftitle{ font-family:var(--mono); color:#fff; font-size:2.1em; line-height:1; letter-spacing:.02em; margin-bottom:.4em; text-shadow:var(--halo); }
   .ftitle .sub{ color:var(--brand-soft); font-style:italic; }
@@ -210,7 +223,15 @@
     color:var(--rose); text-decoration:none; white-space:nowrap; border:1px solid var(--tag-border);
     border-radius:100px; padding:.55rem .95rem; background:var(--card-a); backdrop-filter:blur(5px); transition:background .2s ease,color .2s ease; }
   #masthead .apply-link:hover{ background:var(--rose); color:var(--btn-fg); }
-  /* countdown to the party — retro (VT323) digits in a pill matching the Apply chip */
+  /* header sound toggle — chat pings + arcade share one preference, visible from the first frame */
+  .snd-toggle{ position:relative; width:2.3rem; height:2.3rem; display:grid; place-items:center; cursor:pointer;
+    font-size:1rem; color:var(--rose); border:1px solid var(--tag-border); border-radius:100px;
+    background:var(--card-a); backdrop-filter:blur(5px); transition:background .2s ease,color .2s ease; }
+  .snd-toggle:hover{ background:var(--rose); color:var(--btn-fg); }
+  .snd-toggle.off{ opacity:.6; }
+  .snd-toggle.off::after{ content:''; position:absolute; left:50%; top:50%; width:60%; height:2px; background:currentColor;
+    transform:translate(-50%,-50%) rotate(-45deg); border-radius:2px; }
+  /* countdown to when the form closes — retro (VT323) digits in a pill matching the Apply chip */
   .countdown{ display:inline-flex; align-items:baseline; gap:.5rem; white-space:nowrap; pointer-events:auto;
     border:1px solid var(--tag-border); border-radius:100px; padding:.4rem .85rem;
     background:var(--card-a); backdrop-filter:blur(5px); }
@@ -319,6 +340,7 @@
     #masthead .countdown{ padding:.35rem .6rem; gap:.35rem; }
     #masthead .countdown .cd-label{ font-size:.62rem; letter-spacing:.1em; }
     #masthead .countdown .cd-time{ font-size:.95rem; }
+    #masthead .snd-toggle{ width:1.9rem; height:1.9rem; font-size:.85rem; }
   }
 
   /* ---------- easter egg: SLUMBER SNAKE (retro game on the CRT) ---------- */
@@ -439,7 +461,7 @@
         <div class="chat-card" id="chatInbox">
           <p class="ci-label">messages</p>
           <button class="ci-row" type="button" id="ciRow">
-            <span class="ci-av">K</span>
+            <span class="ci-av"><img src="assets/khushi-face.png" alt="khushi" /></span>
             <span class="ci-main">
               <span class="ci-top"><span class="ci-name">khushi</span><span class="ci-handle">@khushikapoor</span></span>
               <span class="ci-prev">i have a secret to share 🤫</span>
@@ -450,16 +472,22 @@
         </div>
         <div class="chat-card" id="chatThread" hidden>
           <div class="ct-head">
-            <span class="ct-back">‹</span>
-            <span class="ct-av">K</span>
+            <button class="ct-back" id="ctBack" type="button" aria-label="back a step">‹</button>
+            <span class="ct-av"><img src="assets/khushi-face.png" alt="khushi" /></span>
             <span class="ct-id"><b>khushi</b><i>@khushikapoor · active now</i></span>
           </div>
           <div class="ct-body" id="ctBody"></div>
           <div class="ct-chips" id="ctChips" hidden></div>
+          <div class="ct-suggest" id="ctSuggest" hidden></div>
           <div class="ct-compose" id="ctCompose" hidden>
             <span class="ct-at" id="ctAt" hidden>@</span>
             <span class="ct-draft" id="ctDraft"></span>
             <input class="ct-input" id="ctInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" hidden />
+            <span class="ct-date" id="ctDate" hidden>
+              <select id="ctDD" aria-label="date"></select>
+              <select id="ctMM" aria-label="month"></select>
+              <select id="ctYY" aria-label="year"></select>
+            </span>
             <button class="ct-send" type="button" id="ctSend">send</button>
           </div>
         </div>
@@ -566,7 +594,8 @@
   <header id="masthead">
     <img class="logo" src="assets/logo2.png" alt="(secret;) khushi's slumber party" />
     <div class="head-right">
-      <span class="countdown" id="countdown" aria-label="countdown to the party"></span>
+      <button class="snd-toggle" id="sndToggle" type="button" title="sound on/off" aria-label="sound on/off">♪</button>
+      <span class="countdown" id="countdown" aria-label="countdown to when the form closes"></span>
       <a class="apply-link" href="#apply" id="applyLink">Apply</a>
     </div>
   </header>
@@ -775,6 +804,112 @@ const ciRow=document.getElementById('ciRow');
 const ctInput=document.getElementById('ctInput');
 const ctChips=document.getElementById('ctChips');
 const ctAt=document.getElementById('ctAt');
+const ctDate=document.getElementById('ctDate');
+const ctDD=document.getElementById('ctDD'), ctMM=document.getElementById('ctMM'), ctYY=document.getElementById('ctYY');
+const ctSuggest=document.getElementById('ctSuggest');
+/* ---------- chat sound fx (all synthesized, no files) ----------
+   lazy AudioContext, unlocked by the first real gesture; if a sound fires before then it
+   just skips (no queueing). every body is try/catch'd so audio can never break the page. */
+const CHATFX=(function(){
+  let fxCtx=null, fxNoise=null, fxPending=false;
+  let fxMuted=false; try{ fxMuted=localStorage.getItem('ksp-snd')==='off'; }catch(e){}
+  function fxUnlock(){
+    try{
+      fxCtx=fxCtx||new (window.AudioContext||window.webkitAudioContext)();
+      if(fxCtx.state==='suspended') fxCtx.resume();
+      // the unread ping that fired before audio was allowed — let it land now, if we're still on the teaser
+      setTimeout(()=>{ if(fxPending && !fxMuted && lastStage===0){ fxPending=false; nokiaTone(); } }, 150);
+    }catch(e){}
+  }
+  ['pointerdown','touchstart','keydown'].forEach(ev=>window.addEventListener(ev, fxUnlock, {once:true, passive:true}));
+  function fxOk(){ return fxCtx && fxCtx.state==='running'; }        // not unlocked yet → stay silent
+  function noiseBuf(){                                               // one shared second of white noise
+    if(!fxNoise){
+      fxNoise=fxCtx.createBuffer(1, fxCtx.sampleRate, fxCtx.sampleRate);
+      const d=fxNoise.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    }
+    return fxNoise;
+  }
+  // one enveloped oscillator note (shared by nokia + recv)
+  function fxTone(freq, at, dur, type, peak){
+    const o=fxCtx.createOscillator(), g=fxCtx.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq, at);
+    o.connect(g); g.connect(fxCtx.destination);
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(peak, at+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, at+dur);
+    o.start(at); o.stop(at+dur+0.02);
+  }
+  // the classic nokia sms tone — morse for "sms": dot dot dot / dash dash / dot dot dot
+  function nokiaTone(){
+      try{
+        if(fxMuted) return;
+        if(!fxOk()){ fxPending=true; return; }   // audio not allowed yet — remember it, replay on first tap
+        const DOT=0.07, DASH=0.2, GAP=0.07, LGAP=0.2, F=2093, P=0.05;
+        let t=fxCtx.currentTime+0.02;
+        [DOT,DOT,DOT].forEach(d=>{ fxTone(F,t,d,'square',P); t+=d+GAP; });
+        t+=LGAP-GAP;
+        [DASH,DASH].forEach(d=>{ fxTone(F,t,d,'square',P); t+=d+GAP; });
+        t+=LGAP-GAP;
+        [DOT,DOT,DOT].forEach(d=>{ fxTone(F,t,d,'square',P); t+=d+GAP; });
+      }catch(e){}
+  }
+  return {
+    nokia:nokiaTone,
+    // flip the pings on/off — the header toggle + arcade mute share this ('ksp-snd')
+    muted(){ return fxMuted; },
+    setMuted(m){ fxMuted=!!m; try{ localStorage.setItem('ksp-snd', fxMuted?'off':'on'); }catch(e){} if(!fxMuted) fxUnlock(); },
+    // her message lands — a soft two-note ding, imessage-ish (G5 then C6)
+    recv(){
+      try{
+        if(fxMuted||!fxOk()) return;
+        const t=fxCtx.currentTime+0.01;
+        fxTone(784,  t,      0.16, 'triangle', 0.07);
+        fxTone(1046.5, t+0.12, 0.22, 'sine',   0.06);
+      }catch(e){}
+    },
+    // your reply goes out — a rising filtered-noise swoosh with a faint sine underneath
+    sent(){
+      try{
+        if(fxMuted||!fxOk()) return;
+        const t=fxCtx.currentTime+0.01, D=0.28;
+        const src=fxCtx.createBufferSource(); src.buffer=noiseBuf();
+        const bp=fxCtx.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=6;
+        bp.frequency.setValueAtTime(400, t);
+        bp.frequency.exponentialRampToValueAtTime(3500, t+D);
+        const g=fxCtx.createGain(); src.connect(bp); bp.connect(g); g.connect(fxCtx.destination);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.08, t+0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, t+D);
+        src.start(t); src.stop(t+D+0.02);
+        const o=fxCtx.createOscillator(), og=fxCtx.createGain();
+        o.type='sine'; o.frequency.setValueAtTime(500, t);
+        o.frequency.exponentialRampToValueAtTime(1400, t+D);
+        o.connect(og); og.connect(fxCtx.destination);
+        og.gain.setValueAtTime(0.0001, t);
+        og.gain.exponentialRampToValueAtTime(0.04, t+0.05);
+        og.gain.exponentialRampToValueAtTime(0.0001, t+D);
+        o.start(t); o.stop(t+D+0.02);
+      }catch(e){}
+    },
+    // a tiny keyboard tick — short high noise burst, pitch wobbles a touch per press
+    click(){
+      try{
+        if(fxMuted||!fxOk()) return;
+        const t=fxCtx.currentTime, D=0.012;
+        const src=fxCtx.createBufferSource(); src.buffer=noiseBuf();
+        src.playbackRate.value=0.9+Math.random()*0.4;
+        const hp=fxCtx.createBiquadFilter(); hp.type='highpass';
+        hp.frequency.value=2500+Math.random()*1500;
+        const g=fxCtx.createGain(); src.connect(hp); hp.connect(g); g.connect(fxCtx.destination);
+        g.gain.setValueAtTime(0.03, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t+D);
+        src.start(t); src.stop(t+D+0.01);
+      }catch(e){}
+    }
+  };
+})();
 // the conversation: each turn is one of her lines + the reply we pre-draft for you to send.
 // hitting "send" (or just scrolling) advances one snap groove → the next turn appears.
 const CHAT=[
@@ -803,28 +938,59 @@ function buildThread(stage, typing){
    asking each question; you type real answers (the "who are you?" step is tap-chips), then it
    posts to the same Google Form and unlocks the arcade — all inside the thread. */
 const APPLY_Q=[
-  { name:'name',   ask:"eee ok! let me get you on the list ♡ what's your name?", type:'text',   ph:'first & last' },
-  { name:'age',    ask:"how old are you?",                         type:'number', ph:'21' },
-  { name:'city',   ask:"where are you based?",                     type:'text',   ph:'mumbai' },
-  { name:'role',   ask:"and who are you?",                         type:'choice', choices:['creator','artist','entrepreneur','follower'] },
+  { name:'name',   ask:"sure! give me your deets — what's your name?", type:'text',   ph:'first & last' },
+  { name:'city',   ask:"where are you based?",                     type:'city',   ph:'start typing your city…' },
+  { name:'age',    ask:"when's your birthday?",                    type:'date' },
+  { name:'role',   ask:"what describes you best?",                 type:'choice', choices:['creator','artist','entrepreneur','follower'] },
   { name:'handle', ask:"your instagram?",                          type:'handle', ph:'yourhandle' },
-  { name:'phone',  ask:"drop your number?",                        type:'tel',    ph:'+91 98765 43210' },
-  { name:'email',  ask:"best email?",                              type:'email',  ph:'you@email.com' },
-  { name:'why',    ask:"last one — what's your idea of a perfect slumber party?", type:'text', ph:'face masks, ghost stories, chaos…' }
+  { name:'phone',  ask:"drop your number?",                        type:'tel',    ph:'98765 43210' },
+  { name:'email',  ask:"your email?",                              type:'email',  ph:'you@email.com' },
+  { name:'why',    ask:'last one — finish this sentence: "my slumber party is incomplete without ___"', type:'text', ph:'fill in the blank' }
 ];
+// the city question filters this list as you type (free-typed cities are fine too)
+const CITIES=['mumbai','delhi','bangalore','hyderabad','chennai','kolkata','pune','ahmedabad','jaipur','surat',
+  'lucknow','kanpur','nagpur','indore','bhopal','chandigarh','goa','kochi','coimbatore','visakhapatnam',
+  'patna','vadodara','ludhiana','agra','nashik','faridabad','gurgaon','noida','ghaziabad','rajkot',
+  'varanasi','srinagar','amritsar','ranchi','guwahati','mysore','thiruvananthapuram','bhubaneswar','dehradun','shimla',
+  'udaipur','jodhpur','madurai','raipur','puducherry','mangalore','vijayawada','trichy','siliguri','jammu'];
+const MONTHS=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+// birthday selects: filled once, years capped so guests are 18+; the sheet gets ddmmyyyy
+function fillDateSelects(){
+  if(ctDD.options.length) return;
+  const opt=(sel,v,t)=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; sel.appendChild(o); };
+  opt(ctDD,'','date');  for(let d=1;d<=31;d++) opt(ctDD, String(d).padStart(2,'0'), d);
+  opt(ctMM,'','month'); MONTHS.forEach((m,i)=>opt(ctMM, String(i+1).padStart(2,'0'), m));
+  opt(ctYY,'','year');  for(let y=2008;y>=1950;y--) opt(ctYY, String(y), y);
+}
+let cityMode=false;
+function suggestCities(q){
+  if(q==null || !cityMode){ ctSuggest.hidden=true; ctSuggest.innerHTML=''; return; }
+  const v=q.trim().toLowerCase();
+  const hits=(v ? CITIES.filter(c=>c.includes(v)) : CITIES.slice(0,4)).slice(0,4);
+  ctSuggest.innerHTML=hits.map(c=>'<button type="button" class="ct-chip" data-city="'+c+'">'+c+'</button>').join('');
+  ctSuggest.hidden=!hits.length;
+}
 let qIndex=-1, qAns={}, qBusy=false;
-function pinChat(){ ctBody.scrollTop=ctBody.scrollHeight; }
+// keep the newest line in view — but if it's taller than the body, show its TOP (never clip the
+// opening words of a long message; the tail below is normal chat behaviour)
+function pinChat(){
+  const last=ctBody.lastElementChild;
+  if(!last){ ctBody.scrollTop=ctBody.scrollHeight; return; }
+  const top=last.getBoundingClientRect().top - ctBody.getBoundingClientRect().top + ctBody.scrollTop;
+  ctBody.scrollTop=Math.min(ctBody.scrollHeight-ctBody.clientHeight, Math.max(0, top-6));
+}
 function addTyping(){ ctBody.insertAdjacentHTML('beforeend', TYPING); pinChat(); }
 function clearTyping(){ const t=ctBody.querySelector('.msg.typing'); if(t) t.remove(); }
-function addBubble(who,text){ ctBody.insertAdjacentHTML('beforeend', bubble(who,text)); pinChat(); }
-function nudgeField(){ const el=(!ctChips.hidden)?ctChips:ctInput; el.classList.add('nudge'); setTimeout(()=>el.classList.remove('nudge'),420); }
-// which bit of the compose is live: pre-drafted span | real input | tap-chips | nothing
-function composeMode(m){   // 'draft' | 'type' | 'choice' | 'none'
+function addBubble(who,text){ ctBody.insertAdjacentHTML('beforeend', bubble(who,text)); pinChat(); if(who==='her') CHATFX.recv(); else CHATFX.sent(); }
+function nudgeField(){ const el=(!ctChips.hidden)?ctChips:(!ctDate.hidden)?ctDate:ctInput; el.classList.add('nudge'); setTimeout(()=>el.classList.remove('nudge'),420); }
+// which bit of the compose is live: pre-drafted span | real input | tap-chips | birthday selects | nothing
+function composeMode(m){   // 'draft' | 'type' | 'choice' | 'date' | 'none'
   ctCompose.hidden = (m==='choice' || m==='none');
   ctChips.hidden   = (m!=='choice');
   ctDraft.hidden   = (m!=='draft');
   ctInput.hidden   = (m!=='type');
-  if(m!=='type') ctAt.hidden=true;
+  ctDate.hidden    = (m!=='date');
+  if(m!=='type'){ ctAt.hidden=true; suggestCities(null); }
 }
 function startApply(){                       // called from enterFormLock (page is now frozen)
   qAns={}; qIndex=-1; qBusy=false;
@@ -848,28 +1014,43 @@ function readyAnswer(q){
     ctChips.innerHTML=q.choices.map(c=>'<button type="button" class="ct-chip" data-val="'+esc(c)+'">'+esc(c)+'</button>').join('');
     composeMode('choice'); pinChat(); return;
   }
+  if(q.type==='date'){                                   // birthday: three little selects, send once all picked
+    fillDateSelects(); ctDD.value=''; ctMM.value=''; ctYY.value='';
+    composeMode('date'); ctSend.disabled=true; pinChat(); return;
+  }
+  cityMode = (q.type==='city');
   composeMode('type');
-  ctInput.type = q.type==='number'?'number' : q.type==='email'?'email' : q.type==='tel'?'tel' : 'text';
-  ctInput.inputMode = q.type==='number'?'numeric' : q.type==='tel'?'tel' : q.type==='email'?'email' : 'text';
+  ctInput.type = q.type==='email'?'email' : q.type==='tel'?'tel' : 'text';
+  ctInput.inputMode = q.type==='tel'?'tel' : q.type==='email'?'email' : 'text';
   ctInput.placeholder = q.ph||'message…';
   ctAt.hidden = q.type!=='handle';
   ctSend.disabled = ctInput.value.trim()==='';
+  suggestCities(cityMode ? ctInput.value : null);
   try{ ctInput.focus({preventScroll:true}); }catch(e){}
   pinChat();
 }
 function submitAnswer(rawVal){
   if(qBusy || qIndex<0) return;
   const q=APPLY_Q[qIndex];
-  let val=String(rawVal==null?ctInput.value:rawVal).trim();
-  if(q.type==='number'){ const n=parseInt(val,10); if(!(n>=18)){ return nudgeField(); } val=String(n); }
-  else if(q.type==='email'){ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)){ return nudgeField(); } }
-  else if(!val){ return nudgeField(); }
-  let store=val, disp=val;
-  if(q.type==='handle'){ store='@'+val.replace(/^@+/,''); disp=store; }
+  let store, disp;
+  if(q.type==='date'){
+    const dd=ctDD.value, mm=ctMM.value, yy=ctYY.value;
+    if(!(dd&&mm&&yy)) return nudgeField();
+    if(+dd > new Date(+yy, +mm, 0).getDate()) return nudgeField();   // no 31st of feb
+    store=dd+mm+yy;                                                  // the sheet gets ddmmyyyy
+    disp=(+dd)+' '+MONTHS[+mm-1]+' '+yy;                             // your bubble reads like a date
+  } else {
+    let val=String(rawVal==null?ctInput.value:rawVal).trim();
+    if(q.type==='email'){ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)){ return nudgeField(); } }
+    else if(!val){ return nudgeField(); }
+    store=val; disp=val;
+    if(q.type==='handle'){ store='@'+val.replace(/^@+/,''); disp=store; }
+  }
+  cityMode=false; suggestCities(null);
   qAns[q.name]=store; addBubble('you', disp);
   const next=qIndex+1;
   // keep the mobile keyboard alive across typed questions by re-focusing inside this tap
-  if(next<APPLY_Q.length && APPLY_Q[next].type!=='choice'){
+  if(next<APPLY_Q.length && APPLY_Q[next].type!=='choice' && APPLY_Q[next].type!=='date'){
     composeMode('type'); ctInput.value=''; ctInput.placeholder='message…'; ctSend.disabled=true;
     try{ ctInput.focus({preventScroll:true}); }catch(e){}
   } else { composeMode('none'); if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }
@@ -891,22 +1072,30 @@ function finishApply(){
   addTyping();                        // khushi "sends" the confirmation after a beat, regardless of the network
   setTimeout(()=>{
     clearTyping();
-    addBubble('her', "tucked in ♡ your name's with khushi now.");
+    addBubble('her', "sorted, someone will be in touch soon");
     setTimeout(()=>{
-      addBubble('her', "if you're one of the thirty, i'll whisper back 🤫");
-      setTimeout(()=>{
-        ctChips.innerHTML='<button type="button" class="ct-chip cta" id="chatArcade">▸ enter khushi’s arcade</button>';
-        composeMode('choice'); pinChat();
-        if(window.__slumberGame) window.__slumberGame.unlock();
-        const b=document.getElementById('chatArcade');
-        if(b) b.addEventListener('click', ()=>{ if(window.__slumberGame) window.__slumberGame.start(); });
-      }, 800);
-    }, 700);
+      ctChips.innerHTML='<button type="button" class="ct-chip cta" id="chatArcade">▸ enter khushi’s arcade</button>';
+      composeMode('choice'); pinChat();
+      if(window.__slumberGame) window.__slumberGame.unlock();
+      const b=document.getElementById('chatArcade');
+      if(b) b.addEventListener('click', ()=>{ if(window.__slumberGame) window.__slumberGame.start(); });
+    }, 800);
   }, 1200);
 }
-ctInput.addEventListener('input', ()=>{ if(qIndex>=0 && !qBusy) ctSend.disabled = ctInput.value.trim()===''; });
+ctInput.addEventListener('input', ()=>{ if(qIndex>=0 && !qBusy) ctSend.disabled = ctInput.value.trim()===''; if(cityMode) suggestCities(ctInput.value); });
 ctInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(!ctSend.disabled) submitAnswer(); } });
+// keyboard ticks while you type a real answer (letters + backspace only — not enter/arrows/modifiers)
+ctInput.addEventListener('keydown', e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  if(e.key==='Backspace' || e.key.length===1) CHATFX.click();
+});
 ctChips.addEventListener('click', e=>{ const b=e.target.closest('.ct-chip'); if(b && b.dataset.val!=null) submitAnswer(b.dataset.val); });
+ctSuggest.addEventListener('click', e=>{ const b=e.target.closest('[data-city]'); if(b) submitAnswer(b.dataset.city); });   // tap a city = send it
+[ctDD,ctMM,ctYY].forEach(s=>s.addEventListener('change', ()=>{
+  if(qIndex>=0 && !qBusy && APPLY_Q[qIndex].type==='date') ctSend.disabled=!(ctDD.value&&ctMM.value&&ctYY.value);
+}));
+// the ‹ in the thread header steps back a turn (and back to the teaser from turn one)
+document.getElementById('ctBack').addEventListener('click', ()=>{ if(!formLocked) goSnap(-1); });
 
 // your pre-drafted reply types itself into the compose field, char by char, left-aligned;
 // the send button only surfaces once the reply has finished typing
@@ -916,7 +1105,7 @@ function typeDraft(text){
   ctDraft.classList.add('caret'); ctDraft.textContent='';
   let i=0;
   typeDraft._t=setInterval(()=>{
-    ctDraft.textContent=text.slice(0, ++i);
+    ctDraft.textContent=text.slice(0, ++i); CHATFX.click();
     if(i>=text.length){ clearInterval(typeDraft._t); ctDraft.classList.remove('caret'); ctSend.disabled=false; }  // …then enables
   }, 72);
 }
@@ -925,7 +1114,7 @@ let lastStage=-1, chatTimer=0, notifReady=false;
 function showNotif(){
   clearTimeout(showNotif._t);
   chatInbox.classList.remove('ready');
-  showNotif._t=setTimeout(()=>{ if(lastStage===0) chatInbox.classList.add('ready'); }, 650);
+  showNotif._t=setTimeout(()=>{ if(lastStage===0){ chatInbox.classList.add('ready'); CHATFX.nokia(); } }, 650);
 }
 function renderChat(stage){
   if(stage===lastStage) return;
@@ -941,7 +1130,7 @@ function renderChat(stage){
   if(stage>CHAT.length){            // stage 4 — the application: render the intro convo; the Q&A
     qIndex=-1;                      // begins once the page locks (enterFormLock → startApply)
     clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
-    ctBody.innerHTML=buildThread(stage, false); ctBody.scrollTop=ctBody.scrollHeight;
+    ctBody.innerHTML=buildThread(stage, false); pinChat();
     composeMode('none');
     return;
   }
@@ -954,13 +1143,13 @@ function renderChat(stage){
     composeMode('draft'); clearInterval(typeDraft._t); ctDraft.classList.remove('caret');
     ctDraft.textContent=text||''; ctSend.disabled=(text==null);
   };
-  const toBottom=()=>{ ctBody.scrollTop=ctBody.scrollHeight; };
+  const toBottom=()=>pinChat();
   if(forward){
     // her line runs a "typing" loader → lands → a beat passes → then your reply types into the (already-there) field
     ctBody.innerHTML=buildThread(stage, true); toBottom(); field(null);   // field present, empty, send disabled
     chatTimer=setTimeout(()=>{
       if(lastStage!==stage) return;
-      ctBody.innerHTML=buildThread(stage, false); toBottom();                                    // her message arrives
+      ctBody.innerHTML=buildThread(stage, false); toBottom(); CHATFX.recv();                     // her message arrives
       if(draft) chatTimer=setTimeout(()=>{ if(lastStage===stage) typeDraft(draft); }, 650);      // a beat, then you type
     }, 1300);
   } else {                                        // scrubbing back — land straight on the turn, ready to send
@@ -972,7 +1161,7 @@ function updateChat(p){
   // keep the thread pinned to its latest line every frame — the CRT's font-size shifts the
   // content height as the scene zooms, so a one-shot scroll can go stale (body is overflow:hidden,
   // so the reader never scrolls it by hand). short threads sit at the top; full ones stick to bottom.
-  if(!chatThread.hidden) ctBody.scrollTop=ctBody.scrollHeight;
+  if(!chatThread.hidden) pinChat();
   // mobile: recentre the card in the actually-visible slice. the room is sized to the LARGE
   // viewport (lvh) for zoom stability, so with the browser's url bar up a room-centred card sits
   // low. scale the nudge by how fullscreen the CRT is, so the tiny inbox isn't shoved off-screen.
@@ -1048,10 +1237,12 @@ function zoomNudgeThenNotify(){
 function armIntroRelease(atP){
   const rel=()=>{
     removeEventListener('wheel', rel); removeEventListener('touchmove', rel); removeEventListener('keydown', rel);
+    window.__introRelease=null;
     if(window.__p===undefined) return;
     const max=document.body.scrollHeight-room.clientHeight;   // land the scroll where the nudge left off — no jump
     delete window.__p; window.scrollTo(0, Math.round(atP*max)); readScroll();
   };
+  window.__introRelease=rel;      // a tap can release the hold too (goSnap calls this before it scrolls)
   addEventListener('wheel', rel, {passive:true});
   addEventListener('touchmove', rel, {passive:true});
   addEventListener('keydown', rel);
@@ -1074,29 +1265,47 @@ function renderCountdown(){
   const d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60), sec = s%60;
   const p = n => String(n).padStart(2,'0');
   const t = (d>0 ? d+'d ' : '') + p(h)+':'+p(m)+':'+p(sec);
-  cdEl.innerHTML = '<span class="cd-label">party in</span><span class="cd-time">'+t+'</span>';
+  cdEl.innerHTML = '<span class="cd-label">form closes in</span><span class="cd-time">'+t+'</span>';
 }
 renderCountdown(); setInterval(renderCountdown, 1000);
+
+/* ---------- header sound toggle — visible from the first frame; tapping it is also the
+   gesture that lets the browser unblock audio, so a pending unread ping can land ---------- */
+const sndBtn=document.getElementById('sndToggle');
+function paintSnd(){ if(sndBtn) sndBtn.classList.toggle('off', CHATFX.muted()); }
+if(sndBtn){ sndBtn.addEventListener('click', e=>{ e.stopPropagation(); CHATFX.setMuted(!CHATFX.muted()); paintSnd(); }); paintSnd(); }
 
 /* ---------- stepping through the snap grooves (the DM's send buttons) ---------- */
 const snapTops=()=>[...document.querySelectorAll('.scroll-space section')].map(s=>s.offsetTop);
 let snapRestore=0;
 function goSnap(dir){
+  if(window.__introRelease) window.__introRelease();   // a tap during the intro hold must actually move the page (mobile)
   const tops=snapTops(), y=scrollY, eps=12, maxY=document.body.scrollHeight-innerHeight;
   let target;
   if(dir>0){ target=tops.find(v=>v>y+eps); if(target==null) target=maxY; }
   else { const before=tops.filter(v=>v<y-eps); target=before.length? before[before.length-1] : 0; }
   target=Math.max(0, Math.min(target,maxY));
-  // mandatory scroll-snap fights a programmatic scroll — turn it off for the animation, restore after
+  // mandatory scroll-snap fights a programmatic scroll — keep it off until we actually ARRIVE.
+  // (the old fixed 900ms restore could fire mid-animation on a slow phone and yank the page back,
+  // which is why taps "did nothing" on mobile)
   const root=document.documentElement;
   root.style.scrollSnapType='none';
+  clearInterval(snapRestore);
   window.scrollTo({ top:target, behavior:'smooth' });
-  clearTimeout(snapRestore); snapRestore=setTimeout(()=>{ root.style.scrollSnapType=''; }, 900);
+  let still=0, lastY=-1;
+  const arrive=()=>{ clearInterval(snapRestore); window.scrollTo({ top:target, behavior:'instant' }); root.style.scrollSnapType=''; };
+  snapRestore=setInterval(()=>{
+    const y2=Math.round(scrollY);
+    if(Math.abs(y2-target)<4) return arrive();          // made it — pin + re-arm the snap
+    still=(y2===lastY)?still+1:0; lastY=y2;
+    if(still>=8) arrive();                              // animation stalled → jump the rest, never strand the tap
+  }, 150);
 }
 // opening the unread teaser + each "send" steps to the next snap groove (the DM advances by scroll or tap)
 function chatSend(){
   if(ctSend.disabled) return;                    // send only works once there's something to send
-  if(qIndex>=0){ submitAnswer(); return; }        // answering one of khushi's application questions
+  if(qIndex>=0){ submitAnswer(); return; }        // answering one of khushi's application questions (addBubble handles its sound)
+  CHATFX.sent();                                   // draft mode renders via buildThread, so it needs its own swoosh
   goSnap(1);                                       // an intro turn — step to the next groove
 }
 // in the hero, tapping ANYWHERE on the computer opens the DM (not just the message card)
@@ -1106,6 +1315,17 @@ addEventListener('click', e=>{
   goSnap(1);
 });
 ctSend.addEventListener('click', chatSend);
+// enter "sends" just like clicking — anywhere outside a field (fields handle their own enter);
+// on the unread teaser it opens the DM, same as a tap
+addEventListener('keydown', e=>{
+  if(e.key!=='Enter') return;
+  const el=document.activeElement;
+  if(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+  const g=document.getElementById('game'); if(g && g.classList.contains('on')) return;   // the arcade owns its keys
+  if(chatThread.hidden){ if(veilGone && !formLocked && chatStage(curP)===0){ e.preventDefault(); goSnap(1); } return; }
+  if(ctSend.disabled) return;
+  e.preventDefault(); chatSend();
+});
 ctDraft.addEventListener('click', chatSend);
 
 /* ---------- form mode: reaching the form locks the page (like the arcade) ----------
@@ -1241,8 +1461,8 @@ const GLEADER = {
     snake:       { field:'entry.1350983856', col:'game 1 score' },
     pillowstack: { field:'entry.1683579071', col:'game 2 score' },
     dreammaze:   { field:'entry.1649898258', col:'game 3 score' },
-    pong:        { field:'entry.1469487080', col:'game 4 score' }
-    // game 5 slot ready: entry.522284106
+    pong:        { field:'entry.1469487080', col:'game 4 score' },
+    slumberescape:{ field:'entry.522284106', col:'game 5 score' }
   }
 };
 let PLAYER = null;              // the submitted application, so the game knows who's playing
@@ -1394,7 +1614,24 @@ renderStep();
     if(unlocked) return; unlocked=true;
     const eb=document.getElementById('enterArcade'); if(eb) eb.addEventListener('click', e=>{ e.stopPropagation(); openArcade(); });   // the CTA is the only visible way in
   }
-  window.__slumberGame={ unlock, start:openArcade };
+  // external games (e.g. slumber escape) live in their own file and take over the whole
+  // viewport instead of the CRT canvas; they register here and hand back a score on exit.
+  function registerGame(def){ GAMES.push(def); if(open && mode==='menu') renderMenu(); }
+  function launchExternal(def){
+    stopMusic(); mode=null; applyMode();
+    gameEl.classList.remove('on');
+    if(arcadeChrome) arcadeChrome.classList.remove('on');
+    def.launch({
+      exit(score){                       // land back on the arcade menu; post a new best like gameOver does
+        score=+score||0;
+        if(score>0 && score>hiFor(def.key)){ setHi(def.key, score); if(typeof postScore==='function') postScore(def.key, score); }
+        gameEl.classList.add('on');
+        if(arcadeChrome) arcadeChrome.classList.add('on');
+        open=true; mode='menu'; sel=Math.max(0, GAMES.indexOf(def)); renderMenu(); applyMode(); drawFrame(); playTrack('menu');
+      }
+    });
+  }
+  window.__slumberGame={ unlock, start:openArcade, register:registerGame };
 
   function applyMode(){
     gmenu.classList.toggle('off', mode!=='menu');
@@ -1417,6 +1654,8 @@ renderStep();
   /* ---------- arcade menu ---------- */
   function openArcade(){
     if(!unlocked||open) return; open=true;
+    try{ muted = localStorage.getItem('ksp-snd')==='off'; }catch(e){}   // pick up the header toggle's preference
+    if(muteBtn){ muteBtn.classList.toggle('off', muted); muteBtn.title = muted?'sound off':'sound on'; }
     gameEl.classList.add('on');
     setChrome(false);
     if(arcadeChrome) arcadeChrome.classList.add('on');   // page-level leave + mute, top-right
@@ -1435,7 +1674,7 @@ renderStep();
     gmfoot.innerHTML = TOUCH ? 'tap a game · or use the pad' : '↑ ↓ choose&nbsp;&nbsp;·&nbsp;&nbsp;enter play&nbsp;&nbsp;·&nbsp;&nbsp;esc exit';
   }
   function moveSel(d){ sel=(sel+d+GAMES.length)%GAMES.length; renderMenu(); blip('eat'); }
-  function selectGame(){ const g=GAMES[sel]; if(g) startGame(g.key); }
+  function selectGame(){ const g=GAMES[sel]; if(!g) return; if(g.external && g.launch) launchExternal(g); else startGame(g.key); }
   function backToMenu(){ mode='menu'; clearTimeout(loopTimer); sel=0; renderMenu(); applyMode(); drawFrame(); playTrack('menu'); }
 
   // Freeze the scroll scene at the form framing (the little computer, screen facing us) while playing.
@@ -1883,6 +2122,8 @@ renderStep();
     muted=!muted;
     if(muted) stopLoop(); else if(open) startLoop(curTrack||'menu');
     if(muteBtn){ muteBtn.classList.toggle('off', muted); muteBtn.title = muted?'sound off':'sound on'; }
+    try{ CHATFX.setMuted(muted); }catch(e){}                        // one preference everywhere
+    if(typeof paintSnd==='function') paintSnd();                    // keep the header toggle honest
   }
 
   /* ---------- controls ---------- */
@@ -1978,5 +2219,6 @@ renderStep();
   addEventListener('resize', ()=>{ if(open){ drawFrame(); applyMode(); } });   // re-evaluate gamepad on rotate/resize
 })();
 </script>
+<script src="assets/escape.js"></script>
 </body>
 </html>
