@@ -270,25 +270,34 @@ function launchGame(opts){
  var exitCb=(opts&&opts.exit)||function(){};
  var finished=false;
 
- /* ---- dom ---- */
+ /* ---- dom — mounted INSIDE the CRT screen (#tv) when it exists, so the
+    room plays out on the monitor; falls back to fullscreen elsewhere ---- */
+ var host=document.getElementById('tv');
  var overlay=document.createElement('div');
- overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:'+NIGHT+';display:flex;align-items:center;justify-content:center;touch-action:none;overflow:hidden;';
+ overlay.style.cssText=(host?'position:absolute':'position:fixed')+';inset:0;z-index:9999;background:'+NIGHT+';display:flex;align-items:center;justify-content:center;touch-action:none;overflow:hidden;pointer-events:auto;';
  var cv=document.createElement('canvas');
  cv.width=LW;cv.height=LH;
  cv.style.cssText='image-rendering:pixelated;image-rendering:crisp-edges;display:block;touch-action:none;';
  overlay.appendChild(cv);
- document.body.appendChild(overlay);
+ (host||document.body).appendChild(overlay);
  var ctx=cv.getContext('2d');
  ctx.imageSmoothingEnabled=false;   /* room stays pixel-crisp; portrait flips this on locally */
  var cssScale=1;
  function doResize(){
   var vw=window.innerWidth,vh=window.innerHeight;
+  if(host && host.clientWidth>40 && host.clientHeight>40){
+   /* the page camera does the zooming; letterbox to the VISIBLE slice when
+      the zoomed CRT outgrows the window (centres stay aligned) */
+   vw=Math.min(host.clientWidth,window.innerWidth); vh=Math.min(host.clientHeight,window.innerHeight);
+  }
   var s=Math.min(vw/LW,vh/LH);
   cssScale=s;
   cv.style.width=Math.floor(LW*s)+'px';
   cv.style.height=Math.floor(LH*s)+'px';
  }
  doResize();
+ var hostRO=null;   /* the CRT rect eases with the page zoom — stay letterboxed to it */
+ if(host && typeof ResizeObserver!=='undefined'){ try{ hostRO=new ResizeObserver(doResize); hostRO.observe(host); }catch(e){} }
 
  /* ---- audio ---- */
  var actx=null,muted=false;
@@ -410,7 +419,7 @@ function launchGame(opts){
  var transAt=0,transPhase=0; // 0 door swing/out, 1 fade in
  var nextBanterAt=performance.now()+22000;
  var confetti=null;
- var victoryBtn={x:160,y:206,w:160,h:22};
+ var victoryBtn={x:140,y:206,w:200,h:22};
  var rafId=0,dead=false;
 
  function now(){return performance.now();}
@@ -430,7 +439,7 @@ function launchGame(opts){
   if(!dlg||dlgDone()) nextDlg();
  }
  function dlgPages(text){
-  var lines=wrap(text,DLG_W,8);
+  var lines=wrap(text,DLG_W,10);
   if(lines.length<=DLG_LINES) return [text];
   var pages=[];
   for(var i=0;i<lines.length;i+=DLG_LINES) pages.push(lines.slice(i,i+DLG_LINES).join(' '));
@@ -610,7 +619,7 @@ function launchGame(opts){
  var DOOR={x:432,y:58,w:32,h:108};
  /* hit rects for mute/quit (>=18px square); the visible 14x14 buttons are centered inside */
  var MUTEB={x:430,y:0,w:24,h:18},QUITB={x:456,y:0,w:24,h:18};
- function invRect(i){return {x:4+i*27,y:246,w:24,h:22};}
+ function invRect(i){return {x:4+i*27,y:248,w:24,h:22};}
  function friendRect(i){var f=friendPos(i);return {x:f.x,y:f.y,w:24,h:32};}
  function friendPos(i){
   var spots=[{x:210,y:158},{x:254,y:163},{x:298,y:156}];
@@ -657,8 +666,8 @@ function launchGame(opts){
   if(dlg&&dlgDone()&&dlgQueue.length){nextDlg();return;}
 
   if(state==='confirm'){
-   if(hit(x,y,{x:130,y:150,w:100,h:22})){state=prevState;snd.click();return;}   /* keep playing */
-   if(hit(x,y,{x:250,y:150,w:100,h:22})){finish(0);return;}                     /* give up */
+   if(hit(x,y,{x:120,y:150,w:110,h:22})){state=prevState;snd.click();return;}   /* keep playing */
+   if(hit(x,y,{x:250,y:150,w:110,h:22})){finish(0);return;}                     /* give up */
    return;
   }
   if(state==='victory'){
@@ -794,14 +803,14 @@ function launchGame(opts){
  function bx(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
  function frameRect(x,y,w,h,c){ctx.strokeStyle=c;ctx.lineWidth=1;ctx.strokeRect(Math.round(x)+0.5,Math.round(y)+0.5,Math.round(w)-1,Math.round(h)-1);}
  function txt(s,x,y,c,size,align){
-  ctx.font=(size||8)+'px '+FSTACK;
+  ctx.font=(size||10)+'px '+FSTACK;
   ctx.fillStyle=c||WHITE;
   ctx.textAlign=align||'left';
   ctx.textBaseline='top';
   ctx.fillText(s,Math.round(x),Math.round(y));
  }
  function wrap(s,maxW,size){
-  ctx.font=(size||8)+'px '+FSTACK;
+  ctx.font=(size||10)+'px '+FSTACK;
   var words=String(s).split(' '),lines=[],cur='';
   for(var i=0;i<words.length;i++){
    var w=words[i];
@@ -821,7 +830,7 @@ function launchGame(opts){
  }
  /* draw a single line clamped to maxW (truncates with … if needed) */
  function fitTxt(s,x,y,c,size,align,maxW){
-  ctx.font=(size||8)+'px '+FSTACK;
+  ctx.font=(size||10)+'px '+FSTACK;
   var t=String(s);
   if(ctx.measureText(t).width>maxW){
    while(t.length>1&&ctx.measureText(t+'…').width>maxW)t=t.slice(0,-1);
@@ -833,7 +842,7 @@ function launchGame(opts){
  function txtWrap(s,x,y,c,size,align,maxW,maxLines,lh){
   var lines=wrap(s,maxW,size);
   var n=Math.min(lines.length,maxLines||lines.length);
-  for(var i=0;i<n;i++)txt(lines[i],x,y+i*(lh||9),c,size,align);
+  for(var i=0;i<n;i++)txt(lines[i],x,y+i*(lh||12),c,size,align);
   return n;
  }
  function star(x,y,c){
@@ -941,43 +950,43 @@ function launchGame(opts){
    bx(lx,ly+3,9,8,YEL);bx(lx+2,ly,5,4,YEL);bx(lx+3,ly+1,3,2,r.pal.wall);bx(lx+4,ly+6,1,3,'#1a1026');
   }
   if(hover===DOOR||(tapFlash===DOOR&&now()-tapFlashAt<350)) drawGlow(DOOR,t);
-  if(last) txt('exit',DOOR.x+DOOR.w/2,DOOR.y-12,YEL,8,'center');
+  if(last) txt('exit',DOOR.x+DOOR.w/2,DOOR.y-14,YEL,10,'center');
  }
 
  function drawTopBar(t){
   bx(0,0,LW,ROOMTOP,'#160e2b');
   bx(0,ROOMTOP-1,LW,1,PINK);
-  /* layout audit @480px: name 4..154 | timer 164..204 | star+score 216..~258 | best ..424 | mute 430 | quit 456 */
-  fitTxt(state==='victory'?'the villa':room().name,4,5,SOFT,8,'left',150);
+  /* layout audit @480px, 10px font: name 4..154 | timer 164..214 | star+score 216..~258 | best ..424 | mute 430 | quit 456 */
+  fitTxt(state==='victory'?'the villa':room().name,4,5,SOFT,10,'left',150);
   var sec=Math.floor(elapsed()/1000),mm=Math.floor(sec/60),ss=sec%60;
-  txt((mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss,164,5,WHITE,8);
+  txt((mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss,164,5,WHITE,10);
   star(216,6,YEL);
-  txt(String(state==='victory'?finalScore:curScore()),226,5,YEL,8);
-  if(bestScore>0) fitTxt('best '+bestScore,MUTEB.x-6,5,'#9b8bb8',8,'right',110);
+  txt(String(state==='victory'?finalScore:curScore()),226,5,YEL,10);
+  if(bestScore>0) fitTxt('best '+bestScore,MUTEB.x-6,5,'#9b8bb8',10,'right',110);
   /* mute (visible button centered in the bigger hit rect) */
   bx(MUTEB.x+5,2,14,14,'#241733');
-  txt(muted?'x':'♪',MUTEB.x+12,6,muted?'#6b5a8a':SOFT,8,'center');
+  txt(muted?'x':'♪',MUTEB.x+12,4,muted?'#6b5a8a':SOFT,10,'center');
   /* quit */
   bx(QUITB.x+5,2,14,14,'#241733');
-  txt('✕',QUITB.x+12,6,PINK,8,'center');
+  txt('✕',QUITB.x+12,4,PINK,10,'center');
  }
 
  function drawBottom(t){
   /* dialogue box */
-  bx(4,205,LW-8,38,'#160e2b');
-  frameRect(4,205,LW-8,38,PINK);
+  bx(4,196,LW-8,50,'#160e2b');
+  frameRect(4,196,LW-8,50,PINK);
   if(dlg){
    var age=now()-(dlg.doneAt||now());
    var faded=dlgDone()&&!dlgQueue.length&&dlg.doneAt&&age>6000;
    if(!faded){
-    txt(dlg.who+':',10,209,dlg.who==='you'?YEL:PINK,8);
+    txt(dlg.who+':',10,199,dlg.who==='you'?YEL:PINK,10);
     var vis=dlg.text.slice(0,Math.floor(dlg.shown));
-    var lines=wrap(vis,DLG_W,8);
-    for(var i=0;i<Math.min(lines.length,DLG_LINES);i++) txt(lines[i],10,219+i*9,WHITE,8);
-    if(dlgDone()&&dlgQueue.length&&Math.floor(t/400)%2) txt('▾',LW-16,231,SOFT,8);
+    var lines=wrap(vis,DLG_W,10);
+    for(var i=0;i<Math.min(lines.length,DLG_LINES);i++) txt(lines[i],10,211+i*11,WHITE,10);
+    if(dlgDone()&&dlgQueue.length&&Math.floor(t/400)%2) txt('▾',LW-16,234,SOFT,10);
    }
   }else{
-   txt('tap around. find clues. escape.',10,220,'#6b5a8a',8);
+   txt('tap around. find clues. escape.',10,216,'#6b5a8a',10);
   }
   /* inventory */
   for(var s2=0;s2<5;s2++){
@@ -990,8 +999,8 @@ function launchGame(opts){
     else{bx(ir.x+6,ir.y+4,12,14,'#f6f2e4');bx(ir.x+8,ir.y+7,8,1,'#8a86a8');bx(ir.x+8,ir.y+10,8,1,'#8a86a8');bx(ir.x+8,ir.y+13,8,1,'#8a86a8');}
    }
   }
-  txt('items',140,252,'#6b5a8a',8);
-  fitTxt('tap a friend for a hint',LW-4,252,'#6b5a8a',8,'right',300);
+  txt('items',140,254,'#6b5a8a',10);
+  fitTxt('tap a friend for a hint',LW-4,254,'#6b5a8a',10,'right',300);
  }
 
  function drawModal(t){
@@ -1002,23 +1011,23 @@ function launchGame(opts){
   frameRect(b.x+2,b.y+2,b.w-4,b.h-4,'#463159');
   var cl=modalClose();
   bx(cl.x,cl.y,cl.w,cl.h,'#241733');
-  txt('✕',cl.x+7,cl.y+4,PINK,8,'center');
+  txt('✕',cl.x+7,cl.y+3,PINK,10,'center');
   if(modal.kind==='pad'){
-   fitTxt('door keypad',b.x+b.w/2,b.y+8,SOFT,8,'center',b.w-40);
+   fitTxt('door keypad',b.x+b.w/2,b.y+8,SOFT,10,'center',b.w-40);
    for(var s2=0;s2<3;s2++){
     bx(b.x+58+s2*36,b.y+26,30,20,'#0d0920');
     frameRect(b.x+58+s2*36,b.y+26,30,20,YEL);
-    txt(modal.entry[s2]||'_',b.x+73+s2*36,b.y+32,YEL,8,'center');
+    txt(modal.entry[s2]||'_',b.x+73+s2*36,b.y+32,YEL,10,'center');
    }
-   for(var d=0;d<10;d++){var pb=padBtn(d);bx(pb.x,pb.y,pb.w,pb.h,'#2d1d40');frameRect(pb.x,pb.y,pb.w,pb.h,SOFT);txt(String(d),pb.x+pb.w/2,pb.y+6,WHITE,8,'center');}
-   bx(PAD_CLR.x,PAD_CLR.y,PAD_CLR.w,PAD_CLR.h,'#2d1d40');frameRect(PAD_CLR.x,PAD_CLR.y,PAD_CLR.w,PAD_CLR.h,SOFT);txt('clear',PAD_CLR.x+PAD_CLR.w/2,PAD_CLR.y+5,SOFT,8,'center');
-   bx(PAD_OK.x,PAD_OK.y,PAD_OK.w,PAD_OK.h,PINK);txt('enter',PAD_OK.x+PAD_OK.w/2,PAD_OK.y+5,WHITE,8,'center');
+   for(var d=0;d<10;d++){var pb=padBtn(d);bx(pb.x,pb.y,pb.w,pb.h,'#2d1d40');frameRect(pb.x,pb.y,pb.w,pb.h,SOFT);txt(String(d),pb.x+pb.w/2,pb.y+5,WHITE,10,'center');}
+   bx(PAD_CLR.x,PAD_CLR.y,PAD_CLR.w,PAD_CLR.h,'#2d1d40');frameRect(PAD_CLR.x,PAD_CLR.y,PAD_CLR.w,PAD_CLR.h,SOFT);txt('clear',PAD_CLR.x+PAD_CLR.w/2,PAD_CLR.y+5,SOFT,10,'center');
+   bx(PAD_OK.x,PAD_OK.y,PAD_OK.w,PAD_OK.h,PINK);txt('enter',PAD_OK.x+PAD_OK.w/2,PAD_OK.y+5,WHITE,10,'center');
   }
   else if(modal.kind==='simon'){
    var lbl=r.byId[r.puzzleProp].label;
-   fitTxt(lbl,b.x+b.w/2,b.y+8,SOFT,8,'center',b.w-40);
+   fitTxt(lbl,b.x+b.w/2,b.y+8,SOFT,10,'center',b.w-40);
    var msg=modal.phase==='watch'?'watch...':(modal.phase==='input'?'your turn! ('+modal.inputIdx+'/4)':'nice!!');
-   fitTxt(msg,b.x+b.w/2,b.y+22,YEL,8,'center',b.w-16);
+   fitTxt(msg,b.x+b.w/2,b.y+22,YEL,10,'center',b.w-16);
    var cols=[PINK,YEL,PURP,TEAL];
    for(var i=0;i<4;i++){
     var sb=simonBtn(i);
@@ -1030,47 +1039,47 @@ function launchGame(opts){
    }
   }
   else if(modal.kind==='order'){
-   fitTxt(r.byId[r.puzzleProp].label+' — tap two to swap',b.x+b.w/2,b.y+7,SOFT,8,'center',b.w-40);
-   txtWrap(r.foundNote?r.clue:'(you haven\'t found the clue note yet...)',b.x+b.w/2,b.y+21,'#9b8bb8',8,'center',b.w-16,2,9);
+   fitTxt('tap two to swap',b.x+b.w/2,b.y+7,SOFT,10,'center',b.w-40);
+   txtWrap(r.foundNote?r.clue:'(you haven\'t found the clue note yet...)',b.x+b.w/2,b.y+20,'#9b8bb8',10,'center',b.w-16,2,11);
    for(var s3=0;s3<4;s3++){
     var os=orderSlot(s3),it=r.items[s3];
     bx(os.x,os.y,os.w,os.h,modal.sel===s3?'#3d2a5c':'#241733');
     frameRect(os.x,os.y,os.w,os.h,modal.sel===s3?YEL:SOFT);
     if(r.rule==='rainbow'){bx(os.x+14,os.y+10,20,34,it.c);bx(os.x+18,os.y+4,12,8,it.c);}
     else if(r.rule==='size'){var z=it.sz;bx(os.x+os.w/2-z/2,os.y+40-z*1.6,z,z*1.6,'#b07040');bx(os.x+os.w/2-z/4,os.y+38-z*1.6,z/2,4,'#8a5028');}
-    else{bx(os.x+14,os.y+10,20,20,[PINK,TEAL,YEL,PURP][s3]);txt(it.n[0],os.x+24,os.y+16,'#1a1026',8,'center');}
-    txt(it.n,os.x+os.w/2,os.y+52,WHITE,8,'center');
+    else{bx(os.x+14,os.y+10,20,20,[PINK,TEAL,YEL,PURP][s3]);txt(it.n[0],os.x+24,os.y+16,'#1a1026',10,'center');}
+    txt(it.n,os.x+os.w/2,os.y+52,WHITE,10,'center');
    }
-   if(modal.solvedAt) txt('click! it opens!',b.x+b.w/2,b.y+b.h-14,YEL,8,'center');
+   if(modal.solvedAt) txt('click! it opens!',b.x+b.w/2,b.y+b.h-14,YEL,10,'center');
   }
   else if(modal.kind==='sym'){
-   txtWrap(r.byId[r.puzzleProp].label+' — match the pairs',b.x+b.w/2,b.y+8,SOFT,8,'center',b.w-40,2,9);
+   txtWrap(r.byId[r.puzzleProp].label+' — match the pairs',b.x+b.w/2,b.y+8,SOFT,10,'center',b.w-40,2,11);
    for(var k2=0;k2<8;k2++){
     var st2=symTile(k2),tl=r.tiles[k2];
-    if(tl.st===0){bx(st2.x,st2.y,st2.w,st2.h,'#2d1d40');frameRect(st2.x,st2.y,st2.w,st2.h,SOFT);txt('?',st2.x+st2.w/2,st2.y+18,'#6b5a8a',8,'center');}
+    if(tl.st===0){bx(st2.x,st2.y,st2.w,st2.h,'#2d1d40');frameRect(st2.x,st2.y,st2.w,st2.h,SOFT);txt('?',st2.x+st2.w/2,st2.y+17,'#6b5a8a',10,'center');}
     else{
      bx(st2.x,st2.y,st2.w,st2.h,tl.st===2?'#173a2e':'#3d2a5c');
      frameRect(st2.x,st2.y,st2.w,st2.h,tl.st===2?GRN:YEL);
      drawSym(tl.s,st2.x+st2.w/2,st2.y+st2.h/2);
     }
    }
-   if(modal.solvedAt) txt('unlocked!',b.x+b.w/2,b.y+b.h-14,YEL,8,'center');
+   if(modal.solvedAt) txt('unlocked!',b.x+b.w/2,b.y+b.h-14,YEL,10,'center');
   }
  }
  function drawSym(s,cx2,cy2){
   if(s===0){/* moon */bx(cx2-8,cy2-8,16,16,'#f3ead0');bx(cx2-2,cy2-7,12,14,'#3d2a5c');}
   else if(s===1){/* star */bx(cx2-2,cy2-9,4,18,YEL);bx(cx2-9,cy2-2,18,4,YEL);bx(cx2-6,cy2-6,12,12,YEL);}
   else if(s===2){/* heart */bx(cx2-8,cy2-6,7,7,PINK);bx(cx2+1,cy2-6,7,7,PINK);bx(cx2-6,cy2-1,12,6,PINK);bx(cx2-3,cy2+5,6,4,PINK);}
-  else{txt('zzz',cx2,cy2-5,TEAL,8,'center');}
+  else{txt('zzz',cx2,cy2-6,TEAL,10,'center');}
  }
 
  function drawConfirm(){
   ctx.globalAlpha=0.72;bx(0,0,LW,LH,NIGHT);ctx.globalAlpha=1;
   bx(110,96,260,90,'#1c1233');frameRect(110,96,260,90,PINK);
-  txt('give up?',240,110,WHITE,8,'center');
-  fitTxt('khushi will judge you (a bit)',240,126,SOFT,8,'center',248);
-  bx(130,150,100,22,'#2d1d40');frameRect(130,150,100,22,TEAL);txt('keep going',180,157,TEAL,8,'center');
-  bx(250,150,100,22,'#2d1d40');frameRect(250,150,100,22,PINK);txt('give up',300,157,PINK,8,'center');
+  txt('give up?',240,110,WHITE,10,'center');
+  fitTxt('khushi will judge you',240,126,SOFT,10,'center',248);
+  bx(120,150,110,22,'#2d1d40');frameRect(120,150,110,22,TEAL);txt('keep going',175,156,TEAL,10,'center');
+  bx(250,150,110,22,'#2d1d40');frameRect(250,150,110,22,PINK);txt('give up',305,156,PINK,10,'center');
  }
 
  function drawVictory(t,dt){
@@ -1079,15 +1088,15 @@ function launchGame(opts){
   /* moon + stars */
   bx(400,26,18,18,'#f3ead0');bx(408,28,12,14,NIGHT);
   for(var s2=0;s2<24;s2++){var sx=(s2*67+13)%LW,sy=(s2*41+7)%170;if(Math.floor(t/300+s2)%4!==0)bx(sx,sy,1,1,WHITE);}
-  fitTxt('you escaped the villa!',240,64,YEL,8,'center',LW-16);
-  fitTxt('slumber escape',240,44,PINK,8,'center',LW-16);
-  star(196,88,YEL);
-  txt(finalScore+' stars',240,86,WHITE,8,'center');
-  if(finalScore>bestScore) txt('new best!',240,102,PINK,8,'center');
+  fitTxt('you escaped the villa!',240,64,YEL,10,'center',LW-16);
+  fitTxt('slumber escape',240,44,PINK,10,'center',LW-16);
+  star(186,88,YEL);
+  txt(finalScore+' stars',240,86,WHITE,10,'center');
+  if(finalScore>bestScore) txt('new best!',240,102,PINK,10,'center');
   /* the girls */
   for(var i=0;i<friendNames.length;i++){
-   drawSprite(friendNames[i],168+i*52,124,Math.floor(t/280+i)%2===0);
-   txt(friendNames[i],180+i*52,162,SOFT,8,'center');
+   drawSprite(friendNames[i],168+i*62,124,Math.floor(t/280+i)%2===0);
+   txt(friendNames[i],180+i*62,162,SOFT,10,'center');
   }
   /* confetti */
   if(confetti){
@@ -1099,7 +1108,7 @@ function launchGame(opts){
    }
   }
   bx(victoryBtn.x,victoryBtn.y,victoryBtn.w,victoryBtn.h,PINK);
-  fitTxt('back to the arcade',victoryBtn.x+victoryBtn.w/2,victoryBtn.y+7,WHITE,8,'center',victoryBtn.w-8);
+  fitTxt('back to the arcade',victoryBtn.x+victoryBtn.w/2,victoryBtn.y+6,WHITE,10,'center',victoryBtn.w-8);
  }
 
  /* ---------------- main loop ---------------- */
@@ -1211,6 +1220,7 @@ function launchGame(opts){
   cv.removeEventListener('pointerdown',onDown);
   cv.removeEventListener('pointermove',onMove);
   window.removeEventListener('resize',doResize);
+  try{ if(hostRO) hostRO.disconnect(); }catch(e){}
   window.removeEventListener('keydown',onKey);
   if(actx){try{actx.close();}catch(e){}}
   if(overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -1230,7 +1240,7 @@ function launchGame(opts){
  window.addEventListener('resize',doResize);
  window.addEventListener('keydown',onKey);
 
- say('khushi','okay so... the villa locked itself. classic. find the clues and get us out of '+room().name+'!');
+ say('khushi','tap stuff, find clues, get us out of '+room().name+'!');
  rafId=requestAnimationFrame(frame);
 }
 

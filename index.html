@@ -278,6 +278,34 @@
   #veil .l{ font-family:var(--script); font-weight:700; color:var(--rose); font-size:2rem; animation:pulse 1.6s ease-in-out infinite; }
   @keyframes pulse{ 0%,100%{opacity:.4} 50%{opacity:.95} }
 
+  /* ---- the "enter" gate (sits below the veil so it's revealed as the "shhh…" fades) ---- */
+  #gateway{ position:fixed; inset:0; z-index:28; display:none;
+    background:rgba(10,7,14,.94); opacity:0; }
+  #gateway.on{ display:block; animation:gateIn .6s ease forwards; }
+  #gateway.leaving{ animation:gateOut .55s ease forwards; pointer-events:none; }
+  @keyframes gateIn{ from{opacity:0} to{opacity:1} }
+  @keyframes gateOut{ from{opacity:1} to{opacity:0} }
+  html.gate-open #static{ opacity:0 !important; }   /* no TV static on the monitor while the gate's up */
+  /* the button sits at the CENTRE OF THE MONITOR — JS pins #gatePos to the live CRT rect */
+  #gatePos{ position:fixed; left:50%; top:42%; transform:translate(-50%,-50%); z-index:1; }
+  /* one tap = audio unlock + sound preference. buttons read like the in-chat send button */
+  #gateLbl{ font-family:var(--pixel); font-size:.72rem; letter-spacing:.08em; text-transform:lowercase;
+    color:#fff; text-align:center; margin-bottom:1em; text-shadow:0 0 8px rgba(235,100,140,.8); }
+  #gateRow{ display:flex; gap:.8em; justify-content:center; }
+  .gateBtn{ position:relative; overflow:hidden; cursor:pointer; font-family:var(--pixel);
+    font-size:.8rem; letter-spacing:.06em; text-transform:lowercase; color:#fff;
+    padding:1.1em 1.7em; border-radius:.6em; background:linear-gradient(90deg,#eb648c,#ec642a);
+    border:1px solid rgba(255,255,255,.5);
+    box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2);
+    transition:transform .2s ease; }
+  .gateBtn::after{ content:''; position:absolute; top:0; bottom:0; left:0; width:55%; pointer-events:none;
+    background:linear-gradient(105deg, transparent 18%, rgba(255,255,255,.6) 50%, transparent 82%);
+    transform:translateX(-200%) skewX(-14deg); animation:sendShimmer 2.6s ease-in-out infinite; }
+  .gateBtn:hover{ transform:translateY(-2px); }
+  .gateBtn:active{ transform:translateY(0); }
+  .gateBtn.gateNo{ background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.35); box-shadow:none; }
+  .gateBtn.gateNo::after{ display:none; }
+
   /* ---- step-based application form (lives on the TV screen) ---- */
   #formwrap{ position:absolute; inset:0; display:grid; place-items:center; padding:5% 7%; opacity:0; pointer-events:none; }
   #formwrap.on{ pointer-events:auto; }   /* opacity driven by the scroll loop; font-size inherits the screen scale */
@@ -655,6 +683,18 @@
   </div>
   <div id="veil"><div class="l">shhh…</div></div>
 
+  <!-- the sound gate: shown once the veil lifts. one tap dismisses it, unlocks audio for the
+       DM's ping AND records the sound preference in the same gesture. -->
+  <div id="gateway" aria-hidden="true">
+    <div id="gatePos">
+      <div id="gateLbl">enable sound?</div>
+      <div id="gateRow">
+        <button id="gateYes" class="gateBtn" type="button">✓ yes</button>
+        <button id="gateNo" class="gateBtn gateNo" type="button">✕ no</button>
+      </div>
+    </div>
+  </div>
+
   <!-- scroll grooves: one snap detent per DM turn + the form (heights defined in CSS place each point) -->
   <div class="scroll-space">
     <section class="snap s-hero"></section>
@@ -975,12 +1015,12 @@ function buildThread(stage, typing){
    asking each question; you type real answers (the "who are you?" step is tap-chips), then it
    posts to the same Google Form and unlocks the arcade — all inside the thread. */
 const APPLY_Q=[
-  { name:'name',   ask:"sure! give me your deets — what's your name?", type:'text',   ph:'first & last' },
+  { name:'name',   ask:"gimme deets, i'll try getting you on the list. what's your name?", type:'text',   ph:'first & last' },
   { name:'city',   ask:"where are you based?",                     type:'city',   ph:'start typing your city…' },
-  { name:'age',    ask:"when's your birthday?",                    type:'date' },
+  { name:'age',    ask:"what's your age?",                         type:'age',    ph:'21' },
   { name:'role',   ask:"what describes you best?",                 type:'choice', choices:['creator','artist','entrepreneur','follower'] },
   { name:'handle', ask:"your instagram?",                          type:'handle', ph:'yourhandle' },
-  { name:'phone',  ask:"drop your number?",                        type:'tel',    ph:'98765 43210' },
+  { name:'phone',  ask:"drop your number?",                        type:'tel',    ph:'98765 43210', optional:true },
   { name:'email',  ask:"your email?",                              type:'email',  ph:'you@email.com' },
   { name:'why',    ask:'last one — finish this sentence: "my slumber party is incomplete without ___"', type:'text', ph:'fill in the blank' }
 ];
@@ -1058,13 +1098,23 @@ function readyAnswer(q){
   cityMode = (q.type==='city');
   composeMode('type');
   ctInput.type = q.type==='email'?'email' : q.type==='tel'?'tel' : 'text';
-  ctInput.inputMode = q.type==='tel'?'tel' : q.type==='email'?'email' : 'text';
+  ctInput.inputMode = q.type==='tel'?'tel' : q.type==='email'?'email' : (q.type==='age'?'numeric':'text');
   ctInput.placeholder = q.ph||'message…';
   ctAt.hidden = q.type!=='handle';
-  ctSend.disabled = ctInput.value.trim()==='';
+  syncSend();
   suggestCities(cityMode ? ctInput.value : null);
   try{ ctInput.focus({preventScroll:true}); }catch(e){}
   pinChat();
+}
+// keep the send button in sync with the live input: an OPTIONAL question (phone) reads "skip"
+// while empty and stays tappable; every other typed question keeps the usual empty=disabled "send".
+function syncSend(){
+  if(qIndex<0 || qBusy) return;
+  const q=APPLY_Q[qIndex];
+  if(!q || q.type==='date' || q.type==='choice') return;      // those manage their own button
+  const empty = ctInput.value.trim()==='';
+  if(q.optional){ ctSend.disabled=false; ctSend.textContent = empty ? 'skip' : 'send'; }
+  else { ctSend.disabled = empty; ctSend.textContent='send'; }
 }
 function submitAnswer(rawVal){
   if(qBusy || qIndex<0) return;
@@ -1078,9 +1128,11 @@ function submitAnswer(rawVal){
     disp=(+dd)+' '+MONTHS[+mm-1]+' '+yy;                             // your bubble reads like a date
   } else {
     let val=String(rawVal==null?ctInput.value:rawVal).trim();
-    if(q.type==='email'){ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)){ return nudgeField(); } }
+    if(q.optional && val===''){ store=''; disp='maybe later ♡'; }        // phone is skippable — tap "skip"
+    else if(q.type==='email'){ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)){ return nudgeField(); } store=val; disp=val; }
+    else if(q.type==='age'){ const n=parseInt(val,10); if(!(n>=18 && n<=99)){ return nudgeField(); } store=String(n); disp=String(n); }
     else if(!val){ return nudgeField(); }
-    store=val; disp=val;
+    else { store=val; disp=val; }
     if(q.type==='handle'){ store='@'+val.replace(/^@+/,''); disp=store; }
   }
   cityMode=false; suggestCities(null);
@@ -1088,7 +1140,7 @@ function submitAnswer(rawVal){
   const next=qIndex+1;
   // keep the mobile keyboard alive across typed questions by re-focusing inside this tap
   if(next<APPLY_Q.length && APPLY_Q[next].type!=='choice' && APPLY_Q[next].type!=='date'){
-    composeMode('type'); ctInput.value=''; ctInput.placeholder='message…'; ctSend.disabled=true;
+    composeMode('type'); ctInput.value=''; ctInput.placeholder='message…'; ctSend.disabled=true; ctSend.textContent='send';
     try{ ctInput.focus({preventScroll:true}); }catch(e){}
   } else { composeMode('none'); if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }
   askQuestion(next);
@@ -1109,7 +1161,7 @@ function finishApply(){
   addTyping();                        // khushi "sends" the confirmation after a beat, regardless of the network
   setTimeout(()=>{
     clearTyping();
-    addBubble('her', "sorted, someone will be in touch soon");
+    addBubble('her', "sorted, will keep you posted about the list");
     setTimeout(()=>{
       ctChips.innerHTML='<button type="button" class="ct-chip cta" id="chatArcade">▸ enter khushi’s arcade</button>';
       composeMode('choice'); pinChat();
@@ -1119,7 +1171,7 @@ function finishApply(){
     }, 800);
   }, 1200);
 }
-ctInput.addEventListener('input', ()=>{ if(qIndex>=0 && !qBusy) ctSend.disabled = ctInput.value.trim()===''; if(cityMode) suggestCities(ctInput.value); });
+ctInput.addEventListener('input', ()=>{ if(qIndex>=0 && !qBusy) syncSend(); if(cityMode) suggestCities(ctInput.value); });
 ctInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(!ctSend.disabled) submitAnswer(); } });
 // keyboard ticks while you type a real answer (letters + backspace only — not enter/arrows/modifiers)
 ctInput.addEventListener('keydown', e=>{
@@ -1249,8 +1301,39 @@ readScroll(); tick();
 const MIN_VEIL=3200, MAX_VEIL=7000;
 let veilGone=false;
 function hideVeil(){ if(veilGone)return; veilGone=true; const v=document.getElementById('veil'); if(v){ v.style.opacity='0'; setTimeout(()=>v.remove(),900); }
-  if(DEVICE==='phone'){ startPhoneIntro(); return; }   // the phone flips open first, then the DM lands
-  notifReady=true; if(lastStage===0) showNotif(); }     // (mac) the screen's visible, let the unread DM land
+  showGateway(); }   // a tap-to-enter gate first: unlocks audio (so the DM ping sounds) + eases them into tapping
+
+/* ---------- the "enter" gate — revealed as the veil lifts; its tap unlocks audio + reveals the scene ---------- */
+let gateOpen=false;
+function positionGateBtn(){                                // pin the button to the middle of the CRT, not the page
+  if(!gateOpen) return;
+  const pos=document.getElementById('gatePos'); if(!pos) return;
+  const r=tv.getBoundingClientRect();
+  if(r && r.width>1){ pos.style.left=(r.left+r.width/2)+'px'; pos.style.top=(r.top+r.height/2)+'px'; }
+}
+addEventListener('resize', positionGateBtn);
+function revealIntro(){                                    // the old hideVeil tail: the actual scene reveal
+  if(DEVICE==='phone'){ startPhoneIntro(); return; }       // the phone flips open first, then the DM lands
+  notifReady=true; if(lastStage===0) showNotif();          // (mac) the screen's visible, let the unread DM land
+}
+function showGateway(){
+  const g=document.getElementById('gateway');
+  if(!g){ revealIntro(); return; }                         // no gate in the DOM → reveal straight away
+  gateOpen=true; g.classList.add('on'); document.documentElement.classList.add('gate-open');   // kill the monitor static while gated
+  positionGateBtn(); requestAnimationFrame(positionGateBtn);
+  const enter=(e,soundOn)=>{
+    if(!gateOpen) return; gateOpen=false;
+    if(e) e.stopPropagation();                              // this tap must NOT also advance the DM behind the gate
+    try{ CHATFX.setMuted(!soundOn); }catch(err){}           // the same tap records the sound pref everywhere
+    try{ if(typeof paintSnd==='function') paintSnd(); }catch(err){}
+    document.documentElement.classList.remove('gate-open');
+    g.classList.add('leaving'); setTimeout(()=>{ g.remove(); }, 600);
+    revealIntro();                                          // audio's unlocked now — land the DM + its ping
+  };
+  g.querySelector('#gateYes').addEventListener('click', e=>enter(e,true), {once:true});
+  g.querySelector('#gateNo').addEventListener('click', e=>enter(e,false), {once:true});
+  try{ g.querySelector('#gateYes').focus({preventScroll:true}); }catch(e){}   // so Enter/Space activate it too
+}
 
 /* ---------- flip-phone intro: closed phone flips open (video) → a little zoom → the DM pings in ---------- */
 function startPhoneIntro(){
@@ -1355,7 +1438,7 @@ function chatSend(){
 }
 // in the hero, tapping ANYWHERE on the computer opens the DM (not just the message card)
 addEventListener('click', e=>{
-  if(!veilGone || formLocked || chatStage(curP)!==0) return;   // only during the unread-teaser beat
+  if(gateOpen || !veilGone || formLocked || chatStage(curP)!==0) return;   // only during the unread-teaser beat (never through the gate)
   if(e.target.closest('#masthead')) return;                    // leave the header (apply / countdown) alone
   goSnap(1);
 });
@@ -1364,6 +1447,7 @@ ctSend.addEventListener('click', chatSend);
 // on the unread teaser it opens the DM, same as a tap
 addEventListener('keydown', e=>{
   if(e.key!=='Enter') return;
+  if(gateOpen) return;                            // the gate's own button handles Enter/Space
   const el=document.activeElement;
   if(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
   const g=document.getElementById('game'); if(g && g.classList.contains('on')) return;   // the arcade owns its keys
@@ -1506,8 +1590,13 @@ const GLEADER = {
     snake:       { field:'entry.1350983856', col:'game 1 score' },
     pillowstack: { field:'entry.1683579071', col:'game 2 score' },
     dreammaze:   { field:'entry.1649898258', col:'game 3 score' },
-    pong:        { field:'entry.1469487080', col:'game 4 score' },
-    slumberescape:{ field:'entry.522284106', col:'game 5 score' }
+    vault:       { field:'entry.1469487080', col:'game 4 score' },   // "the inner circle" total (a+b+c)
+    slumberescape:{ field:'entry.522284106', col:'game 5 score' },
+    // inner-circle per-game boards — new form fields (assumed in creation order a, b, c
+    // from the prefilled link; if the sheet headers differ, just fix `col` here)
+    vault_a:     { field:'entry.1643536895', col:'inner game a score' },
+    vault_b:     { field:'entry.831735939',  col:'inner game b score' },
+    vault_c:     { field:'entry.213152006',  col:'inner game c score' }
   }
 };
 let PLAYER = null;              // the submitted application, so the game knows who's playing
@@ -1639,8 +1728,8 @@ renderStep();
   const GAMES=[
     { key:'snake',       name:'slumber snake', unit:'pillows', make:makeSnake },
     { key:'pillowstack', name:'pillow stack',  unit:'lines',   make:makeStack },
-    { key:'dreammaze',   name:'dream maze',    unit:'dots',    make:makeMaze  },
-    { key:'pong',        name:'starlight pong',unit:'rallies', make:makePong  }
+    { key:'dreammaze',   name:'dream maze',    unit:'dots',    make:makeMaze  }
+    // starlight pong retired — its GLEADER column now belongs to "the inner circle" (assets/vault.js)
   ];
   const hiKey=k=>'ksp-hi-'+k;
   function hiFor(k){ try{ return +localStorage.getItem(hiKey(k))||0; }catch(e){ return 0; } }
@@ -1667,17 +1756,35 @@ renderStep();
     stopMusic(); mode=null; applyMode();
     gameEl.classList.remove('on');
     if(arcadeChrome) arcadeChrome.classList.remove('on');
+    // ride the page camera in — monitor and screen zoom together — but only as far
+    // as the CRT still FITS the window: binary-search the biggest p that fits,
+    // so nothing ever renders off-screen.
+    tv.classList.add('tvease');
+    (function(){
+      let lo=0.58, hi=0.94;                                  // lo = deepest zoom, hi = arcade framing (known fit)
+      const fits=p=>{ updateZoom(p); const r=tv.getBoundingClientRect();
+        return r.width<=innerWidth-6 && r.height<=innerHeight-6; };
+      for(let i=0;i<9;i++){ const mid=(lo+hi)/2; if(fits(mid)) hi=mid; else lo=mid; }
+      window.__p=hi; updateZoom(hi);
+    })();
+    setTimeout(()=>tv.classList.remove('tvease'), 500);
     def.launch({
       exit(score){                       // land back on the arcade menu; post a new best like gameOver does
         score=+score||0;
         if(score>0 && score>hiFor(def.key)){ setHi(def.key, score); if(typeof postScore==='function') postScore(def.key, score); }
+        tv.classList.add('tvease');
+        freeze();                        // back out to the arcade's form framing
+        setTimeout(()=>tv.classList.remove('tvease'), 500);
         gameEl.classList.add('on');
         if(arcadeChrome) arcadeChrome.classList.add('on');
         open=true; mode='menu'; sel=Math.max(0, GAMES.indexOf(def)); renderMenu(); applyMode(); drawFrame(); playTrack('menu');
       }
     });
   }
-  window.__slumberGame={ unlock, start:openArcade, register:registerGame };
+  // `post` lets external games (the inner circle) file per-game scores, e.g. postScore('vault_a', 120);
+  // `board` hands them a ready leaderboard for one of their sub-games (same data as the arcade menu)
+  window.__slumberGame={ unlock, start:openArcade, register:registerGame, post:postScore,
+    board: async function(key, localHi){ try{ const rows=await loadScores(); return computeBoard(rows, key, PLAYER&&PLAYER.handle, localHi||0); }catch(e){ return null; } } };
 
   function applyMode(){
     gmenu.classList.toggle('off', mode!=='menu');
@@ -1714,7 +1821,8 @@ renderStep();
     GAMES.forEach((g,i)=>{
       const li=document.createElement('li');
       li.className='gm-item'+(i===sel?' sel':'');
-      li.innerHTML='<span class="gm-ptr">▸</span><span class="gm-name">'+g.name+'</span>';
+      const lk=(g.locked && g.locked()) ? '🔒 ' : '';
+      li.innerHTML='<span class="gm-ptr">▸</span><span class="gm-name">'+lk+g.name+'</span>';
       // first tap selects a game (revealing its high scores); tapping the already-selected one plays it
       li.addEventListener('click', ()=>{ if(sel===i){ selectGame(); } else { sel=i; renderMenu(); blip('eat'); } });
       gmlist.appendChild(li);
@@ -1729,6 +1837,7 @@ renderStep();
   }
   function renderMenuBoard(){
     const g=GAMES[sel]; if(!g||!gmScores) return;
+    if(g.locked && g.locked()){ gmScores.innerHTML='<li class="gm-empty">'+esc(g.teaser||'🔒 password required')+'</li>'; return; }
     if(!MENU_ROWS){ gmScores.innerHTML='<li class="gm-empty">loading the board…</li>'; return; }
     let board=null; try{ board=computeBoard(MENU_ROWS, g.key, PLAYER&&PLAYER.handle, hiFor(g.key)); }catch(e){}
     if(!board || !board.top.length){ gmScores.innerHTML='<li class="gm-empty">no scores yet — be the first ✨</li>'; return; }
@@ -1738,6 +1847,13 @@ renderStep();
   }
   function moveSel(d){ sel=(sel+d+GAMES.length)%GAMES.length; renderMenu(); blip('eat'); }
   function selectGame(){ const g=GAMES[sel]; if(!g) return; if(g.external && g.launch) launchExternal(g); else startGame(g.key); }
+  // "k" easter egg: leap straight into "the inner circle" (its own level menu) from the arcade menu
+  function jumpToInnerCircle(){
+    let i=-1; for(let j=0;j<GAMES.length;j++){ if(GAMES[j].key==='vault'){ i=j; break; } }
+    if(i<0) return;   // not registered yet
+    sel=i; const g=GAMES[i];
+    if(g.external && g.launch) launchExternal(g); else startGame(g.key);
+  }
   function backToMenu(){ mode='menu'; clearTimeout(loopTimer); sel=0; renderMenu(); applyMode(); drawFrame(); playTrack('menu'); }
 
   // Freeze the scroll scene at the form framing (the little computer, screen facing us) while playing.
@@ -2194,7 +2310,20 @@ renderStep();
     // bypass hotkey: press "k" to jump straight into the arcade (skips the form) — ignored while typing in a field
     if((e.key==='k'||e.key==='K') && !open){
       const el=document.activeElement;
-      if(!(el && /^(INPUT|TEXTAREA)$/.test(el.tagName))){ e.preventDefault(); unlock(); openArcade(); return; }
+      if(!(el && /^(INPUT|TEXTAREA)$/.test(el.tagName))){
+        e.preventDefault();
+        // if the tap-to-enter gate is still up, take it down first (also unlocks audio)
+        try{
+          const off = localStorage.getItem('ksp-snd')==='off';
+          const gb=document.getElementById(off?'gateNo':'gateYes'); if(gb) gb.click();
+        }catch(err){}
+        unlock(); openArcade(); return;
+      }
+    }
+    // …and once inside the arcade menu, "k" leaps straight into the inner circle's level menu
+    if((e.key==='k'||e.key==='K') && open && mode==='menu'){
+      const el=document.activeElement;
+      if(!(el && /^(INPUT|TEXTAREA)$/.test(el.tagName))){ e.preventDefault(); jumpToInnerCircle(); return; }
     }
     if(!unlocked || !open) return;   // otherwise keys only act inside the arcade (enter via the button/hotkey)
     const k=e.key;
@@ -2283,5 +2412,9 @@ renderStep();
 })();
 </script>
 <script src="assets/escape.js"></script>
+<script src="assets/vault.js"></script>
+<script src="assets/vault-soorry.js"></script>
+<script src="assets/vault-jahnu.js"></script>
+<script src="assets/vault-key.js"></script>
 </body>
 </html>
