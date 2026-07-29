@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>slumber party · admin</title>
+<link rel="icon" href="../assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* ---------------------------------------------------------------------
+     Every encoding on this page is MAGNITUDE (counts), so everything uses a
+     single hue and length/size carries the value — no categorical palette,
+     nothing for a colourblind reader to disambiguate by hue. Both steps were
+     checked against their own surface: light #d4557d on #fffcfd, dark #df6389
+     on #1a1118 (lightness band, chroma floor, ≥3:1 contrast all pass).
+     --------------------------------------------------------------------- */
+  :root{
+    color-scheme: light;
+    --surface-1:#fffcfd; --surface-2:#fdeff3; --plane:#f7f2f4;
+    --ink:#1b1016; --ink-2:#6b5560; --ink-3:#9b8790;
+    --line:rgba(90,70,80,.14); --grid:rgba(90,70,80,.10);
+    --series:#d4557d; --series-soft:rgba(212,85,125,.16);
+    --good:#0ca30c; --critical:#d03b3b;
+    --sans:'Inter',system-ui,-apple-system,sans-serif;
+    --mono:'VT323',ui-monospace,monospace;
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --surface-1:#1a1118; --surface-2:#241722; --plane:#120b10;
+      --ink:#fff; --ink-2:#c9b6bf; --ink-3:#8d7883;
+      --line:rgba(255,255,255,.13); --grid:rgba(255,255,255,.09);
+      --series:#df6389; --series-soft:rgba(223,99,137,.22);
+      --good:#0ca30c; --critical:#e66767;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --surface-1:#1a1118; --surface-2:#241722; --plane:#120b10;
+    --ink:#fff; --ink-2:#c9b6bf; --ink-3:#8d7883;
+    --line:rgba(255,255,255,.13); --grid:rgba(255,255,255,.09);
+    --series:#df6389; --series-soft:rgba(223,99,137,.22);
+    --good:#0ca30c; --critical:#e66767;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  body{ background:var(--plane); color:var(--ink); font-family:var(--sans);
+    font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3{ font-weight:600; letter-spacing:-.01em; }
+  button{ font:inherit; cursor:pointer; }
+  a{ color:var(--series); }
+
+  /* ---- login ---- */
+  #login{ min-height:100dvh; display:grid; place-items:center; padding:24px; }
+  .card{ background:var(--surface-1); border:1px solid var(--line); border-radius:var(--radius); }
+  #login .card{ width:min(380px,100%); padding:30px 26px; }
+  #login h1{ font-size:1.25rem; margin-bottom:.25rem; }
+  #login p.sub{ color:var(--ink-2); font-size:.9rem; margin-bottom:1.4rem; }
+  label{ display:block; font-size:.8rem; font-weight:500; color:var(--ink-2); margin:0 0 .35rem; }
+  input[type=email],input[type=password],input[type=search]{
+    width:100%; font:inherit; color:var(--ink); background:var(--surface-2);
+    border:1px solid var(--line); border-radius:9px; padding:.6rem .75rem; margin-bottom:.9rem; }
+  input:focus{ outline:2px solid var(--series); outline-offset:1px; }
+  .btn{ width:100%; background:var(--series); color:#fff; border:0; border-radius:9px;
+    padding:.7rem 1rem; font-weight:600; }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .btn.ghost{ width:auto; background:transparent; color:var(--ink-2); border:1px solid var(--line); font-weight:500; }
+  .msg{ font-size:.85rem; margin-top:.7rem; min-height:1.2em; }
+  .msg.err{ color:var(--critical); }
+
+  /* ---- shell ---- */
+  #app{ display:none; max-width:1180px; margin:0 auto; padding:22px 20px 70px; }
+  header.top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+  header.top h1{ font-size:1.15rem; flex:1; }
+  .live{ display:inline-flex; align-items:center; gap:.45rem; font-size:.78rem; color:var(--ink-2); }
+  .live .dot{ width:.5rem; height:.5rem; border-radius:100px; background:var(--good);
+    box-shadow:0 0 .5rem rgba(12,163,12,.7); animation:pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ---- stat tiles: headline numbers, no plot, so no hover layer ---- */
+  .tiles{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); margin-bottom:14px; }
+  .tile{ background:var(--surface-1); border:1px solid var(--line); border-radius:var(--radius); padding:15px 16px; }
+  .tile .k{ font-size:.72rem; font-weight:500; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-3); }
+  .tile .v{ font-size:2rem; font-weight:600; line-height:1.15; margin-top:.15rem; font-variant-numeric:tabular-nums; }
+  .tile .n{ font-size:.78rem; color:var(--ink-2); }
+
+  .grid{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); margin-bottom:12px; }
+  .panel{ background:var(--surface-1); border:1px solid var(--line); border-radius:var(--radius); padding:16px 17px; }
+  .panel h2{ font-size:.95rem; margin-bottom:.15rem; }
+  .panel .sub{ font-size:.78rem; color:var(--ink-3); margin-bottom:.9rem; }
+
+  /* ---- bar rows: thin marks, 4px rounded data-end, direct labels ---- */
+  .rows{ display:flex; flex-direction:column; gap:7px; }
+  .row{ display:grid; grid-template-columns:minmax(84px,auto) 1fr auto; align-items:center; gap:10px;
+    font-size:.85rem; padding:1px 0; }
+  .row .lab{ color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .track{ position:relative; height:10px; background:var(--series-soft); border-radius:5px; overflow:hidden; }
+  .row .bar{ position:absolute; inset:0 auto 0 0; background:var(--series); border-radius:5px; }
+  .row .val{ font-variant-numeric:tabular-nums; color:var(--ink); font-weight:500; min-width:2.2em; text-align:right; }
+  .row:hover .track{ outline:2px solid var(--series); outline-offset:2px; border-radius:5px; }
+
+  /* ---- day columns ---- */
+  .days{ display:flex; align-items:flex-end; gap:2px; height:132px; }
+  .day{ flex:1; min-width:0; display:flex; flex-direction:column; justify-content:flex-end; height:100%;
+    position:relative; }
+  .day .col{ background:var(--series); border-radius:4px 4px 0 0; min-height:2px; transition:filter .12s; }
+  .day:hover .col{ filter:brightness(1.15); }
+  .day .cap{ font-size:.62rem; color:var(--ink-3); text-align:center; margin-top:5px;
+    white-space:nowrap; overflow:hidden; }
+  .axis{ border-top:1px solid var(--grid); margin-top:0; }
+
+  /* ---- map: proportional symbols on a real lat/long projection ---- */
+  .mapwrap{ position:relative; width:100%; aspect-ratio:1/.92; background:var(--surface-2);
+    border-radius:11px; border:1px solid var(--line); overflow:hidden; }
+  .mapwrap svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .graticule{ stroke:var(--grid); stroke-width:1; fill:none; }
+  .cityDot{ fill:var(--series); fill-opacity:.75; stroke:var(--surface-2); stroke-width:2; }
+  .cityDot:hover{ fill-opacity:1; }
+  .cityLab{ font-size:9px; fill:var(--ink-2); font-family:var(--sans); }
+
+  /* ---- table ---- */
+  .tablebar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .tablebar input[type=search]{ flex:1; min-width:180px; margin:0; }
+  .scroll{ overflow-x:auto; border:1px solid var(--line); border-radius:11px; }
+  table{ border-collapse:collapse; width:100%; font-size:.83rem; }
+  th,td{ text-align:left; padding:.55rem .7rem; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th{ position:sticky; top:0; background:var(--surface-2); color:var(--ink-2); font-weight:600;
+    font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; z-index:1; }
+  tbody tr:last-child td{ border-bottom:0; }
+  tbody tr:hover{ background:var(--series-soft); }
+  td.why{ white-space:normal; min-width:240px; max-width:340px; }
+  .empty{ padding:26px; text-align:center; color:var(--ink-3); font-size:.9rem; }
+
+  /* ---- tooltip ---- */
+  #tip{ position:fixed; z-index:50; pointer-events:none; opacity:0; transition:opacity .1s;
+    background:var(--ink); color:var(--surface-1); font-size:.78rem; line-height:1.35;
+    padding:.45rem .6rem; border-radius:7px; max-width:220px; }
+  #tip.on{ opacity:1; }
+
+  .note{ font-size:.78rem; color:var(--ink-3); margin-top:.6rem; }
+  .setup{ background:var(--surface-1); border:1px solid var(--line); border-left:3px solid var(--series);
+    border-radius:var(--radius); padding:16px 18px; margin-bottom:16px; font-size:.87rem; color:var(--ink-2); }
+  .setup code{ font-family:ui-monospace,monospace; font-size:.85em; background:var(--surface-2);
+    padding:.1rem .3rem; border-radius:4px; color:var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- ===================== login ===================== -->
+<section id="login">
+  <form class="card" id="loginForm">
+    <h1>slumber party</h1>
+    <p class="sub">admin — sign in to see applications</p>
+    <label for="em">email</label>
+    <input id="em" type="email" autocomplete="username" required />
+    <label for="pw">password</label>
+    <input id="pw" type="password" autocomplete="current-password" required />
+    <button class="btn" id="go" type="submit">sign in</button>
+    <p class="msg" id="loginMsg"></p>
+  </form>
+</section>
+
+<!-- ===================== dashboard ===================== -->
+<main id="app">
+  <header class="top">
+    <h1>applications</h1>
+    <span class="live"><span class="dot"></span><span id="liveTxt">live</span></span>
+    <button class="btn ghost" id="csv" type="button">download csv</button>
+    <button class="btn ghost" id="out" type="button">sign out</button>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>applications a day</h2>
+      <p class="sub">last 14 days</p>
+      <div class="days" id="days"></div>
+      <div class="axis"></div>
+    </section>
+
+    <section class="panel">
+      <h2>funnel</h2>
+      <p class="sub">how far each session got</p>
+      <div class="rows" id="funnel"></div>
+      <p class="note">counted per browser tab, from a random id that's forgotten when the tab closes — no cookie, no IP, no fingerprint.</p>
+    </section>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>where they're from</h2>
+      <p class="sub">the city each applicant typed</p>
+      <div class="mapwrap" id="mapwrap">
+        <svg id="map" viewBox="0 0 300 276" role="img" aria-label="Applicants plotted by city"></svg>
+      </div>
+      <div class="rows" id="cityRows" style="margin-top:14px"></div>
+      <p class="note" id="mapNote"></p>
+    </section>
+
+    <section class="panel">
+      <h2>who they are</h2>
+      <p class="sub">answers to “what describes you best?”</p>
+      <div class="rows" id="roleRows"></div>
+      <h2 style="margin-top:18px">time zones</h2>
+      <p class="sub">from the browser, including people who never applied</p>
+      <div class="rows" id="tzRows"></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="tablebar">
+      <h2 style="flex:1">everyone who applied</h2>
+      <input id="q" type="search" placeholder="search name, city, handle, email…" />
+    </div>
+    <div class="scroll">
+      <table id="tbl">
+        <thead><tr>
+          <th>when</th><th>name</th><th>city</th><th>age</th><th>describes them</th>
+          <th>instagram</th><th>email</th><th>phone</th><th>about them</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="tblEmpty" hidden>nothing yet.</p>
+    <p class="note">instagram follower counts aren't shown: Meta's API only reports them for accounts that authorise you, and scraping breaks constantly and violates their terms. Each handle links to the profile instead, and there's a <code>followers</code> column in the database you can fill in by hand or from a paid provider.</p>
+  </section>
+</main>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+/* ------------------------------------------------------------------ config */
+const CFG = await fetch('../assets/config.js')
+  .then(r => r.text())
+  .then(t => { const s = {}; new Function('window', t)(s); return s.SLUMBER_CONFIG || {}; })
+  .catch(() => ({}));
+
+const loginMsg = document.getElementById('loginMsg');
+if (!CFG.supabaseUrl || !CFG.supabaseAnonKey) {
+  document.getElementById('loginForm').innerHTML =
+    `<h1>not connected yet</h1>
+     <p class="sub" style="margin-bottom:0">Fill in <code>supabaseUrl</code> and <code>supabaseAnonKey</code>
+     in <code>assets/config.js</code>, then reload. Both are safe to commit — the anon key grants nothing
+     on its own; row-level security refuses every read and applications can only be written through the
+     Edge Function.</p>`;
+  throw new Error('unconfigured');
+}
+
+const sb = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
+
+/* -------------------------------------------------------------------- auth */
+const loginEl = document.getElementById('login'), appEl = document.getElementById('app');
+
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('go');
+  btn.disabled = true; loginMsg.textContent = 'checking…'; loginMsg.className = 'msg';
+  const { error } = await sb.auth.signInWithPassword({
+    email: document.getElementById('em').value.trim(),
+    password: document.getElementById('pw').value,
+  });
+  btn.disabled = false;
+  if (error) { loginMsg.textContent = error.message; loginMsg.className = 'msg err'; return; }
+  loginMsg.textContent = '';
+  boot();
+});
+
+document.getElementById('out').addEventListener('click', async () => {
+  await sb.auth.signOut(); location.reload();
+});
+
+sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
+
+/* -------------------------------------------------------------------- data */
+let APPS = [], VISITS = [];
+
+async function boot() {
+  // RLS decides this, not the UI: a signed-in user who isn't in `admins`
+  // gets zero rows back rather than an error, so say so plainly.
+  const [a, v] = await Promise.all([
+    sb.from('applications').select('*').order('created_at', { ascending: false }),
+    sb.from('visits').select('reached,tz,created_at,session_id'),
+  ]);
+  if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
+
+  APPS = a.data || []; VISITS = v.data || [];
+  loginEl.style.display = 'none'; appEl.style.display = 'block';
+  renderAll();
+
+  sb.channel('live')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'applications' },
+        p => { APPS.unshift(p.new); renderAll(); flashLive(); })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'visits' },
+        p => { VISITS.push(p.new); renderAll(); })
+    .subscribe();
+}
+
+function flashLive() {
+  const t = document.getElementById('liveTxt');
+  t.textContent = 'new application'; setTimeout(() => t.textContent = 'live', 4000);
+}
+
+/* ------------------------------------------------------------------ render */
+const DAY = 86400000;
+const dayKey = d => new Date(d).toISOString().slice(0, 10);
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const norm = s => String(s ?? '').trim().toLowerCase();
+
+function tally(list, pick) {
+  const m = new Map();
+  for (const r of list) { const k = pick(r); if (!k) continue; m.set(k, (m.get(k) || 0) + 1); }
+  return [...m.entries()].sort((x, y) => y[1] - x[1]);
+}
+
+function renderAll() { tiles(); days(); funnel(); cities(); roles(); zones(); table(); }
+
+function tiles() {
+  const now = Date.now();
+  const last24 = APPS.filter(r => now - +new Date(r.created_at) < DAY).length;
+  const sessions = new Set(VISITS.map(v => v.session_id)).size;
+  const cityCount = new Set(APPS.map(r => norm(r.city)).filter(Boolean)).size;
+  const rate = sessions ? Math.round(APPS.length / sessions * 100) : null;
+  const put = (k, v, n) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`;
+  document.getElementById('tiles').innerHTML =
+    put('applications', APPS.length, `${last24} in the last 24h`) +
+    put('sessions', sessions || '—', 'browser tabs that landed') +
+    put('completion', rate === null ? '—' : rate + '%', 'landed → applied') +
+    put('cities', cityCount, 'distinct places');
+}
+
+function days() {
+  const out = [];
+  const counts = new Map();
+  for (const r of APPS) counts.set(dayKey(r.created_at), (counts.get(dayKey(r.created_at)) || 0) + 1);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const series = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(+today - i * DAY);
+    series.push({ d, n: counts.get(dayKey(d)) || 0 });
+  }
+  const max = Math.max(1, ...series.map(s => s.n));
+  for (const s of series) {
+    const h = Math.round(s.n / max * 100);
+    const lab = s.d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    out.push(`<div class="day" data-tip="${lab} — ${s.n} application${s.n === 1 ? '' : 's'}">
+      <div class="col" style="height:${h}%"></div>
+      <div class="cap">${s.d.getDate()}</div></div>`);
+  }
+  document.getElementById('days').innerHTML = out.join('');
+}
+
+const STEPS = [
+  ['landed', 'landed on the site'],
+  ['entered', 'tapped enter'],
+  ['opened_dm', 'opened the DM'],
+  ['started_form', 'reached the questions'],
+  ['submitted', 'applied'],
+];
+function funnel() {
+  const per = new Map(STEPS.map(([k]) => [k, new Set()]));
+  for (const v of VISITS) if (per.has(v.reached)) per.get(v.reached).add(v.session_id);
+  const top = Math.max(1, per.get('landed').size);
+  document.getElementById('funnel').innerHTML = STEPS.map(([k, label]) => {
+    const n = per.get(k).size, pct = Math.round(n / top * 100);
+    return bar(label, n, pct, `${label} — ${n} session${n === 1 ? '' : 's'} (${pct}% of everyone who landed)`);
+  }).join('');
+}
+
+function bar(label, value, pct, tip) {
+  return `<div class="row" data-tip="${esc(tip)}">
+    <span class="lab">${esc(label)}</span>
+    <span class="track"><span class="bar" style="width:${Math.max(1.5, pct)}%"></span></span>
+    <span class="val">${value}</span></div>`;
+}
+
+/* Real coordinates for the cities the form suggests, so the plot is a genuine
+   projection rather than a decorative scatter. Anything typed that isn't here
+   still counts in the ranked list below the map — it just has no dot. */
+const COORD = {
+  mumbai:[19.08,72.88], delhi:[28.61,77.21], bangalore:[12.97,77.59], hyderabad:[17.39,78.49],
+  chennai:[13.08,80.27], kolkata:[22.57,88.36], pune:[18.52,73.86], ahmedabad:[23.02,72.57],
+  jaipur:[26.91,75.79], surat:[21.17,72.83], lucknow:[26.85,80.95], kanpur:[26.45,80.33],
+  nagpur:[21.15,79.09], indore:[22.72,75.86], bhopal:[23.26,77.41], chandigarh:[30.73,76.78],
+  goa:[15.30,74.12], kochi:[9.93,76.27], coimbatore:[11.02,76.96], visakhapatnam:[17.69,83.22],
+  patna:[25.59,85.14], vadodara:[22.31,73.18], ludhiana:[30.90,75.86], agra:[27.18,78.01],
+  nashik:[19.99,73.79], faridabad:[28.41,77.31], gurgaon:[28.46,77.03], noida:[28.54,77.39],
+  ghaziabad:[28.67,77.45], rajkot:[22.30,70.80], varanasi:[25.32,82.97], srinagar:[34.08,74.80],
+  amritsar:[31.63,74.87], ranchi:[23.34,85.31], guwahati:[26.14,91.74], mysore:[12.30,76.64],
+  thiruvananthapuram:[8.52,76.94], bhubaneswar:[20.30,85.82], dehradun:[30.32,78.03],
+  shimla:[31.10,77.17], udaipur:[24.58,73.71], jodhpur:[26.24,73.02], madurai:[9.93,78.12],
+  raipur:[21.25,81.63], puducherry:[11.94,79.83], mangalore:[12.91,74.86],
+  vijayawada:[16.51,80.65], trichy:[10.79,78.70], siliguri:[26.73,88.40], jammu:[32.73,74.86],
+};
+const BOUNDS = { lat:[6,37], lon:[68,98] };            // India, equirectangular
+const W = 300, H = 276;
+const px = lon => (lon - BOUNDS.lon[0]) / (BOUNDS.lon[1] - BOUNDS.lon[0]) * W;
+const py = lat => H - (lat - BOUNDS.lat[0]) / (BOUNDS.lat[1] - BOUNDS.lat[0]) * H;
+
+function cities() {
+  const counts = tally(APPS, r => norm(r.city));
+  const max = Math.max(1, ...counts.map(c => c[1]));
+
+  let g = '';
+  for (let lon = 70; lon <= 95; lon += 5) g += `<line class="graticule" x1="${px(lon)}" y1="0" x2="${px(lon)}" y2="${H}"/>`;
+  for (let lat = 10; lat <= 35; lat += 5) g += `<line class="graticule" x1="0" y1="${py(lat)}" x2="${W}" y2="${py(lat)}"/>`;
+
+  let dots = '', plotted = 0;
+  for (const [city, n] of counts) {
+    const c = COORD[city]; if (!c) continue;
+    plotted += n;
+    // area ∝ count, so a dot twice the value looks twice the size (not 4×)
+    const r = 3 + Math.sqrt(n / max) * 13;
+    dots += `<circle class="cityDot" cx="${px(c[1]).toFixed(1)}" cy="${py(c[0]).toFixed(1)}" r="${r.toFixed(1)}"
+             data-tip="${esc(city)} — ${n} applicant${n === 1 ? '' : 's'}"></circle>`;
+    if (n / max > 0.34) dots += `<text class="cityLab" x="${(px(c[1]) + r + 3).toFixed(1)}" y="${(py(c[0]) + 3).toFixed(1)}">${esc(city)}</text>`;
+  }
+  document.getElementById('map').innerHTML = g + dots;
+
+  document.getElementById('cityRows').innerHTML = counts.slice(0, 8)
+    .map(([city, n]) => bar(city, n, n / max * 100, `${city} — ${n} applicant${n === 1 ? '' : 's'}`)).join('')
+    || `<p class="empty">no cities yet.</p>`;
+
+  const off = APPS.filter(r => r.city && !COORD[norm(r.city)]).length;
+  document.getElementById('mapNote').textContent = off
+    ? `${plotted} plotted; ${off} typed a place that isn't in the suggestion list, so they're in the ranking but not on the map.`
+    : 'Plotted from the city each applicant typed, not from their IP address.';
+}
+
+function roles() {
+  const counts = tally(APPS, r => r.role);
+  const max = Math.max(1, ...counts.map(c => c[1]));
+  document.getElementById('roleRows').innerHTML = counts
+    .map(([role, n]) => bar(role, n, n / max * 100, `${role} — ${n}`)).join('')
+    || `<p class="empty">no answers yet.</p>`;
+}
+
+function zones() {
+  const counts = tally(VISITS, v => v.tz);
+  const max = Math.max(1, ...counts.map(c => c[1]));
+  document.getElementById('tzRows').innerHTML = counts.slice(0, 6)
+    .map(([tz, n]) => bar(tz.replace(/_/g, ' '), n, n / max * 100, `${tz} — ${n} session${n === 1 ? '' : 's'}`)).join('')
+    || `<p class="empty">no visits recorded yet.</p>`;
+}
+
+/* --------------------------------------------------- table (the table view) */
+const q = document.getElementById('q');
+q.addEventListener('input', table);
+
+function table() {
+  const term = norm(q.value);
+  const rows = term
+    ? APPS.filter(r => [r.name, r.city, r.handle, r.email, r.role, r.why].some(f => norm(f).includes(term)))
+    : APPS;
+  document.getElementById('tblEmpty').hidden = rows.length > 0;
+  document.getElementById('tbody').innerHTML = rows.map(r => {
+    const when = new Date(r.created_at).toLocaleString(undefined,
+      { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const h = (r.handle || '').replace(/^@/, '');
+    return `<tr>
+      <td>${esc(when)}</td>
+      <td>${esc(r.name)}</td>
+      <td>${esc(r.city)}</td>
+      <td>${esc(r.age)}</td>
+      <td>${esc(r.role)}</td>
+      <td>${h ? `<a href="https://instagram.com/${encodeURIComponent(h)}" target="_blank" rel="noopener noreferrer">@${esc(h)}</a>` : ''}</td>
+      <td>${esc(r.email)}</td>
+      <td>${esc(r.phone)}</td>
+      <td class="why">${esc(r.why)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* --------------------------------------------------------------------- csv */
+document.getElementById('csv').addEventListener('click', () => {
+  const cols = ['created_at','name','city','age','role','handle','email','phone','why','tz','followers','status','notes'];
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [cols.join(','), ...APPS.map(r => cols.map(c => cell(r[c])).join(','))].join('\r\n');
+  const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = `slumber-party-applications-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+});
+
+/* ----------------------------------------------------------------- tooltip */
+const tip = document.getElementById('tip');
+addEventListener('pointerover', e => {
+  const el = e.target.closest('[data-tip]');
+  if (!el) return;
+  tip.textContent = el.dataset.tip; tip.classList.add('on');
+});
+addEventListener('pointermove', e => {
+  if (!tip.classList.contains('on')) return;
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(innerWidth - w - 8, Math.max(8, e.clientX + pad)) + 'px';
+  tip.style.top = Math.max(8, e.clientY - h - pad) + 'px';
+});
+addEventListener('pointerout', e => {
+  if (e.target.closest('[data-tip]')) tip.classList.remove('on');
+});
+</script>
+</body>
+</html>

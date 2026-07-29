@@ -359,17 +359,27 @@
   @media (prefers-reduced-motion:reduce){
     #gateway.on #gatePos, #gateway.leaving #gatePos{ animation:none; }
   }
+  /* flex + line-height:1 so the label and the ▸ share one optical centre — the arrow comes from
+     a fallback font (the pixel face has no glyph for it) and sat off the baseline otherwise */
   .gateBtn{ position:relative; overflow:hidden; cursor:pointer; font-family:var(--pixel);
+    display:inline-flex; align-items:center; justify-content:center; gap:.85em; line-height:1;
     font-size:.66rem; letter-spacing:.06em; text-transform:lowercase; color:#fff;
-    padding:.8em 1.35em; border-radius:.55em; background:linear-gradient(90deg,#eb648c,#ec642a);
+    padding:1em 1.5em; border-radius:.55em; background:linear-gradient(90deg,#eb648c,#ec642a);
     border:1px solid rgba(255,255,255,.5);
     box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2);
-    transition:transform .2s ease; }
+    transition:transform .2s ease, box-shadow .2s ease; }
+  .gateBtn span, .gateBtn i{ display:block; line-height:1; }
+  .gateBtn i{ font-style:normal; font-size:.85em; }
   .gateBtn::after{ content:''; position:absolute; top:0; bottom:0; left:0; width:55%; pointer-events:none;
     background:linear-gradient(105deg, transparent 18%, rgba(255,255,255,.6) 50%, transparent 82%);
     transform:translateX(-200%) skewX(-14deg); animation:sendShimmer 2.6s ease-in-out infinite; }
   .gateBtn:hover{ transform:translateY(-2px); }
   .gateBtn:active{ transform:translateY(0); }
+  /* the button is focused on open so Enter/Space work — swap the browser's blue rectangle for a
+     halo in the button's own language, so the focus state still reads without breaking the scene */
+  .gateBtn:focus{ outline:none; }
+  .gateBtn:focus-visible{ outline:none;
+    box-shadow:0 0 0 3px rgba(255,255,255,.9), 0 0 18px rgba(235,100,140,.75), inset 0 0 8px rgba(255,255,255,.2); }
 
   /* ---- step-based application form (lives on the TV screen) ---- */
   #formwrap{ position:absolute; inset:0; display:grid; place-items:center; padding:5% 7%; opacity:0; pointer-events:none; }
@@ -727,6 +737,7 @@
     <button class="acbtn" id="gquit" title="leave the arcade">✕</button>
   </div>
   <div id="veil"><div class="l">shhh…</div></div>
+  <script src="assets/config.js"></script>
 
   <!-- the entry gate: the FIRST screen, shown once the veil lifts. One tap dismisses it and
        unlocks audio for the rest of the visit (there's no sound toggle anywhere else). The logo
@@ -736,7 +747,7 @@
       <img id="gateLogo" src="assets/logo2.png" alt="(secret;) khushi's slumber party" />
       <span class="countdown" id="countdown" aria-label="countdown to when the form closes"></span>
       <div id="gateRow">
-        <button id="gateYes" class="gateBtn" type="button">enter ▸</button>
+        <button id="gateYes" class="gateBtn" type="button"><span>enter</span><i aria-hidden="true">▸</i></button>
       </div>
     </div>
   </div>
@@ -1134,6 +1145,7 @@ function composeMode(m){   // 'draft' | 'type' | 'choice' | 'date' | 'none'
   if(m!=='type'){ ctAt.hidden=true; suggestCities(null); }
 }
 function startApply(){                       // called by renderChat once stage 4 is on screen
+  track('started_form');
   qAns={}; qIndex=-1; qBusy=false;
   clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
   askQuestion(0);
@@ -1228,31 +1240,103 @@ function submitAnswer(rawVal){
   } else { composeMode('none'); if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }
   askQuestion(next);
 }
+/* Send the application. Supabase is the real store: its Edge Function validates,
+   saves, emails the confirmation, and — unlike the Google Form — returns a reply
+   we can actually read, so we KNOW whether it landed. The Google Form post runs
+   alongside during the migration; it's fire-and-forget (mode:'no-cors' makes the
+   response unreadable by design) so it can never report success or failure. */
 async function submitApplication(data){
   PLAYER = {...data};                        // remember the applicant for the leaderboard
-  if(GFORM.id){
+  const cfg = window.SLUMBER_CONFIG || {};
+
+  if(GFORM.id && cfg.alsoPostGoogleForm!==false){
     const body=new URLSearchParams();
     for(const k in data){ if(GFORM.fields[k]) body.append(GFORM.fields[k], data[k]); }
-    try{ await fetch(`https://docs.google.com/forms/d/e/${GFORM.id}/formResponse`,
-      { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body }); }
-    catch(err){ console.warn('submit failed, confirming anyway', err); }
-  } else { console.log('Application (Google Form not configured yet):', data); }
+    fetch(`https://docs.google.com/forms/d/e/${GFORM.id}/formResponse`,
+      { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body })
+      .catch(err=>console.warn('google form mirror failed', err));
+  }
+
+  if(!(cfg.useSupabase && cfg.supabaseUrl && cfg.supabaseAnonKey)){
+    console.log('Application (Supabase not configured yet):', data);
+    return { ok:false, unconfigured:true };
+  }
+  try{
+    const res = await fetch(cfg.supabaseUrl.replace(/\/$/,'')+'/functions/v1/submit', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey:cfg.supabaseAnonKey,
+                Authorization:'Bearer '+cfg.supabaseAnonKey },
+      body: JSON.stringify({ ...data, tz:localTz(), referrer:document.referrer||null,
+                             user_agent:navigator.userAgent })
+    });
+    const out = await res.json().catch(()=>({}));
+    if(!res.ok){ console.error('submit rejected', res.status, out); return { ok:false, error:out.error }; }
+    track('submitted');
+    return { ok:true, ...out };
+  }catch(err){
+    console.error('submit failed', err);
+    return { ok:false, error:'network' };
+  }
 }
+
+/* ---------- funnel breadcrumbs ----------
+   A random per-tab id (gone when the tab closes) plus the browser's timezone.
+   No IP, no cookie, no fingerprint — enough to tell you how many people landed
+   versus finished, and nothing that identifies anyone. */
+const localTz = ()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){ return null; } };
+function sessionId(){
+  let s=null; try{ s=sessionStorage.getItem('ksp-sid'); }catch(e){}
+  if(!s){ s=Math.random().toString(36).slice(2)+Date.now().toString(36);
+          try{ sessionStorage.setItem('ksp-sid', s); }catch(e){} }
+  return s;
+}
+function track(step){
+  const cfg = window.SLUMBER_CONFIG || {};
+  if(!(cfg.useSupabase && cfg.supabaseUrl && cfg.supabaseAnonKey)) return;
+  try{
+    fetch(cfg.supabaseUrl.replace(/\/$/,'')+'/functions/v1/visit', {
+      method:'POST', keepalive:true,
+      headers:{ 'Content-Type':'application/json', apikey:cfg.supabaseAnonKey,
+                Authorization:'Bearer '+cfg.supabaseAnonKey },
+      body: JSON.stringify({ session_id:sessionId(), reached:step, tz:localTz(),
+                             referrer:document.referrer||null,
+                             device:(innerWidth<=640?'mobile':'desktop') })
+    }).catch(()=>{});
+  }catch(e){}
+}
+track('landed');
 // her sign-off, sent line by line like everything else, then the arcade unlocks
 const OUTRO=["noted. i am on my way to stalk you!!! i'll reach out if you're in :)", 'till then…'];
+/* She only signs off once the application is SAFELY STORED. Her "typing" doubles
+   as the loading state while the POST is in flight, so a failed submission can
+   never be confirmed to someone who didn't actually get through. */
 function finishApply(){
   qBusy=true; qIndex=-1; composeMode('none');
-  submitApplication(qAns);            // fire-and-forget — it's a no-cors POST, we can't read the reply anyway
-  clearTimeout(finishApply._t);       // she signs off after a beat regardless of the network
-  (function sendLine(n){
-    if(n>=OUTRO.length){ finishApply._t=setTimeout(showArcadeCta, 750); return; }
-    addTyping();
-    finishApply._t=setTimeout(()=>{
-      if(!inside) return;             // they backed out mid sign-off
-      clearTyping(); addBubble('her', OUTRO[n]);
-      sendLine(n+1);
-    }, n===0 ? 1200 : 900);
-  })(0);
+  clearTimeout(finishApply._t);
+  addTyping();
+  submitApplication(qAns).then(res=>{
+    if(!inside) return;                          // they backed out mid-send
+    clearTyping();
+    if(res && res.ok===false && !res.unconfigured) return submitFailed();
+    sendOutro(0);
+  });
+}
+function submitFailed(){
+  addBubble('her', "hmm, that didn't go through — mind trying again?");
+  ctChips.classList.remove('list');
+  ctChips.innerHTML='<button type="button" class="ct-chip cta" id="retrySubmit">▸ try again</button>';
+  composeMode('choice'); pinChat(true);
+  const b=document.getElementById('retrySubmit');
+  if(b) b.addEventListener('click', ()=>{ ctChips.innerHTML=''; composeMode('none'); finishApply(); });
+}
+function sendOutro(n){
+  if(n>=OUTRO.length){ finishApply._t=setTimeout(showArcadeCta, 750); return; }
+  addTyping();
+  finishApply._t=setTimeout(()=>{
+    if(!inside) return;
+    clearTyping(); addBubble('her', OUTRO[n]);
+    sendOutro(n+1);
+  }, 900);
 }
 function showArcadeCta(){
   ctChips.classList.remove('list');
@@ -1452,6 +1536,7 @@ function showGateway(){
     // the CRT powers on behind the clearing gate — a hairline that snaps open into the picture
     const root=document.documentElement;
     root.classList.add('booting'); setTimeout(()=>root.classList.remove('booting'), 1200);
+    track('entered');
     setTimeout(revealIntro, 240);                           // audio's unlocked now — land the DM + its ping
   };
   g.querySelector('#gateYes').addEventListener('click', e=>enter(e,true), {once:true});   // one button: enter → sound on for everyone
@@ -1539,6 +1624,7 @@ function lockPage(on){
 function enterScreen(){
   if(inside || flying || !veilGone || gateOpen) return;
   inside=true; insideStage=0; applyStarted=false; chatStick=true;
+  track('opened_dm');
   document.documentElement.classList.add('inside');   // masthead out, thread goes full-bleed
   lockPage(true);
   const from=(typeof window.__p==='number') ? window.__p : curP;
