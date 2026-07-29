@@ -290,11 +290,11 @@
   #gatePos{ position:fixed; left:50%; top:42%; transform:translate(-50%,-50%); z-index:1; }
   /* one tap = audio unlock + sound preference. buttons read like the in-chat send button */
   #gateLbl{ font-family:var(--pixel); font-size:.72rem; letter-spacing:.08em; text-transform:lowercase;
-    color:#fff; text-align:center; margin-bottom:1em; text-shadow:0 0 8px rgba(235,100,140,.8); }
+    color:#fff; text-align:center; margin-bottom:1.9em; text-shadow:0 0 8px rgba(235,100,140,.8); }
   #gateRow{ display:flex; gap:.8em; justify-content:center; }
   .gateBtn{ position:relative; overflow:hidden; cursor:pointer; font-family:var(--pixel);
-    font-size:.8rem; letter-spacing:.06em; text-transform:lowercase; color:#fff;
-    padding:1.1em 1.7em; border-radius:.6em; background:linear-gradient(90deg,#eb648c,#ec642a);
+    font-size:.66rem; letter-spacing:.06em; text-transform:lowercase; color:#fff;
+    padding:.8em 1.35em; border-radius:.55em; background:linear-gradient(90deg,#eb648c,#ec642a);
     border:1px solid rgba(255,255,255,.5);
     box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2);
     transition:transform .2s ease; }
@@ -303,8 +303,6 @@
     transform:translateX(-200%) skewX(-14deg); animation:sendShimmer 2.6s ease-in-out infinite; }
   .gateBtn:hover{ transform:translateY(-2px); }
   .gateBtn:active{ transform:translateY(0); }
-  .gateBtn.gateNo{ background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.35); box-shadow:none; }
-  .gateBtn.gateNo::after{ display:none; }
 
   /* ---- step-based application form (lives on the TV screen) ---- */
   #formwrap{ position:absolute; inset:0; display:grid; place-items:center; padding:5% 7%; opacity:0; pointer-events:none; }
@@ -318,11 +316,11 @@
   .step .q .sub{ color:var(--brand-soft); font-style:italic; }
   .step input, .step textarea{ width:100%; background:var(--input-bg); border:none; border-bottom:2px solid var(--input-border);
     color:#fff; font-family:var(--mono); font-size:1.4em; letter-spacing:.02em; padding:.4em .2em; transition:border-color .2s ease; }
-  /* instagram field: fixed "@" prefix, user types only their handle */
+  /* prefix fields: a fixed "@" (instagram) or "+91" (phone), user types only the rest */
   .at-field{ display:flex; align-items:baseline; border-bottom:2px solid var(--input-border); transition:border-color .2s ease; }
   .at-field:focus-within{ border-color:var(--brand-yellow); }
-  .at-field .at{ font-family:var(--mono); font-size:1.4em; color:var(--brand-soft); padding:.4em .05em .4em .2em; }
-  .at-field input[name="handle"]{ border:none; flex:1; padding-left:.05em; }
+  .at-field .at{ font-family:var(--mono); font-size:1.4em; color:var(--brand-soft); padding:.4em .05em .4em .2em; white-space:nowrap; }
+  .at-field input{ border:none; flex:1; padding-left:.35em; min-width:0; }
   .choices{ display:flex; flex-wrap:wrap; gap:.5em; margin-top:.2em; }
   .choice{ font-family:var(--mono); font-size:1.25em; color:#fff; cursor:pointer; border:1px solid var(--input-border);
     background:var(--input-bg); border-radius:100px; padding:.5em 1.1em; transition:background .15s ease, color .15s ease, border-color .15s ease; }
@@ -401,6 +399,9 @@
      the form-mode ✕ shares the same spot and styling */
   #arcadeChrome, #formChrome{ position:fixed; top:clamp(.8rem,2.6vw,1.4rem); right:clamp(.8rem,2.6vw,1.5rem); z-index:26; display:none; gap:.55rem; }
   #arcadeChrome.on, #formChrome.on{ display:flex; }
+  /* while the form's locked, the ✕ is the only top-right control — clear the masthead so it can't
+     collide with the countdown / sound toggle (esp. on a narrow phone) */
+  html.form-lock #masthead{ opacity:0 !important; pointer-events:none !important; }
   .acbtn{ position:relative; width:44px; height:44px; border-radius:100px; display:grid; place-items:center; cursor:pointer;
     color:var(--rose); border:1px solid var(--tag-border); background:var(--card-a); backdrop-filter:blur(5px); font-size:1.05rem;
     transition:transform .15s ease, background .2s ease, color .2s ease; }
@@ -579,7 +580,7 @@
           </div>
           <div class="step" data-name="phone">
             <p class="q">your <span class="sub">number?</span></p>
-            <input name="phone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" required />
+            <div class="at-field"><span class="at">+91</span><input name="phone" type="tel" inputmode="numeric" placeholder="9876543210" maxlength="10" pattern="[0-9]{10}" title="enter your 10-digit mobile number" autocomplete="tel" required /></div>
           </div>
           <div class="step" data-name="email">
             <p class="q">best <span class="sub">email?</span></p>
@@ -687,10 +688,9 @@
        DM's ping AND records the sound preference in the same gesture. -->
   <div id="gateway" aria-hidden="true">
     <div id="gatePos">
-      <div id="gateLbl">enable sound?</div>
+      <div id="gateLbl">for your eyes only</div>
       <div id="gateRow">
-        <button id="gateYes" class="gateBtn" type="button">✓ yes</button>
-        <button id="gateNo" class="gateBtn gateNo" type="button">✕ no</button>
+        <button id="gateYes" class="gateBtn" type="button">enter ▸</button>
       </div>
     </div>
   </div>
@@ -1100,7 +1100,10 @@ function readyAnswer(q){
   ctInput.type = q.type==='email'?'email' : q.type==='tel'?'tel' : 'text';
   ctInput.inputMode = q.type==='tel'?'tel' : q.type==='email'?'email' : (q.type==='age'?'numeric':'text');
   ctInput.placeholder = q.ph||'message…';
-  ctAt.hidden = q.type!=='handle';
+  // a fixed prefix in the compose row: "@" for instagram, "+91" for the phone number
+  if(q.type==='handle'){ ctAt.textContent='@'; ctAt.hidden=false; }
+  else if(q.type==='tel'){ ctAt.textContent='+91'; ctAt.hidden=false; }
+  else ctAt.hidden=true;
   syncSend();
   suggestCities(cityMode ? ctInput.value : null);
   try{ ctInput.focus({preventScroll:true}); }catch(e){}
@@ -1131,6 +1134,7 @@ function submitAnswer(rawVal){
     if(q.optional && val===''){ store=''; disp='maybe later ♡'; }        // phone is skippable — tap "skip"
     else if(q.type==='email'){ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)){ return nudgeField(); } store=val; disp=val; }
     else if(q.type==='age'){ const n=parseInt(val,10); if(!(n>=18 && n<=99)){ return nudgeField(); } store=String(n); disp=String(n); }
+    else if(q.type==='tel'){ const d=val.replace(/\D/g,''); if(d.length!==10){ return nudgeField(); } store='+91 '+d; disp='+91 '+d; }   // exactly 10 digits, stored with +91
     else if(!val){ return nudgeField(); }
     else { store=val; disp=val; }
     if(q.type==='handle'){ store='@'+val.replace(/^@+/,''); disp=store; }
@@ -1140,7 +1144,7 @@ function submitAnswer(rawVal){
   const next=qIndex+1;
   // keep the mobile keyboard alive across typed questions by re-focusing inside this tap
   if(next<APPLY_Q.length && APPLY_Q[next].type!=='choice' && APPLY_Q[next].type!=='date'){
-    composeMode('type'); ctInput.value=''; ctInput.placeholder='message…'; ctSend.disabled=true; ctSend.textContent='send';
+    composeMode('type'); ctInput.value=''; ctInput.placeholder='message…'; ctSend.disabled=true; ctSend.textContent='send'; ctAt.hidden=true;
     try{ ctInput.focus({preventScroll:true}); }catch(e){}
   } else { composeMode('none'); if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }
   askQuestion(next);
@@ -1171,7 +1175,10 @@ function finishApply(){
     }, 800);
   }, 1200);
 }
-ctInput.addEventListener('input', ()=>{ if(qIndex>=0 && !qBusy) syncSend(); if(cityMode) suggestCities(ctInput.value); });
+ctInput.addEventListener('input', ()=>{
+  // phone: keep it to digits only, capped at 10 (the +91 lives in the prefix, not the field)
+  if(qIndex>=0 && APPLY_Q[qIndex] && APPLY_Q[qIndex].type==='tel'){ const d=ctInput.value.replace(/\D/g,'').slice(0,10); if(d!==ctInput.value) ctInput.value=d; }
+  if(qIndex>=0 && !qBusy) syncSend(); if(cityMode) suggestCities(ctInput.value); });
 ctInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(!ctSend.disabled) submitAnswer(); } });
 // keyboard ticks while you type a real answer (letters + backspace only — not enter/arrows/modifiers)
 ctInput.addEventListener('keydown', e=>{
@@ -1330,8 +1337,7 @@ function showGateway(){
     g.classList.add('leaving'); setTimeout(()=>{ g.remove(); }, 600);
     revealIntro();                                          // audio's unlocked now — land the DM + its ping
   };
-  g.querySelector('#gateYes').addEventListener('click', e=>enter(e,true), {once:true});
-  g.querySelector('#gateNo').addEventListener('click', e=>enter(e,false), {once:true});
+  g.querySelector('#gateYes').addEventListener('click', e=>enter(e,true), {once:true});   // one button: enter → sound on for everyone
   try{ g.querySelector('#gateYes').focus({preventScroll:true}); }catch(e){}   // so Enter/Space activate it too
 }
 
@@ -1465,6 +1471,7 @@ const FORM_P=0.94;                                 // the .s-form snap point (56
 let formLocked=false;
 function formChromeOn(on){
   formChrome.classList.toggle('on', on);
+  document.documentElement.classList.toggle('form-lock', on);   // clears the masthead so the ✕ doesn't overlap it
   const al=document.getElementById('applyLink');
   if(al){ al.style.opacity=on?'0':''; al.style.pointerEvents=on?'none':''; }
 }
@@ -1521,6 +1528,8 @@ function renderStep(focusNow){
     if(inp && inp.type!=='hidden'){ try{ inp.focus({preventScroll:true}); }catch(e){} }
   }
 }
+// phone: keep the value to digits only (max 10) so a stray space/symbol can't fail the 10-digit check
+(()=>{ const ph=form.querySelector('input[name="phone"]'); if(ph) ph.addEventListener('input',()=>{ const d=ph.value.replace(/\D/g,'').slice(0,10); if(d!==ph.value) ph.value=d; }); })();
 function advance(){
   const inp=stepsEls[cur].querySelector('input,textarea');
   if(inp.type==='hidden'){                                   // a choice step (e.g. "who are you?")
@@ -1675,6 +1684,7 @@ function computeBoard(rows, gameKey, myHandle, myScore){
 async function submitForm(){
   const data=Object.fromEntries(new FormData(form).entries());
   if(data.handle!=null) data.handle='@'+String(data.handle).trim().replace(/^@+/,'');   // store as @handle (the "@" is shown in the field)
+  if(data.phone!=null){ const d=String(data.phone).replace(/\D/g,'').slice(-10); data.phone='+91 '+d; }   // store with the +91 shown in the field
   PLAYER = data;                                        // remember the player for the leaderboard
   if(GFORM.id){
     const body=new URLSearchParams();
@@ -2313,10 +2323,7 @@ renderStep();
       if(!(el && /^(INPUT|TEXTAREA)$/.test(el.tagName))){
         e.preventDefault();
         // if the tap-to-enter gate is still up, take it down first (also unlocks audio)
-        try{
-          const off = localStorage.getItem('ksp-snd')==='off';
-          const gb=document.getElementById(off?'gateNo':'gateYes'); if(gb) gb.click();
-        }catch(err){}
+        try{ const gb=document.getElementById('gateYes'); if(gb) gb.click(); }catch(err){}
         unlock(); openArcade(); return;
       }
     }

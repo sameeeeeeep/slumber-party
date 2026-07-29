@@ -62,6 +62,9 @@ function launchGame(opts){
  var finished=false, bestScore=0;
  var timers=[];
  var TOUCH=('ontouchstart' in window)||(typeof navigator!=='undefined'&&navigator.maxTouchPoints>0);
+ /* treat narrow / ?device=phone as touch too — matches the arcade's useGamepad() so the
+    on-screen controls + keyboard show wherever a physical keyboard likely isn't around */
+ var useTouch = TOUCH || window.innerWidth<=640 || /(^|\s)dev-phone(\s|$)/.test(document.documentElement.className);
  function later(fn,ms){ var t=setTimeout(fn,ms); timers.push(t); return t; }
 
  /* ---- audio (tiny synth, shared mute pref) ---- */
@@ -108,7 +111,9 @@ function launchGame(opts){
   '<button id="vaExit" style="all:unset;cursor:pointer;width:34px;height:34px;text-align:center;color:'+PINK+';font-size:20px;">✕</button>';
  ov.appendChild(head);
  var panel=document.createElement('div');   /* dom screens: gate / select / tally */
- panel.style.cssText='position:relative;z-index:4;width:min(94%,600px);max-height:100%;overflow-y:auto;text-align:center;font-family:'+MONO+';color:#fff;';
+ /* cap to the VIEWPORT (vw/vh), not the CRT: at full camera zoom the CRT overgrows the
+    window, and a 600px panel then spilled off both edges of a phone. */
+ panel.style.cssText='position:relative;z-index:4;width:min(94%,600px,96vw);max-height:min(100%,90vh);overflow-y:auto;text-align:center;font-family:'+MONO+';color:#fff;';
  ov.appendChild(panel);
  var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
  cv.style.cssText='display:none;position:relative;z-index:3;touch-action:none;';
@@ -164,6 +169,7 @@ function launchGame(opts){
   if(cv.width!==PIXW){ cv.width=PIXW; cv.height=PIXW; }
   ctx.setTransform(PIXW/W,0,0,PIXW/H,0,0);    /* draw in 0..W, land on the PIXW grid */
   ctx.imageSmoothingEnabled=false;             /* nearest-neighbour: hard pixels */
+  layoutControls();                            /* keep the touch buttons pinned under the (re-letterboxed) canvas */
  }
  window.addEventListener('resize',doResize); doResize();
  /* the CRT rect eases as the page zooms — track it so the game stays letterboxed to the screen */
@@ -227,26 +233,64 @@ function launchGame(opts){
  function onCanvasTap(e){ e.preventDefault(); ensureAudio(); if(state==='tally') tallyAgain(); else if(pressCb) pressCb('tap'); }
  cv.addEventListener('pointerdown',onCanvasTap);
 
- /* ---- on-screen touch buttons (levels opt in) ---- */
+ /* ---- ONE on-screen controller for every game — the same game-boy deck as the arcade
+    (snake / pillow-stack / dream-maze): a D-pad + a single A button. Every level maps its
+    actions onto the shared press vocabulary (up/down/left/right/action), so the controls
+    look and work identically across all three games — no bespoke per-game buttons.
+    Pinned to the VIEWPORT (document.body, fixed) and laid out under the visible canvas:
+    at full camera zoom the CRT overgrows the window, so an overlay-anchored bar fell
+    off the bottom of the screen; reading the live canvas rect keeps the pad on-screen. */
  var ctrlWrap=null;
- function touchControls(defs){
+ function layoutControls(){
+  if(!ctrlWrap) return;
+  var r=cv.getBoundingClientRect();
+  if(!(r.width>1)){ return; }
+  var barH=ctrlWrap.offsetHeight||130;
+  var top=Math.min(r.bottom+6, window.innerHeight-barH-8);   // just under the canvas, but never off-screen
+  top=Math.max(8, top);
+  ctrlWrap.style.top=Math.round(top)+'px';
+ }
+ function padDir(dir){ ensureAudio(); held[dir]=true; if(pressCb) pressCb(dir); }
+ function buildGamepad(){
   clearControls();
   ctrlWrap=document.createElement('div');
-  ctrlWrap.style.cssText='position:absolute;left:0;right:0;bottom:16px;z-index:6;display:flex;justify-content:center;gap:14px;padding:0 16px;pointer-events:none;';
-  defs.forEach(function(d){
-   var b=document.createElement('button'); b.textContent=d.label;
-   b.style.cssText='pointer-events:auto;all:unset;cursor:pointer;font-family:'+PIXEL+';font-size:12px;letter-spacing:1px;color:#fff;text-transform:lowercase;background:rgba(11,7,22,.72);border:2px solid '+SOFT+';border-radius:4px;box-shadow:0 3px 0 rgba(0,0,0,.45);padding:15px 0;flex:1;max-width:200px;text-align:center;-webkit-tap-highlight-color:transparent;user-select:none;';
-   b.addEventListener('pointerdown',function(e){ e.preventDefault(); ensureAudio(); if(d.onPress) d.onPress(); });
-   if(d.onRelease) b.addEventListener('pointerup',function(e){ e.preventDefault(); d.onRelease(); });
-   ctrlWrap.appendChild(b);
-  });
-  ov.appendChild(ctrlWrap);
-  ctrlWrap.style.display = TOUCH ? 'flex' : 'none';   /* keyboard players don't need them */
+  ctrlWrap.style.cssText='position:fixed;z-index:10000;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 clamp(16px,6vw,34px);box-sizing:border-box;pointer-events:none;';
+  /* D-pad (left) */
+  var dpad=document.createElement('div');
+  dpad.style.cssText='position:relative;width:9.4em;height:9.4em;font-size:13px;flex:none;';
+  function dbtn(dir,glyph,pos){
+   var b=document.createElement('button'); b.textContent=glyph;
+   b.style.cssText='pointer-events:auto;position:absolute;width:3.1em;height:3.1em;display:grid;place-items:center;color:#fff;font-size:1em;border:1px solid rgba(245,195,207,.35);border-radius:.7em;background:#3c2f35;box-shadow:0 2px 3px rgba(80,30,50,.4),inset 0 1px 0 rgba(255,255,255,.18);-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none;transition:background .1s ease, transform .1s ease;'+pos;
+   var down=function(e){ e.preventDefault(); b.style.background=PINK; b.style.transform='scale(.92)'; padDir(dir); };
+   var up=function(e){ if(e) e.preventDefault(); b.style.background='#3c2f35'; b.style.transform=''; held[dir]=false; };
+   b.addEventListener('pointerdown',down); b.addEventListener('pointerup',up);
+   b.addEventListener('pointerleave',up); b.addEventListener('pointercancel',up);
+   return b;
+  }
+  dpad.appendChild(dbtn('up','▲','left:3.15em;top:0;'));
+  dpad.appendChild(dbtn('down','▼','left:3.15em;bottom:0;'));
+  dpad.appendChild(dbtn('left','◀','left:0;top:3.15em;'));
+  dpad.appendChild(dbtn('right','▶','right:0;top:3.15em;'));
+  ctrlWrap.appendChild(dpad);
+  /* A button (right) — the "action": jump (a) · nothing (b) · boost (c) */
+  var a=document.createElement('button'); a.textContent='A';
+  a.style.cssText='pointer-events:auto;width:4.4em;height:4.4em;font-size:16px;font-family:'+PIXEL+';color:#fff;border-radius:100px;background:linear-gradient(90deg,#eb648c,#ec642a);border:none;box-shadow:0 5px 14px rgba(235,100,140,.45),inset 0 1px 0 rgba(255,255,255,.3);-webkit-tap-highlight-color:transparent;touch-action:none;flex:none;transition:transform .1s ease;';
+  a.addEventListener('pointerdown',function(e){ e.preventDefault(); a.style.transform='scale(.94)'; ensureAudio(); if(pressCb) pressCb('action'); });
+  var aup=function(){ a.style.transform=''; }; a.addEventListener('pointerup',aup); a.addEventListener('pointerleave',aup); a.addEventListener('pointercancel',aup);
+  ctrlWrap.appendChild(a);
+  document.body.appendChild(ctrlWrap);
+  ctrlWrap.style.display = useTouch ? 'flex' : 'none';   /* keyboard players don't need it */
+  layoutControls();
+ }
+ /* levels still call env.touchControls(defs); we ignore the per-game labels and show the
+    shared game-boy pad instead, so the controller is identical everywhere. */
+ function touchControls(defs){
+  buildGamepad();
   return { show:function(){ if(ctrlWrap) ctrlWrap.style.display='flex'; },
            hide:function(){ if(ctrlWrap) ctrlWrap.style.display='none'; },
            remove:clearControls };
  }
- function clearControls(){ if(ctrlWrap){ try{ ov.removeChild(ctrlWrap); }catch(e){} ctrlWrap=null; } }
+ function clearControls(){ if(ctrlWrap){ try{ ctrlWrap.parentNode.removeChild(ctrlWrap); }catch(e){} ctrlWrap=null; } }
 
  /* ---- shared state ---- */
  var state = isLocked() ? 'gate' : 'select';   /* gate | select | play | tally */
@@ -256,7 +300,7 @@ function launchGame(opts){
  function makeEnv(){
   var myToken=runToken;
   return {
-   ctx:ctx, W:W, H:H, TOUCH:TOUCH, colors:COLORS, PIXEL:PIXEL, MONO:MONO,
+   ctx:ctx, W:W, H:H, TOUCH:useTouch, colors:COLORS, PIXEL:PIXEL, MONO:MONO,
    rr:rr, tone:tone, snd:snd, loadImage:loadImage, held:held,
    onPress:function(fn){ pressCb=fn; },
    touchControls:touchControls,
@@ -290,23 +334,32 @@ function launchGame(opts){
    }
   }
   var kb=panel.querySelector('#vaKb');
-  kb.innerHTML='<p style="font-size:'+(host?'15px':'17px')+';color:'+SOFT+';opacity:.7;margin:4px 0 0;">type your guess · enter to submit</p>';
-  /* no on-screen keyboard — on touch, a hidden real input summons the phone's own keyboard */
-  if(TOUCH){
-   var inp=document.createElement('input');
-   inp.type='text'; inp.autocapitalize='off'; inp.autocomplete='off'; inp.spellcheck=false;
-   inp.setAttribute('autocorrect','off'); inp.maxLength=gCols;
-   inp.style.cssText='position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0.01;font-size:16px;';   /* ≥16px so iOS never zooms */
-   panel.appendChild(inp); gateInput=inp;
-   inp.addEventListener('input',function(){
-    var v=(inp.value||'').toLowerCase().replace(/[^a-z]/g,'').slice(0,gCols);
-    inp.value=v; gCur=v; paintCur();
-   });
-   var refocus=function(){ if(state==='gate'&&!gDone){ try{ inp.focus({preventScroll:true}); }catch(e){} } };
-   panel.addEventListener('pointerdown',refocus);
-   setTimeout(refocus,250);
-  }
+  /* on touch we render our OWN keyboard (with a visible ENTER) rather than summoning the
+     phone's soft keyboard — which used to cover the board and left submit unclear. */
+  if(useTouch){ buildGateKeyboard(kb); }
+  else { kb.innerHTML='<p style="font-size:'+(host?'15px':'17px')+';color:'+SOFT+';opacity:.7;margin:4px 0 0;">type your guess · enter to submit</p>'; }
   revealHint(1);   /* the question shows BEFORE the first try — simpler */
+ }
+ /* an on-screen keyboard for the gate — QWERTY + enter/⌫, with per-key colour feedback (keyEls) */
+ function buildGateKeyboard(kb){
+  var KH=host?34:40, KF=host?'15px':'18px', KLF=host?'9px':'11px';
+  kb.innerHTML='<p style="font-size:'+(host?'13px':'16px')+';color:'+SOFT+';opacity:.65;margin:2px 0 8px;">tap to type</p>';
+  var wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-direction:column;gap:5px;align-items:center;width:100%;max-width:340px;margin:0 auto;';
+  function mkKey(label,onTap,wide,letter){
+   var b=document.createElement('button'); b.textContent=label;
+   b.style.cssText='all:unset;box-sizing:border-box;cursor:pointer;font-family:'+(wide?PIXEL:MONO)+';font-size:'+(wide?KLF:KF)+';color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(235,100,140,.4);border-radius:5px;height:'+KH+'px;display:grid;place-items:center;-webkit-tap-highlight-color:transparent;user-select:none;'+(wide?'flex:0 0 auto;padding:0 12px;':'flex:1 1 0;min-width:0;');
+   b.addEventListener('pointerdown',function(e){ e.preventDefault(); ensureAudio(); onTap(); });
+   if(letter) keyEls[letter]=b;
+   return b;
+  }
+  ['qwertyuiop','asdfghjkl','zxcvbnm'].forEach(function(rowStr,ri){
+   var row=document.createElement('div'); row.style.cssText='display:flex;gap:4px;justify-content:center;width:100%;';
+   if(ri===2) row.appendChild(mkKey('enter',function(){ gateKey('enter'); },true));
+   rowStr.split('').forEach(function(ch){ row.appendChild(mkKey(ch,(function(c){ return function(){ gateKey(c); }; })(ch),false,ch)); });
+   if(ri===2) row.appendChild(mkKey('⌫',function(){ gateKey('backspace'); },true));
+   wrap.appendChild(row);
+  });
+  kb.appendChild(wrap);
  }
  function gateMsg(t){ var m=panel.querySelector('#vaMsg'); if(m) m.textContent=t; }
  // hints unlock as they play: after guess 1 → hint 1 (the question), after guess 2 → hint 2 (indian sweet)
@@ -397,18 +450,18 @@ function launchGame(opts){
   var cur=games[selIdx];
   var list=games.map(function(l,i){
    var on=(i===selIdx);
-   return '<li data-lv="'+l.n+'" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:9px;padding:9px 4px;'+
+   return '<li data-lv="'+l.n+'" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:9px;padding:'+(useTouch?'14px':'9px')+' 4px;'+
     'font-family:'+PIXEL+';font-size:11px;line-height:1.6;color:'+(on?YEL:'#fff')+';">'+
     '<span style="width:14px;color:'+PINK+';">'+(on?'▸':'')+'</span>'+GLETTER[l.n]+' · '+esc(l.title)+'</li>';
   }).join('');
-  var html='<div style="display:flex;gap:20px;align-items:flex-start;text-align:left;justify-content:center;">'+
-   '<ul id="vaList" style="margin:0;padding:0;flex:1 1 52%;min-width:0;border-right:1px solid rgba(255,255,255,.18);padding-right:14px;">'+list+'</ul>'+
-   '<div id="vaBoard" style="flex:1 1 44%;min-width:0;">'+
+  var html='<div style="display:flex;flex-wrap:wrap;gap:16px 20px;align-items:flex-start;text-align:left;justify-content:center;">'+
+   '<ul id="vaList" style="margin:0;padding:0;flex:1 1 200px;min-width:0;border-right:1px solid rgba(255,255,255,.18);padding-right:14px;">'+list+'</ul>'+
+   '<div id="vaBoard" style="flex:1 1 150px;min-width:0;">'+
     '<p style="font-family:'+PIXEL+';font-size:10px;letter-spacing:2px;color:'+SOFT+';margin:2px 0 10px;">high scores</p>'+
     '<div id="vaBoardRows" style="font-family:'+MONO+';font-size:16px;color:#fff;"></div>'+
    '</div></div>'+
    '<p style="font-family:'+MONO+';font-size:15px;color:'+SOFT+';opacity:.75;margin:16px 0 0;text-align:center;">'+
-   (TOUCH?'tap a game for its scores · tap again to play':'↑ ↓ browse · enter play · esc exit')+'</p>';
+   (useTouch?'tap a game for its scores · tap again to play':'↑ ↓ browse · enter play · esc exit')+'</p>';
   panel.innerHTML=html;
   [].forEach.call(panel.querySelectorAll('#vaList li'),function(li,i){
    li.addEventListener('click',function(){
@@ -497,6 +550,7 @@ function launchGame(opts){
   try{ cv.removeEventListener('pointerdown',onCanvasTap); }catch(e){}
   try{ if(actx&&actx.close) actx.close(); }catch(e){}
   onLevelsChanged=null;
+  clearControls();                 /* the touch bar lives on document.body now — remove it explicitly */
   try{ ov.remove(); }catch(e){}
   var total=Math.max(totalClout(),bestScore);   /* arcade board gets the a+b+c total */
   exitCb(total>0?total:0);
