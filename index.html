@@ -82,6 +82,17 @@
   #glitch{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; mix-blend-mode:screen; image-rendering:pixelated; }
   #pixelbg{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; opacity:0; will-change:opacity,transform; }
   #tvtint{ position:absolute; inset:0; background:var(--tv-tint); }
+  /* the CRT powering on as you come through the gate: a hairline that snaps open into the picture */
+  #tvboot{ position:absolute; inset:0; pointer-events:none; opacity:0; transform-origin:50% 50%;
+    background:linear-gradient(180deg, rgba(255,255,255,.65), #fff 48%, rgba(255,255,255,.65)); }
+  html.booting #tvboot{ animation:tvBoot .9s cubic-bezier(.3,0,.2,1) forwards; }
+  @keyframes tvBoot{
+    0%{   opacity:0;   transform:scaleY(.006) scaleX(.35); }
+    14%{  opacity:1;   transform:scaleY(.006) scaleX(1); }    /* the hairline strikes across */
+    42%{  opacity:.85; transform:scaleY(1) scaleX(1); }       /* it opens into the full picture */
+    100%{ opacity:0;   transform:scaleY(1) scaleX(1); }
+  }
+  @media (prefers-reduced-motion:reduce){ html.booting #tvboot{ animation:none; } }
   #scanlines{ position:absolute; inset:0; pointer-events:none; opacity:.5; mix-blend-mode:overlay;
     background:repeating-linear-gradient(0deg, rgba(0,0,0,.5) 0 1px, transparent 1px 3px); }
   /* dark scrim over the static/noise so the text reads clearly (sits below #tvcontent) */
@@ -152,7 +163,19 @@
   .ct-id b{ font-family:var(--mono); font-weight:400; font-size:1.15em; color:#fff; }
   .ct-id i{ font-family:var(--mono); font-style:normal; font-size:.92em; color:rgba(255,255,255,.5);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .ct-body{ flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:.5em; padding:1em; }
+  /* she's online: a live green dot that turns the status into "typing…" while she's mid-message */
+  .ct-live{ display:inline-flex; align-items:center; gap:.4em; }
+  .ct-dot{ flex:none; width:.5em; height:.5em; border-radius:100px; background:#3ddc84;
+    box-shadow:0 0 .5em rgba(61,220,132,.85); animation:ctLive 2.6s ease-in-out infinite; }
+  @keyframes ctLive{ 0%,100%{opacity:1} 50%{opacity:.45} }
+  .ct-live.typing #ctState{ color:var(--brand-soft); }
+  .ct-live.typing .ct-dot{ animation-duration:1s; }
+  /* the thread scrolls on its own — you can always read back through the whole conversation.
+     `contain` stops a flick at the top/bottom from being handed to the page behind it. */
+  .ct-body{ flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain; display:flex; flex-direction:column; gap:.5em; padding:1em; }
+  .ct-body::-webkit-scrollbar{ width:.4em; }
+  .ct-body::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.18); border-radius:1em; }
   .msg{ max-width:82%; font-family:var(--mono); font-size:1.4em; line-height:1.25; padding:.5em .8em; text-align:left;
     border-radius:1.1em; animation:msgIn .34s ease; word-wrap:break-word; }
   @keyframes msgIn{ from{opacity:0; transform:translateY(.5em) scale(.98)} to{opacity:1; transform:none} }
@@ -168,15 +191,18 @@
   @keyframes typedot{ 0%,60%,100%{opacity:.3; transform:translateY(0)} 30%{opacity:1; transform:translateY(-.22em)} }
   .ct-compose{ flex:none; display:flex; align-items:center; gap:.6em; padding:.7em .8em;
     border-top:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); }
-  .ct-draft{ flex:1; min-width:0; font-family:var(--mono); font-size:1.1em; color:#fff; cursor:pointer; text-align:left;
-    padding:.5em .9em; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:100px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* the pre-drafted reply WRAPS rather than truncating — you should always be able to read the
+     whole thing before you send it */
+  .ct-draft{ flex:1; min-width:0; font-family:var(--mono); font-size:1.3em; color:#fff; cursor:pointer; text-align:left;
+    padding:.62em 1em; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:1.1em;
+    line-height:1.3; white-space:normal; overflow-wrap:anywhere; }
   .ct-draft.caret::after{ content:'▋'; color:var(--brand-soft); animation:caretBlink .8s steps(1) infinite; }
   @keyframes caretBlink{ 50%{opacity:0} }
   .ct-draft:empty::before{ content:'message…'; color:rgba(255,255,255,.4); }   /* the field waits, like a real chat app */
   /* same recipe as the form's button so the send matches the rest of the site */
-  .ct-send{ position:relative; overflow:hidden; flex:none; cursor:pointer; font-family:var(--pixel); font-size:.62em; letter-spacing:.06em;
-    text-transform:lowercase; color:#fff; padding:.95em 1.1em; border-radius:.6em;
+  /* sized to sit level with the (now larger) compose field rather than looking like an afterthought */
+  .ct-send{ position:relative; overflow:hidden; flex:none; cursor:pointer; font-family:var(--pixel); font-size:.68em; letter-spacing:.06em;
+    text-transform:lowercase; color:#fff; padding:1.3em 1.4em; border-radius:.7em;
     background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
     box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2);
     transition:opacity .25s ease, transform .2s ease, box-shadow .25s ease, filter .25s ease; }
@@ -192,14 +218,20 @@
   .ct-send:focus-visible{ outline:2px solid var(--brand-yellow); outline-offset:2px; }
   /* the CRT is pointer-events:none — re-enable just the clickable chat controls (and cut them once the form takes over) */
   /* the real input the user types into once khushi starts asking the application questions */
-  .ct-at{ font-family:var(--mono); font-size:1.1em; color:var(--brand-soft); padding-left:.15em; }
-  .ct-input{ flex:1; min-width:0; font-family:var(--mono); font-size:1.1em; color:#fff; text-align:left; outline:none;
-    padding:.5em .9em; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:100px; }
+  .ct-at{ font-family:var(--mono); font-size:1.3em; color:var(--brand-soft); padding-left:.15em; }
+  .ct-input{ flex:1; min-width:0; font-family:var(--mono); font-size:1.3em; color:#fff; text-align:left; outline:none;
+    padding:.62em 1em; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:100px; }
   .ct-input::placeholder{ color:rgba(255,255,255,.4); }
   .ct-input:focus{ border-color:rgba(235,216,27,.5); }
   .ct-at:not([hidden]) + .ct-draft + .ct-input{ padding-left:.3em; }
   /* tap-to-answer chips (the "who are you?" question + the final arcade CTA) */
   .ct-chips{ flex:none; display:flex; flex-wrap:wrap; gap:.5em; justify-content:center; padding:.2em 1em 1em; }
+  /* …and as a scrollable list when there are too many options to sit in a row of pills */
+  .ct-chips.list{ flex-direction:column; flex-wrap:nowrap; align-items:stretch; justify-content:flex-start;
+    gap:.4em; max-height:12em; overflow-y:auto; overscroll-behavior:contain; padding:.2em .8em .9em; }
+  .ct-chips.list .ct-chip{ text-align:left; border-radius:.85em; padding:.6em .95em; }
+  .ct-chips.list::-webkit-scrollbar{ width:.4em; }
+  .ct-chips.list::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.18); border-radius:1em; }
   .ct-chip{ font-family:var(--mono); font-size:1.1em; color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent;
     border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08); border-radius:100px; padding:.45em 1.1em;
     transition:background .15s ease, border-color .15s ease, transform .15s ease; }
@@ -207,9 +239,12 @@
   .ct-chip:active{ transform:scale(.95); background:var(--brand-pink); }
   .ct-chip.cta{ position:relative; overflow:hidden; font-family:var(--pixel); font-size:.7em; letter-spacing:.05em; color:#fff; border-color:rgba(255,255,255,.5);
     background:linear-gradient(90deg,#eb648c,#ec642a); box-shadow:0 0 10px rgba(235,100,140,.6); animation:ctaGlow 1.8s ease-in-out infinite; }
-  /* the city suggestions — a slim strip of tappable chips right above the field */
-  .ct-suggest{ flex:none; display:flex; flex-wrap:wrap; gap:.4em; padding:.5em .8em 0; }
-  .ct-suggest .ct-chip{ font-size:.95em; padding:.3em .8em; }
+  /* the city suggestions — one tidy strip above the field that scrolls sideways rather than
+     wrapping into a cramped block against the compose row */
+  .ct-suggest{ flex:none; display:flex; flex-wrap:nowrap; gap:.5em; padding:.8em .9em .85em;
+    overflow-x:auto; overflow-y:hidden; overscroll-behavior-x:contain; scrollbar-width:none; }
+  .ct-suggest::-webkit-scrollbar{ display:none; }
+  .ct-suggest .ct-chip{ flex:none; font-size:1em; padding:.45em 1em; }
   /* the birthday pickers — three little pixel selects in the compose row */
   .ct-date{ flex:1; min-width:0; display:flex; gap:.4em; }
   .ct-date select{ flex:1; min-width:0; font-family:var(--mono); font-size:1.05em; color:#fff; outline:none;
@@ -220,7 +255,24 @@
   .ct-input.nudge, .ct-chips.nudge, .ct-date.nudge{ animation:nudge .42s; }
   #chat .ci-row, #chat .ct-send, #chat .ct-draft, #chat .ct-input, #chat .ct-chip, #chat .ct-date select, #chat .ct-back{ pointer-events:auto; }
   #chat.locked .ci-row, #chat.locked .ct-send, #chat.locked .ct-draft, #chat.locked .ct-back{ pointer-events:none; }
-  @media (max-width:640px){ .ct-input{ font-size:16px; } }   /* ≥16px so iOS never zooms the fixed CRT on focus */
+  @media (max-width:640px){ .ct-input{ font-size:18px; } }   /* ≥16px so iOS never zooms the fixed CRT on focus */
+
+  /* ---- INSIDE the screen: opening the DM flies the camera all the way in and locks there,
+     so the thread stops being a little card floating on a CRT and becomes the whole UI.
+     --cardH is the slice the mobile keyboard leaves visible (set per-frame in JS). ---- */
+  html.inside #masthead{ opacity:0 !important; pointer-events:none !important; }   /* the screen is the whole page now */
+  html.inside #chat{ padding:0; }
+  html.inside .chat-card{ max-height:none; border-radius:0; border:0; background:rgba(24,15,30,.78); box-shadow:none; }
+  /* at full zoom the CRT is COVER-sized, so it spills past the viewport — bound the thread by the
+     viewport itself (--cardH is the slice the mobile keyboard leaves, set per-frame in JS) */
+  html.inside #chatThread, html.dev-phone.inside #chatThread{ width:100vw; height:var(--cardH,100vh); }
+  /* wide screens: hold the thread to a readable column instead of stretching bubbles across a desk */
+  @media (min-width:900px){
+    html.inside #chatThread, html.dev-phone.inside #chatThread{ width:min(100vw,760px); }
+  }
+  /* keep the header and the compose row clear of notches and home bars */
+  html.inside .ct-head{ padding-top:calc(.7em + env(safe-area-inset-top,0px)); }
+  html.inside .ct-compose, html.inside .ct-chips{ padding-bottom:calc(.8em + env(safe-area-inset-bottom,0px)); }
   .ftitle{ font-family:var(--mono); color:#fff; font-size:2.1em; line-height:1; letter-spacing:.02em; margin-bottom:.4em; text-shadow:var(--halo); }
   .ftitle .sub{ color:var(--brand-soft); font-style:italic; }
 
@@ -229,36 +281,26 @@
     display:flex; align-items:center; justify-content:space-between; gap:1rem;
     padding:.85rem clamp(1.1rem,3vw,1.8rem); background:var(--head-scrim); transition:opacity .4s ease; }
   .logo{ display:block; height:clamp(2.7rem,7vw,3.9rem); width:auto; }
-  .head-right{ display:flex; align-items:center; gap:.7rem; pointer-events:auto; }
-  #masthead .apply-link{ font-family:var(--sans); font-size:.7rem; letter-spacing:.2em; text-transform:uppercase;
-    color:var(--rose); text-decoration:none; white-space:nowrap; border:1px solid var(--tag-border);
-    border-radius:100px; padding:.55rem .95rem; background:var(--card-a); backdrop-filter:blur(5px); transition:background .2s ease,color .2s ease; }
-  #masthead .apply-link:hover{ background:var(--rose); color:var(--btn-fg); }
-  /* header sound toggle — chat pings + arcade share one preference, visible from the first frame */
-  .snd-toggle{ position:relative; width:2.3rem; height:2.3rem; display:grid; place-items:center; cursor:pointer;
-    font-size:1rem; color:var(--rose); border:1px solid var(--tag-border); border-radius:100px;
-    background:var(--card-a); backdrop-filter:blur(5px); transition:background .2s ease,color .2s ease; }
-  .snd-toggle:hover{ background:var(--rose); color:var(--btn-fg); }
-  .snd-toggle.off{ opacity:.6; }
-  .snd-toggle.off::after{ content:''; position:absolute; left:50%; top:50%; width:60%; height:2px; background:currentColor;
-    transform:translate(-50%,-50%) rotate(-45deg); border-radius:2px; }
-  /* countdown to when the form closes — retro (VT323) digits in a pill matching the Apply chip */
-  .countdown{ display:inline-flex; align-items:baseline; gap:.5rem; white-space:nowrap; pointer-events:auto;
-    border:1px solid var(--tag-border); border-radius:100px; padding:.4rem .85rem;
-    background:var(--card-a); backdrop-filter:blur(5px); }
-  .countdown .cd-label{ font-family:var(--mono); font-size:.8rem; letter-spacing:.16em; text-transform:uppercase;
-    color:var(--rose); opacity:.75; }
-  .countdown .cd-time{ font-family:var(--mono); font-size:1.15rem; line-height:1; letter-spacing:.06em;
+  /* countdown to when the form closes — retro (VT323) digits. It lives on the gate (the first
+     screen) only, and the gate is blush pink, so this reads dark-rose on light. */
+  .countdown{ display:inline-flex; flex-direction:column; align-items:center; gap:.3rem; white-space:nowrap; pointer-events:auto;
+    border:1px solid var(--tag-border); border-radius:1rem; padding:.7rem clamp(1.1rem,5vw,1.6rem);
+    background:var(--card-a); backdrop-filter:blur(6px); box-shadow:0 .4rem 1.6rem rgba(235,100,140,.16); }
+  .countdown .cd-label{ font-family:var(--mono); font-size:clamp(.78rem,3.4vw,.95rem); letter-spacing:.22em; text-transform:uppercase;
+    color:var(--rose); opacity:.72; }
+  .countdown .cd-time{ font-family:var(--mono); font-size:clamp(1.6rem,7vw,2.3rem); line-height:1; letter-spacing:.08em;
     color:var(--rose); font-variant-numeric:tabular-nums; }
 
   .progress{ position:fixed; top:0; left:0; height:2px; width:0%; z-index:21;
     background:linear-gradient(90deg,var(--brand-pink),var(--brand-orange),var(--brand-yellow)); box-shadow:0 0 10px rgba(235,100,140,.5); }
-  /* mobile handheld controls: a pink console deck (exact monitor pink) covering everything below
-     the screen (floppy + keyboard), with the buttons on it. `top` is set in JS to the CRT bottom. */
-  #gamepad{ position:fixed; left:0; right:0; top:60vh; bottom:0; z-index:22; display:none;
+  /* mobile handheld controls. The CRT is fullscreen now, so these sit as a bar ON the black screen
+     instead of on a pink deck below it — the arcade reads as one dark console rather than a cropped
+     picture with furniture underneath. layout() keeps the game/menu clear of this bar. */
+  #gamepad{ position:fixed; left:0; right:0; top:auto; bottom:0; z-index:22; display:none;
     justify-content:center; align-items:flex-end;
-    padding:1.3em clamp(1.1rem,6vw,2.2rem) calc(1.9em + env(safe-area-inset-bottom,0px));
-    background:rgb(222,184,187); box-shadow:inset 0 1px 0 rgba(255,255,255,.28); pointer-events:auto; }
+    padding:1.1em clamp(1.1rem,6vw,2.2rem) calc(1.3em + env(safe-area-inset-bottom,0px));
+    background:linear-gradient(180deg, rgba(12,7,18,0) 0%, rgba(12,7,18,.94) 34%, rgba(12,7,18,.99) 100%);
+    pointer-events:auto; }
   #gamepad.on{ display:flex; }
   #gamepad .gp-row{ width:100%; display:flex; justify-content:space-between; align-items:center; }   /* D-pad and A level with each other */
   #gamepad .dpad{ position:relative; width:9.6em; height:9.6em; font-size:14px; flex:none; }
@@ -278,20 +320,40 @@
   #veil .l{ font-family:var(--script); font-weight:700; color:var(--rose); font-size:2rem; animation:pulse 1.6s ease-in-out infinite; }
   @keyframes pulse{ 0%,100%{opacity:.4} 50%{opacity:.95} }
 
-  /* ---- the "enter" gate (sits below the veil so it's revealed as the "shhh…" fades) ---- */
+  /* ---- the "enter" gate (sits below the veil so it's revealed as the "shhh…" fades) ----
+     This is the FIRST screen: the sticker logo, the countdown, and one button — dead-centre
+     of the viewport (not pinned to the CRT) so it composes the same on any phone. */
+  /* blush, the same colour as the "shhh…" veil above it — the veil dissolves straight into the
+     gate with no colour jump, and the room only appears once you're through */
   #gateway{ position:fixed; inset:0; z-index:28; display:none;
-    background:rgba(10,7,14,.94); opacity:0; }
-  #gateway.on{ display:block; animation:gateIn .6s ease forwards; }
-  #gateway.leaving{ animation:gateOut .55s ease forwards; pointer-events:none; }
+    background:var(--veil-bg); opacity:0; }
+  #gateway.on{ display:grid; place-items:center; animation:gateIn .6s ease forwards; }
+  #gateway.leaving{ animation:gateOut .62s ease forwards; pointer-events:none; }
   @keyframes gateIn{ from{opacity:0} to{opacity:1} }
   @keyframes gateOut{ from{opacity:1} to{opacity:0} }
   html.gate-open #static{ opacity:0 !important; }   /* no TV static on the monitor while the gate's up */
-  /* the button sits at the CENTRE OF THE MONITOR — JS pins #gatePos to the live CRT rect */
-  #gatePos{ position:fixed; left:50%; top:42%; transform:translate(-50%,-50%); z-index:1; }
-  /* one tap = audio unlock + sound preference. buttons read like the in-chat send button */
-  #gateLbl{ font-family:var(--pixel); font-size:.72rem; letter-spacing:.08em; text-transform:lowercase;
-    color:#fff; text-align:center; margin-bottom:1.9em; text-shadow:0 0 8px rgba(235,100,140,.8); }
+  html.gate-open #masthead{ opacity:0 !important; pointer-events:none !important; }   /* the gate owns the first screen */
+  /* the stack: logo → countdown → enter. safe-area padding keeps it clear of notches/home bars */
+  #gatePos{ z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:clamp(1.5rem,5vh,2.6rem); text-align:center; max-width:100%;
+    padding:calc(1.5rem + env(safe-area-inset-top,0px)) clamp(1.2rem,6vw,2rem) calc(1.5rem + env(safe-area-inset-bottom,0px)); }
+  #gateLogo{ display:block; width:min(78vw,32rem); max-height:34vh; height:auto; object-fit:contain;
+    filter:drop-shadow(0 .5rem 1.6rem rgba(235,100,140,.3)); }
+  /* one tap = audio on for the whole visit. the button reads like the in-chat send button */
   #gateRow{ display:flex; gap:.8em; justify-content:center; }
+  /* the whole stack breathes in as the veil lifts, then dives INTO the CRT on the way out */
+  #gateway.on #gatePos{ animation:gateRise .85s .12s cubic-bezier(.2,.85,.3,1) both; }
+  #gateway.leaving #gatePos{ animation:gateDive .62s cubic-bezier(.5,0,.35,1) forwards; }
+  @keyframes gateRise{ from{opacity:0; transform:translateY(16px) scale(.94)} to{opacity:1; transform:none} }
+  @keyframes gateDive{ from{opacity:1; transform:scale(1); filter:blur(0)} to{opacity:0; transform:scale(1.6); filter:blur(7px)} }
+  /* short/landscape phones: the logo can't eat the whole screen or the button falls off */
+  @media (max-height:560px){
+    #gatePos{ gap:clamp(.9rem,3.5vh,1.5rem); }
+    #gateLogo{ width:min(62vw,24rem); max-height:30vh; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    #gateway.on #gatePos, #gateway.leaving #gatePos{ animation:none; }
+  }
   .gateBtn{ position:relative; overflow:hidden; cursor:pointer; font-family:var(--pixel);
     font-size:.66rem; letter-spacing:.06em; text-transform:lowercase; color:#fff;
     padding:.8em 1.35em; border-radius:.55em; background:linear-gradient(90deg,#eb648c,#ec642a);
@@ -357,27 +419,13 @@
   @keyframes ctaGlow{ 0%,100%{box-shadow:0 0 10px rgba(235,100,140,.7),0 0 22px rgba(235,100,140,.4),inset 0 0 8px rgba(255,255,255,.25)}
     50%{box-shadow:0 0 16px rgba(235,216,27,.8),0 0 30px rgba(235,100,140,.6),inset 0 0 10px rgba(255,255,255,.35)} }
 
-  .scroll-space{ position:relative; z-index:5; pointer-events:none; }
-  /* Each groove's TOP is a snap point; its height places that point on a DM turn's progress
-     (progress = top ÷ (totalHeight − 100vh), total = 700vh ⇒ divisor = 600vh). Every section is
-     ≥ 100vh (one viewport) so mandatory snapping can't skip a turn. Thresholds in chatStage(). */
-  .snap{ scroll-snap-align:start; }
-  .s-hero { height:132vh; }  /* top 0vh   → p≈0.00  unread teaser        */
-  .s-party{ height:102vh; }  /* top 132vh → p≈0.22  "a secret to share"  */
-  .s-tea  { height:108vh; }  /* top 234vh → p≈0.39  "a slumber party"    */
-  .s-crew { height:222vh; }  /* top 342vh → p≈0.57  "thirty folks…"      */
-  .s-form { height:136vh; }  /* top 564vh → p≈0.94  the application form  */
   /* mobile: iOS auto-zooms the page when a focused input is <16px, which shatters the fixed
      TV illusion — pin form fields to 16px so focusing a question never zooms the viewport */
   @media (max-width:640px){
     .step input, .step textarea{ font-size:18px; }   /* ≥16px so iOS never zooms; VT323 reads a touch small */
-    #masthead{ justify-content:space-between; }       /* logo left, countdown right */
-    #masthead .head-right{ display:flex; }            /* keep the countdown… */
-    #masthead .apply-link{ display:none; }            /* …just hide Apply (the DM's send buttons carry you to the form) */
-    #masthead .countdown{ padding:.35rem .6rem; gap:.35rem; }
-    #masthead .countdown .cd-label{ font-size:.62rem; letter-spacing:.1em; }
-    #masthead .countdown .cd-time{ font-size:.95rem; }
-    #masthead .snd-toggle{ width:1.9rem; height:1.9rem; font-size:.85rem; }
+    /* the logo is the header's only element — centre it and give it more room on a phone */
+    #masthead{ justify-content:center; padding-left:1rem; padding-right:1rem; }
+    #masthead .logo{ height:3.4rem; }
   }
 
   /* ---------- easter egg: SLUMBER SNAKE (retro game on the CRT) ---------- */
@@ -399,9 +447,6 @@
      the form-mode ✕ shares the same spot and styling */
   #arcadeChrome, #formChrome{ position:fixed; top:clamp(.8rem,2.6vw,1.4rem); right:clamp(.8rem,2.6vw,1.5rem); z-index:26; display:none; gap:.55rem; }
   #arcadeChrome.on, #formChrome.on{ display:flex; }
-  /* while the form's locked, the ✕ is the only top-right control — clear the masthead so it can't
-     collide with the countdown / sound toggle (esp. on a narrow phone) */
-  html.form-lock #masthead{ opacity:0 !important; pointer-events:none !important; }
   .acbtn{ position:relative; width:44px; height:44px; border-radius:100px; display:grid; place-items:center; cursor:pointer;
     color:var(--rose); border:1px solid var(--tag-border); background:var(--card-a); backdrop-filter:blur(5px); font-size:1.05rem;
     transition:transform .15s ease, background .2s ease, color .2s ease; }
@@ -461,6 +506,8 @@
     text-align:center; z-index:3; padding:4% 5%; background:rgba(16,10,24,.55); }
   .g-menu.off{ display:none; }
   .g-menu.nudge{ animation:nudge .4s; }
+  /* sit a touch above dead centre — it reads better than being pinned to the exact middle */
+  @media (max-width:640px){ .g-menu{ padding:4% 5% 9%; } }
   /* left: the game list · right: the selected game's high scores (the FOMO) */
   .gm-wrap{ display:flex; gap:1.3em; align-items:stretch; justify-content:center; width:100%; max-width:30em; }
   .gm-side{ flex:0 0 auto; text-align:left; }
@@ -506,6 +553,7 @@
     <canvas id="static"></canvas>
     <canvas id="glitch"></canvas>
     <canvas id="pixelbg"></canvas>
+    <div id="tvboot"></div>
     <div id="tvtint"></div>
     <div id="scanlines"></div>
     <div id="noisescrim"></div>
@@ -528,7 +576,7 @@
           <div class="ct-head">
             <button class="ct-back" id="ctBack" type="button" aria-label="back a step">‹</button>
             <span class="ct-av"><img src="assets/khushi-face.png" alt="khushi" /></span>
-            <span class="ct-id"><b>khushi</b><i>@khushikapoor · active now</i></span>
+            <span class="ct-id"><b>khushi</b><i>@khushikapoor · <span class="ct-live" id="ctLive"><span class="ct-dot"></span><span id="ctState">active now</span></span></i></span>
           </div>
           <div class="ct-body" id="ctBody"></div>
           <div class="ct-chips" id="ctChips" hidden></div>
@@ -653,11 +701,6 @@
 
   <header id="masthead">
     <img class="logo" src="assets/logo2.png" alt="(secret;) khushi's slumber party" />
-    <div class="head-right">
-      <button class="snd-toggle" id="sndToggle" type="button" title="sound on/off" aria-label="sound on/off">♪</button>
-      <span class="countdown" id="countdown" aria-label="countdown to when the form closes"></span>
-      <a class="apply-link" href="#apply" id="applyLink">Apply</a>
-    </div>
   </header>
 
   <div class="progress" id="progress"></div>
@@ -678,31 +721,21 @@
     <button class="acbtn" id="gmute" title="sound on/off">♪</button>
     <button class="acbtn" id="gquit" title="leave the arcade">✕</button>
   </div>
-  <!-- form-mode chrome: the form locks the page (like the arcade), this ✕ is the only way out -->
-  <div id="formChrome">
-    <button class="acbtn" id="formExit" title="close the form">✕</button>
-  </div>
   <div id="veil"><div class="l">shhh…</div></div>
 
-  <!-- the sound gate: shown once the veil lifts. one tap dismisses it, unlocks audio for the
-       DM's ping AND records the sound preference in the same gesture. -->
+  <!-- the entry gate: the FIRST screen, shown once the veil lifts. One tap dismisses it and
+       unlocks audio for the rest of the visit (there's no sound toggle anywhere else). The logo
+       and the "form closes in" countdown live here — the only screen either appears on. -->
   <div id="gateway" aria-hidden="true">
     <div id="gatePos">
-      <div id="gateLbl">for your eyes only</div>
+      <img id="gateLogo" src="assets/logo2.png" alt="(secret;) khushi's slumber party" />
+      <span class="countdown" id="countdown" aria-label="countdown to when the form closes"></span>
       <div id="gateRow">
         <button id="gateYes" class="gateBtn" type="button">enter ▸</button>
       </div>
     </div>
   </div>
 
-  <!-- scroll grooves: one snap detent per DM turn + the form (heights defined in CSS place each point) -->
-  <div class="scroll-space">
-    <section class="snap s-hero"></section>
-    <section class="snap s-party"></section>
-    <section class="snap s-tea"></section>
-    <section class="snap s-crew"></section>
-    <section class="snap s-form"></section>
-  </div>
 
 <script>
 /* ============================================================
@@ -713,6 +746,14 @@
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 const smooth=(e0,e1,x)=>{const t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t);};
+
+/* ---------- where we are in the scene ----------
+   Declared up here because the render loop starts before the block that drives them (see
+   "INSIDE THE SCREEN" further down) — a `let` down there would still be in its dead zone on
+   the first frame. */
+const TEASER_P=0.06;               // the gentle push toward the CRT while the DM sits unread
+const INSIDE_P=0.94;               // full zoom, with the pink noise dimmed enough to read against
+let inside=false, insideStage=0, applyStarted=false, flying=false;
 
 /* ---------- scroll → progress ---------- */
 let targetP=0, curP=0;
@@ -769,15 +810,11 @@ addEventListener('resize', ()=>{
 computeBase(); lastVW=room.clientWidth; lastVH=room.clientHeight;
 
 const ZOOM_END=0.46;
-const ZOUT=0.10;   // how far back we pull for the on-screen form (0 = whole computer in view)
 function updateZoom(p){
-  // zoom IN (0→0.42), hold at full (0.42→0.66), then (desktop) zoom OUT to ZOUT for the form (0.66→0.84).
-  // on mobile the form takes over fullscreen anyway, so we DON'T pull back — staying full avoids the
-  // shrink-then-expand jump when the fullscreen form snaps in.
-  // stay fullscreen on mobile AND on the flip phone (its screen is too small to pull back to) —
-  // only the Mac on desktop pulls back to show the computer with the chat on its screen
-  const zoomOut = (innerWidth<=640 || DEVICE==='phone') ? 1 : lerp(1, ZOUT, smooth(0.66, 0.84, p));
-  const z=Math.min(smooth(0, 0.42, p), zoomOut);
+  // zoom IN (0→0.42) and STAY there. The old desktop pull-back (out to ZOUT, so you saw the little
+  // computer with the chat on its screen) is gone — once you're through the DM we live inside the
+  // screen on every size, which is what makes the thread readable on a phone.
+  const z=smooth(0, 0.42, p);
   const Vw=room.clientWidth, Vh=room.clientHeight;   // lvh-stable, same box computeBase used
   const s=lerp(1, ZMAX, z);
   const cx=lerp(base.cx, 0.5, z), cy=lerp(base.cy, 0.5, z);  // screen centre pans to viewport centre
@@ -868,6 +905,7 @@ const chat=document.getElementById('chat');
 const chatInbox=document.getElementById('chatInbox');
 const chatThread=document.getElementById('chatThread');
 const ctBody=document.getElementById('ctBody');
+const ctLive=document.getElementById('ctLive'), ctState=document.getElementById('ctState');
 const ctCompose=document.getElementById('ctCompose');
 const ctDraft=document.getElementById('ctDraft');
 const ctSend=document.getElementById('ctSend');
@@ -934,7 +972,10 @@ const CHATFX=(function(){
   }
   return {
     nokia:nokiaTone,
-    // flip the pings on/off — the header toggle + arcade mute share this ('ksp-snd')
+    // wake the audio context by hand — the gate's "enter" stops its click from bubbling to the
+    // window-level unlock listeners, so it has to ask for the unlock inside its own gesture
+    unlock:fxUnlock,
+    // flip the pings on/off — the gate turns them ON for good; the arcade's mute shares this ('ksp-snd')
     muted(){ return fxMuted; },
     setMuted(m){ fxMuted=!!m; try{ localStorage.setItem('ksp-snd', fxMuted?'off':'on'); }catch(e){} if(!fxMuted) fxUnlock(); },
     // her message lands — a soft two-note ding, imessage-ish (G5 then C6)
@@ -990,13 +1031,12 @@ const CHATFX=(function(){
 // the conversation: each turn is one of her lines + the reply we pre-draft for you to send.
 // hitting "send" (or just scrolling) advances one snap groove → the next turn appears.
 const CHAT=[
-  { her:'i have a secret to share 🤫',                            draft:'whaaat? tell me' },
-  { her:"nooo, i'm hosting a slumber party to spill the tea ☕",   draft:"who's going to be there?" },
-  { her:'a group of thirty folks — my friends, a few creators, artists, entrepreneurs & some of you girlies ✨', draft:'how can i get in?' }
+  { her:'i have a secret to share 🤫',                            draft:'whaaat?? tell me!!' },
+  { her:"nooo, i'm hosting a slumber party to spill the tea ☕",   draft:"ahaha, who's going to be there?" },
+  { her:'a group of thirty folks — my friends, a few creators, artists, entrepreneurs & some of you girlies ✨', draft:'can i come too?' }
 ];
-// the 5 snap grooves map to stages 0–4: inbox, three DM turns, then the form. stage 4 has no
-// new line of hers — sending "how can i get in?" just lands you on the application form.
-function chatStage(p){ return p<0.11?0 : p<0.30?1 : p<0.48?2 : p<0.72?3 : 4; }
+// stages 0–4: the unread teaser, three DM turns, then the application. Stage 4 has no new line
+// of hers — sending the last reply is what starts khushi asking.
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const bubble=(who,t)=>'<div class="msg '+who+'">'+esc(t)+'</div>';
 const TYPING='<div class="msg typing"><i></i><i></i><i></i></div>';
@@ -1014,15 +1054,24 @@ function buildThread(stage, typing){
    once you send "how can i get in?", the page locks and khushi keeps the conversation going,
    asking each question; you type real answers (the "who are you?" step is tap-chips), then it
    posts to the same Google Form and unlocks the arcade — all inside the thread. */
+// just the first word of whatever they typed, so khushi can use their name later in the thread
+const firstName=n=>String(n||'').trim().split(/\s+/)[0]||'';
+// `ask` takes a string, an array to send as consecutive messages (each with its own typing beat)
+// before the field opens, or a function of the answers so far for a personalised line.
 const APPLY_Q=[
-  { name:'name',   ask:"gimme deets, i'll try getting you on the list. what's your name?", type:'text',   ph:'first & last' },
-  { name:'city',   ask:"where are you based?",                     type:'city',   ph:'start typing your city…' },
+  { name:'name',   ask:["i'll try getting you on the list, i only have three more spots!",
+                        'help me with these deets…',
+                        'name'],                                  type:'text',   ph:'first & last' },
+  { name:'city',   ask:a=>{ const f=firstName(a.name); return f ? f+', where are you from?' : 'where are you from?'; },
+                                                                   type:'city',   ph:'start typing your city…' },
   { name:'age',    ask:"what's your age?",                         type:'age',    ph:'21' },
-  { name:'role',   ask:"what describes you best?",                 type:'choice', choices:['creator','artist','entrepreneur','follower'] },
+  { name:'role',   ask:"what describes you best?",                 type:'choice', list:true,
+    choices:['🖥️ 9-to-5 Icon','💼 Corporate Baddie','🏃 Gym Girlie','🚀 Startup Hustler','✨ Internet Baddie','🤍 Just Here for the Vibes'] },
   { name:'handle', ask:"your instagram?",                          type:'handle', ph:'yourhandle' },
   { name:'phone',  ask:"drop your number?",                        type:'tel',    ph:'98765 43210', optional:true },
   { name:'email',  ask:"your email?",                              type:'email',  ph:'you@email.com' },
-  { name:'why',    ask:'last one — finish this sentence: "my slumber party is incomplete without ___"', type:'text', ph:'fill in the blank' }
+  { name:'why',    ask:['also last one, tell me a little about yourself?',
+                        'why do you want to be a part of this?'],  type:'text', ph:'tell me…' }
 ];
 // the city question filters this list as you type (free-typed cities are fine too)
 const CITIES=['mumbai','delhi','bangalore','hyderabad','chennai','kolkata','pune','ahmedabad','jaipur','surat',
@@ -1048,9 +1097,17 @@ function suggestCities(q){
   ctSuggest.hidden=!hits.length;
 }
 let qIndex=-1, qAns={}, qBusy=false;
+// The thread scrolls by hand, so auto-scrolling has to yield: while you're reading back through
+// the conversation we leave your scroll position alone, and only resume following the newest
+// line once you've returned to the bottom. `force` overrides it (your own sends, stage changes).
+let chatStick=true;
+ctBody.addEventListener('scroll', ()=>{
+  chatStick = (ctBody.scrollHeight - ctBody.scrollTop - ctBody.clientHeight) < 48;
+}, {passive:true});
 // keep the newest line in view — but if it's taller than the body, show its TOP (never clip the
 // opening words of a long message; the tail below is normal chat behaviour)
-function pinChat(){
+function pinChat(force){
+  if(!force && !chatStick) return;
   const last=ctBody.lastElementChild;
   if(!last){ ctBody.scrollTop=ctBody.scrollHeight; return; }
   const top=last.getBoundingClientRect().top - ctBody.getBoundingClientRect().top + ctBody.scrollTop;
@@ -1058,7 +1115,9 @@ function pinChat(){
 }
 function addTyping(){ ctBody.insertAdjacentHTML('beforeend', TYPING); pinChat(); }
 function clearTyping(){ const t=ctBody.querySelector('.msg.typing'); if(t) t.remove(); }
-function addBubble(who,text){ ctBody.insertAdjacentHTML('beforeend', bubble(who,text)); pinChat(); if(who==='her') CHATFX.recv(); else CHATFX.sent(); }
+// your own line always scrolls you back down; hers respects a scroll-up
+function addBubble(who,text){ ctBody.insertAdjacentHTML('beforeend', bubble(who,text));
+  if(who==='her'){ pinChat(); CHATFX.recv(); } else { chatStick=true; pinChat(true); CHATFX.sent(); } }
 function nudgeField(){ const el=(!ctChips.hidden)?ctChips:(!ctDate.hidden)?ctDate:ctInput; el.classList.add('nudge'); setTimeout(()=>el.classList.remove('nudge'),420); }
 // which bit of the compose is live: pre-drafted span | real input | tap-chips | birthday selects | nothing
 function composeMode(m){   // 'draft' | 'type' | 'choice' | 'date' | 'none'
@@ -1069,7 +1128,7 @@ function composeMode(m){   // 'draft' | 'type' | 'choice' | 'date' | 'none'
   ctDate.hidden    = (m!=='date');
   if(m!=='type'){ ctAt.hidden=true; suggestCities(null); }
 }
-function startApply(){                       // called from enterFormLock (page is now frozen)
+function startApply(){                       // called by renderChat once stage 4 is on screen
   qAns={}; qIndex=-1; qBusy=false;
   clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
   askQuestion(0);
@@ -1078,18 +1137,27 @@ function askQuestion(i){
   if(i>=APPLY_Q.length){ finishApply(); return; }
   qIndex=i; qBusy=true;
   const q=APPLY_Q[i];
-  addTyping();                               // khushi "types", then the question lands
+  const raw=(typeof q.ask==='function') ? q.ask(qAns) : q.ask;
+  const lines=Array.isArray(raw)?raw:[raw];
   clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
-  askQuestion._t1=setTimeout(()=>{
-    clearTyping(); addBubble('her', q.ask);
-    askQuestion._t2=setTimeout(()=>readyAnswer(q), 550);
-  }, 1100);
+  // her lines land one after another, each with its own "typing" beat; the field only opens
+  // once the last one has arrived
+  (function sendLine(n){
+    if(n>=lines.length){ askQuestion._t2=setTimeout(()=>{ if(qIndex===i) readyAnswer(q); }, 550); return; }
+    addTyping();
+    askQuestion._t1=setTimeout(()=>{
+      if(qIndex!==i) return;                 // the question moved on (or we left) — drop this one
+      clearTyping(); addBubble('her', lines[n]);
+      sendLine(n+1);
+    }, n===0 ? 1100 : 850);
+  })(0);
 }
 function readyAnswer(q){
   qBusy=false;
   if(q.type==='choice'){
+    ctChips.classList.toggle('list', !!q.list);   // too many options for a row of pills → a scrollable list
     ctChips.innerHTML=q.choices.map(c=>'<button type="button" class="ct-chip" data-val="'+esc(c)+'">'+esc(c)+'</button>').join('');
-    composeMode('choice'); pinChat(); return;
+    composeMode('choice'); pinChat(true); return;
   }
   if(q.type==='date'){                                   // birthday: three little selects, send once all picked
     fillDateSelects(); ctDD.value=''; ctMM.value=''; ctYY.value='';
@@ -1099,6 +1167,8 @@ function readyAnswer(q){
   composeMode('type');
   ctInput.type = q.type==='email'?'email' : q.type==='tel'?'tel' : 'text';
   ctInput.inputMode = q.type==='tel'?'tel' : q.type==='email'?'email' : (q.type==='age'?'numeric':'text');
+  // iOS only opens the number pad for a text input when a digits-only pattern is on it too
+  if(q.type==='age'||q.type==='tel') ctInput.setAttribute('pattern','[0-9]*'); else ctInput.removeAttribute('pattern');
   ctInput.placeholder = q.ph||'message…';
   // a fixed prefix in the compose row: "@" for instagram, "+91" for the phone number
   if(q.type==='handle'){ ctAt.textContent='@'; ctAt.hidden=false; }
@@ -1122,6 +1192,10 @@ function syncSend(){
 function submitAnswer(rawVal){
   if(qBusy || qIndex<0) return;
   const q=APPLY_Q[qIndex];
+  // a chips question is answered by tapping a chip and nothing else — without this, a stray
+  // Enter (the compose row is hidden, but the key handler isn't) files whatever the field
+  // happened to be left holding as the answer
+  if(q.type==='choice' && rawVal==null) return;
   let store, disp;
   if(q.type==='date'){
     const dd=ctDD.value, mm=ctMM.value, yy=ctYY.value;
@@ -1159,25 +1233,37 @@ async function submitApplication(data){
     catch(err){ console.warn('submit failed, confirming anyway', err); }
   } else { console.log('Application (Google Form not configured yet):', data); }
 }
+// her sign-off, sent line by line like everything else, then the arcade unlocks
+const OUTRO=["noted. i am on my way to stalk you!!! i'll reach out if you're in :)", 'till then…'];
 function finishApply(){
   qBusy=true; qIndex=-1; composeMode('none');
   submitApplication(qAns);            // fire-and-forget — it's a no-cors POST, we can't read the reply anyway
-  addTyping();                        // khushi "sends" the confirmation after a beat, regardless of the network
-  setTimeout(()=>{
-    clearTyping();
-    addBubble('her', "sorted, will keep you posted about the list");
-    setTimeout(()=>{
-      ctChips.innerHTML='<button type="button" class="ct-chip cta" id="chatArcade">▸ enter khushi’s arcade</button>';
-      composeMode('choice'); pinChat();
-      if(window.__slumberGame) window.__slumberGame.unlock();
-      const b=document.getElementById('chatArcade');
-      if(b) b.addEventListener('click', ()=>{ if(window.__slumberGame) window.__slumberGame.start(); });
-    }, 800);
-  }, 1200);
+  clearTimeout(finishApply._t);       // she signs off after a beat regardless of the network
+  (function sendLine(n){
+    if(n>=OUTRO.length){ finishApply._t=setTimeout(showArcadeCta, 750); return; }
+    addTyping();
+    finishApply._t=setTimeout(()=>{
+      if(!inside) return;             // they backed out mid sign-off
+      clearTyping(); addBubble('her', OUTRO[n]);
+      sendLine(n+1);
+    }, n===0 ? 1200 : 900);
+  })(0);
+}
+function showArcadeCta(){
+  ctChips.classList.remove('list');
+  ctChips.innerHTML='<button type="button" class="ct-chip cta" id="chatArcade">▸ enter khushi’s arcade</button>';
+  composeMode('choice'); pinChat(true);
+  if(window.__slumberGame) window.__slumberGame.unlock();
+  const b=document.getElementById('chatArcade');
+  if(b) b.addEventListener('click', ()=>{ if(window.__slumberGame) window.__slumberGame.start(); });
 }
 ctInput.addEventListener('input', ()=>{
-  // phone: keep it to digits only, capped at 10 (the +91 lives in the prefix, not the field)
-  if(qIndex>=0 && APPLY_Q[qIndex] && APPLY_Q[qIndex].type==='tel'){ const d=ctInput.value.replace(/\D/g,'').slice(0,10); if(d!==ctInput.value) ctInput.value=d; }
+  // digits only: the phone caps at 10 (the +91 lives in the prefix, not the field), the age at 2
+  const t=(qIndex>=0 && APPLY_Q[qIndex]) ? APPLY_Q[qIndex].type : null;
+  if(t==='tel' || t==='age'){ const d=ctInput.value.replace(/\D/g,'').slice(0, t==='tel'?10:2); if(d!==ctInput.value) ctInput.value=d; }
+  // an email or an @handle can't contain a space — swallow it as it's typed rather than failing
+  // validation later (mobile keyboards love to insert one after a full stop)
+  if(t==='email' || t==='handle'){ const v=ctInput.value.replace(/\s+/g,''); if(v!==ctInput.value) ctInput.value=v; }
   if(qIndex>=0 && !qBusy) syncSend(); if(cityMode) suggestCities(ctInput.value); });
 ctInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(!ctSend.disabled) submitAnswer(); } });
 // keyboard ticks while you type a real answer (letters + backspace only — not enter/arrows/modifiers)
@@ -1190,8 +1276,13 @@ ctSuggest.addEventListener('click', e=>{ const b=e.target.closest('[data-city]')
 [ctDD,ctMM,ctYY].forEach(s=>s.addEventListener('change', ()=>{
   if(qIndex>=0 && !qBusy && APPLY_Q[qIndex].type==='date') ctSend.disabled=!(ctDD.value&&ctMM.value&&ctYY.value);
 }));
-// the ‹ in the thread header steps back a turn (and back to the teaser from turn one)
-document.getElementById('ctBack').addEventListener('click', ()=>{ if(!formLocked) goSnap(-1); });
+// the ‹ in the thread header steps back a turn, and flies back out to the teaser from turn one.
+// Once khushi starts asking the application questions there's nothing sane to step back to, so
+// it stops there rather than stranding a half-answered form.
+document.getElementById('ctBack').addEventListener('click', ()=>{
+  if(!inside || flying || applyStarted) return;
+  if(insideStage>1) insideStage--; else exitScreen();
+});
 
 // your pre-drafted reply types itself into the compose field, char by char, left-aligned;
 // the send button only surfaces once the reply has finished typing
@@ -1231,11 +1322,12 @@ function renderChat(stage){
     if(notifReady) showNotif();      // else the veil-clear handler fires it once you can see the screen
     return;
   }
-  if(stage>CHAT.length){            // stage 4 — the application: render the intro convo; the Q&A
-    qIndex=-1;                      // begins once the page locks (enterFormLock → startApply)
-    clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
-    ctBody.innerHTML=buildThread(stage, false); pinChat();
+  if(stage>CHAT.length){            // stage 4 — the application: render the intro convo, then khushi
+    qIndex=-1;                      // starts asking. Kicked off HERE (not by the caller) so the
+    clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);   // thread is rebuilt before her
+    ctBody.innerHTML=buildThread(stage, false); pinChat(true);      // first "typing" bubble lands.
     composeMode('none');
+    if(inside && !applyStarted){ applyStarted=true; setTimeout(()=>{ if(inside && applyStarted) startApply(); }, 700); }
     return;
   }
   qIndex=-1;                        // any intro turn — reset the Q&A (e.g. after exiting the lock)
@@ -1247,7 +1339,7 @@ function renderChat(stage){
     composeMode('draft'); clearInterval(typeDraft._t); ctDraft.classList.remove('caret');
     ctDraft.textContent=text||''; ctSend.disabled=(text==null);
   };
-  const toBottom=()=>pinChat();
+  const toBottom=()=>pinChat(true);
   if(forward){
     // her line runs a "typing" loader → lands → a beat passes → then your reply types into the (already-there) field
     ctBody.innerHTML=buildThread(stage, true); toBottom(); field(null);   // field present, empty, send disabled
@@ -1261,24 +1353,46 @@ function renderChat(stage){
   }
 }
 function updateChat(p){
-  renderChat(chatStage(p));
-  // keep the thread pinned to its latest line every frame — the CRT's font-size shifts the
-  // content height as the scene zooms, so a one-shot scroll can go stale (body is overflow:hidden,
-  // so the reader never scrolls it by hand). short threads sit at the top; full ones stick to bottom.
-  if(!chatThread.hidden) pinChat();
-  // mobile: recentre the card in the actually-visible slice. the room is sized to the LARGE
-  // viewport (lvh) for zoom stability, so with the browser's url bar up a room-centred card sits
-  // low. scale the nudge by how fullscreen the CRT is, so the tiny inbox isn't shoved off-screen.
-  let cardY=0;
-  if(innerWidth<=640){
-    const vv=window.visualViewport;
-    if(vv){ const full=Math.min(1, tv.getBoundingClientRect().height/room.clientHeight);
-      cardY=((vv.offsetTop + vv.height/2) - room.clientHeight/2)*full; }
+  // before you're inside, the only beat is the unread teaser; once you're inside, the stage is
+  // driven by send/back, never by the camera
+  renderChat(inside ? insideStage : 0);
+  // only re-pin while the camera is actually moving (the CRT's font-size shifts the content
+  // height mid-flight, so a one-shot scroll would go stale). Once we've landed, the thread is
+  // yours to scroll — see chatStick in pinChat().
+  if(flying && !chatThread.hidden) pinChat(true);
+  // mobile: the card lives in the slice the browser chrome / keyboard actually leaves visible.
+  // The room is sized to the LARGE viewport (lvh) for zoom stability, so a room-centred card
+  // sits low with the url bar up — and once we're inside, the card is also SIZED to that slice
+  // so the compose row is never buried under the keyboard.
+  let cardY=0, cardH='';
+  const vv=window.visualViewport;
+  if(inside){
+    const vh = vv ? vv.height : innerHeight, off = vv ? vv.offsetTop : 0;
+    cardH = vh+'px';
+    cardY = (off + vh/2) - room.clientHeight/2;
+  } else if(vv && innerWidth<=640){
+    const full=Math.min(1, tv.getBoundingClientRect().height/room.clientHeight);
+    cardY=((vv.offsetTop + vv.height/2) - room.clientHeight/2)*full;
   }
   chat.style.setProperty('--cardY', cardY.toFixed(1)+'px');
+  if(cardH) chat.style.setProperty('--cardH', cardH); else chat.style.removeProperty('--cardH');
+  // the keyboard sliding in/out resizes the card — re-pin so the newest line stays visible above
+  // the compose row instead of being pushed off the top (respects a manual scroll-up)
+  if(cardH!==updateChat._h){ updateChat._h=cardH; if(!chatThread.hidden) pinChat(); }
   chat.style.opacity='1';                                  // the chat IS the form now — it never hands off
   noisescrim.style.opacity='1';                            // keep the screen legible under the noise
   bar.style.width=(p*100)+'%';
+  paintStatus();
+}
+// the header status mirrors the thread: "typing…" for as long as her loader is on screen,
+// "active now" otherwise. Read off the DOM so every path that shows a loader is covered.
+function paintStatus(){
+  if(!ctState) return;
+  const t=!!ctBody.querySelector('.msg.typing');
+  if(t===paintStatus._t) return;
+  paintStatus._t=t;
+  ctState.textContent = t ? 'typing…' : 'active now';
+  ctLive.classList.toggle('typing', t);
 }
 
 /* ---------- main loop ---------- */
@@ -1288,7 +1402,6 @@ function tick(){
   tt+=0.016;
   if(typeof window.__p==='number'){ targetP=clamp(window.__p,0,1); curP=targetP; }
   else curP += (targetP-curP)*0.2;
-  if(window.__p===undefined && targetP>0.92 && curP>0.92) enterFormLock();   // reaching the form locks the page
   updateZoom(curP);
   updateChat(curP);
   if((sf++ & 1)===0) drawStatic();   // ~30fps static is plenty
@@ -1312,30 +1425,29 @@ function hideVeil(){ if(veilGone)return; veilGone=true; const v=document.getElem
 
 /* ---------- the "enter" gate — revealed as the veil lifts; its tap unlocks audio + reveals the scene ---------- */
 let gateOpen=false;
-function positionGateBtn(){                                // pin the button to the middle of the CRT, not the page
-  if(!gateOpen) return;
-  const pos=document.getElementById('gatePos'); if(!pos) return;
-  const r=tv.getBoundingClientRect();
-  if(r && r.width>1){ pos.style.left=(r.left+r.width/2)+'px'; pos.style.top=(r.top+r.height/2)+'px'; }
-}
-addEventListener('resize', positionGateBtn);
 function revealIntro(){                                    // the old hideVeil tail: the actual scene reveal
   if(DEVICE==='phone'){ startPhoneIntro(); return; }       // the phone flips open first, then the DM lands
-  notifReady=true; if(lastStage===0) showNotif();          // (mac) the screen's visible, let the unread DM land
+  zoomNudgeThenNotify();                                   // (mac) push the camera toward the CRT, then land the DM
 }
 function showGateway(){
   const g=document.getElementById('gateway');
   if(!g){ revealIntro(); return; }                         // no gate in the DOM → reveal straight away
   gateOpen=true; g.classList.add('on'); document.documentElement.classList.add('gate-open');   // kill the monitor static while gated
-  positionGateBtn(); requestAnimationFrame(positionGateBtn);
   const enter=(e,soundOn)=>{
     if(!gateOpen) return; gateOpen=false;
     if(e) e.stopPropagation();                              // this tap must NOT also advance the DM behind the gate
-    try{ CHATFX.setMuted(!soundOn); }catch(err){}           // the same tap records the sound pref everywhere
-    try{ if(typeof paintSnd==='function') paintSnd(); }catch(err){}
+    // entering turns sound ON for good — there's no header toggle, so this tap is the only
+    // chance to wake the audio context inside a gesture (or the DM's ping gets dropped)
+    try{ CHATFX.setMuted(!soundOn); }catch(err){}
+    try{ CHATFX.unlock(); }catch(err){}
     document.documentElement.classList.remove('gate-open');
-    g.classList.add('leaving'); setTimeout(()=>{ g.remove(); }, 600);
-    revealIntro();                                          // audio's unlocked now — land the DM + its ping
+    // the stack dives into the screen (CSS) while the backdrop clears; the scene's own push
+    // toward the CRT starts partway through so the two reads as one continuous move inward
+    g.classList.add('leaving'); setTimeout(()=>{ g.remove(); }, 700);
+    // the CRT powers on behind the clearing gate — a hairline that snaps open into the picture
+    const root=document.documentElement;
+    root.classList.add('booting'); setTimeout(()=>root.classList.remove('booting'), 1200);
+    setTimeout(revealIntro, 240);                           // audio's unlocked now — land the DM + its ping
   };
   g.querySelector('#gateYes').addEventListener('click', e=>enter(e,true), {once:true});   // one button: enter → sound on for everyone
   try{ g.querySelector('#gateYes').focus({preventScroll:true}); }catch(e){}   // so Enter/Space activate it too
@@ -1358,95 +1470,106 @@ function startPhoneIntro(){
   try{ const p=fi.play(); if(p&&p.catch) p.catch(()=>handoff()); }catch(e){ handoff(); }
 }
 function zoomNudgeThenNotify(){
-  // ease a gentle zoom-in, then reveal the unread DM; hold there until the first scroll takes over
-  const t0=performance.now(), TARGET=0.06, DUR=850;
-  window.__p=0;
-  (function step(now){
-    const k=Math.min(1,(now-t0)/DUR), e=k*k*(3-2*k);
-    window.__p=TARGET*e;
-    if(k<1) requestAnimationFrame(step);
-    else { notifReady=true; if(lastStage===0) showNotif(); armIntroRelease(TARGET); }
-  })(t0);
-}
-function armIntroRelease(atP){
-  const rel=()=>{
-    removeEventListener('wheel', rel); removeEventListener('touchmove', rel); removeEventListener('keydown', rel);
-    window.__introRelease=null;
-    if(window.__p===undefined) return;
-    const max=document.body.scrollHeight-room.clientHeight;   // land the scroll where the nudge left off — no jump
-    delete window.__p; window.scrollTo(0, Math.round(atP*max)); readScroll();
-  };
-  window.__introRelease=rel;      // a tap can release the hold too (goSnap calls this before it scrolls)
-  addEventListener('wheel', rel, {passive:true});
-  addEventListener('touchmove', rel, {passive:true});
-  addEventListener('keydown', rel);
+  // ease a gentle push toward the CRT as it boots, then land the unread DM. The camera stays
+  // here — the only way onward is tapping the message open.
+  easeP(0, TEASER_P, 850, ()=>{ notifReady=true; if(lastStage===0) showNotif(); });
 }
 function maybeHideVeil(){ if(veilGone)return; setTimeout(hideVeil, Math.max(0, MIN_VEIL-performance.now())); }  // hold at least MIN_VEIL
 roomimg.complete ? maybeHideVeil() : roomimg.addEventListener('load', maybeHideVeil);
 addEventListener('load', maybeHideVeil); setTimeout(hideVeil, MAX_VEIL);   // hard cap so it never sticks
 
-/* ---------- header "Apply" jumps to the form ---------- */
-document.getElementById('applyLink').addEventListener('click', e=>{
-  e.preventDefault(); window.scrollTo({ top:document.body.scrollHeight, behavior:'smooth' });
-});
-
-/* ---------- header countdown to the party ---------- */
-const PARTY = new Date('2026-07-25T00:00:00');   // 25 Jul 2026, 12am (local) — placeholder, change anytime
+/* ---------- countdown to when the form closes (gate screen only) ---------- */
+const PARTY = new Date('2026-08-13T00:00:00');   // 13 Aug 2026, 12am (local) — change when the date's confirmed
 const cdEl = document.getElementById('countdown');
+let cdTimer=0;
 function renderCountdown(){
   if(!cdEl) return;
+  if(!cdEl.isConnected){ clearInterval(cdTimer); return; }   // the gate's gone — stop ticking into a detached node
   const s = Math.max(0, Math.floor((PARTY - new Date())/1000));
   const d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60), sec = s%60;
   const p = n => String(n).padStart(2,'0');
-  const t = (d>0 ? d+'d ' : '') + p(h)+':'+p(m)+':'+p(sec);
+  const t = p(d)+':'+p(h)+':'+p(m)+':'+p(sec);   // days read as another clock segment, not a "14d" suffix
   cdEl.innerHTML = '<span class="cd-label">form closes in</span><span class="cd-time">'+t+'</span>';
 }
-renderCountdown(); setInterval(renderCountdown, 1000);
+renderCountdown(); cdTimer=setInterval(renderCountdown, 1000);
 
-/* ---------- header sound toggle — visible from the first frame; tapping it is also the
-   gesture that lets the browser unblock audio, so a pending unread ping can land ---------- */
-const sndBtn=document.getElementById('sndToggle');
-function paintSnd(){ if(sndBtn) sndBtn.classList.toggle('off', CHATFX.muted()); }
-if(sndBtn){ sndBtn.addEventListener('click', e=>{ e.stopPropagation(); CHATFX.setMuted(!CHATFX.muted()); paintSnd(); }); paintSnd(); }
-
-/* ---------- stepping through the snap grooves (the DM's send buttons) ---------- */
-const snapTops=()=>[...document.querySelectorAll('.scroll-space section')].map(s=>s.offsetTop);
-let snapRestore=0;
-function goSnap(dir){
-  if(window.__introRelease) window.__introRelease();   // a tap during the intro hold must actually move the page (mobile)
-  const tops=snapTops(), y=scrollY, eps=12, maxY=document.body.scrollHeight-innerHeight;
-  let target;
-  if(dir>0){ target=tops.find(v=>v>y+eps); if(target==null) target=maxY; }
-  else { const before=tops.filter(v=>v<y-eps); target=before.length? before[before.length-1] : 0; }
-  target=Math.max(0, Math.min(target,maxY));
-  // mandatory scroll-snap fights a programmatic scroll — keep it off until we actually ARRIVE.
-  // (the old fixed 900ms restore could fire mid-animation on a slow phone and yank the page back,
-  // which is why taps "did nothing" on mobile)
-  const root=document.documentElement;
-  root.style.scrollSnapType='none';
-  clearInterval(snapRestore);
-  window.scrollTo({ top:target, behavior:'smooth' });
-  let still=0, lastY=-1;
-  const arrive=()=>{ clearInterval(snapRestore); window.scrollTo({ top:target, behavior:'instant' }); root.style.scrollSnapType=''; };
-  snapRestore=setInterval(()=>{
-    const y2=Math.round(scrollY);
-    if(Math.abs(y2-target)<4) return arrive();          // made it — pin + re-arm the snap
-    still=(y2===lastY)?still+1:0; lastY=y2;
-    if(still>=8) arrive();                              // animation stalled → jump the rest, never strand the tap
-  }, 150);
+/* ---------- INSIDE THE SCREEN ----------
+   The page never scrolls. The camera sits at TEASER_P on the unread DM; opening it flies all
+   the way to INSIDE_P (full-screen CRT) and LOCKS there, and from then on the conversation is
+   driven purely by send / back while the thread scrolls inside its own panel. One state instead
+   of a scroll position means momentum and the mobile keyboard have nothing left to fight over.
+   (TEASER_P / INSIDE_P / inside / insideStage / applyStarted / flying are declared at the top,
+   above the render loop.) */
+// drive the camera by hand — window.__p overrides the (now unused) scroll position entirely.
+// rAF STOPS in a backgrounded tab, so a plain rAF ease would leave `flying` stuck true forever
+// and every tap dead on return; a timer guarantees we always land, and `settled`/`flyToken` stop
+// a thawed-out stale frame from re-animating a flight that's already over.
+let flyToken=0;
+function easeP(from, to, dur, done){
+  const my=++flyToken;
+  clearTimeout(easeP._t);
+  flying=true;
+  let settled=false;
+  const t0=performance.now();
+  const finish=()=>{
+    if(settled || my!==flyToken) return;
+    settled=true; clearTimeout(easeP._t);
+    window.__p=to; flying=false; if(done) done();
+  };
+  (function step(now){
+    if(settled || my!==flyToken) return;
+    const k=Math.min(1,(now-t0)/dur), e=k*k*(3-2*k);
+    window.__p = from + (to-from)*e;
+    if(k<1) requestAnimationFrame(step); else finish();
+  })(t0);
+  easeP._t=setTimeout(finish, dur+300);
 }
-// opening the unread teaser + each "send" steps to the next snap groove (the DM advances by scroll or tap)
+function lockPage(on){
+  // mobile really does need body:fixed — otherwise focusing a field scrolls the whole page
+  // out from under the fixed CRT and the illusion falls apart
+  document.documentElement.style.overflow = on ? 'hidden' : '';
+  document.body.style.position = on ? 'fixed' : '';
+  document.body.style.inset = on ? '0' : '';
+}
+function enterScreen(){
+  if(inside || flying || !veilGone || gateOpen) return;
+  inside=true; insideStage=0; applyStarted=false; chatStick=true;
+  document.documentElement.classList.add('inside');   // masthead out, thread goes full-bleed
+  lockPage(true);
+  const from=(typeof window.__p==='number') ? window.__p : curP;
+  // her first line opens partway through the flight, so the thread is already alive when we land
+  clearTimeout(enterScreen._t);
+  enterScreen._t=setTimeout(()=>{ if(inside) insideStage=1; }, 520);
+  easeP(from, INSIDE_P, 950);
+}
+function exitScreen(){
+  if(!inside) return;
+  inside=false; insideStage=0; applyStarted=false; qIndex=-1; qBusy=false; cityMode=false;
+  clearTimeout(enterScreen._t); clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
+  clearTimeout(finishApply._t); clearTimeout(chatTimer); clearInterval(typeDraft._t);
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  document.documentElement.classList.remove('inside');
+  lockPage(false);
+  composeMode('none'); suggestCities(null);
+  notifReady=true;
+  easeP((typeof window.__p==='number') ? window.__p : curP, TEASER_P, 700);
+}
+function advanceStage(){
+  if(!inside || flying) return;
+  if(insideStage>CHAT.length) return;    // the application is running — sends go through submitAnswer
+  insideStage++;
+}
 function chatSend(){
-  if(ctSend.disabled) return;                    // send only works once there's something to send
+  if(ctSend.disabled || ctCompose.hidden) return;   // nothing to send (or the compose row isn't even up)
   if(qIndex>=0){ submitAnswer(); return; }        // answering one of khushi's application questions (addBubble handles its sound)
   CHATFX.sent();                                   // draft mode renders via buildThread, so it needs its own swoosh
-  goSnap(1);                                       // an intro turn — step to the next groove
+  advanceStage();
 }
-// in the hero, tapping ANYWHERE on the computer opens the DM (not just the message card)
+// on the teaser, tapping ANYWHERE on the computer opens the DM (not just the message card)
 addEventListener('click', e=>{
-  if(gateOpen || !veilGone || formLocked || chatStage(curP)!==0) return;   // only during the unread-teaser beat (never through the gate)
-  if(e.target.closest('#masthead')) return;                    // leave the header (apply / countdown) alone
-  goSnap(1);
+  if(inside || flying || gateOpen || !veilGone) return;
+  if(e.target.closest('#masthead')) return;                    // tapping the header logo shouldn't open it
+  enterScreen();
 });
 ctSend.addEventListener('click', chatSend);
 // enter "sends" just like clicking — anywhere outside a field (fields handle their own enter);
@@ -1457,50 +1580,13 @@ addEventListener('keydown', e=>{
   const el=document.activeElement;
   if(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
   const g=document.getElementById('game'); if(g && g.classList.contains('on')) return;   // the arcade owns its keys
-  if(chatThread.hidden){ if(veilGone && !formLocked && chatStage(curP)===0){ e.preventDefault(); goSnap(1); } return; }
+  if(!inside){ if(veilGone && !flying){ e.preventDefault(); enterScreen(); } return; }
   if(ctSend.disabled) return;
   e.preventDefault(); chatSend();
 });
 ctDraft.addEventListener('click', chatSend);
-
-/* ---------- form mode: reaching the form locks the page (like the arcade) ----------
-   Scroll momentum + the keyboard shatter the fixed-TV illusion on mobile, so once the form
-   is up we pin the scene (window.__p) and freeze the body; the ✕ is the only way out. */
-const formChrome=document.getElementById('formChrome');
-const FORM_P=0.94;                                 // the .s-form snap point (564vh ÷ 600vh)
-let formLocked=false;
-function formChromeOn(on){
-  formChrome.classList.toggle('on', on);
-  document.documentElement.classList.toggle('form-lock', on);   // clears the masthead so the ✕ doesn't overlap it
-  const al=document.getElementById('applyLink');
-  if(al){ al.style.opacity=on?'0':''; al.style.pointerEvents=on?'none':''; }
-}
-function enterFormLock(){
-  if(formLocked) return; formLocked=true;
-  window.__p=FORM_P;
-  document.documentElement.style.overflow='hidden';         // desktop: no wheel/keys scrolling
-  document.body.style.position='fixed'; document.body.style.inset='0';   // mobile: really no touch scrolling
-  formChromeOn(true);
-  startApply();          // khushi begins asking the application questions right in the thread
-}
-function exitFormLock(){
-  if(!formLocked) return; formLocked=false;
-  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();   // put the keyboard away
-  delete window.__p;
-  document.documentElement.style.overflow='';
-  document.body.style.position=''; document.body.style.inset='';
-  formChromeOn(false);
-  // step back out to the last beat — an instant jump (the scene itself eases via the curP lerp),
-  // so restoring mandatory snap can never interrupt a scroll still in flight
-  const root=document.documentElement, crew=document.querySelector('.s-crew');
-  root.style.scrollSnapType='none';
-  window.scrollTo({ top: crew ? crew.offsetTop : 0, behavior:'instant' });
-  setTimeout(()=>{ root.style.scrollSnapType=''; }, 400);
-  readScroll();
-}
-document.getElementById('formExit').addEventListener('click', exitFormLock);
-// the arcade opens on top of the locked form; when it thaws, the form re-pins instead
-window.__formLock={ active:()=>formLocked, repin(){ window.__p=FORM_P; formChromeOn(true); } };
+// the arcade opens on top of the locked screen; when it thaws, we re-pin inside instead
+window.__formLock={ active:()=>inside, repin(){ window.__p=INSIDE_P; document.documentElement.classList.add('inside'); } };
 
 /* ---------- step-based form ---------- */
 const form=document.getElementById('apply');
@@ -1803,14 +1889,12 @@ renderStep();
     hud.style.visibility = (mode==='play'||mode==='over') ? 'visible' : 'hidden';
     if(mode!=='play') toastEl.style.opacity='0';
     quitBtn.title = (mode==='board') ? 'back' : (mode==='menu'||mode===null) ? 'leave the arcade' : 'back to menu';
-    if(gamepad){ const show=(mode!==null && useGamepad()); gamepad.classList.toggle('on', show); gamepad.setAttribute('aria-hidden', show?'false':'true'); if(show) layoutGamepad(); }
+    if(gamepad){ const show=(mode!==null && useGamepad()); gamepad.classList.toggle('on', show); gamepad.setAttribute('aria-hidden', show?'false':'true'); }
+    if(mode!==null) view=layout();   // re-measure whenever the mode changes — the menu has to know where the pad ends
   }
   // the pink deck starts right below the CRT screen, covering the floppy + keyboard
-  function layoutGamepad(){
-    if(!gamepad || !gamepad.classList.contains('on')) return;
-    const b=gameEl.getBoundingClientRect().bottom;
-    gamepad.style.top=Math.max(80, Math.min(innerHeight-96, b-1))+'px';
-  }
+  // how much of the bottom of the viewport the on-screen controls are covering
+  function padH(){ return (gamepad && gamepad.classList.contains('on')) ? gamepad.getBoundingClientRect().height : 0; }
   function seedStars(){ stars=[]; for(let i=0;i<16;i++) stars.push({x:Math.random(), y:Math.random(), r:Math.random()<0.3?2:1}); }
   function showToast(txt){ toastEl.textContent=txt||''; toastEl.style.opacity='1'; clearTimeout(showToast._t); showToast._t=setTimeout(()=>toastEl.style.opacity='0', 2600); }
 
@@ -1875,8 +1959,9 @@ renderStep();
   // The CRT screen can overflow a narrow viewport, so confine play + UI to the on-screen visible slice.
   function layout(){
     const r=gameEl.getBoundingClientRect(), W=r.width, H=r.height;
+    const floor=innerHeight-padH();          // stop above the on-screen controls, not at the viewport edge
     const lx=Math.max(0,Math.min(-r.left, W)), ty=Math.max(0,Math.min(-r.top, H));
-    const rx=Math.max(0,Math.min(innerWidth-r.left, W)), by=Math.max(0,Math.min(innerHeight-r.top, H));
+    const rx=Math.max(0,Math.min(innerWidth-r.left, W)), by=Math.max(0,Math.min(floor-r.top, H));
     const vis={x:lx, y:ty, w:Math.max(40,rx-lx), h:Math.max(40,by-ty)};
     gframe.style.left=vis.x+'px'; gframe.style.top=vis.y+'px'; gframe.style.width=vis.w+'px'; gframe.style.height=vis.h+'px';
     return vis;
@@ -2312,7 +2397,6 @@ renderStep();
     if(muted) stopLoop(); else if(open) startLoop(curTrack||'menu');
     if(muteBtn){ muteBtn.classList.toggle('off', muted); muteBtn.title = muted?'sound off':'sound on'; }
     try{ CHATFX.setMuted(muted); }catch(e){}                        // one preference everywhere
-    if(typeof paintSnd==='function') paintSnd();                    // keep the header toggle honest
   }
 
   /* ---------- controls ---------- */
