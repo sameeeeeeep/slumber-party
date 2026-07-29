@@ -226,18 +226,21 @@
   .ct-at:not([hidden]) + .ct-draft + .ct-input{ padding-left:.3em; }
   /* tap-to-answer chips (the "who are you?" question + the final arcade CTA) */
   .ct-chips{ flex:none; display:flex; flex-wrap:wrap; gap:.5em; justify-content:center; padding:.2em 1em 1em; }
-  /* …and as a scrollable list when there are too many options to sit in a row of pills */
-  .ct-chips.list{ flex-direction:column; flex-wrap:nowrap; align-items:stretch; justify-content:flex-start;
-    gap:.4em; max-height:12em; overflow-y:auto; overscroll-behavior:contain; padding:.2em .8em .9em; }
-  .ct-chips.list .ct-chip{ text-align:left; border-radius:.85em; padding:.6em .95em; }
-  .ct-chips.list::-webkit-scrollbar{ width:.4em; }
-  .ct-chips.list::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.18); border-radius:1em; }
+  /* …and as a full list when there are too many options to sit in a row of pills. NO height cap:
+     every option is on screen at once and the thread above shrinks to make room, because a nested
+     scroller inside the locked page is fiddly to actually drag on a phone. `flex:0 1 auto` is the
+     safety valve — only a viewport too short to fit them lets it scroll at all. */
+  .ct-chips.list{ flex:0 1 auto; flex-direction:column; flex-wrap:nowrap; align-items:stretch; justify-content:flex-start;
+    gap:.35em; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding:.2em .8em .9em; }
+  .ct-chips.list .ct-chip{ flex:none; text-align:left; border-radius:.85em; padding:.5em .95em; font-size:1.05em; }
   .ct-chip{ font-family:var(--mono); font-size:1.1em; color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent;
     border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08); border-radius:100px; padding:.45em 1.1em;
     transition:background .15s ease, border-color .15s ease, transform .15s ease; }
   .ct-chip:hover{ border-color:var(--brand-yellow); }
   .ct-chip:active{ transform:scale(.95); background:var(--brand-pink); }
-  .ct-chip.cta{ position:relative; overflow:hidden; font-family:var(--pixel); font-size:.7em; letter-spacing:.05em; color:#fff; border-color:rgba(255,255,255,.5);
+  /* the arcade CTA — sized like the send button, but broad: it's the only thing left to tap */
+  .ct-chip.cta{ position:relative; overflow:hidden; width:100%; font-family:var(--pixel); font-size:.62em; letter-spacing:.05em;
+    white-space:nowrap; color:#fff; border-color:rgba(255,255,255,.5); border-radius:.7em; padding:1.5em 1.1em;
     background:linear-gradient(90deg,#eb648c,#ec642a); box-shadow:0 0 10px rgba(235,100,140,.6); animation:ctaGlow 1.8s ease-in-out infinite; }
   /* the city suggestions — one tidy strip above the field that scrolls sideways rather than
      wrapping into a cramped block against the compose row */
@@ -266,9 +269,11 @@
   /* at full zoom the CRT is COVER-sized, so it spills past the viewport — bound the thread by the
      viewport itself (--cardH is the slice the mobile keyboard leaves, set per-frame in JS) */
   html.inside #chatThread, html.dev-phone.inside #chatThread{ width:100vw; height:var(--cardH,100vh); }
-  /* wide screens: hold the thread to a readable column instead of stretching bubbles across a desk */
+  /* wide screens: a broader column, and the type scaled DOWN off the CRT's font-size — that size
+     is tuned for a phone-sized screen, so at desktop zoom it renders a chat app at ~2x. Everything
+     in the card is in em, so one font-size here rescales the whole thread in proportion. */
   @media (min-width:900px){
-    html.inside #chatThread, html.dev-phone.inside #chatThread{ width:min(100vw,760px); }
+    html.inside #chatThread, html.dev-phone.inside #chatThread{ width:min(100vw,980px); font-size:.46em; }
   }
   /* keep the header and the compose row clear of notches and home bars */
   html.inside .ct-head{ padding-top:calc(.7em + env(safe-area-inset-top,0px)); }
@@ -1251,7 +1256,7 @@ function finishApply(){
 }
 function showArcadeCta(){
   ctChips.classList.remove('list');
-  ctChips.innerHTML='<button type="button" class="ct-chip cta" id="chatArcade">▸ enter khushi’s arcade</button>';
+  ctChips.innerHTML='<button type="button" class="ct-chip cta" id="chatArcade">▸ enter arcade</button>';
   composeMode('choice'); pinChat(true);
   if(window.__slumberGame) window.__slumberGame.unlock();
   const b=document.getElementById('chatArcade');
