@@ -515,7 +515,15 @@
   .lb-foot{ font-family:var(--mono); font-size:.78em; line-height:1.35; color:rgba(255,255,255,.7); margin-top:.5em; }
   .lb-foot b{ color:var(--brand-yellow); }
   .g-overlay .go-verify2{ font-family:var(--mono); font-size:.82em; line-height:1.35; color:var(--brand-soft); margin-top:.55em; }
-  .g-overlay .go-verify2 .go-code{ color:var(--brand-yellow); letter-spacing:.14em; }
+  /* getting on the board is now one tap, so it looks like the site's other primary buttons */
+  .go-publish, .gm-foot .go-publish{ font-family:var(--pixel); font-size:.58em; letter-spacing:.05em;
+    text-transform:lowercase; color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent;
+    padding:1.1em 1.3em; border-radius:.6em; border:1px solid rgba(255,255,255,.5);
+    background:linear-gradient(90deg,#eb648c,#ec642a);
+    box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2);
+    transition:transform .15s ease; }
+  .go-publish:active{ transform:scale(.96); }
+  .go-note{ font-family:var(--mono); font-size:1em; color:var(--brand-soft); }
   /* the arcade select screen (Nintendo-style menu) */
   .g-menu{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; z-index:3; padding:4% 5%; background:rgba(16,10,24,.55); }
@@ -1770,7 +1778,8 @@ const GLEADER = {
   insta: '@secretslumberparty',
   sheetCsv: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSa3ZUjT8BzU-f-s56em5fiKcdvIgXPwk3JHM2VYSRSIpIpxiNL7nvooXm7DhIJC-T-twIcrYoCXcED/pub?output=csv',
   handleField: 'entry.434204412', handleCol: 'instagram',
-  codeField:   'entry.1112728021',
+  // codeField is deliberately no longer sent: the DM-a-code verification is gone, so nothing
+  // writes to that column any more. Delete it from the sheet when convenient.
   verifiedField:'entry.846556357', verifiedCol: 'verified?',
   games: {                                   // gameKey -> { post-field, sheet-column }
     snake:       { field:'entry.1350983856', col:'game 1 score' },
@@ -1786,28 +1795,33 @@ const GLEADER = {
   }
 };
 let PLAYER = null;              // the submitted application, so the game knows who's playing
-// a stable per-browser 5-digit code the player DMs from their insta, so you can prove they own that @
-const VKEY='ksp-verify';
-function verifyCode(){
-  let c=null; try{ c=localStorage.getItem(VKEY); }catch(e){}
-  if(!c){ c=String(10000+Math.floor(Math.random()*90000)); try{ localStorage.setItem(VKEY,c); }catch(e){} }
-  return c;
+
+/* ---- getting on the leaderboard ----
+   Scores are no longer filed automatically and no longer carry a DM-this-code
+   round trip. Nothing reaches the board unless the player taps "publish", and
+   the identity comes from the application they already sent — so there's nothing
+   to verify by hand and no secret code sitting in the published sheet. */
+const PUBKEY = g => 'ksp-pub-' + g;
+function publishedScore(g){ try{ return +localStorage.getItem(PUBKEY(g)) || 0; }catch(e){ return 0; } }
+function markPublished(g, s){ try{ localStorage.setItem(PUBKEY(g), String(s)); }catch(e){} }
+function canPublish(game){
+  const g = GLEADER.games && GLEADER.games[game];
+  return !!(GLEADER.id && g && /^entry\.\d+$/.test(g.field||''));
 }
-function codeMapped(){ return /^entry\.\d+$/.test(GLEADER.codeField||''); }
-// returns true if a score row was actually posted (leaderboard configured + player + game known)
+// returns true if a score row was actually filed
 function postScore(game, score){
-  const g=GLEADER.games&&GLEADER.games[game];
-  if(!GLEADER.id || !PLAYER || !g || !/^entry\.\d+$/.test(g.field||'')) return false;
+  if(!canPublish(game) || !PLAYER || !PLAYER.handle) return false;
+  const g=GLEADER.games[game];
   const body=new URLSearchParams();
   const add=(id,val)=>{ if(id && /^entry\.\d+$/.test(id) && val!=null && val!=='') body.append(id,val); };
   add(GLEADER.handleField, PLAYER.handle);
   add(g.field, String(score));
-  add(GLEADER.codeField, verifyCode());
-  add(GLEADER.verifiedField, 'No');
+  add(GLEADER.verifiedField, 'Yes');   // the player published it themselves; no DM to match up
   if(![...body.keys()].length) return false;
   try{ fetch(`https://docs.google.com/forms/d/e/${GLEADER.id}/formResponse`,
     { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body }); }
   catch(err){ return false; }
+  markPublished(game, score);
   return true;
 }
 
@@ -1891,7 +1905,7 @@ renderStep();
   const boardEl=document.getElementById('goboard'), verifyEl=document.getElementById('goverify'), footEl=document.getElementById('gofoot');
   const gboard=document.getElementById('gboard'), lblist=document.getElementById('lblist'), lbtitle=document.getElementById('lbtitle'),
         lbpage=document.getElementById('lbpage'), lbprev=document.getElementById('lbprev'), lbnext=document.getElementById('lbnext'), lbfoot=document.getElementById('lbfoot');
-  let lastBoard=null, lbPage=0;
+  let lastBoard=null, lbPage=0, pendingPub=null;   // a full-screen game's best, waiting for a publish tap
   const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit'), muteBtn=document.getElementById('gmute');
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
@@ -1958,7 +1972,8 @@ renderStep();
     def.launch({
       exit(score){                       // land back on the arcade menu; post a new best like gameOver does
         score=+score||0;
-        if(score>0 && score>hiFor(def.key)){ setHi(def.key, score); if(typeof postScore==='function') postScore(def.key, score); }
+        // a full-screen game exits straight to the menu, so its publish button waits there
+        if(score>0 && score>hiFor(def.key)){ setHi(def.key, score); pendingPub={ game:def.key, score }; }
         tv.classList.add('tvease');
         freeze();                        // back out to the arcade's form framing
         setTimeout(()=>tv.classList.remove('tvease'), 500);
@@ -2012,7 +2027,11 @@ renderStep();
       li.addEventListener('click', ()=>{ if(sel===i){ selectGame(); } else { sel=i; renderMenu(); blip('eat'); } });
       gmlist.appendChild(li);
     });
-    gmfoot.innerHTML = TOUCH ? 'tap a game for its scores&nbsp;·&nbsp;tap again to play' : '↑ ↓ browse&nbsp;&nbsp;·&nbsp;&nbsp;enter play&nbsp;&nbsp;·&nbsp;&nbsp;esc exit';
+    // a score from a full-screen game is still waiting to be published — offer it here
+    const pub = pendingPub ? publishHtml(pendingPub.game, pendingPub.score) : '';
+    gmfoot.innerHTML = pub ||
+      (TOUCH ? 'tap a game for its scores&nbsp;·&nbsp;tap again to play'
+             : '↑ ↓ browse&nbsp;&nbsp;·&nbsp;&nbsp;enter play&nbsp;&nbsp;·&nbsp;&nbsp;esc exit');
     renderMenuBoard();
   }
   // the selected game's leaderboard, shown in the menu so you see the celebs' scores before you play
@@ -2092,17 +2111,43 @@ renderStep();
     if(isBest){ hi=score; setHi(curGame,score); hiEl.textContent=hi; }
     titleEl.textContent = isBest ? 'new best!' : 'game over';
     playTrack('menu'); sting(isBest && score>0 ? 'win' : 'lose');   // switch to ambient + a win/lose jingle
-    if(isBest && score>0 && typeof postScore==='function') postScore(curGame, score);
+    // NOT filed automatically — the player decides, via the publish button below the board
     subEl.innerHTML = (G&&G.overText) ? G.overText(score) : ('you scored <b>'+score+'</b>.');
     footEl.innerHTML=(TOUCH?'tap to replay':'press <b>enter</b> to replay')+'&nbsp;&nbsp;·&nbsp;&nbsp;'+(TOUCH?'✕ for menu':'<b>esc</b> for menu');
     boardEl.innerHTML=''; verifyEl.innerHTML='';
     applyMode(); drawFrame();
     renderBoard();
   }
-  // on-CRT leaderboard for the current game (+ player standing + verify prompt)
+  /* The publish affordance. One helper for every place a score can be filed, so
+     the wording and the already-published state can't drift apart. */
+  function publishHtml(game, score){
+    if(!(score>0) || !canPublish(game)) return '';
+    if(!PLAYER || !PLAYER.handle)
+      return '<span class="go-note">apply first — then your scores can go on the board</span>';
+    if(publishedScore(game) >= score)
+      return '<span class="go-note">on the board as '+esc(PLAYER.handle)+' ✓</span>';
+    return '<button type="button" class="go-publish" data-pub="'+esc(game)+'" data-score="'+score+'">'
+         + 'publish '+score+' to the leaderboard ▸</button>';
+  }
+  function doPublish(game, score, host){
+    if(!postScore(game, score)){ host.innerHTML='<span class="go-note">couldn’t publish that — try again?</span>'; return; }
+    blip('eat');
+    host.innerHTML='<span class="go-note">published as '+esc(PLAYER.handle)+' ✓ — the board catches up in a minute</span>';
+  }
+  // the overlay restarts the game on any click, so the button has to stop the bubble
+  verifyEl.addEventListener('click', e=>{
+    const b=e.target.closest('[data-pub]'); if(!b) return;
+    e.stopPropagation(); doPublish(b.dataset.pub, +b.dataset.score, verifyEl);
+  });
+  gmfoot.addEventListener('click', e=>{
+    const b=e.target.closest('[data-pub]'); if(!b) return;
+    e.stopPropagation(); doPublish(b.dataset.pub, +b.dataset.score, gmfoot);
+  });
+
+  // on-CRT leaderboard for the current game (+ player standing + publish button)
   async function renderBoard(){
     lastBoard=null;
-    const showVerify=()=>{ if(codeMapped() && hi>0) verifyEl.innerHTML='verify to add to leaderboard — DM <b class="go-code">'+verifyCode()+'</b> to '+esc(GLEADER.insta||'@us')+' from your ID'; };
+    const showVerify=()=>{ verifyEl.innerHTML=publishHtml(curGame, hi); };
     if(!GLEADER.sheetCsv){ showVerify(); return; }
     boardEl.innerHTML='<span class="gb-empty">loading the board…</span>';
     const rows = (typeof loadScores==='function') ? await loadScores() : null;
@@ -2120,7 +2165,7 @@ renderStep();
       h+='<p class="gb-you">you · #'+board.you.rank+' · '+board.you.score+(board.you.pending?' <i>(pending)</i>':'')+'</p>';
     if(board.all.length>board.top.length) h+='<span class="see-all">see all '+board.all.length+' ▸</span>';
     boardEl.innerHTML=h;
-    if(!board.you || board.you.pending) showVerify();
+    showVerify();   // publishHtml decides what (if anything) to offer
   }
   /* ---------- full paginated leaderboard ---------- */
   function openLeaderboard(){
