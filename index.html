@@ -1424,10 +1424,16 @@ function renderChat(stage){
     if(notifReady) showNotif();      // else the veil-clear handler fires it once you can see the screen
     return;
   }
-  if(stage>CHAT.length){            // stage 4 — the application: render the intro convo, then khushi
-    qIndex=-1;                      // starts asking. Kicked off HERE (not by the caller) so the
-    clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);   // thread is rebuilt before her
-    ctBody.innerHTML=buildThread(stage, false); pinChat(true);      // first "typing" bubble lands.
+  if(stage>CHAT.length){            // stage 4 — the application: khushi starts asking. Kicked off
+    qIndex=-1;                      // HERE (not by the caller) so the thread is settled before her
+    clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);   // first "typing" bubble lands.
+    // append your last reply rather than rebuilding — see the note in the forward branch below
+    if(forward && ctBody.children.length){
+      ctBody.insertAdjacentHTML('beforeend', bubble('you', CHAT[CHAT.length-1].draft));
+    } else {
+      ctBody.innerHTML=buildThread(stage, false);
+    }
+    chatStick=true; pinChat(true);
     composeMode('none');
     if(inside && !applyStarted){ applyStarted=true; setTimeout(()=>{ if(inside && applyStarted) startApply(); }, 700); }
     return;
@@ -1443,11 +1449,18 @@ function renderChat(stage){
   };
   const toBottom=()=>pinChat(true);
   if(forward){
-    // her line runs a "typing" loader → lands → a beat passes → then your reply types into the (already-there) field
-    ctBody.innerHTML=buildThread(stage, true); toBottom(); field(null);   // field present, empty, send disabled
+    // APPEND, never rebuild. Reassigning ctBody.innerHTML destroys and recreates every bubble
+    // already on screen, so they all re-run their entry animation and the scroll snaps back —
+    // which read as the thread reloading rather than a new message arriving. Only the genuinely
+    // new nodes go in: your reply, then her typing loader, then her line in its place.
+    if(stage===1) ctBody.innerHTML='';                          // her first line — nothing precedes it
+                                                                // (also clears a stale thread after a re-entry)
+    if(stage>1 && CHAT[stage-2]) ctBody.insertAdjacentHTML('beforeend', bubble('you', CHAT[stage-2].draft));
+    chatStick=true; toBottom(); field(null);                    // field present, empty, send disabled
+    addTyping();
     chatTimer=setTimeout(()=>{
       if(lastStage!==stage) return;
-      ctBody.innerHTML=buildThread(stage, false); toBottom(); CHATFX.recv();                     // her message arrives
+      clearTyping(); addBubble('her', CHAT[stage-1].her);                                        // her message arrives
       if(draft) chatTimer=setTimeout(()=>{ if(lastStage===stage) typeDraft(draft); }, 650);      // a beat, then you type
     }, 1300);
   } else {                                        // scrubbing back — land straight on the turn, ready to send
