@@ -158,6 +158,8 @@
   .ct-back{ font-family:var(--mono); font-size:1.4em; line-height:1; color:var(--brand-soft); opacity:.7;
     background:none; border:0; cursor:pointer; padding:.1em .35em; -webkit-tap-highlight-color:transparent; }
   .ct-back:active{ opacity:1; transform:scale(.92); }
+  /* dimmed when there's nothing to go back to (khushi mid-sentence, or the form's been sent) */
+  .ct-back.off{ opacity:.22; pointer-events:none; }
   .ct-av{ width:2.1em; height:2.1em; font-size:.72em; }
   .ct-id{ display:flex; flex-direction:column; align-items:flex-start; text-align:left; line-height:1.2; min-width:0; }   /* left-align the name (the CRT centers text by default) */
   .ct-id b{ font-family:var(--mono); font-weight:400; font-size:1.15em; color:#fff; }
@@ -934,6 +936,7 @@ const chat=document.getElementById('chat');
 const chatInbox=document.getElementById('chatInbox');
 const chatThread=document.getElementById('chatThread');
 const ctBody=document.getElementById('ctBody');
+const ctBack=document.getElementById('ctBack');
 const ctLive=document.getElementById('ctLive'), ctState=document.getElementById('ctState');
 const ctCompose=document.getElementById('ctCompose');
 const ctDraft=document.getElementById('ctDraft');
@@ -1126,6 +1129,9 @@ function suggestCities(q){
   ctSuggest.hidden=!hits.length;
 }
 let qIndex=-1, qAns={}, qBusy=false;
+// what was actually typed for each question (qAns holds the cleaned/stored form, e.g. "+91 98…"),
+// plus where each question's first bubble sits, so ‹ can rewind the thread to it
+let qRaw={}, qMarks=[];
 // The thread scrolls by hand, so auto-scrolling has to yield: while you're reading back through
 // the conversation we leave your scroll position alone, and only resume following the newest
 // line once you've returned to the bottom. `force` overrides it (your own sends, stage changes).
@@ -1159,17 +1165,26 @@ function composeMode(m){   // 'draft' | 'type' | 'choice' | 'date' | 'none'
 }
 function startApply(){                       // called by renderChat once stage 4 is on screen
   track('started_form');
-  qAns={}; qIndex=-1; qBusy=false;
+  qAns={}; qRaw={}; qMarks=[]; qIndex=-1; qBusy=false;
   clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
   askQuestion(0);
 }
-function askQuestion(i){
+// `replay` re-asks a question you've stepped back to: her line goes straight up with no typing
+// beat (you've already read it) and the field opens holding what you typed last time.
+function askQuestion(i, replay){
   if(i>=APPLY_Q.length){ finishApply(); return; }
   qIndex=i; qBusy=true;
   const q=APPLY_Q[i];
   const raw=(typeof q.ask==='function') ? q.ask(qAns) : q.ask;
   const lines=Array.isArray(raw)?raw:[raw];
   clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
+  if(qMarks[i]==null) qMarks[i]=ctBody.children.length;   // where this question starts in the thread
+  if(replay){
+    for(const t of lines) ctBody.insertAdjacentHTML('beforeend', bubble('her', t));
+    chatStick=true; pinChat(true);
+    readyAnswer(q, qRaw[q.name]);
+    return;
+  }
   // her lines land one after another, each with its own "typing" beat; the field only opens
   // once the last one has arrived
   (function sendLine(n){
@@ -1182,7 +1197,7 @@ function askQuestion(i){
     }, n===0 ? 1100 : 850);
   })(0);
 }
-function readyAnswer(q){
+function readyAnswer(q, prefill){
   qBusy=false;
   if(q.type==='choice'){
     ctChips.classList.toggle('list', !!q.list);   // too many options for a row of pills → a scrollable list
@@ -1190,8 +1205,10 @@ function readyAnswer(q){
     composeMode('choice'); pinChat(true); return;
   }
   if(q.type==='date'){                                   // birthday: three little selects, send once all picked
-    fillDateSelects(); ctDD.value=''; ctMM.value=''; ctYY.value='';
-    composeMode('date'); ctSend.disabled=true; pinChat(); return;
+    fillDateSelects();
+    const d=prefill||{};
+    ctDD.value=d.dd||''; ctMM.value=d.mm||''; ctYY.value=d.yy||'';
+    composeMode('date'); ctSend.disabled=!(ctDD.value&&ctMM.value&&ctYY.value); pinChat(); return;
   }
   cityMode = (q.type==='city');
   composeMode('type');
@@ -1200,6 +1217,7 @@ function readyAnswer(q){
   // iOS only opens the number pad for a text input when a digits-only pattern is on it too
   if(q.type==='age'||q.type==='tel') ctInput.setAttribute('pattern','[0-9]*'); else ctInput.removeAttribute('pattern');
   ctInput.placeholder = q.ph||'message…';
+  ctInput.value = (typeof prefill==='string') ? prefill : '';   // stepped back → your old answer, ready to edit
   // a fixed prefix in the compose row: "@" for instagram, "+91" for the phone number
   if(q.type==='handle'){ ctAt.textContent='@'; ctAt.hidden=false; }
   else if(q.type==='tel'){ ctAt.textContent='+91'; ctAt.hidden=false; }
@@ -1244,7 +1262,10 @@ function submitAnswer(rawVal){
     if(q.type==='handle'){ store='@'+val.replace(/^@+/,''); disp=store; }
   }
   cityMode=false; suggestCities(null);
-  qAns[q.name]=store; addBubble('you', disp);
+  qAns[q.name]=store;
+  qRaw[q.name] = (q.type==='date') ? { dd:ctDD.value, mm:ctMM.value, yy:ctYY.value }
+                                   : String(rawVal==null ? ctInput.value : rawVal);
+  addBubble('you', disp);
   const next=qIndex+1;
   // keep the mobile keyboard alive across typed questions by re-focusing inside this tap
   if(next<APPLY_Q.length && APPLY_Q[next].type!=='choice' && APPLY_Q[next].type!=='date'){
@@ -1381,9 +1402,35 @@ ctSuggest.addEventListener('click', e=>{ const b=e.target.closest('[data-city]')
 // the ‹ in the thread header steps back a turn, and flies back out to the teaser from turn one.
 // Once khushi starts asking the application questions there's nothing sane to step back to, so
 // it stops there rather than stranding a half-answered form.
-document.getElementById('ctBack').addEventListener('click', ()=>{
-  if(!inside || flying || applyStarted) return;
-  if(insideStage>1) insideStage--; else exitScreen();
+/* Can ‹ do anything right now? During the application it rewinds one question so a wrong
+   answer can be fixed; before it, it steps back a DM turn and leaves the screen from the
+   first one. It's inert while khushi is mid-sentence, and once the form is submitted. */
+function backTarget(){
+  if(!inside || flying) return null;
+  if(applyStarted) return (qIndex>0 && !qBusy) ? 'question' : null;
+  return insideStage>1 ? 'turn' : 'exit';
+}
+function paintBack(){
+  const on=!!backTarget();
+  if(paintBack._on===on) return; paintBack._on=on;
+  ctBack.classList.toggle('off', !on);
+  ctBack.setAttribute('aria-disabled', on?'false':'true');
+}
+ctBack.addEventListener('click', ()=>{
+  const what=backTarget();
+  if(what==='turn'){ insideStage--; return; }
+  if(what==='exit'){ exitScreen(); return; }
+  if(what!=='question') return;
+  // rewind to the previous question: cut the thread back to where it started, drop the answers
+  // from there on, and re-ask it holding what you typed before
+  const target=qIndex-1;
+  clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
+  const cut=qMarks[target];
+  if(cut!=null) while(ctBody.children.length>cut) ctBody.lastElementChild.remove();
+  for(let i=target;i<APPLY_Q.length;i++){ delete qAns[APPLY_Q[i].name]; if(i>target) delete qRaw[APPLY_Q[i].name]; }
+  qMarks.length=target+1;
+  CHATFX.click();
+  askQuestion(target, true);
 });
 
 // your pre-drafted reply types itself into the compose field, char by char, left-aligned;
@@ -1497,7 +1544,7 @@ function updateChat(p){
   chat.style.opacity='1';                                  // the chat IS the form now — it never hands off
   noisescrim.style.opacity='1';                            // keep the screen legible under the noise
   bar.style.width=(p*100)+'%';
-  paintStatus();
+  paintStatus(); paintBack();
 }
 // the header status mirrors the thread: "typing…" for as long as her loader is on screen,
 // "active now" otherwise. Read off the DOM so every path that shows a loader is covered.
