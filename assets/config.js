@@ -19,10 +19,11 @@ window.SLUMBER_CONFIG = {
   // its writes are refused with a row-level-security violation (42501).
   supabaseAnonKey: 'sb_publishable_eyh8o8PCrMBfjZ0199Ki4A_cyKjbXJZ',
 
-  // While false, the site keeps posting to the Google Form only and the
-  // Supabase calls are skipped — so filling in the two values above is what
-  // switches the new backend on. Set to false to fall back instantly.
-  useSupabase: true,
+  // OFF until the Edge Functions are deployed. While false the site posts to the
+  // Google Form only and skips Supabase entirely — no failed-submit message, no
+  // visit tracking, nothing written to Postgres. Flip to true the moment
+  // `supabase functions deploy submit && supabase functions deploy visit` is done.
+  useSupabase: false,
 
   // Keep writing to the Google Form as well during the migration, so nothing
   // is lost while we cut over. Set to false once Supabase has been running
