@@ -273,7 +273,12 @@
      is tuned for a phone-sized screen, so at desktop zoom it renders a chat app at ~2x. Everything
      in the card is in em, so one font-size here rescales the whole thread in proportion. */
   @media (min-width:900px){
-    html.inside #chatThread, html.dev-phone.inside #chatThread{ width:min(100vw,980px); font-size:.46em; }
+    html.inside #chatThread, html.dev-phone.inside #chatThread{ width:min(100vw,980px); font-size:.46em;
+      /* the space either side becomes the monitor's casing rather than more screen. A huge
+         box-shadow spread paints it, so the thread keeps the pink CRT noise showing through its
+         own translucent panel — a background on the parent would have flattened that away.
+         The first shadow lands on top: a soft rim where the screen meets the bezel. */
+      box-shadow:0 0 3.5rem rgba(70,25,45,.5), 0 0 0 100vmax #deb8bb; }
   }
   /* keep the header and the compose row clear of notches and home bars */
   html.inside .ct-head{ padding-top:calc(.7em + env(safe-area-inset-top,0px)); }
