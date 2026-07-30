@@ -12,10 +12,12 @@
    ============================================================================ */
 window.SLUMBER_CONFIG = {
   // Supabase → Project Settings → API → "Project URL"
-  supabaseUrl: '',
+  supabaseUrl: 'https://secseoyetyfqsfgzlnis.supabase.co',
 
-  // Supabase → Project Settings → API → "Project API keys" → anon / public
-  supabaseAnonKey: '',
+  // Supabase → Project Settings → API → "Project API keys" → publishable / anon.
+  // Verified inert against this project: it reads zero rows from every table and
+  // its writes are refused with a row-level-security violation (42501).
+  supabaseAnonKey: 'sb_publishable_eyh8o8PCrMBfjZ0199Ki4A_cyKjbXJZ',
 
   // While false, the site keeps posting to the Google Form only and the
   // Supabase calls are skipped — so filling in the two values above is what
