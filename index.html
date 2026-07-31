@@ -9,7 +9,20 @@
 <!-- meta domain verification (secretslumberparty.com) -->
 <meta name="facebook-domain-verification" content="l6xskk0uub1m0qga2cxq7xqumvj6qc" />
 
-<!-- Meta Pixel — shared Nailin.it dataset (637257295363759). Independent of the parked Supabase analytics. -->
+<!-- persistent per-browser id (slumber-<uuid>) — survives across visits so an abandoned
+     application row can be linked to a later completed one. Set FIRST so the pixel can use it. -->
+<script>
+window.SSP_VID=(function(){
+  var v=null; try{ v=localStorage.getItem('ssp-vid'); }catch(e){}
+  if(!v){ v='slumber-'+((self.crypto&&crypto.randomUUID)?crypto.randomUUID()
+          :(Math.random().toString(36).slice(2)+Date.now().toString(36)));
+          try{ localStorage.setItem('ssp-vid', v); }catch(e){} }
+  return v;
+})();
+</script>
+
+<!-- Meta Pixel — shared Nailin.it dataset (637257295363759). Independent of the parked Supabase analytics.
+     external_id = SSP_VID ties pixel events to the same visitor id used in the Google Sheet. -->
 <script>
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -19,13 +32,23 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window,document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init','637257295363759');
+fbq('init','637257295363759', { external_id: window.SSP_VID });
 fbq('track','PageView');
 fbq('trackCustom','slumberview');   // everyone who lands on the page
 </script>
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt="" /></noscript>
 <!-- End Meta Pixel -->
+
+<!-- Microsoft Clarity — session recordings + heatmaps (drop-off behaviour) -->
+<script type="text/javascript">
+    (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", "xv2t1ls7qb");
+</script>
+<!-- End Microsoft Clarity -->
 
 <!-- favicon: khushi's dp -->
 <link rel="icon" type="image/png" href="assets/favicon.png" />
@@ -805,7 +828,7 @@ const smooth=(e0,e1,x)=>{const t=clamp((x-e0)/(e1-e0),0,1);return t*t*(3-2*t);};
    the first frame. */
 const TEASER_P=0.06;               // the gentle push toward the CRT while the DM sits unread
 const INSIDE_P=0.94;               // full zoom, with the pink noise dimmed enough to read against
-let inside=false, insideStage=0, applyStarted=false, flying=false;
+let inside=false, insideStage=0, applyStarted=false, applyCompleted=false, flying=false;
 
 /* ---------- scroll → progress ---------- */
 let targetP=0, curP=0;
@@ -1308,6 +1331,8 @@ async function submitApplication(data){
   if(GFORM.id && cfg.alsoPostGoogleForm!==false){
     const body=new URLSearchParams();
     for(const k in data){ if(GFORM.fields[k]) body.append(GFORM.fields[k], data[k]); }
+    body.append(GFORM.fields.visitor_id, visitorId());   // link to any earlier incomplete row
+    body.append(GFORM.fields.status, 'complete');
     fetch(`https://docs.google.com/forms/d/e/${GFORM.id}/formResponse`,
       { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body })
       .catch(err=>console.warn('google form mirror failed', err));
@@ -1346,6 +1371,9 @@ function sessionId(){
           try{ sessionStorage.setItem('ksp-sid', s); }catch(e){} }
   return s;
 }
+// persistent, cross-session id (set in <head> as window.SSP_VID). Same value on every visit
+// from this browser, so an abandoned row and a later completed row can be matched.
+function visitorId(){ return window.SSP_VID || ''; }
 function track(step){
   const cfg = window.SLUMBER_CONFIG || {};
   if(!(cfg.useSupabase && cfg.supabaseUrl && cfg.supabaseAnonKey)) return;
@@ -1367,6 +1395,7 @@ const OUTRO=["noted. i am on my way to stalk you!!! i'll reach out if you're in 
    as the loading state while the POST is in flight, so a failed submission can
    never be confirmed to someone who didn't actually get through. */
 function finishApply(){
+  applyCompleted=true;                 // they reached the end — a full row is posted; suppress the partial beacon
   qBusy=true; qIndex=-1; composeMode('none');
   clearTimeout(finishApply._t);
   addTyping();
@@ -1377,6 +1406,34 @@ function finishApply(){
     sendOutro(0);
   });
 }
+
+/* ---------- abandoned-application capture ----------
+   If someone STARTS the application but leaves before finishing, mirror whatever they've
+   typed so far into the SAME Google Sheet, tagged "incomplete (n/8)" and carrying the
+   persistent visitor_id — so a later completed row can be matched back to this drop-off.
+   Fires on tab-hide / unload via sendBeacon (survives the page closing); re-sends only if
+   they've answered MORE since the last beacon, so we don't spam duplicate rows. */
+let _partialCount=-1;
+function sendPartial(){
+  if(!applyStarted || applyCompleted || !GFORM.id) return;
+  const keys=Object.keys(qAns).filter(k=>GFORM.fields[k] && qAns[k]!=='' && qAns[k]!=null);
+  if(keys.length===0 || keys.length<=_partialCount) return;   // nothing new worth saving
+  _partialCount=keys.length;
+  const body=new URLSearchParams();
+  for(const k of keys) body.append(GFORM.fields[k], qAns[k]);
+  body.append(GFORM.fields.visitor_id, visitorId());
+  body.append(GFORM.fields.status, 'incomplete ('+keys.length+'/'+APPLY_Q.length+')');
+  const url=`https://docs.google.com/forms/d/e/${GFORM.id}/formResponse`;
+  try{
+    const blob=new Blob([body.toString()], {type:'application/x-www-form-urlencoded'});
+    if(!(navigator.sendBeacon && navigator.sendBeacon(url, blob))){
+      fetch(url, { method:'POST', mode:'no-cors', keepalive:true,
+                   headers:{'Content-Type':'application/x-www-form-urlencoded'}, body }).catch(()=>{});
+    }
+  }catch(e){}
+}
+addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') sendPartial(); });
+addEventListener('pagehide', sendPartial);
 function submitFailed(){
   addBubble('her', "hmm, that didn't go through — mind trying again?");
   ctChips.classList.remove('list');
@@ -1718,7 +1775,7 @@ function lockPage(on){
 }
 function enterScreen(){
   if(inside || flying || !veilGone || gateOpen) return;
-  inside=true; insideStage=0; applyStarted=false; chatStick=true;
+  inside=true; insideStage=0; applyStarted=false; applyCompleted=false; chatStick=true;
   track('opened_dm');
   document.documentElement.classList.add('inside');   // masthead out, thread goes full-bleed
   lockPage(true);
@@ -1730,7 +1787,7 @@ function enterScreen(){
 }
 function exitScreen(){
   if(!inside) return;
-  inside=false; insideStage=0; applyStarted=false; qIndex=-1; qBusy=false; cityMode=false;
+  inside=false; insideStage=0; applyStarted=false; applyCompleted=false; qIndex=-1; qBusy=false; cityMode=false;
   clearTimeout(enterScreen._t); clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
   clearTimeout(finishApply._t); clearTimeout(chatTimer); clearInterval(typeDraft._t);
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -1844,7 +1901,9 @@ const GFORM = {
     handle:'entry.1679267567',
     phone: 'entry.1398897030',
     email: 'entry.1473309531',
-    why:   'entry.1553029635'
+    why:   'entry.1553029635',
+    visitor_id: 'entry.928272700',    // slumber-<uuid> — cross-session link between rows
+    status:     'entry.1485513036'    // "complete" or "incomplete (n/8)"
   }
 };
 
