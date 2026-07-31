@@ -6,6 +6,27 @@
 <title>Khushi's Secret Slumber Party</title>
 <meta name="description" content="An invite-only night for creators, artists & dreamers. 30 spots open by application." />
 
+<!-- meta domain verification (secretslumberparty.com) -->
+<meta name="facebook-domain-verification" content="l6xskk0uub1m0qga2cxq7xqumvj6qc" />
+
+<!-- Meta Pixel — shared Nailin.it dataset (637257295363759). Independent of the parked Supabase analytics. -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window,document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init','637257295363759');
+fbq('track','PageView');
+fbq('trackCustom','slumberview');   // everyone who lands on the page
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt="" /></noscript>
+<!-- End Meta Pixel -->
+
 <!-- favicon: khushi's dp -->
 <link rel="icon" type="image/png" href="assets/favicon.png" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
@@ -1165,6 +1186,7 @@ function composeMode(m){   // 'draft' | 'type' | 'choice' | 'date' | 'none'
 }
 function startApply(){                       // called by renderChat once stage 4 is on screen
   track('started_form');
+  if(window.fbq) fbq('trackCustom','slumberform');   // Meta Pixel — they've started the application (fires once)
   qAns={}; qRaw={}; qMarks=[]; qIndex=-1; qBusy=false;
   clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);
   askQuestion(0);
