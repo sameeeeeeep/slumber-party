@@ -29,4 +29,23 @@ window.SLUMBER_CONFIG = {
   // is lost while we cut over. Set to false once Supabase has been running
   // cleanly for a few days.
   alsoPostGoogleForm: true,
+
+  /* ---------------------------------------------------------------- /besties
+     The private invitation. Note what is NOT here: the password, the dates, the
+     location, the chat script. All of that lives encrypted in besties/sealed.js
+     and is only ever decrypted in the guest's browser, because this file — like
+     everything else on a static site — is world-readable.
+
+     To change any of it:  edit besties/content.json
+                           node tools/besties-seal.mjs seal
+     To change the password:  node tools/besties-seal.mjs seal --pass=NEWWORD
+                              (then re-run `guests` so personal links keep working)
+
+     There is deliberately no RSVP form and no guest data collection: tapping
+     "I'M COMING" is a single confirmation, and everything else (numbers, food,
+     travel) happens in the real group chat she adds people to afterwards. So
+     there is nothing to configure here yet — the block exists as the hook for
+     when there is.
+     ------------------------------------------------------------------------- */
+  besties: {},
 };

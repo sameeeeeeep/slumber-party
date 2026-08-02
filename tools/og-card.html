@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" />
+<title>og card</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Playfair+Display:ital,wght@1,500&family=Press+Start+2P&display=swap" rel="stylesheet" />
+<style>body{margin:0;background:#111;display:grid;place-items:center;min-height:100vh}canvas{width:600px}</style>
+</head><body>
+<canvas id="c" width="1200" height="630"></canvas>
+<script>
+/* Draws besties/og.png — the WhatsApp preview card. Run it, then read
+   window.__og (a data URL) and write the bytes to disk. Says nothing about the
+   party: the card has to make someone curious, not brief them. */
+async function draw() {
+  await document.fonts.ready;
+  await document.fonts.load('700 64px Caveat');
+  await document.fonts.load('italic 500 64px "Playfair Display"');
+  await document.fonts.load('24px "Press Start 2P"');
+
+  const c = document.getElementById('c'), x = c.getContext('2d');
+  const W = 1200, H = 630;
+
+  // deep wine field with a bedside-lamp glow, same as the page itself
+  x.fillStyle = '#12040c'; x.fillRect(0, 0, W, H);
+  let g = x.createRadialGradient(W * .78, -60, 40, W * .78, -60, 720);
+  g.addColorStop(0, 'rgba(235,100,140,.42)'); g.addColorStop(1, 'rgba(235,100,140,0)');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  g = x.createRadialGradient(90, H + 60, 30, 90, H + 60, 560);
+  g.addColorStop(0, 'rgba(236,100,42,.26)'); g.addColorStop(1, 'rgba(236,100,42,0)');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+
+  // grain
+  x.globalAlpha = .05;
+  for (let i = 0; i < 9000; i++) {
+    x.fillStyle = Math.random() > .5 ? '#fff' : '#000';
+    x.fillRect(Math.random() * W, Math.random() * H, 1.6, 1.6);
+  }
+  x.globalAlpha = 1;
+
+  // sparkles
+  x.fillStyle = 'rgba(245,195,207,.55)';
+  [[140, 120], [1040, 150], [200, 500], [1010, 470], [610, 78], [860, 545]].forEach(([px, py], i) => {
+    x.save(); x.translate(px, py); x.rotate(i * .7);
+    x.beginPath();
+    for (let k = 0; k < 4; k++) { x.rotate(Math.PI / 2); x.moveTo(0, 0); x.quadraticCurveTo(4, 4, 0, 16); x.quadraticCurveTo(-4, 4, 0, 0); }
+    x.fill(); x.restore();
+  });
+
+  x.textAlign = 'center';
+
+  // the lock
+  x.font = '58px system-ui, "Apple Color Emoji"';
+  x.fillText('🔒', W / 2, 196);
+
+  // BESTIES ONLY
+  x.font = '24px "Press Start 2P", monospace';
+  x.fillStyle = '#f5c3cf';
+  x.letterSpacing = '10px';
+  x.fillText('BESTIES ONLY', W / 2, 268);
+  x.letterSpacing = '0px';
+
+  // the line that gives nothing away
+  x.font = 'italic 500 76px "Playfair Display", Georgia, serif';
+  x.fillStyle = '#fff';
+  x.fillText('khushi left you something.', W / 2, 380);
+
+  // handwritten tease
+  x.font = '700 46px Caveat, cursive';
+  x.fillStyle = 'rgba(245,195,207,.82)';
+  x.fillText('“what happens at the slumber party…”', W / 2, 452);
+
+  // hairline + domain
+  const gr = x.createLinearGradient(W / 2 - 260, 0, W / 2 + 260, 0);
+  gr.addColorStop(0, 'rgba(235,100,140,0)'); gr.addColorStop(.5, 'rgba(235,100,140,.75)'); gr.addColorStop(1, 'rgba(235,100,140,0)');
+  x.fillStyle = gr; x.fillRect(W / 2 - 260, 508, 520, 1);
+
+  x.font = '18px "Press Start 2P", monospace';
+  x.fillStyle = 'rgba(255,246,242,.5)';
+  x.letterSpacing = '6px';
+  x.fillText('SECRETSLUMBERPARTY.COM', W / 2, 560);
+  x.letterSpacing = '0px';
+
+  window.__og = c.toDataURL('image/png');
+  document.title = 'ready';
+}
+draw();
+</script>
+</body></html>

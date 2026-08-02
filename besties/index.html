@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+
+<!-- Deliberately says nothing. This link gets forwarded; the preview card should
+     make someone curious, never brief them on the party. -->
+<title>besties only 🤫</title>
+<meta name="description" content="Khushi left you something." />
+<meta name="robots" content="noindex, nofollow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="besties only 🤫" />
+<meta property="og:description" content="Khushi left you something." />
+<meta property="og:url" content="https://secretslumberparty.com/besties" />
+<meta property="og:image" content="https://secretslumberparty.com/besties/og.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="theme-color" content="#1a0611" />
+
+<link rel="icon" type="image/png" href="../assets/favicon.png" />
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+
+<style>
+  :root{
+    /* the public site's palette, moved to midnight — same brand, after dark */
+    --pink:#eb648c; --soft:#f5c3cf; --yellow:#ebd81b; --orange:#ec642a;
+    --wine-0:#12040c; --wine-1:#1f0713; --wine-2:#2e0b1d; --wine-3:#43102a;
+    --cream:#fff6f2; --ink:#2a0a18;
+    --serif:'Playfair Display', Georgia, serif;
+    --sans:'Inter', system-ui, -apple-system, sans-serif;
+    --script:'Caveat', cursive;
+    --mono:'VT323', ui-monospace, monospace;
+    --pixel:'Press Start 2P', var(--mono);
+    /* the slice of viewport the on-screen keyboard leaves us (kept in sync in JS) */
+    --vh:100dvh;
+    --safe-t:env(safe-area-inset-top,0px);
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    background:var(--wine-0); color:var(--cream); font-family:var(--sans);
+    overflow:hidden; overscroll-behavior:none; -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+  }
+  button{ font:inherit; color:inherit; cursor:pointer; border:0; background:none; }
+  input{ font:inherit; color:inherit; }
+  [hidden]{ display:none !important; }
+  @media (prefers-reduced-motion:reduce){
+    *{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+  }
+
+  /* ---------- the room everything sits in ----------
+     A deep wine field with a bedside-lamp glow in one corner. Fixed, never scrolls,
+     so the chat can scroll inside it like a real app. */
+  #stage{
+    position:fixed; inset:0; height:var(--vh);
+    background:
+      radial-gradient(120% 80% at 78% -10%, rgba(235,100,140,.28) 0%, transparent 58%),
+      radial-gradient(90% 70% at 8% 108%, rgba(236,100,42,.16) 0%, transparent 60%),
+      linear-gradient(170deg, var(--wine-1) 0%, var(--wine-0) 48%, var(--wine-2) 100%);
+    /* an explicit column: an implicit `auto` one sizes to its widest child's
+       max-content and quietly overflows the phone, which is exactly the kind of
+       horizontal scroll this thing must never have */
+    display:grid; grid-template-columns:minmax(0,1fr); place-items:stretch; overflow:hidden;
+  }
+  /* film grain — one tiny tiled SVG, no image request, no library */
+  #grain{ position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.16; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.55'/></svg>");
+    animation:grainShift 1.1s steps(3) infinite; }
+  @keyframes grainShift{ 0%{transform:translate(0,0)} 33%{transform:translate(-3%,2%)} 66%{transform:translate(2%,-3%)} }
+
+  /* the disposable-camera flash, fired between beats */
+  #flash{ position:fixed; inset:0; z-index:70; pointer-events:none; background:#fff; opacity:0; }
+  #flash.pop{ animation:flashPop .42s ease-out; }
+  @keyframes flashPop{ 0%{opacity:0} 6%{opacity:1} 24%{opacity:.86} 100%{opacity:0} }
+
+  /* drifting sparkles — 6 elements, pure CSS, negligible cost */
+  .spark{ position:fixed; z-index:2; pointer-events:none; color:var(--soft); font-size:.7rem;
+    opacity:0; animation:sparkle 7s ease-in-out infinite; }
+  @keyframes sparkle{ 0%,100%{opacity:0; transform:translateY(6px) scale(.6) rotate(0deg)}
+    50%{opacity:.75; transform:translateY(-10px) scale(1) rotate(22deg)} }
+
+  /* ================= 1 · THE GATE ================= */
+  #gate{ position:relative; z-index:10; height:var(--vh); display:grid; place-items:center;
+    padding:calc(2rem + var(--safe-t)) 1.6rem calc(2rem + var(--safe-b));
+    transition:opacity .5s ease, transform .7s cubic-bezier(.6,0,.3,1); }
+  #gate.leaving{ opacity:0; transform:scale(1.06); }
+  .gate-in{ width:min(24rem,100%); text-align:center; animation:riseIn .8s cubic-bezier(.2,.8,.3,1) both; }
+  @keyframes riseIn{ from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none} }
+
+  .lock{ font-size:2.1rem; line-height:1; display:inline-block; transform-origin:50% 70%; }
+  .lock.open{ animation:lockPop .7s cubic-bezier(.3,1.4,.4,1) both; }
+  @keyframes lockPop{ 0%{transform:none} 35%{transform:rotate(-14deg) scale(1.18)} 100%{transform:rotate(-8deg) scale(1) translateY(-4px)} }
+
+  .gate-title{ font-family:var(--pixel); font-size:.72rem; letter-spacing:.18em; color:var(--soft);
+    margin:1rem 0 .1rem; }
+  .gate-sub{ font-family:var(--script); font-size:1.55rem; line-height:1.25; color:#fff; opacity:.9;
+    margin:.55rem 0 1.9rem; }
+  .gate-sub em{ font-style:normal; color:var(--pink); }
+
+  .field{ display:flex; align-items:center; gap:.5rem; padding:.2rem .2rem .2rem 1.1rem;
+    border:1px solid rgba(245,195,207,.28); border-radius:100px; background:rgba(255,255,255,.05);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07); transition:border-color .2s ease, box-shadow .2s ease; }
+  .field:focus-within{ border-color:rgba(235,100,140,.7); box-shadow:0 0 0 4px rgba(235,100,140,.12); }
+  .field.wrong{ animation:shake .4s; border-color:rgba(236,100,42,.8); }
+  @keyframes shake{ 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(3px)} }
+  #pw{ flex:1; min-width:0; background:none; border:0; outline:none; padding:.9rem 0;
+    font-family:var(--mono); font-size:1.25rem; letter-spacing:.16em; text-transform:uppercase; color:#fff; }
+  #pw::placeholder{ color:rgba(255,255,255,.3); letter-spacing:.3em; }
+  @media (max-width:640px){ #pw{ font-size:16px; } }  /* ≥16px or iOS zooms the fixed layout */
+
+  .btn{ position:relative; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+    font-family:var(--pixel); font-size:.62rem; letter-spacing:.08em; color:#fff;
+    padding:1.05rem 1.5rem; border-radius:100px; background:linear-gradient(96deg,var(--pink),var(--orange));
+    box-shadow:0 6px 22px rgba(235,100,140,.4), inset 0 1px 0 rgba(255,255,255,.35);
+    transition:transform .18s ease, box-shadow .18s ease, opacity .18s ease; }
+  .btn:active{ transform:scale(.96); }
+  .btn:disabled{ opacity:.45; box-shadow:none; }
+  .btn::after{ content:''; position:absolute; inset:0 auto 0 0; width:55%; pointer-events:none;
+    background:linear-gradient(105deg, transparent 20%, rgba(255,255,255,.55) 50%, transparent 80%);
+    transform:translateX(-200%) skewX(-14deg); animation:sweep 3s ease-in-out infinite; }
+  @keyframes sweep{ 0%{transform:translateX(-200%) skewX(-14deg)} 55%,100%{transform:translateX(320%) skewX(-14deg)} }
+  .btn.wide{ width:100%; }
+  .btn.ghost{ background:none; border:1px solid rgba(245,195,207,.4); box-shadow:none; color:var(--soft); }
+  .btn.ghost::after{ display:none; }
+
+  #gateGo{ margin-top:1.1rem; width:100%; }
+  .gate-foot{ font-family:var(--mono); font-size:1.05rem; color:rgba(255,246,242,.42); margin-top:1.5rem; }
+  .gate-err{ min-height:1.5rem; margin-top:.9rem; font-family:var(--script); font-size:1.3rem; color:var(--soft); opacity:0;
+    transition:opacity .25s ease; }
+  .gate-err.on{ opacity:1; animation:riseIn .35s both; }
+
+  /* personalised arrival — the "wait… is that you?" beat */
+  .greet-1{ font-family:var(--pixel); font-size:.8rem; letter-spacing:.2em; color:var(--soft); opacity:0;
+    animation:riseIn .5s .15s both; }
+  .greet-2{ font-family:var(--serif); font-style:italic; font-size:clamp(1.9rem,9vw,2.7rem); line-height:1.15;
+    color:#fff; margin:.7rem 0 .1rem; opacity:0; animation:riseIn .6s 1.15s both; }
+  .greet-3{ font-family:var(--script); font-size:1.5rem; color:var(--soft); margin-top:.9rem; opacity:0;
+    animation:riseIn .6s 2.1s both; }
+  #greetOpen{ margin-top:1.7rem; opacity:0; animation:riseIn .6s 2.7s both; }
+
+  /* ================= 2 · THE CHAT ================= */
+  #app{ position:relative; z-index:10; height:var(--vh); display:none; flex-direction:column; opacity:0;
+    transition:opacity .5s ease; }
+  #app.on{ display:flex; }
+  #app.vis{ opacity:1; }
+  /* desktop: the phone experience, held inside the room rather than stretched across it */
+  @media (min-width:800px){
+    #app{ width:min(30rem,100%); margin:0 auto; height:min(var(--vh), 46rem); align-self:center;
+      border-radius:26px; overflow:hidden; border:1px solid rgba(245,195,207,.16);
+      box-shadow:0 40px 90px rgba(0,0,0,.6), 0 0 0 100vmax rgba(10,3,8,.5); }
+    #stage{ place-items:center; }
+    #gate{ height:auto; }
+  }
+
+  .head{ flex:none; display:flex; align-items:center; gap:.7rem;
+    padding:calc(.75rem + var(--safe-t)) .95rem .75rem;
+    background:linear-gradient(180deg, rgba(67,16,42,.92), rgba(46,11,29,.82));
+    border-bottom:1px solid rgba(245,195,207,.14); backdrop-filter:blur(10px); }
+  .avatar{ flex:none; width:2.4rem; height:2.4rem; border-radius:100px; overflow:hidden;
+    background:linear-gradient(135deg,var(--pink),var(--orange)); box-shadow:0 0 0 2px rgba(245,195,207,.35);
+    transition:transform .15s ease; }
+  .avatar:active{ transform:scale(.92); }
+  .avatar img{ width:100%; height:100%; object-fit:cover; object-position:50% 22%; display:block; }
+  .head-id{ flex:1; min-width:0; line-height:1.2; text-align:left; }
+  .head-id b{ display:block; font-family:var(--mono); font-weight:400; font-size:1.15rem; color:#fff; letter-spacing:.02em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .head-id i{ display:block; font-style:normal; font-family:var(--mono); font-size:.98rem; color:rgba(255,246,242,.55);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #headState{ color:rgba(255,246,242,.55); }
+  .head-id i.typing #headState{ color:var(--soft); }
+  .live-dot{ display:inline-block; width:.45rem; height:.45rem; border-radius:100px; background:#3ddc84;
+    box-shadow:0 0 .5rem rgba(61,220,132,.9); margin-right:.3rem; animation:live 2.6s ease-in-out infinite; }
+  @keyframes live{ 0%,100%{opacity:1} 50%{opacity:.4} }
+  .dotsep{ opacity:.5; margin:0 .35rem; }
+  #bestiesTag{ font-family:var(--mono); font-size:.98rem; letter-spacing:.02em; color:var(--pink); padding:0; }
+  #sound{ flex:none; width:1.85rem; height:1.85rem; border-radius:100px; display:grid; place-items:center;
+    font-size:.9rem; color:var(--soft); background:rgba(255,255,255,.07); }
+  #sound.off{ opacity:.4; }
+
+  /* the thread */
+  #thread{ flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain; display:flex; flex-direction:column; gap:.4rem;
+    padding:1rem .85rem 1.2rem; scroll-behavior:smooth; }
+  #thread::-webkit-scrollbar{ width:.3rem; }
+  #thread::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.14); border-radius:1rem; }
+
+  .msg{ position:relative; max-width:82%; font-family:var(--mono); font-size:1.35rem; line-height:1.3;
+    padding:.5rem .85rem; border-radius:1.15rem; word-wrap:break-word; white-space:pre-wrap;
+    animation:bubbleIn .4s cubic-bezier(.2,.9,.3,1.2) both; }
+  @keyframes bubbleIn{ from{opacity:0; transform:translateY(.6rem) scale(.96)} to{opacity:1; transform:none} }
+  .msg.her{ align-self:flex-start; background:var(--cream); color:var(--ink); border-bottom-left-radius:.3rem;
+    box-shadow:0 2px 10px rgba(0,0,0,.25); }
+  .msg.you{ align-self:flex-end; color:#fff; background:linear-gradient(120deg,var(--pink),#d8447a);
+    border-bottom-right-radius:.3rem; box-shadow:0 2px 10px rgba(0,0,0,.3); }
+  .msg .tick{ display:block; text-align:right; font-size:.78rem; letter-spacing:.06em; opacity:.65; margin-top:.1rem; }
+  .msg .react{ position:absolute; bottom:-.55rem; right:.5rem; font-size:.9rem; background:var(--wine-2);
+    border-radius:100px; padding:.05rem .3rem; box-shadow:0 2px 6px rgba(0,0,0,.4);
+    animation:reactIn .45s cubic-bezier(.3,1.5,.4,1) both; }
+  @keyframes reactIn{ from{opacity:0; transform:scale(.2) translateY(6px)} to{opacity:1; transform:none} }
+
+  .sys{ align-self:center; text-align:center; font-family:var(--mono); font-size:1.05rem; line-height:1.35;
+    color:rgba(255,246,242,.55); background:rgba(255,255,255,.05); border-radius:.8rem;
+    padding:.5rem .9rem; margin:.4rem 0; white-space:pre-line; animation:bubbleIn .5s both; }
+  .stamp{ align-self:center; font-family:var(--mono); font-size:.95rem; letter-spacing:.14em;
+    color:rgba(255,246,242,.32); margin:.5rem 0 .1rem; }
+
+  .msg.typing{ display:flex; gap:.25rem; align-items:center; padding:.75rem .9rem; }
+  .msg.typing i{ width:.38rem; height:.38rem; border-radius:100px; background:#b2557d; opacity:.4;
+    animation:typedot 1s infinite; }
+  .msg.typing i:nth-child(2){ animation-delay:.15s } .msg.typing i:nth-child(3){ animation-delay:.3s }
+  @keyframes typedot{ 0%,60%,100%{opacity:.3; transform:translateY(0)} 30%{opacity:1; transform:translateY(-.22rem)} }
+
+  /* the details she "shouts" — a bigger, hand-lettered bubble */
+  .msg.big{ font-family:var(--script); font-size:2.2rem; line-height:1.1; letter-spacing:.01em;
+    padding:.75rem 1.1rem; text-transform:lowercase; }
+
+  /* polaroids — drawn, not photographed. Placeholder art that still looks authored. */
+  .polaroid{ align-self:flex-start; width:min(63%,13.5rem); padding:.55rem .55rem 0; background:var(--cream);
+    border-radius:.35rem; box-shadow:0 8px 22px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08);
+    transform:rotate(var(--tilt,-2.5deg)); transform-origin:bottom left; cursor:pointer;
+    animation:polaIn .6s cubic-bezier(.2,.9,.3,1.15) both; }
+  @keyframes polaIn{ from{opacity:0; transform:rotate(var(--tilt,-2.5deg)) translateY(1rem) scale(.9)}
+    to{opacity:1; transform:rotate(var(--tilt,-2.5deg))} }
+  .polaroid:active{ transform:rotate(var(--tilt,-2.5deg)) scale(.97); }
+  .pola-img{ position:relative; aspect-ratio:1/1.04; border-radius:.15rem; overflow:hidden;
+    background:linear-gradient(150deg, var(--c1) 0%, var(--c2) 70%, #000 145%); display:grid; place-items:center; }
+  /* the blown-out corner a disposable flash leaves */
+  .pola-img::after{ content:''; position:absolute; inset:0;
+    background:radial-gradient(38% 30% at 68% 22%, rgba(255,255,255,.5), transparent 70%),
+               url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='90' height='90' filter='url(%23g)' opacity='.5'/></svg>");
+    mix-blend-mode:overlay; }
+  .pola-img img{ width:46%; height:auto; filter:drop-shadow(0 6px 14px rgba(0,0,0,.45)); animation:bob 5s ease-in-out infinite; }
+  @keyframes bob{ 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-7px) rotate(5deg)} }
+  .pola-cap{ font-family:var(--script); font-size:1.25rem; color:#7a4258; text-align:center; padding:.3rem 0 .45rem; }
+
+  /* the packing list, arriving as a spam of little sticker bubbles */
+  .pack{ align-self:flex-start; display:flex; flex-direction:column; gap:.35rem; max-width:88%; }
+  .pack-item{ display:flex; align-items:center; gap:.55rem; font-family:var(--mono); font-size:1.25rem;
+    color:var(--ink); background:var(--cream); border-radius:100px; padding:.42rem .95rem .42rem .5rem;
+    box-shadow:0 3px 10px rgba(0,0,0,.28); align-self:flex-start; transform-origin:left center;
+    animation:packIn .45s cubic-bezier(.25,1.4,.4,1) both; cursor:pointer; -webkit-user-select:none; user-select:none; }
+  .pack-item:active{ transform:scale(.95) rotate(-1.5deg); }
+  .pack-item b{ font-weight:400; font-size:1.3rem; }
+  @keyframes packIn{ from{opacity:0; transform:translateX(-1rem) scale(.8) rotate(-6deg)} to{opacity:1; transform:none} }
+  .pack-item .e{ font-size:1.05rem; }
+
+  /* the two reply buttons — styled as drafts of YOUR messages, not as UI chrome */
+  #choices{ flex:none; display:flex; flex-direction:column; gap:.5rem;
+    padding:.3rem .85rem calc(.9rem + var(--safe-b)); }
+  .choice{ align-self:flex-end; max-width:88%; text-align:right; font-family:var(--mono); font-size:1.3rem;
+    color:#fff; border:1px solid rgba(235,100,140,.55); border-radius:1.15rem; border-bottom-right-radius:.3rem;
+    padding:.5rem .9rem; background:rgba(235,100,140,.14);
+    animation:bubbleIn .35s both; transition:background .15s ease, transform .15s ease; }
+  .choice:active{ transform:scale(.96); background:rgba(235,100,140,.35); }
+
+  /* ================= 3 · THE PINKY PROMISE ================= */
+  .sheet{ position:fixed; inset:0; z-index:40; height:var(--vh); display:none; place-items:center;
+    padding:calc(1.6rem + var(--safe-t)) 1.4rem calc(1.6rem + var(--safe-b));
+    background:radial-gradient(90% 70% at 50% 30%, rgba(67,16,42,.97), rgba(10,3,8,.99));
+    backdrop-filter:blur(14px); opacity:0; transition:opacity .5s ease; }
+  .sheet.on{ display:grid; }
+  .sheet.vis{ opacity:1; }
+  .sheet-in{ width:min(24rem,100%); text-align:center; }
+
+  .promise-q{ font-family:var(--script); font-size:1.7rem; line-height:1.3; color:#fff; }
+  .promise-q em{ font-style:normal; color:var(--pink); }
+  #pinkyArt{ width:min(17rem,80vw); height:auto; margin:1.4rem auto .4rem; display:block; }
+  .hand{ transition:transform .12s linear; }
+  #holdBtn{ position:relative; width:100%; margin-top:1.2rem; padding:1.25rem 1.4rem; border-radius:100px;
+    font-family:var(--pixel); font-size:.62rem; letter-spacing:.09em; color:#fff; overflow:hidden;
+    background:rgba(255,255,255,.07); border:1px solid rgba(245,195,207,.35);
+    touch-action:none; -webkit-user-select:none; user-select:none; }
+  #holdFill{ position:absolute; inset:0 auto 0 0; width:0%; background:linear-gradient(90deg,var(--pink),var(--orange));
+    opacity:.9; transition:width .06s linear; }
+  #holdLabel{ position:relative; z-index:1; }
+  #holdBtn.done{ border-color:transparent; }
+  .promise-state{ font-family:var(--mono); font-size:1.2rem; color:var(--soft); margin-top:.9rem; min-height:1.6rem;
+    letter-spacing:.05em; }
+  .kiss{ position:absolute; left:50%; top:44%; font-size:5rem; opacity:0; pointer-events:none; z-index:5; }
+  .kiss.on{ animation:kissIn 1.5s cubic-bezier(.2,1.4,.3,1) both; }
+  @keyframes kissIn{ 0%{opacity:0; transform:translate(-50%,-50%) scale(.2) rotate(-25deg)}
+    30%{opacity:1; transform:translate(-50%,-50%) scale(1.15) rotate(-12deg)}
+    75%{opacity:1; transform:translate(-50%,-50%) scale(1) rotate(-12deg)}
+    100%{opacity:0; transform:translate(-50%,-58%) scale(1.05) rotate(-12deg)} }
+  .confetti{ position:fixed; z-index:45; pointer-events:none; font-size:1rem;
+    animation:fall 2.4s cubic-bezier(.3,.6,.6,1) forwards; }
+  @keyframes fall{ 0%{opacity:1; transform:translateY(0) rotate(0)} 100%{opacity:0; transform:translateY(70vh) rotate(540deg)} }
+
+  /* ================= 4 · THE INVITATION ================= */
+  #invite .sheet-in{ width:min(23rem,100%); }
+  .youre-in{ font-family:var(--serif); font-style:italic; font-size:clamp(2.4rem,13vw,3.4rem); color:#fff;
+    line-height:1; animation:riseIn .7s both; }
+  .youre-sub{ font-family:var(--script); font-size:1.4rem; color:var(--soft); margin:.5rem 0 1.5rem;
+    animation:riseIn .7s .25s both; }
+
+  /* the card itself — this IS the invite; nothing to download, nothing to print */
+  .card{ position:relative; padding:2.1rem 1.5rem 1.9rem; border-radius:.4rem; overflow:hidden;
+    background:linear-gradient(155deg, #fff8f4 0%, #ffeef2 45%, #f7d9de 100%); color:#3a1020;
+    box-shadow:0 26px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.4), inset 0 0 0 1px rgba(235,100,140,.25);
+    animation:cardIn .9s cubic-bezier(.2,.9,.3,1.05) .35s both; }
+  @keyframes cardIn{ from{opacity:0; transform:translateY(2rem) rotateX(16deg) scale(.94)} to{opacity:1; transform:none} }
+  /* a foil sheen that drifts across the stock */
+  .card::before{ content:''; position:absolute; inset:-40%; pointer-events:none; opacity:.5;
+    background:linear-gradient(60deg, transparent 38%, rgba(255,255,255,.85) 50%, transparent 62%);
+    animation:foil 6s ease-in-out infinite; }
+  @keyframes foil{ 0%,100%{transform:translateX(-30%)} 50%{transform:translateX(30%)} }
+  /* deckled edge: a dotted perforation just inside the border */
+  .card::after{ content:''; position:absolute; inset:.5rem; border:1px dashed rgba(235,100,140,.4);
+    border-radius:.2rem; pointer-events:none; }
+  .card-eyebrow{ font-family:var(--pixel); font-size:.5rem; letter-spacing:.28em; color:#c4436c; }
+  .card-name{ font-family:var(--serif); font-weight:500; line-height:.98; margin:1.1rem 0 1.2rem;
+    font-size:clamp(1.7rem,8.5vw,2.25rem); letter-spacing:.01em; }
+  .card-name span{ display:block; }
+  .card-name .l3{ font-style:italic; color:#c4436c; }
+  .card-rule{ height:1px; background:linear-gradient(90deg, transparent, rgba(235,100,140,.55), transparent); margin:0 auto 1.1rem; }
+  .card-dates{ font-family:var(--serif); font-size:clamp(2.4rem,15vw,3.2rem); line-height:.9; letter-spacing:-.01em; }
+  .card-year{ font-family:var(--pixel); font-size:.52rem; letter-spacing:.24em; margin-top:.7rem; color:#7a3350; }
+  .card-loc{ font-family:var(--mono); font-size:1.2rem; letter-spacing:.06em; margin-top:1.1rem; color:#7a3350; }
+  .card-quote{ font-family:var(--script); font-size:1.25rem; line-height:1.25; color:#8d4460; margin-top:1.3rem;
+    white-space:pre-line; }
+  .card-seal{ position:absolute; right:.85rem; bottom:.8rem; font-size:1.5rem; transform:rotate(12deg); }
+  .card-to{ font-family:var(--script); font-size:1.35rem; color:#a54a6d; margin-bottom:.2rem; }
+
+  .invite-btns{ display:flex; flex-direction:column; gap:.6rem; margin-top:1.4rem;
+    animation:riseIn .6s .8s both; }
+  #rsvpDone{ font-family:var(--mono); font-size:1.2rem; color:var(--soft); text-align:center; margin-top:1rem; }
+
+  /* photo lightbox */
+  #lightbox{ position:fixed; inset:0; z-index:55; display:none; place-items:center; padding:2rem 1.5rem;
+    background:rgba(8,2,6,.92); backdrop-filter:blur(6px); }
+  #lightbox.on{ display:grid; }
+  #lightbox .polaroid{ width:min(20rem,86vw); transform:rotate(-1.5deg); cursor:default;
+    animation:cardIn .5s cubic-bezier(.2,.9,.3,1.1) both; }
+
+  /* the playful "we saw that" / easter-egg toast */
+  #toast{ position:fixed; left:50%; bottom:calc(5rem + var(--safe-b)); z-index:80; transform:translate(-50%,1rem);
+    font-family:var(--script); font-size:1.35rem; color:#fff; background:rgba(67,16,42,.95);
+    border:1px solid rgba(245,195,207,.35); border-radius:100px; padding:.6rem 1.2rem; white-space:nowrap;
+    opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+  #toast.on{ opacity:1; transform:translate(-50%,0); }
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <!-- ---------------- the gate ---------------- -->
+  <section id="gate">
+    <!-- universal link: secretslumberparty.com/besties -->
+    <div class="gate-in" id="gateLocked">
+      <span class="lock" id="lockIcon">🔒</span>
+      <p class="gate-title">BESTIES ONLY</p>
+      <p class="gate-sub">“what happens at the<br>slumber party<em>…</em>”</p>
+      <form id="gateForm" autocomplete="off">
+        <label class="field" id="pwField">
+          <input id="pw" type="password" name="besties-pass" placeholder="••••••••"
+                 autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
+                 aria-label="password" enterkeyhint="go" />
+        </label>
+        <button class="btn" id="gateGo" type="submit" disabled>let me in</button>
+      </form>
+      <p class="gate-err" id="gateErr" role="status" aria-live="polite"></p>
+      <p class="gate-foot">if khushi sent you this,<br>you know what to do.</p>
+    </div>
+
+    <!-- personalised link: secretslumberparty.com/besties/shanaya-3w9x -->
+    <div class="gate-in" id="gateGreet" hidden>
+      <p class="greet-1">WAIT…</p>
+      <p class="greet-2" id="greetName">is that you? 👀</p>
+      <p class="greet-3">khushi left you something.</p>
+      <button class="btn wide" id="greetOpen" type="button">open</button>
+    </div>
+  </section>
+
+  <!-- ---------------- the conversation ---------------- -->
+  <section id="app" aria-live="polite">
+    <header class="head">
+      <button class="avatar" id="avatar" type="button" aria-label="khushi">
+        <img src="../assets/khushi-face.png" alt="" />
+      </button>
+      <span class="head-id">
+        <b>🎀 secret slumber party</b>
+        <i id="headSub"><span class="live-dot"></span><span id="headState">khushi + you</span><span
+          class="dotsep">·</span><button id="bestiesTag" type="button">besties only</button></i>
+      </span>
+      <button id="sound" type="button" aria-label="sound on or off">♪</button>
+    </header>
+
+    <div id="thread"></div>
+    <div id="choices" hidden></div>
+  </section>
+
+  <!-- ---------------- the pinky promise ---------------- -->
+  <section class="sheet" id="pinky">
+    <div class="sheet-in">
+      <p class="promise-q">what happens at the slumber party<em>…</em><br>stays at the slumber party.</p>
+      <!-- two stylised hands that travel toward each other and hook as you hold -->
+      <!-- two fists, each with a pinky curling toward the middle; JS slides them
+           together as the hold progresses until the two hooks interlock -->
+      <svg id="pinkyArt" viewBox="0 0 260 160" fill="none" aria-hidden="true">
+        <g id="hookGlow" opacity="0">
+          <defs><radialGradient id="gl"><stop offset="0" stop-color="#ebd81b" stop-opacity=".85"/>
+            <stop offset="1" stop-color="#ebd81b" stop-opacity="0"/></radialGradient></defs>
+          <circle cx="130" cy="80" r="44" fill="url(#gl)"/>
+        </g>
+        <g class="hand" id="handL" transform="translate(-46 0)">
+          <path d="M92 66 C 116 61, 132 70, 132 83 C 132 94, 123 98, 116 93"
+                stroke="#f8d3dc" stroke-width="15" stroke-linecap="round"/>
+          <circle cx="116" cy="93" r="5.5" fill="#eb648c"/>
+          <rect x="14" y="46" width="82" height="66" rx="28" fill="#f5c3cf"/>
+          <path d="M36 63 h42" stroke="#e6adbd" stroke-width="5" stroke-linecap="round"/>
+          <rect x="6" y="74" width="30" height="38" rx="15" fill="#e8b3c1"/>
+        </g>
+        <g class="hand" id="handR" transform="translate(46 0)">
+          <path d="M168 94 C 144 99, 128 90, 128 77 C 128 66, 137 62, 144 67"
+                stroke="#f8d3dc" stroke-width="15" stroke-linecap="round"/>
+          <circle cx="144" cy="67" r="5.5" fill="#eb648c"/>
+          <rect x="164" y="46" width="82" height="66" rx="28" fill="#f5c3cf"/>
+          <path d="M182 63 h42" stroke="#e6adbd" stroke-width="5" stroke-linecap="round"/>
+          <rect x="224" y="74" width="30" height="38" rx="15" fill="#e8b3c1"/>
+        </g>
+      </svg>
+      <button id="holdBtn" type="button">
+        <span id="holdFill"></span>
+        <span id="holdLabel">HOLD TO PINKY PROMISE</span>
+      </button>
+      <p class="promise-state" id="holdState">&nbsp;</p>
+      <span class="kiss" id="kiss">💋</span>
+    </div>
+  </section>
+
+  <!-- ---------------- the invitation ---------------- -->
+  <section class="sheet" id="invite">
+    <div class="sheet-in">
+      <p class="youre-in">you're in 💌</p>
+      <p class="youre-sub">see you at khushi's.</p>
+      <div class="card" id="inviteCard"></div>
+      <div class="invite-btns">
+        <button class="btn wide" id="rsvpBtn" type="button">RSVP — I'M COMING</button>
+        <button class="btn ghost wide" id="calBtn" type="button">ADD TO CALENDAR</button>
+      </div>
+      <p id="rsvpDone" hidden></p>
+    </div>
+  </section>
+
+  <div id="lightbox"></div>
+</div>
+
+<div id="grain"></div>
+<div id="flash"></div>
+<div id="toast"></div>
+
+<script src="../assets/config.js"></script>
+<script src="sealed.js"></script>
+<script src="guests.js"></script>
+<script src="besties.js"></script>
+</body>
+</html>

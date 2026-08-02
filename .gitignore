@@ -1,2 +1,11 @@
 .claude/
 .DS_Store
+
+# /besties plaintext masters — these are the very things the sealed payload
+# protects, so they must never be committed. The CIPHERTEXT (besties/sealed.js,
+# besties/guests.js) is committed; that's what the site serves.
+# Lost the masters? `node tools/besties-seal.mjs unseal` rebuilds content.json
+# from the sealed file plus the password.
+besties/content.json
+besties/guests.json
+besties/.password

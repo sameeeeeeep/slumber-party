@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>besties only 🤫</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" type="image/png" href="/assets/favicon.png" />
+<style>
+  html,body{ height:100%; margin:0; background:#12040c; color:#f5c3cf;
+    font-family:'Caveat',cursive,system-ui,sans-serif; display:grid; place-items:center; }
+  a{ color:#eb648c; }
+  p{ font-size:1.6rem; opacity:.8; }
+</style>
+<script>
+/* GitHub Pages serves this file for any path it can't find, which is how
+   /besties/<name> works without a server: personalised links land here, and we
+   hand the code to the real experience. Everything else goes home.
+
+   The redirect happens before paint, so a guest never sees this page. */
+(function () {
+  var m = location.pathname.match(/^\/besties\/([A-Za-z0-9_-]{1,64})\/?$/);
+  if (m) location.replace('/besties/?g=' + encodeURIComponent(m[1]));
+  else if (/^\/besties/.test(location.pathname)) location.replace('/besties/');
+})();
+</script>
+</head>
+<body>
+  <p>nothing to see here 🤫 &nbsp;<a href="/">go home</a></p>
+</body>
+</html>
