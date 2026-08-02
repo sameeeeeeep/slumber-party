@@ -598,8 +598,9 @@ function buildInviteCard() {
   $('inviteCard').innerHTML =
     to +
     '<p class="card-eyebrow">' + escapeHTML(iv.eyebrow) + '</p>' +
-    '<h1 class="card-name"><span>' + escapeHTML(iv.line1) + '</span><span>' + escapeHTML(iv.line2) +
-      '</span><span class="l3">' + escapeHTML(iv.line3) + '</span></h1>' +
+    // the real logo, not a typographic stand-in for it
+    '<h1 class="card-name"><img class="card-logo" src="../assets/logo.png" alt="' +
+      escapeHTML([iv.line1, iv.line2, iv.line3].join(' ')) + '" /></h1>' +
     '<div class="card-rule"></div>' +
     '<p class="card-dates">' + escapeHTML(e.dates_line) + '</p>' +
     '<p class="card-year">' + escapeHTML(e.dates_year) + '</p>' +
