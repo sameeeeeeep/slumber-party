@@ -135,7 +135,9 @@ async function cmdGuests(argv) {
   const out = {};
   for (const g of list) {
     const record = { first: g.first || (g.name || '').split(/\s+/)[0], name: g.name || '',
-                     plus_one: !!g.plus_one, notes: g.notes || '', pass };
+                     plus_one: !!g.plus_one, notes: g.notes || '',
+                     // picks a copy variant out of content.variants (e.g. "neutral")
+                     voice: g.voice || null, pass };
     out[await guestIndex(g.code)] = await seal(record, g.code.toLowerCase(), GUEST_ROUNDS);
   }
   await writeFile(P('besties/guests.js'), banner() + `window.BESTIES_GUESTS=${JSON.stringify(out)};\n`);

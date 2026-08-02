@@ -326,6 +326,15 @@ function stamp() {
 /* ============================================================================
    THE CONVERSATION
    ============================================================================ */
+/* Per-guest copy swap. Her script is written for the girls she's inviting; a
+   guest whose record asks for a different voice hears the alternate line, and
+   everything not listed falls through untouched. */
+function line(text) {
+  const v = state.guest && state.guest.voice
+    && state.content.variants && state.content.variants[state.guest.voice];
+  return (v && v[text]) || text;
+}
+
 function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -467,9 +476,9 @@ async function doStep(s) {
     if (s.t === 'pinky' || s.t === 'invite') return;
   }
   switch (s.t) {
-    case 'system': system(s.text); await sleep(s.wait || 700); break;
-    case 'her':    await her(s.text, s.typing, s.wait, s.react); break;
-    case 'big':    bubble('her', s.text, 'big'); FX.recv(); await sleep(s.wait || 800); break;
+    case 'system': system(line(s.text)); await sleep(s.wait || 700); break;
+    case 'her':    await her(line(s.text), s.typing, s.wait, s.react); break;
+    case 'big':    bubble('her', line(s.text), 'big'); FX.recv(); await sleep(s.wait || 800); break;
     case 'photo':  await photo(s); break;
     case 'pack':   await pack(); await sleep(s.wait || 800); break;
     case 'choice': {
