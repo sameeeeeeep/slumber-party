@@ -246,8 +246,16 @@
     background:radial-gradient(38% 30% at 68% 22%, rgba(255,255,255,.5), transparent 70%),
                url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='90' height='90' filter='url(%23g)' opacity='.5'/></svg>");
     mix-blend-mode:overlay; }
+  /* placeholder art: a brand sticker floating on a tint */
   .pola-img img{ width:46%; height:auto; filter:drop-shadow(0 6px 14px rgba(0,0,0,.45)); animation:bob 5s ease-in-out infinite; }
   @keyframes bob{ 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-7px) rotate(5deg)} }
+  /* a real photograph fills the frame instead — no float, no bob */
+  .pola-img.shot img{ width:100%; height:100%; object-fit:cover; filter:none; animation:none; }
+  /* the flash bloom and grain still sit on top, so a real photo reads as the same
+     disposable-camera shot the placeholders were imitating */
+  .pola-img.shot::after{ opacity:.55; }
+  /* nothing to look at until it decodes — a dark frame, not a white flash */
+  .pola-img.shot{ background:#2a0713; }
   .pola-cap{ font-family:var(--script); font-size:1.25rem; color:#7a4258; text-align:center; padding:.3rem 0 .45rem; }
 
   /* the packing list, arriving as a spam of little sticker bubbles */

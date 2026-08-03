@@ -417,14 +417,26 @@ const STICKER = { bow: 'sticker-bow', heart: 'sticker-heart', sparkle: 'sticker-
                   star: 'sticker-star', flower: 'sticker-flower', peach: 'sticker-peach',
                   pillow: 'sticker-pillow' };
 
+/* A photo step renders one of two ways:
+     { "src": "photos/whatever.jpg" }  → the real photograph, filling the frame
+     { "tint": […], "sticker": "…" }   → the drawn placeholder
+   Both keep the flash bloom and grain on top, so swapping one for the other
+   doesn't change how the frame sits in the conversation. */
 function polaroid(p, forLightbox) {
   const el = document.createElement('figure');
   el.className = 'polaroid';
   el.style.setProperty('--tilt', (forLightbox ? -1.5 : (Math.random() * 5 - 3.2).toFixed(1)) + 'deg');
-  const src = '../assets/' + (STICKER[p.sticker] || 'sticker-heart') + '.png';
+
+  const tint = p.tint || ['#2a0713', '#71183a'];
+  const src = p.src ? p.src : '../assets/' + (STICKER[p.sticker] || 'sticker-heart') + '.png';
+  // the first photo is on screen within moments of unlocking; the rest can wait
+  const loading = p.eager ? 'eager' : 'lazy';
+
   el.innerHTML =
-    '<div class="pola-img" style="--c1:' + escapeHTML(p.tint[0]) + ';--c2:' + escapeHTML(p.tint[1]) + '">' +
-      '<img src="' + src + '" alt="' + escapeHTML(p.alt || '') + '" loading="lazy" decoding="async" />' +
+    '<div class="pola-img' + (p.src ? ' shot' : '') + '" style="--c1:' + escapeHTML(tint[0]) +
+      ';--c2:' + escapeHTML(tint[1]) + '">' +
+      '<img src="' + escapeHTML(src) + '" alt="' + escapeHTML(p.alt || '') +
+        '" loading="' + loading + '" decoding="async" />' +
     '</div>' +
     '<figcaption class="pola-cap">' + escapeHTML(p.cap || '') + '</figcaption>';
   return el;
