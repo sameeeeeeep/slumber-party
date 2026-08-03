@@ -8,7 +8,15 @@
      make someone curious, never brief them on the party. -->
 <title>besties only 🤫</title>
 <meta name="description" content="Khushi left you something." />
-<meta name="robots" content="noindex, nofollow" />
+<!-- Keep this out of search entirely. Note we do NOT also disallow /besties in
+     robots.txt: a blocked page can't be crawled, so the noindex below would never
+     be read, and Google can still list a blocked URL bare. Crawlable + noindex is
+     what actually removes it. -->
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+<!-- A personalised URL is the guest's key. Without this, every font request from
+     this page would hand the full /besties/<code> to Google in a Referer header. -->
+<meta name="referrer" content="no-referrer" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="besties only 🤫" />
 <meta property="og:description" content="Khushi left you something." />

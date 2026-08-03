@@ -157,9 +157,20 @@ async function cmdAdd(argv) {
   console.log(`\n  ↳ send her:  secretslumberparty.com/besties/${code}`);
 }
 
+/* The message Khushi actually sends. The universal link carries the password so
+   there's nothing to type; personalised links don't need it. */
+async function cmdLink(argv) {
+  const pass = await password(argv);
+  console.log('\n  I have a secret 🤫');
+  console.log('  and apparently you\'re on the besties list.\n');
+  console.log(`  secretslumberparty.com/besties/?p=${encodeURIComponent(pass)}\n`);
+  console.log('  don\'t tell anyone. x\n');
+  console.log(`  (or without the shortcut: secretslumberparty.com/besties  ·  password: ${pass})\n`);
+}
+
 const [cmd = 'seal', ...rest] = process.argv.slice(2);
 const argv = [cmd, ...rest];
-const run = { seal: cmdSeal, unseal: cmdUnseal, guests: cmdGuests, add: cmdAdd }[cmd];
+const run = { seal: cmdSeal, unseal: cmdUnseal, guests: cmdGuests, add: cmdAdd, link: cmdLink }[cmd];
 if (!run) { console.error(`unknown command "${cmd}" — try: seal | unseal | guests | add`); process.exit(1); }
 run(argv).catch(err => {
   if (String(err).includes('operation-specific reason') || err?.name === 'OperationError')

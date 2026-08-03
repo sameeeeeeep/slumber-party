@@ -1,0 +1,20 @@
+# secretslumberparty.com
+#
+# The public site is meant to be found: crawl all of it.
+User-agent: *
+Allow: /
+
+# WHY /besties AND /admin ARE NOT DISALLOWED HERE
+#
+# It looks backwards, but "Disallow" is the wrong tool for hiding a page. It
+# blocks crawling, not indexing — and a page that can't be crawled can't be read,
+# so the <meta name="robots" content="noindex"> on it never gets seen. Google is
+# then free to list the bare URL, with no title and no description, purely from a
+# link it found elsewhere. Blocking would make /besties MORE likely to surface,
+# not less.
+#
+# So both private routes stay crawlable and carry noindex in their own <head>,
+# which Google honours by dropping them from the index entirely. Neither is
+# linked from anywhere public, and personalised invite codes are unguessable.
+
+Sitemap: https://secretslumberparty.com/sitemap.xml

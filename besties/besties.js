@@ -200,7 +200,8 @@ function inviteCode() {
   const seg = location.pathname.replace(/\/+$/, '').split('/').pop();
   if (seg && seg !== 'besties' && !/\.html?$/.test(seg)) return seg;
   const h = location.hash.replace('#', '');
-  return h || null;
+  if (!h || h.startsWith('p=')) return null;   // #p= is a carried password, not a guest
+  return h;
 }
 
 async function boot() {
@@ -220,6 +221,25 @@ async function boot() {
         return greetGuest(g);
       }
     } catch (e) { /* unknown or mistyped code — fall through to the password */ }
+  }
+
+  /* A link can carry the password: /besties/?p=PINKYPROMISE opens straight
+     through, so one WhatsApp message is the whole invitation. It's stripped from
+     the address bar the moment it's used, so it doesn't sit in history or in a
+     screenshot of the URL. Nothing on this page reports URLs to a third party,
+     and <meta name="referrer" content="no-referrer"> stops the font request from
+     carrying it off-site. Obviously anyone forwarding that link forwards the
+     password with it — which is already true of the message it's pasted into. */
+  const carried = new URLSearchParams(location.search).get('p')
+               || (location.hash.startsWith('#p=') ? decodeURIComponent(location.hash.slice(3)) : null);
+  if (carried) {
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    try {
+      state.content = await unsealBlob(window.BESTIES_SEALED, carried.trim().toUpperCase());
+      state.key = carried.trim().toUpperCase();
+      ev('password_success', { via: 'link' });
+      return enter(false);
+    } catch (e) { /* stale link — fall through and just ask for it */ }
   }
 
   // already been let in on this device? walk straight back in.
