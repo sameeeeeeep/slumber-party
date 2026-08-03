@@ -429,8 +429,11 @@ function polaroid(p, forLightbox) {
 
   const tint = p.tint || ['#2a0713', '#71183a'];
   const src = p.src ? p.src : '../assets/' + (STICKER[p.sticker] || 'sticker-heart') + '.png';
-  // the first photo is on screen within moments of unlocking; the rest can wait
-  const loading = p.eager ? 'eager' : 'lazy';
+  /* Default to eager. Two reasons: a lazy image inserted below the fold of a
+     nested scroll container doesn't reliably trigger, and a photo she "sends"
+     should already be decoded when it lands — a frame that pops in a beat later
+     breaks the illusion that she just sent it. There are only ever a handful. */
+  const loading = p.eager === false ? 'lazy' : 'eager';
 
   el.innerHTML =
     '<div class="pola-img' + (p.src ? ' shot' : '') + '" style="--c1:' + escapeHTML(tint[0]) +
