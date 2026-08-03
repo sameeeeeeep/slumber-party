@@ -15,12 +15,13 @@ invited. Password screen → the lock opens → a camera flash → Khushi starts
 texting you. The dates, the location and the packing list arrive as messages;
 it ends on a hold-to-pinky-promise and a collectible invite card.
 
-**Password: `PINKYPROMISE`** (typed in any case).
+The password is kept in `besties/.password` (gitignored) — ask Khushi for it,
+or carry it in the link (below). Typed in any case.
 
 ### Why the content is encrypted
 
 The site is static, so there is no server to check a password against. The naive
-version — `if (typed === 'PINKYPROMISE')` — would put both the password and the
+version — `if (typed === THE_PASSWORD)` — would put both the password and the
 whole invitation in view-source, which defeats the point of a private route.
 
 So the password *is* the key. `besties/sealed.js` is AES-GCM ciphertext under a

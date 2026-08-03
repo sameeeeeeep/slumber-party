@@ -5,7 +5,7 @@
    WHY THIS EXISTS
    ---------------
    The site is static (GitHub Pages). There is no server, so there is nowhere to
-   check a password. The naive version — `if (typed === 'PINKYPROMISE')` — puts
+   check a password. The naive version — `if (typed === THE_PASSWORD)` — puts
    both the password AND the entire invitation in view-source, which defeats the
    whole point of a private route.
 
@@ -27,7 +27,8 @@
      node tools/besties-seal.mjs add "Shanaya Kapoor"     mint a personalised link
 
    The password comes from --pass=…, or $BESTIES_PASS, or besties/.password
-   (gitignored), in that order. Default: PINKYPROMISE.
+   (gitignored), in that order. There is no default — the tool errors if none is
+   given, so a known password can never silently seal the content again.
    ============================================================================ */
 
 import { readFile, writeFile } from 'node:fs/promises';
@@ -89,7 +90,7 @@ async function password(argv) {
   if (flag) return flag.slice(7);
   if (process.env.BESTIES_PASS) return process.env.BESTIES_PASS;
   if (existsSync(P('besties/.password'))) return (await readFile(P('besties/.password'), 'utf8')).trim();
-  return 'PINKYPROMISE';
+  throw new Error('no password — pass --pass=…, set $BESTIES_PASS, or create besties/.password (gitignored)');
 }
 
 const banner = (file) =>

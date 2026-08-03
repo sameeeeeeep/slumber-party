@@ -223,7 +223,7 @@ async function boot() {
     } catch (e) { /* unknown or mistyped code — fall through to the password */ }
   }
 
-  /* A link can carry the password: /besties/?p=PINKYPROMISE opens straight
+  /* A link can carry the password: /besties/?p=<password> opens straight
      through, so one WhatsApp message is the whole invitation. It's stripped from
      the address bar the moment it's used, so it doesn't sit in history or in a
      screenshot of the URL. Nothing on this page reports URLs to a third party,
