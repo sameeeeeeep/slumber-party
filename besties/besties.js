@@ -517,7 +517,8 @@ function pinkyPromise() {
   return new Promise(resolve => {
     ev('pinky_promise_started');
     const sheet = $('pinky'), btn = $('holdBtn'), fill = $('holdFill'),
-          label = $('holdState'), hL = $('handL'), hR = $('handR'), glow = $('hookGlow');
+          label = $('holdState'), hL = $('handL'), hR = $('handR'),
+          glow = $('hookGlow'), stars = $('hookStars');
     sheet.classList.add('on');
     requestAnimationFrame(() => sheet.classList.add('vis'));
 
@@ -525,10 +526,11 @@ function pinkyPromise() {
 
     function paint(v) {
       fill.style.width = (v * 100) + '%';
-      // they start apart and close on each other; at v=1 the two hooks interlock
-      hL.setAttribute('transform', 'translate(' + (-46 * (1 - v)).toFixed(1) + ' 0)');
-      hR.setAttribute('transform', 'translate(' + (46 * (1 - v)).toFixed(1) + ' 0)');
+      // they start apart and close on each other; at v=1 the two fingers interlock
+      hL.setAttribute('transform', 'translate(' + (-40 * (1 - v)).toFixed(1) + ' 0)');
+      hR.setAttribute('transform', 'translate(' + (40 * (1 - v)).toFixed(1) + ' 0)');
       glow.setAttribute('opacity', v > .82 ? ((v - .82) / .18).toFixed(2) : '0');
+      stars.setAttribute('opacity', v > .9 ? ((v - .9) / .1).toFixed(2) : '0');
       let s = 0; for (let i = 0; i < STAGES.length; i++) if (v >= STAGES[i].at) s = i;
       if (s !== stage) { stage = s; label.textContent = STAGES[s].label; buzz(12); FX.tick(); }
     }
