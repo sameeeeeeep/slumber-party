@@ -424,7 +424,7 @@
            seams where they meet. The right hand is the same art rotated 180° about
            the hook — which is how two hands actually meet — and JS slides them
            together until the fingers interlock. -->
-      <svg id="pinkyArt" viewBox="-20 0 340 200" fill="none" aria-hidden="true">
+      <svg id="pinkyArt" viewBox="0 0 380 240" fill="none" aria-hidden="true">
         <defs>
           <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#ffe0e8"/><stop offset="1" stop-color="#efa9bf"/>
@@ -434,60 +434,83 @@
             <stop offset="1" stop-color="#ebd81b" stop-opacity="0"/>
           </radialGradient>
 
+          <!-- One hand, drawn once. Two things make it read: the FRONT EDGE is three
+               arcs bulging outward, so the curled fingers notch the silhouette rather
+               than being lines painted on a rounded rectangle — and the pinky actually
+               reaches, travelling well clear of the fist before it hooks, tapering as
+               it goes, with a joint crease and a painted nail. -->
           <g id="hand">
-            <!-- pass 1 · the cream die-cut, every silhouette piece at once -->
+            <!-- pass 1 · the cream die-cut: every silhouette piece, outline only -->
             <g fill="#fff6f2" stroke="#fff6f2" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
-              <rect x="2" y="74" width="26" height="56" rx="12"/>
-              <rect x="20" y="80" width="44" height="44" rx="21"/>
-              <path d="M108 122 C130 122 144 116 150 106 C154 99 148 93 142 97" stroke-width="23"/>
-              <rect x="50" y="56" width="70" height="82" rx="26"/>
-              <rect x="54" y="44" width="52" height="28" rx="14" transform="rotate(-11 80 58)"/>
+              <rect x="26" y="86" width="20" height="46" rx="9"/>
+              <rect x="38" y="90" width="40" height="38" rx="18"/>
+              <path d="M132 141 C160 145 186 142 194 128 C200 116 190 106 180 111" stroke-width="24" fill="none"/>
+              <path d="M140 74 a11 11 0 0 1 0 22 a11 11 0 0 1 0 22 a10 10 0 0 1 0 20
+                       C138 146 124 151 108 150 C86 149 68 142 68 120 L68 80
+                       C68 60 84 52 104 52 C124 52 140 58 140 74 Z"/>
+              <path d="M76 66 C80 52 96 46 112 50 C124 53 127 64 120 72 C113 80 96 81 85 77 C78 74 74 72 76 66 Z"/>
             </g>
 
             <!-- pass 2 · the fills, which bury every internal edge from pass 1 -->
-            <rect x="20" y="80" width="44" height="44" rx="21" fill="#eda7bd"/>
-            <path d="M108 122 C130 122 144 116 150 106 C154 99 148 93 142 97"
-                  stroke="url(#skin)" stroke-width="16" stroke-linecap="round"/>
-            <rect x="50" y="56" width="70" height="82" rx="26" fill="url(#skin)"/>
-            <!-- the thumb, folded over the top of the fist -->
-            <rect x="54" y="44" width="52" height="28" rx="14" fill="#ffd6e1" transform="rotate(-11 80 58)"/>
+            <rect x="38" y="90" width="40" height="38" rx="18" fill="#eda7bd"/>
+            <!-- the pinky, laid down before the fist so the fist covers its root -->
+            <path d="M132 141 C160 145 186 142 194 128 C200 116 190 106 180 111"
+                  stroke="url(#skin)" stroke-width="17" stroke-linecap="round" fill="none"/>
+            <!-- …narrowed twice more along its length, so it tapers toward the tip -->
+            <path d="M170 144 C182 142 191 136 194 127" stroke="#fbc3d2" stroke-width="14"
+                  stroke-linecap="round" fill="none"/>
+            <path d="M195 124 C199 114 190 106 181 111" stroke="#fbc3d2" stroke-width="12.5"
+                  stroke-linecap="round" fill="none"/>
+            <!-- the fist, three curled fingers scalloping its front edge -->
+            <path d="M140 74 a11 11 0 0 1 0 22 a11 11 0 0 1 0 22 a10 10 0 0 1 0 20
+                     C138 146 124 151 108 150 C86 149 68 142 68 120 L68 80
+                     C68 60 84 52 104 52 C124 52 140 58 140 74 Z" fill="url(#skin)"/>
+            <!-- the thumb, folded across the top -->
+            <path d="M76 66 C80 52 96 46 112 50 C124 53 127 64 120 72 C113 80 96 81 85 77 C78 74 74 72 76 66 Z"
+                  fill="#ffd6e1"/>
+            <path d="M82 74 C94 80 110 79 119 71" stroke="#e6a0b6" stroke-width="2.6"
+                  stroke-linecap="round" opacity=".5" fill="none"/>
 
-            <!-- the other three fingers, curled and stacked above the pinky -->
-            <g stroke="#e6a0b6" stroke-width="3" stroke-linecap="round" opacity=".7">
-              <path d="M78 82 Q99 77 116 83"/>
-              <path d="M76 101 Q98 96 117 102"/>
-              <path d="M76 119 Q96 115 112 120"/>
+            <!-- creases where each curled finger tucks under the one above it -->
+            <g stroke="#e093ab" stroke-width="2.8" stroke-linecap="round" opacity=".62" fill="none">
+              <path d="M116 88 Q130 86 138 90"/>
+              <path d="M114 110 Q129 108 138 112"/>
+              <path d="M113 131 Q126 129 134 133"/>
             </g>
-            <!-- Y2K bubble gloss -->
-            <ellipse cx="72" cy="76" rx="14" ry="9" fill="#fff" opacity=".32" transform="rotate(-28 72 76)"/>
-            <!-- the knuckle of the extended finger, so it bends rather than bulges -->
-            <path d="M133 120 q7 -3 11 -9" stroke="#e6a0b6" stroke-width="2.6" stroke-linecap="round" opacity=".5"/>
-            <!-- painted nail + a glint on it -->
-            <ellipse cx="142" cy="97" rx="6.2" ry="5.1" fill="#eb648c" transform="rotate(-38 142 97)"/>
-            <path d="M140 94.5 l1.3 2 2 1.3 -2 1.3 -1.3 2 -1.3 -2 -2 -1.3 2 -1.3z" fill="#fff" opacity=".92"/>
+            <!-- the knuckle it bends at, and the joint halfway along the finger -->
+            <path d="M146 140 q6 4 12 4" stroke="#e093ab" stroke-width="2.6"
+                  stroke-linecap="round" opacity=".6" fill="none"/>
+            <path d="M180 141 q7 -2 11 -7" stroke="#e093ab" stroke-width="2.2"
+                  stroke-linecap="round" opacity=".42" fill="none"/>
+            <!-- Y2K bubble gloss on the back of the hand -->
+            <ellipse cx="90" cy="76" rx="15" ry="9" fill="#fff" opacity=".3" transform="rotate(-26 90 76)"/>
+            <!-- painted nail on the fingertip + a glint -->
+            <ellipse cx="180" cy="111" rx="6" ry="4.8" fill="#eb648c" transform="rotate(-18 180 111)"/>
+            <path d="M178 108.6 l1.2 1.9 1.9 1.2 -1.9 1.2 -1.2 1.9 -1.2 -1.9 -1.9 -1.2 1.9 -1.2z"
+                  fill="#fff" opacity=".92"/>
             <!-- satin pyjama cuff + friendship beads -->
-            <rect x="2" y="74" width="26" height="56" rx="12" fill="#c9456f"/>
-            <rect x="8" y="78" width="5" height="48" rx="2.5" fill="#fff" opacity=".3"/>
-            <circle cx="36" cy="101" r="4.4" fill="#ebd81b"/>
-            <circle cx="45" cy="104" r="4.4" fill="#ec642a"/>
-            <circle cx="54" cy="106" r="4.4" fill="#fff6f2"/>
+            <rect x="26" y="86" width="20" height="46" rx="9" fill="#c9456f"/>
+            <rect x="31" y="90" width="4" height="38" rx="2" fill="#fff" opacity=".3"/>
+            <circle cx="53" cy="107" r="4.2" fill="#ebd81b"/>
+            <circle cx="62" cy="110" r="4.2" fill="#ec642a"/>
           </g>
         </defs>
 
-        <g id="hookGlow" opacity="0"><circle cx="150" cy="100" r="52" fill="url(#gl)"/></g>
-        <!-- the far hand first, so the near hand's finger crosses in front of it -->
-        <g class="hand" id="handR" transform="translate(40 0)">
-          <g transform="rotate(180 150 100)"><use href="#hand"/></g>
+        <g id="hookGlow" opacity="0"><circle cx="190" cy="126" r="56" fill="url(#gl)"/></g>
+        <!-- the far hand first, so the near hand's finger crosses in front of it.
+             180° about the hook, because that is how two hands actually meet —
+             a mirror would give two hooks curling the same way, which can't link. -->
+        <g class="hand" id="handR" transform="translate(46 0)">
+          <g transform="rotate(180 190 126)"><use href="#hand"/></g>
         </g>
-        <g class="hand" id="handL" transform="translate(-40 0)"><use href="#hand"/></g>
+        <g class="hand" id="handL" transform="translate(-46 0)"><use href="#hand"/></g>
         <!-- sparkles that only show up once the promise is sealed -->
         <g id="hookStars" opacity="0" fill="#ffe9a8">
-          <path d="M150 58 l3.4 8.6 8.6 3.4 -8.6 3.4 -3.4 8.6 -3.4 -8.6 -8.6 -3.4 8.6 -3.4z"/>
-          <path d="M186 128 l2.4 6 6 2.4 -6 2.4 -2.4 6 -2.4 -6 -6 -2.4 6 -2.4z"/>
-          <path d="M114 132 l1.8 4.6 4.6 1.8 -4.6 1.8 -1.8 4.6 -1.8 -4.6 -4.6 -1.8 4.6 -1.8z"/>
+          <path d="M190 74 l3.4 8.6 8.6 3.4 -8.6 3.4 -3.4 8.6 -3.4 -8.6 -8.6 -3.4 8.6 -3.4z"/>
+          <path d="M232 158 l2.4 6 6 2.4 -6 2.4 -2.4 6 -2.4 -6 -6 -2.4 6 -2.4z"/>
+          <path d="M148 166 l1.8 4.6 4.6 1.8 -4.6 1.8 -1.8 4.6 -1.8 -4.6 -4.6 -1.8 4.6 -1.8z"/>
         </g>
-      </svg>
-      <button id="holdBtn" type="button">
+      </svg>      <button id="holdBtn" type="button">
         <span id="holdFill"></span>
         <span id="holdLabel">HOLD TO PINKY PROMISE</span>
       </button>
