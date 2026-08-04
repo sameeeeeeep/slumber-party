@@ -91,19 +91,35 @@ function sid() {
    Synthesised, like the main site's CHATFX — no audio files to load over a
    phone connection. Shares the 'ksp-snd' preference so a mute carries across. */
 const FX = (function () {
-  let ctx = null, muted = false;
+  let ctx = null, muted = false, pending = false;
   try { muted = localStorage.getItem('ksp-snd') === 'off'; } catch (e) {}
   function unlock() {
     try {
+      /* iOS routes WebAudio into the "ambient" audio session, and the ambient
+         session is silenced by the physical ring/silent switch. That is why a
+         page can be unmuted, unlocked and still play nothing on an iPhone with
+         the switch flipped. 'playback' is the session that ignores the switch.
+         Safari 16.4+; harmless everywhere else. */
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
       ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
       if (ctx.state !== 'running') ctx.resume();
       const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
       s.buffer = b; s.connect(ctx.destination); s.start(0);
+      /* A ping that fired before audio was allowed isn't lost — it lands on the
+         first tap instead. Without this, everything up to the first touch is
+         silently dropped and the thread feels dead. */
+      if (pending && !muted) { pending = false; setTimeout(() => { if (running()) recv(); }, 140); }
+      paintSound();
     } catch (e) {}
   }
   // iOS re-suspends the context whenever the page idles, so re-arm on every gesture
   ['pointerdown', 'touchend', 'keydown'].forEach(e => addEventListener(e, unlock, { passive: true }));
-  const ok = () => ctx && ctx.state === 'running' && !muted;
+  const running = () => !!(ctx && ctx.state === 'running');
+  function ok() {
+    if (muted) return false;
+    if (!running()) { pending = true; paintSound(); return false; }   // remember it for the first tap
+    return true;
+  }
   function tone(freq, at, dur, type, peak) {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = type || 'sine'; o.frequency.setValueAtTime(freq, at);
@@ -122,11 +138,14 @@ const FX = (function () {
     const g = ctx.createGain(); g.gain.value = peak || 0.12;
     src.connect(f); f.connect(g); g.connect(ctx.destination); src.start();
   }
+  function recv() { if (!ok()) return; const t = ctx.currentTime; tone(784, t, .1, 'sine', .045); tone(1046, t + .09, .16, 'sine', .05); }
+
   return {
     muted: () => muted,
-    setMuted(m) { muted = !!m; try { localStorage.setItem('ksp-snd', m ? 'off' : 'on'); } catch (e) {} if (!m) unlock(); },
+    running,
+    setMuted(m) { muted = !!m; try { localStorage.setItem('ksp-snd', m ? 'off' : 'on'); } catch (e) {} if (!m) unlock(); paintSound(); },
     unlock,
-    recv()  { if (!ok()) return; const t = ctx.currentTime; tone(784, t, .1, 'sine', .045); tone(1046, t + .09, .16, 'sine', .05); },
+    recv,
     sent()  { if (!ok()) return; const t = ctx.currentTime; tone(1174, t, .07, 'triangle', .04); },
     tick()  { if (!ok()) return; tone(2200, ctx.currentTime, .012, 'square', .008); },
     shutter() { if (!ok()) return; noise(.05, .16, 1800); setTimeout(() => { if (ok()) noise(.09, .1, 700); }, 60); },
@@ -135,6 +154,18 @@ const FX = (function () {
   };
 })();
 const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+/* Declared here because FX reaches back for it on every unlock, and FX is built
+   before the button exists in some load orders. */
+function paintSound() {
+  const el = document.getElementById('sound');
+  if (!el) return;
+  const off = FX.muted();
+  el.classList.toggle('off', off);
+  el.classList.toggle('waiting', !off && !FX.running());
+  el.setAttribute('aria-label',
+    off ? 'sound off' : FX.running() ? 'sound on' : 'tap to turn sound on');
+}
 
 /* ------------------------------------------------------------- unsealing ---
    PBKDF2-SHA256 → AES-GCM. The wrong password doesn't get "rejected"; it simply
@@ -583,9 +614,12 @@ function pinkyPromise() {
 
     function paint(v) {
       fill.style.width = (v * 100) + '%';
-      // they start apart and close on each other; at v=1 the two fingers interlock
-      hL.setAttribute('transform', 'translate(' + (-46 * (1 - v)).toFixed(1) + ' 0)');
-      hR.setAttribute('transform', 'translate(' + (46 * (1 - v)).toFixed(1) + ' 0)');
+      /* They close from 48 apart to 14, not to 0 — the drawing's own geometry
+         already overlaps at the centre, so travelling all the way tangles the
+         two hands instead of hooking them. 14 is where the pinkies link. */
+      const gap = 14 + 34 * (1 - v);
+      hL.setAttribute('transform', 'translate(' + (-gap).toFixed(1) + ' 0)');
+      hR.setAttribute('transform', 'translate(' + gap.toFixed(1) + ' 0)');
       glow.setAttribute('opacity', v > .82 ? ((v - .82) / .18).toFixed(2) : '0');
       stars.setAttribute('opacity', v > .9 ? ((v - .9) / .1).toFixed(2) : '0');
       let s = 0; for (let i = 0; i < STAGES.length; i++) if (v >= STAGES[i].at) s = i;
@@ -741,12 +775,26 @@ async function runRSVP() {
 /* ============================================================================
    THE SMALL PRINT — sound, sparkles, easter eggs
    ============================================================================ */
-$('sound').classList.toggle('off', FX.muted());
+/* The ♪ has three states, not two. "Waiting" is the one that matters: a browser
+   won't start audio without a gesture, and arriving on a ?p= link involves no
+   gesture at all — the conversation just begins. So the opening messages were
+   always silent with nothing on screen admitting it. It pulses until audio is
+   genuinely running. */
+/* Read the state on pointerdown, not on click. The window-level unlock listener
+   also fires on pointerdown, so by the time click runs audio is already running
+   and the tap that was meant to TURN SOUND ON would mute it instead. An element
+   handler runs before the window one, which is what makes this correct. */
+let soundWasWaiting = false;
+$('sound').addEventListener('pointerdown', () => {
+  soundWasWaiting = !FX.muted() && !FX.running();
+});
 $('sound').addEventListener('click', () => {
+  // the tap that started audio shouldn't also toggle it off
+  if (soundWasWaiting) { soundWasWaiting = false; FX.unlock(); FX.recv(); return; }
   FX.setMuted(!FX.muted());
-  $('sound').classList.toggle('off', FX.muted());
   if (!FX.muted()) FX.recv();
 });
+paintSound();
 
 function sparkles() {
   const spots = [[8, 18], [88, 12], [16, 76], [92, 68], [50, 6], [72, 88]];
