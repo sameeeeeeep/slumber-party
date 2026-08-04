@@ -521,7 +521,11 @@ async function doStep(s) {
       state.answers._reply = said; save();
       await you(said); break;
     }
-    case 'pinky':  await pinkyPromise(); break;
+    case 'pinky':
+      await pinkyPromise();
+      // you answer her before she carries on — the promise was a question
+      await you(state.content.pinky_reply || 'i promise!!!');
+      break;
     case 'invite': await showInvite(false); break;
   }
 }
@@ -545,7 +549,9 @@ const STAGES = [
   { at: 0,   label: 'promising…' },
   { at: .30, label: 'no screenshots…' },
   { at: .70, label: 'no spoilers…' },
-  { at: .95, label: 'SEALED 💋' },
+  // blank, not 'SEALED 💋' — the button itself says that on completion, and
+  // showing it twice, one line under the other, read as a glitch
+  { at: .95, label: '' },
 ];
 
 function pinkyPromise() {
@@ -567,7 +573,12 @@ function pinkyPromise() {
       glow.setAttribute('opacity', v > .82 ? ((v - .82) / .18).toFixed(2) : '0');
       stars.setAttribute('opacity', v > .9 ? ((v - .9) / .1).toFixed(2) : '0');
       let s = 0; for (let i = 0; i < STAGES.length; i++) if (v >= STAGES[i].at) s = i;
-      if (s !== stage) { stage = s; label.textContent = STAGES[s].label; buzz(12); FX.tick(); }
+      if (s !== stage) {
+        stage = s;
+        // a blank stage keeps the line's height, so nothing jumps when it clears
+        label.innerHTML = STAGES[s].label || '&nbsp;';
+        buzz(12); FX.tick();
+      }
     }
     function frame(now) {
       if (done) return;
@@ -654,7 +665,6 @@ function buildInviteCard() {
     '<p class="card-quote">' + escapeHTML(iv.quote) + '</p>' +
     '<span class="card-seal">💋</span>';
   $('rsvpBtn').textContent = iv.cta_rsvp;
-  $('calBtn').textContent = iv.cta_cal;
 }
 
 async function showInvite(alreadyRsvped) {
@@ -676,37 +686,14 @@ function markRsvped() {
   $('rsvpBtn').hidden = true;
   const d = $('rsvpDone');
   d.hidden = false;
-  d.textContent = "you're on the list ✓  ·  " + (state.content.event.location_exact || '');
+  // one editable line, not a sentence stitched together out of two fields
+  d.textContent = state.content.rsvp.confirmed || "you're on the list";
 }
 
 $('rsvpBtn').addEventListener('click', () => {
   ev('rsvp_started');
   hideInvite();
   setTimeout(runRSVP, 520);
-});
-
-/* ---- add to calendar: a real .ics, generated in the browser ---- */
-const icsTime = (iso) => new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-$('calBtn').addEventListener('click', () => {
-  const e = state.content.event;
-  const ics = [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//secret slumber party//EN', 'BEGIN:VEVENT',
-    'UID:' + Date.now() + '@secretslumberparty.com',
-    'DTSTAMP:' + icsTime(new Date().toISOString()),
-    'DTSTART:' + icsTime(e.start),
-    'DTEND:' + icsTime(e.end),
-    'SUMMARY:' + e.calendar_title,
-    'LOCATION:' + e.location_teaser,
-    'DESCRIPTION:' + String(e.calendar_note).replace(/\n/g, '\\n'),
-    'END:VEVENT', 'END:VCALENDAR',
-  ].join('\r\n');
-  const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url; a.download = 'secret-slumber-party.ics';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
-  ev('calendar_added');
-  toast('saved to your calendar ♡');
 });
 
 /* ============================================================================
@@ -718,6 +705,8 @@ $('calBtn').addEventListener('click', () => {
    ============================================================================ */
 async function runRSVP() {
   const r = state.content.rsvp;
+  // tapping the button is you saying it — so it lands as your message first
+  if (r.reply) await you(r.reply);
   for (const line of r.intro) await her(line, 800, 700);
   for (const line of r.outro) await her(line, 800, 700);
 
