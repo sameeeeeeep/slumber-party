@@ -114,13 +114,17 @@
     margin:.55rem 0 1.9rem; }
   .gate-sub em{ font-style:normal; color:var(--pink); }
 
-  .field{ display:flex; align-items:center; gap:.5rem; padding:.2rem .2rem .2rem 1.1rem;
+  /* symmetric padding: the field holds nothing but the input, so the old
+     left-heavy inset just pushed the dots off-centre */
+  .field{ display:flex; align-items:center; gap:.5rem; padding:.2rem 1.1rem;
     border:1px solid rgba(245,195,207,.28); border-radius:100px; background:rgba(255,255,255,.05);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.07); transition:border-color .2s ease, box-shadow .2s ease; }
   .field:focus-within{ border-color:rgba(235,100,140,.7); box-shadow:0 0 0 4px rgba(235,100,140,.12); }
   .field.wrong{ animation:shake .4s; border-color:rgba(236,100,42,.8); }
   @keyframes shake{ 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(3px)} }
-  #pw{ flex:1; min-width:0; background:none; border:0; outline:none; padding:.9rem 0;
+  /* centred, so the placeholder sits balanced in the pill and what you type
+     grows out from the middle instead of stranding the right-hand half */
+  #pw{ flex:1; min-width:0; background:none; border:0; outline:none; padding:.9rem 0; text-align:center;
     font-family:var(--mono); font-size:1.25rem; letter-spacing:.16em; text-transform:uppercase; color:#fff; }
   #pw::placeholder{ color:rgba(255,255,255,.3); letter-spacing:.3em; }
   @media (max-width:640px){ #pw{ font-size:16px; } }  /* ≥16px or iOS zooms the fixed layout */
@@ -376,7 +380,7 @@
       <p class="gate-sub">“what happens at the<br>slumber party<em>…</em>”</p>
       <form id="gateForm" autocomplete="off">
         <label class="field" id="pwField">
-          <input id="pw" type="password" name="besties-pass" placeholder="••••••••"
+          <input id="pw" type="password" name="besties-pass" placeholder="••••••••••••"
                  autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
                  aria-label="password" enterkeyhint="go" />
         </label>

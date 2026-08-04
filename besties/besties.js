@@ -161,6 +161,23 @@ async function guestIndex(code) {
 
 /* ------------------------------------------------------------------ misc --- */
 const sleepRaw = (ms) => new Promise(r => setTimeout(r, ms));
+
+/* Bring a full-screen sheet in.
+   `on` flips display:none → grid; `vis` runs the opacity transition. Something
+   has to separate the two or the browser coalesces them into one style pass and
+   the transition never plays.
+
+   The obvious separator is requestAnimationFrame — and it is wrong here. rAF is
+   paused in a backgrounded tab, so switching away at the instant a sheet opens
+   left `vis` unapplied: an invisible sheet sitting over the whole page, blocking
+   it, until you came back and the queued frame finally ran. Reading offsetWidth
+   forces the style flush synchronously, which does not care whether anyone is
+   looking at the tab. */
+function reveal(sheet) {
+  sheet.classList.add('on');
+  void sheet.offsetWidth;
+  sheet.classList.add('vis');
+}
 let skip = null;                       // resolver for "tap to hurry her along"
 function sleep(ms) {
   if (state.fast) return Promise.resolve();
@@ -560,8 +577,7 @@ function pinkyPromise() {
     const sheet = $('pinky'), btn = $('holdBtn'), fill = $('holdFill'),
           label = $('holdState'), hL = $('handL'), hR = $('handR'),
           glow = $('hookGlow'), stars = $('hookStars');
-    sheet.classList.add('on');
-    requestAnimationFrame(() => sheet.classList.add('vis'));
+    reveal(sheet);
 
     let raf = null, t0 = 0, p = 0, done = false, stage = -1;
 
@@ -668,9 +684,7 @@ function buildInviteCard() {
 }
 
 async function showInvite(alreadyRsvped) {
-  const sheet = $('invite');
-  sheet.classList.add('on');
-  requestAnimationFrame(() => sheet.classList.add('vis'));
+  reveal($('invite'));
   if (!state.fast) flash();
   if (alreadyRsvped || state.rsvped) markRsvped();
 }
