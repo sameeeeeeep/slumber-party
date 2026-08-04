@@ -14,8 +14,18 @@
 //
 //  Deploy:  supabase functions deploy submit
 //  Secrets: supabase secrets set RESEND_API_KEY=... IP_SALT=... \
-//                                MAIL_FROM="khushi <hello@secretslumberparty.com>" \
+//                                MAIL_FROM="khushi <khushi@send.secretslumberparty.com>" \
+//                                MAIL_REPLY_TO="hello@secretslumberparty.com" \
 //                                MAIL_BCC="you@yourdomain.com"
+//
+//  MAIL DELIVERABILITY LIVES IN DNS, NOT HERE. Nothing in this file will keep a
+//  message out of spam if the sending domain can't authenticate. As of writing,
+//  secretslumberparty.com has DKIM (google + resend) and DMARC p=quarantine but
+//  NO SPF RECORD AT ALL — which means "quarantine anything that doesn't prove
+//  itself" with one of the two proofs missing. The root domain needs:
+//      TXT  @  v=spf1 include:_spf.google.com ~all
+//  and Google Workspace DKIM has to be switched ON in the admin console, not
+//  merely present in DNS. send.secretslumberparty.com is already correct.
 // ============================================================================
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -93,10 +103,38 @@ function validate(b: Record<string, unknown>) {
   };
 }
 
+/* ----------------------------------------------------------------------------
+   DELIVERABILITY — why this email is shaped the way it is.
+
+   Spam filtering is decided mostly at the DNS layer (SPF/DKIM/DMARC on the
+   sending domain), not here. But three things in the message itself move the
+   needle, and all three are cheap:
+
+     · a plain-text alternative. An HTML-only message is one of the oldest
+       bulk-mail tells there is, because real mail clients send multipart.
+     · List-Unsubscribe. Gmail and Outlook both weigh it, and a one-click
+       unsubscribe is treated as far friendlier than a "report spam" click —
+       which is the thing that actually poisons a domain's reputation.
+     · a From address on a domain that is actually authenticated. See MAIL_FROM
+       below: send from the domain Resend verified, not a cousin of it.
+   -------------------------------------------------------------------------- */
 function confirmationEmail(name: string) {
   const first = name.split(/\s+/)[0] || 'you';
   return {
-    subject: 'noted — khushi got your application 🤫',
+    // no emoji in the subject: it isn't decisive, but it's free to drop and
+    // some filters still score it on a domain with no sending history
+    subject: 'noted — khushi got your application',
+    text: `hi ${first},
+
+your application landed. i'm on my way to stalk you!!! i'll reach out if you're in :)
+
+there are only a few spots left, so hold tight — till then, the arcade is open.
+
+back to the party: https://secretslumberparty.com
+
+—
+you're getting this because you applied at secretslumberparty.com.
+reply to this email if that wasn't you.`,
     html: `<div style="font-family:Helvetica,Arial,sans-serif;background:#fdeff3;padding:32px 16px">
   <div style="max-width:480px;margin:0 auto;background:#fffcfd;border-radius:18px;padding:28px 26px;
               border:1px solid rgba(235,100,140,.28)">
@@ -182,12 +220,27 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: Deno.env.get('MAIL_FROM') ?? 'khushi <hello@secretslumberparty.com>',
+          /* Send from the domain Resend actually verified. DKIM here signs as
+             send.secretslumberparty.com; a From on the bare root only passes
+             DMARC because alignment is relaxed, which is a thin thread to hang
+             deliverability on. Override with MAIL_FROM once the root domain is
+             verified in Resend too. */
+          from: Deno.env.get('MAIL_FROM') ?? 'khushi <khushi@send.secretslumberparty.com>',
           to: [row.email],
           bcc: Deno.env.get('MAIL_BCC') ? [Deno.env.get('MAIL_BCC')] : undefined,
-          reply_to: Deno.env.get('MAIL_REPLY_TO') ?? undefined,
+          // replies should reach a real inbox, not the sending subdomain
+          reply_to: Deno.env.get('MAIL_REPLY_TO') ?? 'hello@secretslumberparty.com',
           subject: mail.subject,
           html: mail.html,
+          text: mail.text,          // multipart, not HTML-only
+          headers: {
+            /* One-click unsubscribe. A person who taps this costs nothing; the
+               same person hitting "report spam" costs the domain far more. */
+            'List-Unsubscribe': `<mailto:${
+              Deno.env.get('MAIL_REPLY_TO') ?? 'hello@secretslumberparty.com'
+            }?subject=unsubscribe>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
         }),
       });
       emailed = res.ok;
