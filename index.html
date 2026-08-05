@@ -1515,16 +1515,22 @@ ctBack.addEventListener('click', ()=>{
 // your pre-drafted reply types itself into the compose field, char by char, left-aligned;
 // the send button only surfaces once the reply has finished typing
 function typeDraft(text){
-  clearInterval(typeDraft._t);
+  clearInterval(typeDraft._t); clearTimeout(draftAutoTimer);
   ctSend.disabled=true;                                     // send stays disabled while your reply types in
   ctDraft.classList.add('caret'); ctDraft.textContent='';
   let i=0;
   typeDraft._t=setInterval(()=>{
     ctDraft.textContent=text.slice(0, ++i); CHATFX.click();
-    if(i>=text.length){ clearInterval(typeDraft._t); ctDraft.classList.remove('caret'); ctSend.disabled=false; }  // …then enables
+    if(i>=text.length){ clearInterval(typeDraft._t); ctDraft.classList.remove('caret'); ctSend.disabled=false;   // …then enables
+      // hands-free intro: if you don't tap send within 4s, send the scripted reply for you. Lives in
+      // typeDraft (the intro drafts only), so it stops at the form — real questions are never auto-answered.
+      clearTimeout(draftAutoTimer);
+      draftAutoTimer=setTimeout(()=>{ if(inside && !flying && qIndex<0 && !ctSend.disabled && !ctCompose.hidden) chatSend(); }, DRAFT_AUTO_MS);
+    }
   }, 72);
 }
-let lastStage=-1, chatTimer=0, notifReady=false;
+const DRAFT_AUTO_MS = 4000;   // idle-timeout before the scripted intro reply sends itself
+let lastStage=-1, chatTimer=0, notifReady=false, draftAutoTimer=0;
 // the unread teaser drops in like a push notification, a beat after the screen tunes in
 // the drop-in animation length (opacity .45s / transform .5s in CSS) — the tone lands with it
 const NOTIF_DROP_MS = 470;
@@ -1542,7 +1548,7 @@ function showNotif(){
 function renderChat(stage){
   if(stage===lastStage) return;
   const forward = stage>lastStage;
-  lastStage=stage; clearTimeout(chatTimer); clearInterval(typeDraft._t);
+  lastStage=stage; clearTimeout(chatTimer); clearInterval(typeDraft._t); clearTimeout(draftAutoTimer);
   chatInbox.hidden = stage!==0;
   chatThread.hidden = stage===0;
   if(stage===0){
@@ -1804,6 +1810,7 @@ function advanceStage(){
 }
 function chatSend(){
   if(ctSend.disabled || ctCompose.hidden) return;   // nothing to send (or the compose row isn't even up)
+  clearTimeout(draftAutoTimer);                     // a real (or the 4s auto) tap cancels any pending auto-advance
   if(qIndex>=0){ submitAnswer(); return; }        // answering one of khushi's application questions (addBubble handles its sound)
   CHATFX.sent();                                   // draft mode renders via buildThread, so it needs its own swoosh
   advanceStage();
