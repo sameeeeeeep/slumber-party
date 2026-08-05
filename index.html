@@ -397,6 +397,13 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     filter:drop-shadow(0 .5rem 1.6rem rgba(235,100,140,.3)); }
   /* one tap = audio on for the whole visit. the button reads like the in-chat send button */
   #gateRow{ display:flex; gap:.8em; justify-content:center; }
+  /* consent line, right above the enter button: age + terms/privacy acceptance */
+  #gateConsent{ display:flex; align-items:center; gap:.55em; max-width:20rem; margin:0 auto;
+    font-family:'Inter',system-ui,sans-serif; font-size:.78rem; line-height:1.45; text-align:left;
+    color:rgba(255,255,255,.84); cursor:pointer; }
+  #gateConsent input{ flex:0 0 auto; width:1.05em; height:1.05em; accent-color:var(--brand-pink); cursor:pointer; }
+  #gateConsent a{ color:#fff; text-decoration:underline; text-underline-offset:2px; }
+  #gateConsent a:hover{ color:var(--brand-yellow); }
   /* the whole stack breathes in as the veil lifts, then dives INTO the CRT on the way out */
   #gateway.on #gatePos{ animation:gateRise .85s .12s cubic-bezier(.2,.85,.3,1) both; }
   #gateway.leaving #gatePos{ animation:gateDive .62s cubic-bezier(.5,0,.35,1) forwards; }
@@ -805,6 +812,10 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     <div id="gatePos">
       <img id="gateLogo" src="assets/logo2.png" alt="(secret;) khushi's slumber party" />
       <span class="countdown" id="countdown" aria-label="countdown to when the form closes"></span>
+      <label id="gateConsent">
+        <input type="checkbox" id="gateAccept" checked />
+        <span>i'm 18+ and i accept the <a href="/terms.html" target="_blank" rel="noopener">terms</a> &amp; <a href="/privacy.html" target="_blank" rel="noopener">privacy policy</a></span>
+      </label>
       <div id="gateRow">
         <button id="gateYes" class="gateBtn" type="button"><span>enter</span><i aria-hidden="true">▸</i></button>
       </div>
@@ -1695,6 +1706,8 @@ function showGateway(){
     const root=document.documentElement;
     root.classList.add('booting'); setTimeout(()=>root.classList.remove('booting'), 1200);
     track('entered');
+    // record terms/privacy acceptance at the moment of entry (pre-ticked; entry works either way)
+    try{ const ok=document.getElementById('gateAccept'); localStorage.setItem('ksp-terms', (ok && ok.checked ? 'accepted' : 'entered') + ' @ ' + new Date().toISOString()); }catch(err){}
     setTimeout(revealIntro, 240);                           // audio's unlocked now — land the DM + its ping
   };
   g.querySelector('#gateYes').addEventListener('click', e=>enter(e,true), {once:true});   // one button: enter → sound on for everyone
