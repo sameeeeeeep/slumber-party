@@ -123,11 +123,13 @@ async function cmdUnseal(argv) {
   console.log('unsealed  besties/sealed.js → besties/content.json');
 }
 
-/* Each guest gets their OWN sealed blob, encrypted under their own invite code
-   and carrying the party password inside it — so a personalised link unlocks
-   without anyone typing anything, while the guest list as a whole stays shut. */
+/* Each guest gets their OWN sealed blob, encrypted under their own invite code,
+   so the guest list as a whole stays shut. The blob holds a name and a copy
+   voice and NOTHING ELSE — deliberately not the party password. A personalised
+   link is recognition, not admission: it greets her by name and then asks for
+   the password like everybody else. That also means a leaked invite code costs
+   you one first name instead of the whole invitation. */
 async function cmdGuests(argv) {
-  const pass = await password(argv);
   if (!existsSync(P('besties/guests.json'))) {
     await writeFile(P('besties/guests.js'), banner() + 'window.BESTIES_GUESTS={};\n');
     return console.log('no besties/guests.json — wrote an empty besties/guests.js');
@@ -138,7 +140,7 @@ async function cmdGuests(argv) {
     const record = { first: g.first || (g.name || '').split(/\s+/)[0], name: g.name || '',
                      plus_one: !!g.plus_one, notes: g.notes || '',
                      // picks a copy variant out of content.variants (e.g. "neutral")
-                     voice: g.voice || null, pass };
+                     voice: g.voice || null };
     out[await guestIndex(g.code)] = await seal(record, g.code.toLowerCase(), GUEST_ROUNDS);
   }
   await writeFile(P('besties/guests.js'), banner() + `window.BESTIES_GUESTS=${JSON.stringify(out)};\n`);
@@ -158,15 +160,16 @@ async function cmdAdd(argv) {
   console.log(`\n  ↳ send her:  secretslumberparty.com/besties/${code}`);
 }
 
-/* The message Khushi actually sends. The universal link carries the password so
-   there's nothing to type; personalised links don't need it. */
+/* The message Khushi actually sends. The link never carries the password — she
+   sends the words separately (or says them out loud), so a forwarded screenshot
+   of the link is not an invitation. */
 async function cmdLink(argv) {
   const pass = await password(argv);
   console.log('\n  I have a secret 🤫');
   console.log('  and apparently you\'re on the besties list.\n');
-  console.log(`  secretslumberparty.com/besties/?p=${encodeURIComponent(pass)}\n`);
+  console.log('  secretslumberparty.com/besties\n');
   console.log('  don\'t tell anyone. x\n');
-  console.log(`  (or without the shortcut: secretslumberparty.com/besties  ·  password: ${pass})\n`);
+  console.log(`  (send the password separately — it's: ${pass}, typed in any case)\n`);
 }
 
 const [cmd = 'seal', ...rest] = process.argv.slice(2);

@@ -248,8 +248,24 @@ function inviteCode() {
   const seg = location.pathname.replace(/\/+$/, '').split('/').pop();
   if (seg && seg !== 'besties' && !/\.html?$/.test(seg)) return seg;
   const h = location.hash.replace('#', '');
-  if (!h || h.startsWith('p=')) return null;   // #p= is a carried password, not a guest
+  if (!h || h.startsWith('p=')) return null;   // p= is a retired password shortcut, never a guest
   return h;
+}
+
+/* Links used to be able to carry the password (/besties/?p=…). They can't any
+   more — the password is typed, always, by everyone. Old links still open, they
+   just land on the gate like everyone else; this only wipes the dead parameter
+   out of the address bar so it isn't sitting in history or a screenshot. */
+function stripCarriedPassword() {
+  const hasQuery = new URLSearchParams(location.search).has('p');
+  const hasHash = location.hash.startsWith('#p=');
+  if (!hasQuery && !hasHash) return;
+  try {
+    const url = new URL(location.href);
+    url.searchParams.delete('p');
+    if (hasHash) url.hash = '';
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+  } catch (e) {}
 }
 
 async function boot() {
@@ -271,24 +287,7 @@ async function boot() {
     } catch (e) { /* unknown or mistyped code — fall through to the password */ }
   }
 
-  /* A link can carry the password: /besties/?p=<password> opens straight
-     through, so one WhatsApp message is the whole invitation. It's stripped from
-     the address bar the moment it's used, so it doesn't sit in history or in a
-     screenshot of the URL. Nothing on this page reports URLs to a third party,
-     and <meta name="referrer" content="no-referrer"> stops the font request from
-     carrying it off-site. Obviously anyone forwarding that link forwards the
-     password with it — which is already true of the message it's pasted into. */
-  const carried = new URLSearchParams(location.search).get('p')
-               || (location.hash.startsWith('#p=') ? decodeURIComponent(location.hash.slice(3)) : null);
-  if (carried) {
-    try { history.replaceState(null, '', location.pathname); } catch (e) {}
-    try {
-      state.content = await unsealBlob(window.BESTIES_SEALED, carried.trim().toUpperCase());
-      state.key = carried.trim().toUpperCase();
-      ev('password_success', { via: 'link' });
-      return enter(false);
-    } catch (e) { /* stale link — fall through and just ask for it */ }
-  }
+  stripCarriedPassword();
 
   // already been let in on this device? walk straight back in.
   const saved = load();
@@ -305,19 +304,22 @@ async function boot() {
   $('pw').focus({ preventScroll: true });
 }
 
+/* A personalised link knows who you are — it does NOT let you in. It greets you
+   by name and then hands you to the same password field as everybody else, so
+   the invitation can't be opened by a forwarded URL alone. The guest blob no
+   longer carries the password at all; all it holds is the name and the voice. */
 function greetGuest(g) {
+  const first = (g.first || '').toLowerCase();
   $('gateLocked').hidden = true;
   $('gateGreet').hidden = false;
   $('greetName').innerHTML = 'is that <em style="font-style:normal;color:var(--pink)">' +
-    escapeHTML((g.first || '').toLowerCase()) + '</em>? 👀';
-  $('greetOpen').addEventListener('click', async () => {
-    FX.unlock();
-    try {
-      state.content = await unsealBlob(window.BESTIES_SEALED, g.pass);
-      state.key = g.pass;
-      ev('password_success', { via: 'personal_link' });
-      enter(false);
-    } catch (e) { toast('hmm, this link is out of date'); }
+    escapeHTML(first) + '</em>? 👀';
+  $('greetOpen').addEventListener('click', () => {
+    ev('guest_recognised');
+    $('gateGreet').hidden = true;
+    $('gateLocked').hidden = false;
+    if (first) $('gateFoot').innerHTML = 'you know the words,<br>' + escapeHTML(first) + '.';
+    $('pw').focus({ preventScroll: true });
   });
 }
 
@@ -331,7 +333,7 @@ $('gateForm').addEventListener('submit', async (e) => {
   try {
     state.content = await unsealBlob(window.BESTIES_SEALED, pass);
     state.key = pass;
-    ev('password_success', { via: 'password' });
+    ev('password_success', { via: state.guest ? 'personal_link' : 'password' });
     enter(false);
   } catch (err) {
     $('gateGo').disabled = false;
@@ -776,10 +778,10 @@ async function runRSVP() {
    THE SMALL PRINT — sound, sparkles, easter eggs
    ============================================================================ */
 /* The ♪ has three states, not two. "Waiting" is the one that matters: a browser
-   won't start audio without a gesture, and arriving on a ?p= link involves no
-   gesture at all — the conversation just begins. So the opening messages were
-   always silent with nothing on screen admitting it. It pulses until audio is
-   genuinely running. */
+   won't start audio without a gesture, and a device that has already been let in
+   returns with no gesture at all — the conversation just begins. So the opening
+   messages were always silent with nothing on screen admitting it. It pulses
+   until audio is genuinely running. */
 /* Read the state on pointerdown, not on click. The window-level unlock listener
    also fires on pointerdown, so by the time click runs audio is already running
    and the tap that was meant to TURN SOUND ON would mute it instead. An element

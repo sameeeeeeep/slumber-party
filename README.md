@@ -15,8 +15,9 @@ invited. Password screen → the lock opens → a camera flash → Khushi starts
 texting you. The dates, the location and the packing list arrive as messages;
 it ends on a hold-to-pinky-promise and a collectible invite card.
 
-The password is kept in `besties/.password` (gitignored) — ask Khushi for it,
-or carry it in the link (below). Typed in any case.
+The password is kept in `besties/.password` (gitignored) — ask Khushi for it.
+Typed in any case, by everyone: there is no link that opens the invitation on
+its own, so a forwarded URL or a screenshot of one is not a way in.
 
 ### Why the content is encrypted
 
@@ -48,8 +49,9 @@ Lost `content.json`? `unseal` rebuilds it. Changing the password:
 
 ```bash
 node tools/besties-seal.mjs seal --pass=NEWWORD
-node tools/besties-seal.mjs guests --pass=NEWWORD   # so personal links keep working
 ```
+
+Personal links are unaffected by a password change — they don't contain it.
 
 ### Personalised links
 
@@ -58,9 +60,12 @@ node tools/besties-seal.mjs add "Shanaya Kapoor"
 #  ↳ send her:  secretslumberparty.com/besties/shanaya-k7m2
 ```
 
-She skips the password entirely — the link is her key — and is greeted with
-"WAIT… IS THAT SHANAYA? 👀" before going in. Each guest gets their own sealed
-blob keyed to her own code, so `besties/guests.js` never exposes the guest list:
+She's greeted with "WAIT… IS THAT SHANAYA? 👀" and then asked for the password
+like everybody else — the link is recognition, not admission. Her sealed record
+holds a first name and a copy voice and deliberately *not* the password, so a
+leaked invite code costs one first name rather than the whole invitation. Each
+guest gets their own blob keyed to her own code, so `besties/guests.js` never
+exposes the guest list:
 there is no readable name in it, and the lookup index is derived over 100k
 PBKDF2 rounds so the codes can't be cheaply guessed against a list of first
 names. `/besties/<name>` resolves through `404.html`, which is how a static host

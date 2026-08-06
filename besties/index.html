@@ -198,8 +198,8 @@
     font-size:.9rem; color:var(--soft); background:rgba(255,255,255,.07); }
   #sound.off{ opacity:.4; }
   /* audio is on, but the browser hasn't been given a gesture to start it yet —
-     arriving on a ?p= link involves no tap at all, so without this the opening
-     messages are silent and nothing says why */
+     a device that's already been let in walks straight back in with no tap at
+     all, so without this the opening messages are silent and nothing says why */
   #sound.waiting{ color:var(--pink); box-shadow:0 0 0 0 rgba(235,100,140,.55);
     animation:soundWait 1.8s ease-out infinite; }
   @keyframes soundWait{
@@ -397,10 +397,12 @@
         <button class="btn" id="gateGo" type="submit" disabled>let me in</button>
       </form>
       <p class="gate-err" id="gateErr" role="status" aria-live="polite"></p>
-      <p class="gate-foot">if khushi sent you this,<br>you know what to do.</p>
+      <p class="gate-foot" id="gateFoot">if khushi sent you this,<br>you know what to do.</p>
     </div>
 
-    <!-- personalised link: secretslumberparty.com/besties/shanaya-3w9x -->
+    <!-- personalised link: secretslumberparty.com/besties/shanaya-3w9x
+         recognises you by name, then sends you to the password like everyone
+         else — a forwarded link is never a way in on its own. -->
     <div class="gate-in" id="gateGreet" hidden>
       <p class="greet-1">WAIT…</p>
       <p class="greet-2" id="greetName">is that you? 👀</p>
