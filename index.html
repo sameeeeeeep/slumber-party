@@ -2192,7 +2192,7 @@ renderStep();
     hud.style.visibility = (mode==='play'||mode==='over') ? 'visible' : 'hidden';
     if(mode!=='play') toastEl.style.opacity='0';
     quitBtn.title = (mode==='board') ? 'back' : (mode==='menu'||mode===null) ? 'leave the arcade' : 'back to menu';
-    if(gamepad){ const show=(mode!==null && useGamepad()); gamepad.classList.toggle('on', show); gamepad.setAttribute('aria-hidden', show?'false':'true'); }
+    if(gamepad){ const show=(mode==='play' && useGamepad()); gamepad.classList.toggle('on', show); gamepad.setAttribute('aria-hidden', show?'false':'true'); }   /* the joystick + button belong to gameplay only — menu/how-to/over/board are tap-driven */
     if(mode!==null) view=layout();   // re-measure whenever the mode changes — the menu has to know where the pad ends
   }
   // the pink deck starts right below the CRT screen, covering the floppy + keyboard
