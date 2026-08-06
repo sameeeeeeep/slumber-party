@@ -215,6 +215,7 @@ function launchGame(opts){
    else if(e.key==='Enter'||e.key===' '){ e.preventDefault(); playSel(); }
    e.stopPropagation(); return;
   }
+  if(state==='howto'){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); if(pendingMod) startLevel(pendingMod); } else if(e.key==='Escape'){ e.preventDefault(); showSelect(); } e.stopPropagation(); return; }
   if(state==='tally'){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); tallyAgain(); } else if(e.key==='Escape'){ e.preventDefault(); showSelect(); } e.stopPropagation(); return; }
   if(state==='play'){
    ensureAudio();
@@ -255,23 +256,34 @@ function launchGame(opts){
   clearControls();
   ctrlWrap=document.createElement('div');
   ctrlWrap.style.cssText='position:fixed;z-index:10000;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 clamp(16px,6vw,34px);box-sizing:border-box;pointer-events:none;';
-  /* D-pad (left) */
-  var dpad=document.createElement('div');
-  dpad.style.cssText='position:relative;width:9.4em;height:9.4em;font-size:13px;flex:none;';
-  function dbtn(dir,glyph,pos){
-   var b=document.createElement('button'); b.textContent=glyph;
-   b.style.cssText='pointer-events:auto;position:absolute;width:3.1em;height:3.1em;display:grid;place-items:center;color:#fff;font-size:1em;border:1px solid rgba(245,195,207,.35);border-radius:.7em;background:#3c2f35;box-shadow:0 2px 3px rgba(80,30,50,.4),inset 0 1px 0 rgba(255,255,255,.18);-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none;transition:background .1s ease, transform .1s ease;'+pos;
-   var down=function(e){ e.preventDefault(); b.style.background=PINK; b.style.transform='scale(.92)'; padDir(dir); };
-   var up=function(e){ if(e) e.preventDefault(); b.style.background='#3c2f35'; b.style.transform=''; held[dir]=false; };
-   b.addEventListener('pointerdown',down); b.addEventListener('pointerup',up);
-   b.addEventListener('pointerleave',up); b.addEventListener('pointercancel',up);
-   return b;
-  }
-  dpad.appendChild(dbtn('up','▲','left:3.15em;top:0;'));
-  dpad.appendChild(dbtn('down','▼','left:3.15em;bottom:0;'));
-  dpad.appendChild(dbtn('left','◀','left:0;top:3.15em;'));
-  dpad.appendChild(dbtn('right','▶','right:0;top:3.15em;'));
-  ctrlWrap.appendChild(dpad);
+  /* thumb-stick (left) — drag the nub; the dominant axis resolves to ONE cardinal press,
+     routed through padDir() exactly like the old D-pad, so every game plays the same. */
+  var stick=document.createElement('div');
+  stick.style.cssText='pointer-events:auto;position:relative;width:9.6em;height:9.6em;font-size:13px;flex:none;border-radius:100px;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;'+
+   'background:radial-gradient(circle at 50% 36%, #4a3a44 0%, #2c2229 70%, #211921 100%);border:1px solid rgba(245,195,207,.28);'+
+   'box-shadow:inset 0 3px 11px rgba(0,0,0,.6),inset 0 -1px 0 rgba(255,255,255,.06),0 3px 8px rgba(80,30,50,.4);';
+  var nub=document.createElement('div');
+  nub.style.cssText='position:absolute;left:50%;top:50%;width:4.4em;height:4.4em;border-radius:100px;transform:translate(-50%,-50%);transition:transform .09s ease;pointer-events:none;'+
+   'background:radial-gradient(circle at 50% 33%, #ffd3df 0%, #eb648c 48%, #c23f6a 100%);'+
+   'box-shadow:0 5px 11px rgba(120,20,55,.5),inset 0 2px 3px rgba(255,255,255,.45),inset 0 -3px 6px rgba(120,20,55,.42);';
+  stick.appendChild(nub);
+  (function(){
+   var active=false, cx=0, cy=0, R=1, curDir=null, pid=null;
+   function setNub(dx,dy){ nub.style.transition='none'; nub.style.transform='translate(calc(-50% + '+dx.toFixed(1)+'px), calc(-50% + '+dy.toFixed(1)+'px))'; }
+   function resetNub(){ nub.style.transition='transform .09s ease'; nub.style.transform='translate(-50%,-50%)'; }
+   function resolve(dx,dy){ var dead=R*0.30; if(Math.abs(dx)<dead&&Math.abs(dy)<dead) return null; return (Math.abs(dx)>Math.abs(dy))?(dx>0?'right':'left'):(dy>0?'down':'up'); }
+   function move(x,y){ var dx=x-cx, dy=y-cy, d=Math.hypot(dx,dy), max=R*0.62; if(d>max){ dx=dx/d*max; dy=dy/d*max; } setNub(dx,dy);
+    var dir=resolve(dx,dy); if(dir!==curDir){ if(curDir) held[curDir]=false; if(dir) padDir(dir); curDir=dir; } }
+   function end(){ if(!active) return; active=false; if(curDir) held[curDir]=false; curDir=null; resetNub(); pid=null; }
+   stick.addEventListener('pointerdown',function(e){ e.preventDefault(); active=true; pid=e.pointerId;
+    var r=stick.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; R=r.width/2;
+    try{ stick.setPointerCapture(pid); }catch(_){} ensureAudio(); move(e.clientX,e.clientY); });
+   stick.addEventListener('pointermove',function(e){ if(active&&(pid===null||e.pointerId===pid)){ e.preventDefault(); move(e.clientX,e.clientY); } });
+   stick.addEventListener('pointerup',function(e){ e.preventDefault(); end(); });
+   stick.addEventListener('pointercancel',end);
+   stick.addEventListener('lostpointercapture',end);
+  })();
+  ctrlWrap.appendChild(stick);
   /* A button (right) — the "action": jump (a) · nothing (b) · boost (c) */
   var a=document.createElement('button'); a.textContent='A';
   a.style.cssText='pointer-events:auto;width:4.4em;height:4.4em;font-size:16px;font-family:'+PIXEL+';color:#fff;border-radius:100px;background:linear-gradient(90deg,#eb648c,#ec642a);border:none;box-shadow:0 5px 14px rgba(235,100,140,.45),inset 0 1px 0 rgba(255,255,255,.3);-webkit-tap-highlight-color:transparent;touch-action:none;flex:none;transition:transform .1s ease;';
@@ -294,7 +306,7 @@ function launchGame(opts){
 
  /* ---- shared state ---- */
  var state = isLocked() ? 'gate' : 'select';   /* gate | select | play | tally */
- var activeLevel=null, runToken=0;
+ var activeLevel=null, runToken=0, pendingMod=null;
 
  /* the env each level receives */
  function makeEnv(){
@@ -437,7 +449,28 @@ function launchGame(opts){
   return out;
  }
  function moveSel(d){ var g=selectable(); if(!g.length) return; selIdx=(selIdx+d+g.length)%g.length; snd.tick(); renderSelect(); }
- function playSel(){ var g=selectable(); if(g[selIdx]){ ensureAudio(); startLevel(g[selIdx]); } }
+ function playSel(){ var g=selectable(); if(g[selIdx]){ ensureAudio(); showHowto(g[selIdx]); } }
+ /* the "how to play" card — controls shown before a game starts, then you tap start to play */
+ function controlLegend(mod){
+  var c=mod.controls||{stick:'move'}, pad=useTouch;
+  var stickLab=pad?'joystick':'arrows / wasd', btnLab=pad?'A button':'space';
+  var lab=function(top,sub){ return '<span style="text-align:left;font-family:'+MONO+';font-size:15px;color:#fff;line-height:1.15;"><span style="display:block;color:'+SOFT+';font-size:12px;">'+top+'</span>'+esc(sub)+'</span>'; };
+  var stickIc='<span style="display:inline-block;flex:none;width:26px;height:26px;border-radius:100px;background:radial-gradient(circle at 50% 33%, #ffd3df, '+PINK+' 55%, #c23f6a);box-shadow:inset 0 1px 2px rgba(255,255,255,.5),0 0 0 3px #2c2229,0 0 0 4px rgba(245,195,207,.3);"></span>';
+  var h='<div style="display:flex;align-items:center;gap:9px;">'+stickIc+lab(stickLab,c.stick||'move')+'</div>';
+  if(c.btn){ var btnIc='<span style="display:inline-grid;place-items:center;flex:none;width:26px;height:26px;border-radius:100px;font-family:'+PIXEL+';font-size:9px;color:#fff;background:linear-gradient(90deg,#eb648c,#ec642a);box-shadow:inset 0 1px 0 rgba(255,255,255,.35);">'+(pad?'A':'')+'</span>';
+   h+='<div style="display:flex;align-items:center;gap:9px;">'+btnIc+lab(btnLab,c.btn)+'</div>'; }
+  return h;
+ }
+ function showHowto(mod){
+  state='howto'; pendingMod=mod; pressCb=null; runToken++; headPlaying(false);
+  clearControls(); cv.style.display='none'; panel.style.display='block';
+  panel.innerHTML='<p style="font-family:'+PIXEL+';font-size:10px;letter-spacing:2px;color:'+SOFT+';margin:0 0 12px;">how to play</p>'+
+   '<p style="font-family:'+PIXEL+';font-size:15px;color:'+YEL+';margin:0 0 8px;line-height:1.6;">'+esc(mod.title)+'</p>'+
+   '<p style="font-family:'+MONO+';font-size:16px;color:'+SOFT+';margin:0 0 18px;line-height:1.35;">'+esc(mod.sub||'')+'</p>'+
+   '<div style="display:flex;flex-wrap:wrap;gap:12px 22px;justify-content:center;margin:0 0 20px;">'+controlLegend(mod)+'</div>'+
+   '<button id="vaGo" class="vaBtnP">start ▸</button>';
+  panel.querySelector('#vaGo').addEventListener('click',function(){ ensureAudio(); startLevel(mod); });
+ }
  function showSelect(){
   state='select'; activeLevel=null; pressCb=null; runToken++; headPlaying(false);
   cv.style.display='none'; panel.style.display='block'; clearControls(); paintBest();

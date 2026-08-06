@@ -358,15 +358,20 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     background:linear-gradient(180deg, rgba(12,7,18,0) 0%, rgba(12,7,18,.94) 34%, rgba(12,7,18,.99) 100%);
     pointer-events:auto; }
   #gamepad.on{ display:flex; }
-  #gamepad .gp-row{ width:100%; display:flex; justify-content:space-between; align-items:center; }   /* D-pad and A level with each other */
-  #gamepad .dpad{ position:relative; width:9.6em; height:9.6em; font-size:14px; flex:none; }
-  #gamepad .gp{ position:absolute; width:3.1em; height:3.1em; display:grid; place-items:center; cursor:pointer;
-    color:#fff; font-size:1em; border:1px solid rgba(60,20,40,.25); border-radius:.7em; background:#3c2f35;
-    box-shadow:0 2px 3px rgba(80,30,50,.35), inset 0 1px 0 rgba(255,255,255,.18); -webkit-user-select:none; user-select:none;
-    -webkit-tap-highlight-color:transparent; touch-action:none; transition:background .1s ease, transform .1s ease; }
-  #gamepad .gp:active{ background:var(--brand-pink); transform:scale(.92); }
-  #gamepad .gp-u{ left:3.25em; top:0; } #gamepad .gp-d{ left:3.25em; bottom:0; }
-  #gamepad .gp-l{ left:0; top:3.25em; } #gamepad .gp-r{ right:0; top:3.25em; }
+  #gamepad .gp-row{ width:100%; display:flex; justify-content:space-between; align-items:center; }   /* joystick (left) + button (right) level with each other */
+  /* the thumb-stick: a recessed dish with a draggable pink nub — the whole thing reads as a handheld deck */
+  #gamepad .stick{ position:relative; width:9.6em; height:9.6em; font-size:14px; flex:none; border-radius:100px;
+    background:radial-gradient(circle at 50% 36%, #4a3a44 0%, #2c2229 70%, #211921 100%);
+    border:1px solid rgba(245,195,207,.28); touch-action:none; cursor:grab;
+    box-shadow:inset 0 3px 11px rgba(0,0,0,.6), inset 0 -1px 0 rgba(255,255,255,.06), 0 3px 8px rgba(80,30,50,.4);
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+  #gamepad .stick::before{ content:''; position:absolute; inset:1.4em; border-radius:100px; border:1px dashed rgba(245,195,207,.16); pointer-events:none; }
+  #gamepad .stick-nub{ position:absolute; left:50%; top:50%; width:4.4em; height:4.4em; border-radius:100px;
+    transform:translate(-50%,-50%); transition:transform .09s ease; pointer-events:none;
+    background:radial-gradient(circle at 50% 33%, #ffd3df 0%, #eb648c 48%, #c23f6a 100%);
+    box-shadow:0 5px 11px rgba(120,20,55,.5), inset 0 2px 3px rgba(255,255,255,.45), inset 0 -3px 6px rgba(120,20,55,.42); }
+  #gamepad .stick.dragging{ cursor:grabbing; }
+  #gamepad .stick.dragging .stick-nub{ transition:none; }
   #gamepad .gp-a{ position:relative; width:4.4em; height:4.4em; border-radius:100px; font-family:var(--pixel);
     font-size:16px; color:var(--btn-fg); background:var(--btn-bg); border:none; flex:none;
     box-shadow:0 5px 14px rgba(235,100,140,.45), inset 0 1px 0 rgba(255,255,255,.3); }
@@ -397,12 +402,11 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     filter:drop-shadow(0 .5rem 1.6rem rgba(235,100,140,.3)); }
   /* one tap = audio on for the whole visit. the button reads like the in-chat send button */
   #gateRow{ display:flex; gap:.8em; justify-content:center; }
-  /* consent line, right above the enter button: age + terms/privacy acceptance */
-  #gateConsent{ display:flex; align-items:center; gap:.55em; max-width:20rem; margin:0 auto;
-    font-family:'Inter',system-ui,sans-serif; font-size:.78rem; line-height:1.45; text-align:left;
-    color:rgba(255,255,255,.84); cursor:pointer; }
-  #gateConsent input{ flex:0 0 auto; width:1.05em; height:1.05em; accent-color:var(--brand-pink); cursor:pointer; }
-  #gateConsent a{ color:#fff; text-decoration:underline; text-underline-offset:2px; }
+  /* consent line, right above the enter button: entering = terms/privacy acceptance */
+  #gateConsent{ max-width:22rem; margin:0 auto;
+    font-family:'Inter',system-ui,sans-serif; font-size:.78rem; line-height:1.45; text-align:center;
+    color:var(--brand-pink); text-shadow:0 0 10px rgba(235,100,140,.45); }
+  #gateConsent a{ color:var(--brand-pink); text-decoration:underline; text-underline-offset:2px; }
   #gateConsent a:hover{ color:var(--brand-yellow); }
   /* the whole stack breathes in as the veil lifts, then dives INTO the CRT on the way out */
   #gateway.on #gatePos{ animation:gateRise .85s .12s cubic-bezier(.2,.85,.3,1) both; }
@@ -541,6 +545,26 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
   .g-overlay .go-sub b{ color:#fff; }
   .g-overlay .go-foot{ font-family:var(--mono); font-size:.9em; line-height:1.4; color:rgba(255,255,255,.7); margin-top:.6em; }
   .g-overlay .go-foot b{ color:#fff; }
+  /* the "how to play" card — shown after you pick a game, before it starts, so the controls are seen first */
+  .gh-kicker{ font-family:var(--pixel); font-size:.5em; letter-spacing:.16em; text-transform:uppercase; color:var(--brand-soft); }
+  .gh-title{ font-family:var(--pixel); font-size:1.02em; line-height:1.3; color:var(--brand-yellow);
+    text-shadow:3px 0 0 #eb648c,-3px 0 0 #6bc7ff; margin-top:.45em; }
+  .gh-obj{ font-family:var(--mono); font-size:1em; line-height:1.3; color:var(--brand-soft); margin-top:.5em; }
+  .gh-legend{ display:flex; justify-content:center; flex-wrap:wrap; gap:.5em 1.3em; margin:.95em 0 .1em; }
+  .gh-ctrl{ display:flex; align-items:center; gap:.5em; }
+  .gh-ic{ flex:none; display:grid; place-items:center; }
+  .gh-stick{ width:2em; height:2em; border-radius:100px;
+    background:radial-gradient(circle at 50% 33%, #ffd3df, #eb648c 55%, #c23f6a);
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.5), 0 0 0 3px #2c2229, 0 0 0 4px rgba(245,195,207,.3); }
+  .gh-btn{ width:2em; height:2em; border-radius:100px; font-family:var(--pixel); font-size:.62em; color:#fff;
+    background:linear-gradient(90deg,#eb648c,#ec642a); box-shadow:inset 0 1px 0 rgba(255,255,255,.35), 0 2px 6px rgba(235,100,140,.4); }
+  .gh-lab{ font-family:var(--mono); font-size:.88em; text-align:left; line-height:1.14; color:#fff; display:flex; flex-direction:column; }
+  .gh-lab b{ color:var(--brand-soft); font-weight:normal; font-size:.8em; text-transform:lowercase; letter-spacing:.03em; }
+  .gh-start{ margin-top:.85em; font-family:var(--pixel); font-size:.62em; letter-spacing:.05em; text-transform:lowercase;
+    color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent; padding:1em 1.7em; border-radius:.6em;
+    border:1px solid rgba(255,255,255,.5); background:linear-gradient(90deg,#eb648c,#ec642a);
+    box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2); transition:transform .15s ease; }
+  .gh-start:active{ transform:scale(.96); }
   /* the on-CRT board */
   .go-board{ margin:.55em auto 0; max-width:14em; }
   .go-board .gb-list{ list-style:none; font-family:var(--mono); font-size:.95em; }
@@ -763,6 +787,15 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
               <p class="go-foot" id="gofoot"></p>
             </div>
           </div>
+          <div class="g-overlay off" id="ghowto">
+            <div class="go-inner">
+              <p class="gh-kicker">how to play</p>
+              <p class="gh-title" id="ghtitle">slumber snake</p>
+              <p class="gh-obj" id="ghobj"></p>
+              <div class="gh-legend" id="ghlegend"></div>
+              <button class="gh-start" id="ghstart" type="button">start ▸</button>
+            </div>
+          </div>
           <div class="g-overlay off" id="gboard">
             <div class="lb-inner">
               <p class="lb-title" id="lbtitle">leaderboard</p>
@@ -788,13 +821,8 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
   <!-- mobile arcade controls: the CRT becomes a little handheld console -->
   <div id="gamepad" aria-hidden="true">
     <div class="gp-row">
-      <div class="dpad">
-        <button class="gp gp-u" data-dir="up" aria-label="up">▲</button>
-        <button class="gp gp-l" data-dir="left" aria-label="left">◀</button>
-        <button class="gp gp-r" data-dir="right" aria-label="right">▶</button>
-        <button class="gp gp-d" data-dir="down" aria-label="down">▼</button>
-      </div>
-      <button class="gp gp-a" data-act="action" aria-label="action">A</button>
+      <div class="stick" id="gpStick" role="button" aria-label="joystick"><div class="stick-nub" id="gpNub"></div></div>
+      <button class="gp-a" data-act="action" aria-label="action">A</button>
     </div>
   </div>
   <!-- arcade page chrome: mute + leave, top-right of the page (the arcade takes over the whole page) -->
@@ -812,10 +840,7 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     <div id="gatePos">
       <img id="gateLogo" src="assets/logo2.png" alt="(secret;) khushi's slumber party" />
       <span class="countdown" id="countdown" aria-label="countdown to when the form closes"></span>
-      <label id="gateConsent">
-        <input type="checkbox" id="gateAccept" checked />
-        <span>i accept the <a href="/terms.html" target="_blank" rel="noopener">terms</a> &amp; <a href="/privacy.html" target="_blank" rel="noopener">privacy policy</a></span>
-      </label>
+      <p id="gateConsent">by entering, you accept our <a href="/terms.html" target="_blank" rel="noopener">terms</a> &amp; <a href="/privacy.html" target="_blank" rel="noopener">privacy</a></p>
       <div id="gateRow">
         <button id="gateYes" class="gateBtn" type="button"><span>enter</span><i aria-hidden="true">▸</i></button>
       </div>
@@ -1706,8 +1731,8 @@ function showGateway(){
     const root=document.documentElement;
     root.classList.add('booting'); setTimeout(()=>root.classList.remove('booting'), 1200);
     track('entered');
-    // record terms/privacy acceptance at the moment of entry (pre-ticked; entry works either way)
-    try{ const ok=document.getElementById('gateAccept'); localStorage.setItem('ksp-terms', (ok && ok.checked ? 'accepted' : 'entered') + ' @ ' + new Date().toISOString()); }catch(err){}
+    // entering IS the acceptance — record the moment of entry
+    try{ localStorage.setItem('ksp-terms', 'entered @ ' + new Date().toISOString()); }catch(err){}
     setTimeout(revealIntro, 240);                           // audio's unlocked now — land the DM + its ping
   };
   g.querySelector('#gateYes').addEventListener('click', e=>enter(e,true), {once:true});   // one button: enter → sound on for everyone
@@ -2075,6 +2100,8 @@ renderStep();
   const toastEl=document.getElementById('gtoast'), quitBtn=document.getElementById('gquit'), muteBtn=document.getElementById('gmute');
   const hud=gframe.querySelector('.g-hud');
   const gmenu=document.getElementById('gmenu'), gmlist=document.getElementById('gmlist'), gmfoot=document.getElementById('gmfoot');
+  const howtoEl=document.getElementById('ghowto'), ghtitle=document.getElementById('ghtitle'), ghobj=document.getElementById('ghobj'),
+        ghlegend=document.getElementById('ghlegend'), ghstart=document.getElementById('ghstart');
   const gmBoardTitle=document.getElementById('gmBoardTitle'), gmScores=document.getElementById('gmScores');
   const gamepad=document.getElementById('gamepad'), arcadeChrome=document.getElementById('arcadeChrome');
   const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
@@ -2093,9 +2120,12 @@ renderStep();
 
   /* ---------- the arcade line-up (add a game: give it a make() and a GLEADER.games entry) ---------- */
   const GAMES=[
-    { key:'snake',       name:'slumber snake', unit:'pillows', make:makeSnake },
-    { key:'pillowstack', name:'pillow stack',  unit:'lines',   make:makeStack },
-    { key:'dreammaze',   name:'dream maze',    unit:'dots',    make:makeMaze  }
+    { key:'snake',       name:'slumber snake', unit:'pillows', make:makeSnake,
+      blurb:"eat the pillows — don't bite your own tail.", controls:{stick:'turn'} },
+    { key:'pillowstack', name:'pillow stack',  unit:'lines',   make:makeStack,
+      blurb:'stack the pillows — clear full lines.',       controls:{stick:'move · drop', btn:'rotate'} },
+    { key:'dreammaze',   name:'dream maze',    unit:'dots',    make:makeMaze,
+      blurb:'eat the dots — dodge the ghosts.',            controls:{stick:'move'} }
     // starlight pong retired — its GLEADER column now belongs to "the inner circle" (assets/vault.js)
   ];
   const hiKey=k=>'ksp-hi-'+k;
@@ -2156,6 +2186,7 @@ renderStep();
 
   function applyMode(){
     gmenu.classList.toggle('off', mode!=='menu');
+    howtoEl.classList.toggle('off', mode!=='howto');
     overEl.classList.toggle('off', mode!=='over');
     gboard.classList.toggle('off', mode!=='board');
     hud.style.visibility = (mode==='play'||mode==='over') ? 'visible' : 'hidden';
@@ -2216,7 +2247,23 @@ renderStep();
     gmScores.innerHTML=html;
   }
   function moveSel(d){ sel=(sel+d+GAMES.length)%GAMES.length; renderMenu(); blip('eat'); }
-  function selectGame(){ const g=GAMES[sel]; if(!g) return; if(g.external && g.launch) launchExternal(g); else startGame(g.key); }
+  function selectGame(){ const g=GAMES[sel]; if(!g) return; if(g.external && g.launch) launchExternal(g); else showHowto(g.key); }
+  /* the "how to play" card: shown after a game is picked, so its controls are seen before play begins */
+  function controlsHtml(def){
+    const c=def.controls||{stick:'move'};
+    const pad=useGamepad();   // label the control that's actually on screen (joystick vs keyboard)
+    const stickLab=pad?'joystick':'arrows / wasd', btnLab=pad?'A button':'space';
+    let h='<div class="gh-ctrl"><span class="gh-ic gh-stick"></span><span class="gh-lab"><b>'+stickLab+'</b>'+esc(c.stick||'move')+'</span></div>';
+    if(c.btn) h+='<div class="gh-ctrl"><span class="gh-ic gh-btn">'+(pad?'A':'⎵')+'</span><span class="gh-lab"><b>'+btnLab+'</b>'+esc(c.btn)+'</span></div>';
+    return h;
+  }
+  function showHowto(key){
+    const def=GAMES.find(g=>g.key===key); if(!def) return;
+    curGame=key; open=true; mode='howto';
+    ghtitle.textContent=def.name; ghobj.textContent=def.blurb||'';
+    ghlegend.innerHTML=controlsHtml(def);
+    applyMode(); drawFrame(); blip('eat');
+  }
   // "k" easter egg: leap straight into "the inner circle" (its own level menu) from the arcade menu
   function jumpToInnerCircle(){
     let i=-1; for(let j=0;j<GAMES.length;j++){ if(GAMES[j].key==='vault'){ i=j; break; } }
@@ -2726,6 +2773,9 @@ renderStep();
       else if(k==='ArrowDown'||k==='s'||k==='S') moveSel(1);
       else if(k==='Enter'||k===' ') selectGame();
       else if(k==='Escape') quitArcade();
+    } else if(mode==='howto'){
+      if(k==='Enter'||k===' ') startGame(curGame);
+      else if(k==='Escape') backToMenu();
     } else if(mode==='play' && G){
       const d=KEYDIR[k];
       if(d){ held[d]=true; G.input&&G.input(d); }
@@ -2742,11 +2792,12 @@ renderStep();
     }
   });
   addEventListener('keyup', e=>{ const d=KEYDIR[e.key]; if(d) held[d]=false; });
-  function goBack(){ if(mode==='board') closeLeaderboard(); else if(mode==='play'||mode==='over') backToMenu(); else quitArcade(); }
+  function goBack(){ if(mode==='board') closeLeaderboard(); else if(mode==='play'||mode==='over'||mode==='howto') backToMenu(); else quitArcade(); }
   quitBtn.addEventListener('click', goBack);
   if(muteBtn) muteBtn.addEventListener('click', toggleMute);
   overEl.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
   cv.addEventListener('click', ()=>{ if(mode==='over') startGame(curGame); });
+  if(ghstart) ghstart.addEventListener('click', e=>{ e.stopPropagation(); if(mode==='howto') startGame(curGame); });
   // "see all" opens the paginated board; its own click must not also trigger a replay
   boardEl.addEventListener('click', e=>{ if(e.target.closest('.see-all')){ e.stopPropagation(); openLeaderboard(); } });
   lbprev.addEventListener('click', ()=>lbNav(-1));
@@ -2773,6 +2824,7 @@ renderStep();
   // menu → navigate + pick; game → steer/act; game-over → replay; leaderboard → page + back
   function padInput(a){
     if(mode==='menu'){ if(a==='up') moveSel(-1); else if(a==='down') moveSel(1); else if(a==='action') selectGame(); }
+    else if(mode==='howto'){ if(a==='action') startGame(curGame); }
     else if(mode==='play' && G){ G.input && G.input(a); }
     else if(mode==='over'){ if(a==='action') startGame(curGame); }
     else if(mode==='board'){ if(a==='left') lbNav(-1); else if(a==='right') lbNav(1); else if(a==='action') closeLeaderboard(); }
@@ -2785,15 +2837,35 @@ renderStep();
     } else padInput(dir);     // menu/over/board: a single discrete press
   }
   function padRelease(dir){ if(dir) held[dir]=false; else if(padDir) held[padDir]=false; clearInterval(padRepeat); padDir=null; }
-  gamepad.querySelectorAll('.gp[data-dir]').forEach(btn=>{
-    const dir=btn.dataset.dir;
-    btn.addEventListener('touchstart', e=>{ e.preventDefault(); padPress(dir); }, {passive:false});
-    btn.addEventListener('touchend',  e=>{ e.preventDefault(); padRelease(dir); }, {passive:false});
-    btn.addEventListener('touchcancel', ()=>padRelease(dir));
-    btn.addEventListener('mousedown', e=>{ e.preventDefault(); padPress(dir); });
-    btn.addEventListener('mouseup', ()=>padRelease(dir));
-    btn.addEventListener('mouseleave', ()=>padRelease(dir));
-  });
+  /* the thumb-stick: drag the nub; the dominant axis resolves to ONE cardinal press,
+     routed through the same padPress/padRelease the D-pad used (so every screen still works). */
+  const stick=document.getElementById('gpStick'), nub=document.getElementById('gpNub');
+  if(stick && nub){
+    let sActive=false, sCx=0, sCy=0, sR=1, sDir=null, sPid=null;
+    const setNub=(dx,dy)=>{ nub.style.transform='translate(calc(-50% + '+dx.toFixed(1)+'px), calc(-50% + '+dy.toFixed(1)+'px))'; };
+    const resetNub=()=>{ nub.style.transform='translate(-50%,-50%)'; };
+    function resolve(dx,dy){
+      const dead=sR*0.30;
+      if(Math.abs(dx)<dead && Math.abs(dy)<dead) return null;
+      return (Math.abs(dx)>Math.abs(dy)) ? (dx>0?'right':'left') : (dy>0?'down':'up');
+    }
+    function sMove(x,y){
+      let dx=x-sCx, dy=y-sCy; const d=Math.hypot(dx,dy), max=sR*0.62;
+      if(d>max){ dx=dx/d*max; dy=dy/d*max; }
+      setNub(dx,dy);
+      const dir=resolve(dx,dy);
+      if(dir!==sDir){ if(sDir) padRelease(sDir); if(dir) padPress(dir); sDir=dir; }
+    }
+    function sEnd(){ if(!sActive) return; sActive=false; stick.classList.remove('dragging'); if(sDir) padRelease(sDir); sDir=null; resetNub(); sPid=null; }
+    stick.addEventListener('pointerdown', e=>{ e.preventDefault(); sActive=true; sPid=e.pointerId;
+      const r=stick.getBoundingClientRect(); sCx=r.left+r.width/2; sCy=r.top+r.height/2; sR=r.width/2;
+      stick.classList.add('dragging'); try{ stick.setPointerCapture(sPid); }catch(_){}
+      sMove(e.clientX,e.clientY); });
+    stick.addEventListener('pointermove', e=>{ if(sActive && (sPid===null||e.pointerId===sPid)){ e.preventDefault(); sMove(e.clientX,e.clientY); } });
+    stick.addEventListener('pointerup', e=>{ e.preventDefault(); sEnd(); });
+    stick.addEventListener('pointercancel', sEnd);
+    stick.addEventListener('lostpointercapture', sEnd);
+  }
   const aBtn=gamepad.querySelector('.gp-a');
   if(aBtn){
     const act=e=>{ e.preventDefault(); padInput('action'); };

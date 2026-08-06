@@ -25,6 +25,7 @@
   if(!(window.__innerCircle&&window.__innerCircle.register)){ return setTimeout(boot,120); }
   window.__innerCircle.register({
    n:3, key:'key', title:'the key to happiness', sub:'race the ferry. beat it to the key.', playable:true,
+   controls:{stick:'up · down to change lane', btn:'boost'},
    start:startLevel
   });
  }

@@ -15,6 +15,7 @@
   if(!(window.__innerCircle&&window.__innerCircle.register)){ return setTimeout(boot,120); }
   window.__innerCircle.register({
    n:2, key:'jahnu', title:'okay jahnu', sub:'cruise the coast. keep the power up.', playable:true,
+   controls:{stick:'left · right to steer'},
    start:startLevel
   });
  }

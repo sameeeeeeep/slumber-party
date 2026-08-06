@@ -21,6 +21,7 @@
   if(!(window.__innerCircle&&window.__innerCircle.register)){ return setTimeout(boot,120); }
   window.__innerCircle.register({
    n:1, key:'soorry', title:'im soorry', sub:'strut the red carpet. pose. dodge the paps.', playable:true,
+   controls:{stick:'up = jump · down = pose', btn:'jump'},
    start:startLevel
   });
  }
