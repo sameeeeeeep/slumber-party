@@ -145,19 +145,38 @@ async function cmdGuests(argv) {
   }
   await writeFile(P('besties/guests.js'), banner() + `window.BESTIES_GUESTS=${JSON.stringify(out)};\n`);
   console.log(`sealed ${list.length} guest${list.length === 1 ? '' : 's'} → besties/guests.js`);
-  for (const g of list) console.log(`  ${g.name.padEnd(24)} secretslumberparty.com/besties/${g.code}`);
+  const tier = (g) => g.voice === 'creator' ? 'creator' : g.voice === 'neutral' ? 'neutral' : 'bestie';
+  for (const g of list) {
+    console.log(`  ${g.name.padEnd(20)} ${tier(g).padEnd(8)} ${link(g.code)}`);
+  }
 }
 
+/* The short form. /besties/<code> still resolves — every link already sent keeps
+   working — but this is the one worth texting: secretslumberparty.com/orry-aftr.
+   404.html turns it back into /besties/?g=<code>, and only after checking the
+   code against the sealed index, so a mistyped page stays a real 404. */
+const link = (code) => `secretslumberparty.com/${code}`;
+
 async function cmdAdd(argv) {
+  const flags = argv.filter(a => a.startsWith('--'));
   const name = argv.slice(1).filter(a => !a.startsWith('--')).join(' ');
-  if (!name) return console.error('usage: node tools/besties-seal.mjs add "Shanaya Kapoor"');
+  if (!name) return console.error(
+    'usage: node tools/besties-seal.mjs add "Shanaya Kapoor" [--creator|--neutral]');
+
+  /* Which copy they hear. The variant only swaps lines that content.json lists
+     under that name, so an unknown voice just falls through to the default. */
+  const voice = flags.includes('--creator') ? 'creator'
+              : flags.includes('--neutral') ? 'neutral' : null;
+
   const list = existsSync(P('besties/guests.json'))
     ? JSON.parse(await readFile(P('besties/guests.json'), 'utf8')) : [];
   const code = `${slugify(name)}-${suffix()}`;
-  list.push({ name, first: name.split(/\s+/)[0], code, plus_one: false, notes: '' });
+  const record = { name, first: name.split(/\s+/)[0], code, plus_one: false, notes: '' };
+  if (voice) record.voice = voice;
+  list.push(record);
   await writeFile(P('besties/guests.json'), JSON.stringify(list, null, 2) + '\n');
   await cmdGuests(argv);
-  console.log(`\n  ↳ send her:  secretslumberparty.com/besties/${code}`);
+  console.log(`\n  ↳ send them:  ${link(code)}${voice ? `   (${voice} voice)` : ''}`);
 }
 
 /* The message Khushi actually sends. The link never carries the password — she

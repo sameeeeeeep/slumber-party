@@ -17,14 +17,60 @@
 </style>
 <script>
 /* GitHub Pages serves this file for any path it can't find, which is how
-   /besties/<name> works without a server: personalised links land here, and we
-   hand the code to the real experience. Everything else goes home.
+   personalised links work without a server: they land here and we hand the code
+   to the real experience. Everything else goes home.
+
+   TWO SHAPES OF LINK, both live:
+     /besties/<code>   the original, still sent out and still working
+     /<code>           root level — secretslumberparty.com/orry-aftr
+
+   The root form is the reason this file got more careful. A bare /<code> rule is
+   a catch-all: it would also swallow a mistyped page and dump a stranger on the
+   private gate. So a root path is only treated as an invite if it BOTH looks
+   like a code and actually resolves against the sealed guest index — the same
+   100k-round derivation /besties uses. Anything else stays a real 404.
 
    The redirect happens before paint, so a guest never sees this page. */
 (function () {
-  var m = location.pathname.match(/^\/besties\/([A-Za-z0-9_-]{1,64})\/?$/);
-  if (m) location.replace('/besties/?g=' + encodeURIComponent(m[1]));
-  else if (/^\/besties/.test(location.pathname)) location.replace('/besties/');
+  var path = location.pathname;
+
+  // ---- the original /besties/<code> form -----------------------------------
+  var m = path.match(/^\/besties\/([A-Za-z0-9_-]{1,64})\/?$/);
+  if (m) return location.replace('/besties/?g=' + encodeURIComponent(m[1]));
+  if (/^\/besties/.test(path)) return location.replace('/besties/');
+
+  // ---- root level: /<code> -------------------------------------------------
+  var seg = path.replace(/^\/+/, '').replace(/\/+$/, '');
+  // cheap gate first, so a normal 404 never pays for the crypto below
+  if (!/^[a-z][a-z0-9]*-[a-z0-9]{4}$/.test(seg)) return;
+  if (!(window.crypto && crypto.subtle)) return;      // no verifying, so no hijacking
+
+  var s = document.createElement('script');
+  s.src = '/besties/guests.js';
+  s.onload = function () {
+    if (!window.BESTIES_GUESTS) return;
+    guestIndex(seg).then(function (idx) {
+      if (window.BESTIES_GUESTS[idx]) location.replace('/besties/?g=' + encodeURIComponent(seg));
+    }).catch(function () {});
+  };
+  document.head.appendChild(s);
+
+  /* Must match tools/besties-seal.mjs and besties.js exactly — same salt, same
+     rounds — or a real code won't be found and the link dies silently. */
+  function guestIndex(code) {
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey('raw', enc.encode(code.toLowerCase()), 'PBKDF2', false, ['deriveBits'])
+      .then(function (base) {
+        return crypto.subtle.deriveBits(
+          { name: 'PBKDF2', salt: enc.encode('ssp-besties-index'), iterations: 100000, hash: 'SHA-256' },
+          base, 128);
+      })
+      .then(function (bits) {
+        return Array.prototype.map.call(new Uint8Array(bits), function (b) {
+          return b.toString(16).padStart(2, '0');
+        }).join('');
+      });
+  }
 })();
 </script>
 </head>

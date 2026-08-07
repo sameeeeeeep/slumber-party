@@ -361,6 +361,9 @@
   .card-seal{ position:absolute; right:.85rem; bottom:.8rem; font-size:1.5rem; transform:rotate(12deg); }
   .card-to{ font-family:var(--script); font-size:1.35rem; color:#a54a6d; margin-bottom:.2rem; }
 
+  /* the same column rules as .invite-btns, so the revealed pair keeps the spacing */
+  #afterRsvp{ display:flex; flex-direction:column; gap:.6rem; animation:riseIn .6s cubic-bezier(.2,.8,.3,1) both; }
+  #afterRsvp[hidden]{ display:none; }
   .invite-btns{ display:flex; flex-direction:column; gap:.6rem; margin-top:1.4rem;
     animation:riseIn .6s .8s both; }
   #rsvpDone{ font-family:var(--mono); font-size:1.2rem; color:var(--soft); text-align:center; margin-top:1rem; }
@@ -473,15 +476,19 @@
       <div class="card" id="inviteCard"></div>
       <div class="invite-btns">
         <button class="btn wide" id="rsvpBtn" type="button">RSVP — I'M COMING</button>
-        <!-- check-in is the one thing khushi actually needs back, so it sits
-             directly under the RSVP and above the arcade. Same tab: it's a task
-             to finish, not a diversion. -->
-        <a class="btn wide ghost" id="checkinBtn" href="/checkin/">▸ CHECK IN — DETAILS &amp; ID</a>
-        <!-- ghost, so it never competes with the RSVP above it. New tab on
-             purpose: the invite card is the thing she came for and shouldn't be
-             navigated away from to go and play a game. -->
-        <a class="btn wide ghost" id="arcadeBtn" href="/?arcade" target="_blank"
-           rel="noopener">▸ KHUSHI'S ARCADE</a>
+        <!-- BOTH HIDDEN UNTIL THEY RSVP. Asking for a government ID before
+             someone has even said they're coming is the wrong order — and the
+             arcade is a reward, so it waits its turn too. markRsvped() reveals
+             them, which also covers a returning guest who already RSVP'd. -->
+        <div id="afterRsvp" hidden>
+          <!-- check-in is the one thing khushi actually needs back, so it comes
+               first. Same tab: it's a task to finish, not a diversion. -->
+          <a class="btn wide ghost" id="checkinBtn" href="/checkin/">▸ CHECK IN — DETAILS &amp; ID</a>
+          <!-- new tab on purpose: the invite card is the thing they came for and
+               shouldn't be navigated away from to go and play a game -->
+          <a class="btn wide ghost" id="arcadeBtn" href="/?arcade" target="_blank"
+             rel="noopener">▸ KHUSHI'S ARCADE</a>
+        </div>
       </div>
       <p id="rsvpDone" hidden></p>
     </div>

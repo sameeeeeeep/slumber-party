@@ -402,7 +402,15 @@ function stamp() {
 function line(text) {
   const v = state.guest && state.guest.voice
     && state.content.variants && state.content.variants[state.guest.voice];
-  return (v && v[text]) || text;
+  let out = (v && v[text]) || text;
+  /* {first} → their first name, for a line that greets someone directly. Only a
+     personalised link knows a name, so it falls back to "there" rather than
+     printing the token at somebody who typed the password on the bare /besties. */
+  if (out.indexOf('{first}') !== -1) {
+    const f = (state.guest && state.guest.first) ? String(state.guest.first).toLowerCase() : 'there';
+    out = out.replace(/\{first\}/g, f);
+  }
+  return out;
 }
 
 function escapeHTML(s) {
@@ -706,7 +714,8 @@ function buildInviteCard() {
   const to = state.guest ? '<p class="card-to">for ' + escapeHTML((state.guest.first || '').toLowerCase()) + ' ♡</p>' : '';
   $('inviteCard').innerHTML =
     to +
-    '<p class="card-eyebrow">' + escapeHTML(iv.eyebrow) + '</p>' +
+    // through line() as well, so a creator's card doesn't say BESTIES ONLY
+    '<p class="card-eyebrow">' + escapeHTML(line(iv.eyebrow)) + '</p>' +
     // the real logo, not a typographic stand-in for it
     '<h1 class="card-name"><img class="card-logo" src="../assets/logo.png" alt="' +
       escapeHTML([iv.line1, iv.line2, iv.line3].join(' ')) + '" /></h1>' +
@@ -738,6 +747,11 @@ function markRsvped() {
   d.hidden = false;
   // one editable line, not a sentence stitched together out of two fields
   d.textContent = state.content.rsvp.confirmed || "you're on the list";
+  /* Check-in and the arcade only exist once they've said they're coming: an ID
+     upload before an RSVP is the wrong order to ask in. This runs for a
+     returning guest too, since restoring a saved RSVP comes through here. */
+  const after = $('afterRsvp');
+  if (after) after.hidden = false;
 }
 
 $('rsvpBtn').addEventListener('click', () => {
