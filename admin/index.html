@@ -394,7 +394,7 @@ function checkinPanel() {
     const c = CHECKINS.find(x => x.guest_id === g.id)
            || byName.get(String(g.name).trim().toLowerCase()) || null;
     if (c) usedIds.add(c.id);
-    return { name: g.name, c, onList: true };
+    return { name: g.name, c, onList: true, address: g.address || '', code: g.code || '' };
   });
   // checked in but not on the roster (or spelled differently)
   for (const c of CHECKINS) {
@@ -407,10 +407,16 @@ function checkinPanel() {
 
   document.getElementById('ciEmpty').hidden = rows.length > 0;
   body.innerHTML = rows.map(r => {
+    /* The address rides on the name as a tooltip rather than taking a column:
+       it's long, it's for posting invites rather than reading at a glance, and
+       the CSV is where it's actually useful. A dotted underline shows it's there. */
+    const nameCell = (n, addr) => addr
+      ? `<span title="${esc(addr)}" style="border-bottom:1px dotted #4a4b5c;cursor:help">${esc(n)}</span>`
+      : esc(n);
     if (!r.c) {
       // 7 = the remaining columns after guest + status; keep in step with <thead>
-      return `<tr><td>${esc(r.name)}</td><td><span class="muted">waiting</span></td>
-        <td colspan="7" class="muted">—</td></tr>`;
+      return `<tr><td>${nameCell(r.name, r.address)}</td><td><span class="muted">waiting</span></td>
+        <td colspan="7" class="muted">${r.address ? 'address on file' : '—'}</td></tr>`;
     }
     const c = r.c;
     const when = new Date(c.created_at).toLocaleString();
@@ -421,7 +427,7 @@ function checkinPanel() {
            style="padding:4px 10px;font-size:12px">view ${esc(c.id_doc_type || '')}</button>`
       : '<span class="muted">none</span>';
     return `<tr>
-      <td>${esc(r.name)}${r.onList ? '' : ' <span class="muted">(not on list)</span>'}</td>
+      <td>${nameCell(r.name, r.address)}${r.onList ? '' : ' <span class="muted">(not on list)</span>'}</td>
       <td>✓ done</td><td>${esc(when)}</td>
       <td>${esc(c.phone)}</td><td>${esc(c.email)}</td>
       <td>${esc(c.pyjama_size)}</td><td>${esc(meal)}${notes}</td><td>${idCell}</td>
@@ -507,19 +513,22 @@ document.getElementById('ciAdd')?.addEventListener('click', async () => {
 });
 
 document.getElementById('ciCsv')?.addEventListener('click', () => {
-  const head = ['name','checked_in','when','phone','email','pyjama_size','meal','meal_notes','id_doc'];
+  // address and invite code included: this file is what you post invites from
+  const head = ['name','checked_in','address','invite_code','when','phone','email',
+                'pyjama_size','meal','meal_notes','id_doc'];
   const byId = new Set();
   const lines = [];
   for (const g of GUESTS) {
     const c = CHECKINS.find(x => x.guest_id === g.id)
       || CHECKINS.find(x => String(x.name).trim().toLowerCase() === g.name.trim().toLowerCase());
     if (c) byId.add(c.id);
-    lines.push([g.name, c ? 'yes' : 'no', c?.created_at || '', c?.phone || '', c?.email || '',
+    lines.push([g.name, c ? 'yes' : 'no', g.address || '', g.code || '',
+                c?.created_at || '', c?.phone || '', c?.email || '',
                 c?.pyjama_size || '', c?.meal || '', c?.meal_notes || '', c?.id_doc_path || '']);
   }
   for (const c of CHECKINS) {
-    if (!byId.has(c.id)) lines.push([c.name, 'yes (not on list)', c.created_at, c.phone, c.email,
-      c.pyjama_size, c.meal, c.meal_notes || '', c.id_doc_path || '']);
+    if (!byId.has(c.id)) lines.push([c.name, 'yes (not on list)', '', '', c.created_at, c.phone,
+      c.email, c.pyjama_size, c.meal, c.meal_notes || '', c.id_doc_path || '']);
   }
   const csv = [head, ...lines]
     .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');

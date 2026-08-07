@@ -26,8 +26,14 @@ create table if not exists public.guests (
   created_at timestamptz not null default now(),
   name       text not null,
   code       text,                       -- besties invite code, when they have one
+  -- postal address, for posting the physical invite. Home addresses, so they sit
+  -- behind the same admin-only RLS as everything else in here and are in the CSV
+  -- export rather than on screen by default.
+  address    text,
   notes      text
 );
+-- for a table created before the column existed
+alter table public.guests add column if not exists address text;
 create unique index if not exists guests_name_key on public.guests (lower(name));
 create index if not exists guests_created_idx on public.guests (created_at desc);
 
