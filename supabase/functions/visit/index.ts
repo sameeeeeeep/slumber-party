@@ -67,6 +67,13 @@ Deno.serve(async (req) => {
     tz: str(b.tz, 60),
     referrer: str(b.referrer, 300),
     device: str(b.device, 20),
+    /* The browser classifies its own source and sends the label; the raw UA comes
+       too so a misclassification can be re-derived later without losing the visit.
+       In-app browsers (Instagram, Threads, Snapchat…) announce themselves in the
+       UA, which is the only reason social traffic can be attributed at all —
+       referrers are stripped on almost every social tap. */
+    source: str(b.source, 40),
+    user_agent: str(b.user_agent, 300),
   });
 
   return new Response('ok', { headers: cors(origin) });

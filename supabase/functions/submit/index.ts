@@ -118,6 +118,8 @@ function validate(b: Record<string, unknown>) {
       tz: str(b.tz, 60),
       referrer: str(b.referrer, 300),
       user_agent: str(b.user_agent, 300),
+      // where they came from, classified in the browser — see trafficSource()
+      source: str(b.source, 40),
     },
   };
 }

@@ -1550,6 +1550,7 @@ async function submitApplication(data){
       // the function can only throttle by IP, which punishes shared networks
       body: JSON.stringify({ ...data, visitor_id:visitorId(), tz:localTz(),
                              referrer:document.referrer||null,
+                             source:trafficSource(),
                              user_agent:navigator.userAgent })
     }).then(async res=>{
       const out = await res.json().catch(()=>({}));
@@ -1622,6 +1623,59 @@ function sessionId(){
 // persistent, cross-session id (set in <head> as window.SSP_VID). Same value on every visit
 // from this browser, so an abandoned row and a later completed row can be matched.
 function visitorId(){ return window.SSP_VID || ''; }
+
+/* ---------- where did this person come from? ----------------------------------
+   Worked out in the browser, because the browser is the only place that knows.
+
+   THE REFERRER IS USUALLY MISSING. Instagram, WhatsApp and most apps strip it, so
+   attribution built on document.referrer alone reports almost everything as
+   "direct" — which is precisely useless on the day of a launch.
+
+   What survives is the USER AGENT. Apps that open links in their own embedded
+   browser announce themselves in it: Instagram says "Instagram", Facebook says
+   FB_IAB/FBAV, Threads still says "Barcelona" (its pre-launch codename), Snapchat
+   says "Snapchat". So the platform is knowable even with no referrer at all.
+
+   WHAT THIS CANNOT KNOW, and doesn't pretend to:
+     · which Instagram placement — bio, story and DM share one user agent. That
+       needs a ?src= tag, which is honoured below if one is ever added.
+     · WhatsApp. It hands off to the system browser with no marker and no referrer,
+       so a WhatsApp tap is indistinguishable from someone typing the address.
+   Both land in "direct", and that label is the truth rather than a shrug. */
+function trafficSource(){
+  try{
+    // an explicit tag always wins — it's a deliberate statement of provenance
+    const p = new URLSearchParams(location.search);
+    const tag = p.get('src') || p.get('utm_source');
+    if(tag) return String(tag).toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40) || 'direct';
+
+    const ua = navigator.userAgent || '';
+    if(/Instagram/i.test(ua))               return 'instagram';
+    if(/FBAN|FBAV|FB_IAB/i.test(ua))        return 'facebook';
+    if(/Barcelona/i.test(ua))               return 'threads';
+    if(/Snapchat/i.test(ua))                return 'snapchat';
+    if(/Twitter/i.test(ua))                 return 'twitter';
+    if(/LinkedInApp/i.test(ua))             return 'linkedin';
+    if(/Line\//i.test(ua))                  return 'line';
+    if(/Pinterest/i.test(ua))               return 'pinterest';
+
+    const ref = document.referrer || '';
+    if(ref){
+      const h = new URL(ref).hostname.replace(/^www\./,'').toLowerCase();
+      if(h === location.hostname) return 'internal';
+      if(/instagram/.test(h))  return 'instagram';
+      if(/facebook/.test(h))   return 'facebook';
+      if(/threads/.test(h))    return 'threads';
+      if(/t\.co$|twitter|x\.com$/.test(h)) return 'twitter';
+      if(/google|bing|duckduckgo|search/.test(h)) return 'search';
+      if(/youtube|youtu\.be/.test(h)) return 'youtube';
+      if(/linkedin/.test(h))   return 'linkedin';
+      if(/whatsapp/.test(h))   return 'whatsapp';
+      return h.slice(0,40);                    // some other site linked here
+    }
+    return 'direct';
+  }catch(e){ return 'direct'; }
+}
 function track(step){
   const cfg = window.SLUMBER_CONFIG || {};
   if(!(cfg.useSupabase && cfg.supabaseUrl && cfg.supabaseAnonKey)) return;
@@ -1632,6 +1686,7 @@ function track(step){
                 Authorization:'Bearer '+cfg.supabaseAnonKey },
       body: JSON.stringify({ session_id:sessionId(), reached:step, tz:localTz(),
                              referrer:document.referrer||null,
+                             source:trafficSource(), user_agent:navigator.userAgent,
                              device:(innerWidth<=640?'mobile':'desktop') })
     }).catch(()=>{});
   }catch(e){}

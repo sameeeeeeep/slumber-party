@@ -136,10 +136,14 @@
   .empty{ padding:26px; text-align:center; color:var(--ink-3); font-size:.9rem; }
 
   /* ---- check-in panel ---- */
-  .pill{ font-size:.72rem; color:var(--ink-2); border:1px solid #262735; border-radius:100px;
+  .pill{ font-size:.72rem; color:var(--ink-2); border:1px solid var(--line); border-radius:100px;
     padding:.25rem .6rem; white-space:nowrap; }
   .muted{ color:var(--ink-3); }
   #ciTbl td, #ciTbl th{ white-space:nowrap; }
+  /* the one column that must wrap — a Mumbai address on one line would push
+     every other column off the side of the panel */
+  #ciTbl td.addr{ white-space:normal; min-width:210px; max-width:300px;
+    font-size:.78rem; line-height:1.35; color:var(--ink-2); }
 
   /* ---- tooltip ---- */
   #tip{ position:fixed; z-index:50; pointer-events:none; opacity:0; transition:opacity .1s;
@@ -195,6 +199,27 @@
       <div class="rows" id="funnel"></div>
       <p class="note">counted per browser tab, from a random id that's forgotten when the tab closes — no cookie, no IP, no fingerprint.</p>
     </section>
+
+    <section class="panel">
+      <div class="tablebar" style="margin-bottom:2px">
+        <h2 style="flex:1">where they came from</h2>
+        <span class="pill" id="srcLive">—</span>
+      </div>
+      <p class="sub">sessions by source · applications and conversion alongside</p>
+      <div class="scroll">
+        <table id="srcTbl">
+          <thead><tr><th>source</th><th>sessions</th><th>applied</th><th>rate</th></tr></thead>
+          <tbody id="srcBody"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="srcEmpty" hidden>no sessions yet.</p>
+      <p class="note">Read from the browser's own user agent, because almost every social tap
+        arrives with no referrer at all — Instagram, Threads, Facebook and Snapchat each name
+        themselves, so they're identifiable anyway. <b>WhatsApp cannot be:</b> it opens the system
+        browser leaving no trace, so those land in “direct” along with anyone who typed the address.
+        Instagram’s bio link, stories and DMs also share one user agent; add
+        <code>?src=ig-story</code> to a link if you ever need to tell them apart.</p>
+    </section>
   </div>
 
   <div class="grid">
@@ -249,7 +274,7 @@
     <div class="scroll" style="margin-top:12px">
       <table id="ciTbl">
         <thead><tr>
-          <th>guest</th><th>status</th><th>when</th><th>phone</th><th>email</th>
+          <th>guest</th><th>address</th><th>status</th><th>when</th><th>phone</th><th>email</th>
           <th>pyjamas</th><th>meal</th><th>id</th><th></th>
         </tr></thead>
         <tbody id="ciBody"></tbody>
@@ -347,7 +372,7 @@ async function boot() {
   // gets zero rows back rather than an error, so say so plainly.
   const [a, v, c, g, f] = await Promise.all([
     sb.from('applications').select('*').order('created_at', { ascending: false }),
-    sb.from('visits').select('reached,tz,created_at,session_id'),
+    sb.from('visits').select('reached,tz,created_at,session_id,source,device'),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
     // empty rather than taking the whole dashboard down with it
     sb.from('checkins').select('*').order('created_at', { ascending: false }),
@@ -406,7 +431,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { tiles(); days(); funnel(); cities(); roles(); zones(); table(); checkinPanel(); failPanel(); }
+function renderAll() { tiles(); days(); funnel(); sources(); cities(); roles(); zones(); table(); checkinPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -456,16 +481,18 @@ function checkinPanel() {
 
   document.getElementById('ciEmpty').hidden = rows.length > 0;
   body.innerHTML = rows.map(r => {
-    /* The address rides on the name as a tooltip rather than taking a column:
-       it's long, it's for posting invites rather than reading at a glance, and
-       the CSV is where it's actually useful. A dotted underline shows it's there. */
-    const nameCell = (n, addr) => addr
-      ? `<span title="${esc(addr)}" style="border-bottom:1px dotted #4a4b5c;cursor:help">${esc(n)}</span>`
-      : esc(n);
+    /* Addresses get their own column and are allowed to wrap. They were a tooltip
+       on the name, which put "address on file" in the WHEN column via a colspan —
+       accurate underneath, nonsense to read. */
+    const addrCell = (addr) => addr
+      ? `<td class="addr">${esc(addr)}</td>`
+      : `<td class="addr"><span class="muted">—</span></td>`;
     if (!r.c) {
-      // 7 = the remaining columns after guest + status; keep in step with <thead>
-      return `<tr><td>${nameCell(r.name, r.address)}</td><td><span class="muted">waiting</span></td>
-        <td colspan="7" class="muted">${r.address ? 'address on file' : '—'}</td></tr>`;
+      // 7 = when, phone, email, pyjamas, meal, id, remove. Keep in step with
+      // <thead>: a short row silently skews every column to its right.
+      return `<tr><td>${esc(r.name)}</td>${addrCell(r.address)}
+        <td><span class="muted">waiting</span></td>
+        <td colspan="7" class="muted">—</td></tr>`;
     }
     const c = r.c;
     const when = istStamp(c.created_at);
@@ -476,7 +503,8 @@ function checkinPanel() {
            style="padding:4px 10px;font-size:12px">view ${esc(c.id_doc_type || '')}</button>`
       : '<span class="muted">none</span>';
     return `<tr>
-      <td>${nameCell(r.name, r.address)}${r.onList ? '' : ' <span class="muted">(not on list)</span>'}</td>
+      <td>${esc(r.name)}${r.onList ? '' : ' <span class="muted">(not on list)</span>'}</td>
+      ${addrCell(r.address)}
       <td>✓ done</td><td>${esc(when)}</td>
       <td>${esc(c.phone)}</td><td>${esc(c.email)}</td>
       <td>${esc(c.pyjama_size)}</td><td>${esc(meal)}${notes}</td><td>${idCell}</td>
@@ -658,6 +686,64 @@ function funnel() {
   }).join('');
 }
 
+/* ============================================================================
+   WHERE THEY CAME FROM
+   Sessions are counted per source, then applications from the SAME source are
+   counted next to them, so the number that matters — did this source actually
+   produce applications — is one row rather than two panels to compare by eye.
+   Sorted by sessions, since that's the question during a launch.
+   ========================================================================== */
+function sources() {
+  const body = document.getElementById('srcBody');
+  if (!body) return;
+
+  // one source per session: whatever it said on the first ping we have for it
+  const sessionSource = new Map();
+  for (const v of [...VISITS].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at))) {
+    if (!sessionSource.has(v.session_id)) sessionSource.set(v.session_id, v.source || 'unknown');
+  }
+  const sessions = new Map();
+  for (const src of sessionSource.values()) sessions.set(src, (sessions.get(src) || 0) + 1);
+
+  const applied = new Map();
+  for (const a of APPS) {
+    const src = a.source || 'unknown';
+    applied.set(src, (applied.get(src) || 0) + 1);
+  }
+
+  // a source can appear in applications without a session (older rows, or a visit
+  // ping that was blocked) — never drop it just because the funnel missed it
+  const all = [...new Set([...sessions.keys(), ...applied.keys()])]
+    .sort((x, y) => (sessions.get(y) || 0) - (sessions.get(x) || 0) || (applied.get(y) || 0) - (applied.get(x) || 0));
+
+  document.getElementById('srcEmpty').hidden = all.length > 0;
+
+  const LIVE = 5 * 60 * 1000, now = Date.now();
+  const liveBy = new Map();
+  for (const v of VISITS) {
+    if (now - +new Date(v.created_at) >= LIVE) continue;
+    const src = sessionSource.get(v.session_id) || 'unknown';
+    if (!liveBy.has(src)) liveBy.set(src, new Set());
+    liveBy.get(src).add(v.session_id);
+  }
+  const liveTxt = [...liveBy.entries()].map(([s, set]) => `${s} ${set.size}`).join(' · ');
+  document.getElementById('srcLive').textContent = liveTxt ? `now: ${liveTxt}` : 'nobody in the last 5 min';
+
+  const maxS = Math.max(1, ...all.map(s => sessions.get(s) || 0));
+  body.innerHTML = all.map(src => {
+    const s = sessions.get(src) || 0, a = applied.get(src) || 0;
+    // no rate when there were no sessions to convert — 3 applications from 0
+    // sessions is a data gap, and "∞%" would be the wrong way to say so
+    const rate = s ? Math.round(a / s * 100) + '%' : '—';
+    const w = Math.max(1.5, Math.round(s / maxS * 100));
+    return `<tr>
+      <td>${esc(src)}</td>
+      <td><span class="track" style="display:inline-block;width:90px;vertical-align:middle"><span class="bar" style="width:${w}%"></span></span>
+          <span style="margin-left:8px">${s}</span></td>
+      <td>${a}</td><td>${rate}</td></tr>`;
+  }).join('');
+}
+
 function bar(label, value, pct, tip) {
   return `<div class="row" data-tip="${esc(tip)}">
     <span class="lab">${esc(label)}</span>
@@ -764,7 +850,7 @@ function table() {
 
 /* --------------------------------------------------------------------- csv */
 document.getElementById('csv').addEventListener('click', () => {
-  const cols = ['created_at','name','city','age','role','handle','email','phone','why','tz','followers','status','notes'];
+  const cols = ['created_at','name','city','age','role','handle','email','phone','why','source','tz','followers','status','notes'];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   // created_at as IST, not the raw UTC ISO string — the sheet gets read by people
   const csv = [cols.join(','), ...APPS.map(r => cols.map(c =>
