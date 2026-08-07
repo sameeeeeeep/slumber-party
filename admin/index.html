@@ -144,6 +144,14 @@
      every other column off the side of the panel */
   #ciTbl td.addr{ white-space:normal; min-width:210px; max-width:300px;
     font-size:.78rem; line-height:1.35; color:var(--ink-2); }
+  /* tier is a label, not a magnitude, so it gets a border rather than a fill —
+     the fill in this dashboard means "how much", and it shouldn't start meaning
+     "which kind" in one table */
+  .tier{ font-size:.7rem; letter-spacing:.04em; text-transform:uppercase;
+    border:1px solid var(--line); border-radius:100px; padding:.1rem .45rem; color:var(--ink-2); }
+  .tier.creator{ border-color:var(--series); color:var(--series); }
+  code.invite{ font-family:var(--mono); font-size:.95rem; color:var(--ink-2);
+    user-select:all; }
 
   /* ---- tooltip ---- */
   #tip{ position:fixed; z-index:50; pointer-events:none; opacity:0; transition:opacity .1s;
@@ -274,8 +282,8 @@
     <div class="scroll" style="margin-top:12px">
       <table id="ciTbl">
         <thead><tr>
-          <th>guest</th><th>address</th><th>status</th><th>when</th><th>phone</th><th>email</th>
-          <th>pyjamas</th><th>meal</th><th>id</th><th></th>
+          <th>guest</th><th>tier</th><th>invite link</th><th>address</th><th>status</th><th>when</th>
+          <th>phone</th><th>email</th><th>pyjamas</th><th>meal</th><th>id</th><th></th>
         </tr></thead>
         <tbody id="ciBody"></tbody>
       </table>
@@ -468,11 +476,12 @@ function checkinPanel() {
     const c = CHECKINS.find(x => x.guest_id === g.id)
            || byName.get(String(g.name).trim().toLowerCase()) || null;
     if (c) usedIds.add(c.id);
-    return { name: g.name, c, onList: true, address: g.address || '', code: g.code || '' };
+    return { name: g.name, c, onList: true, address: g.address || '',
+             code: g.code || '', tier: g.tier || '' };
   });
   // checked in but not on the roster (or spelled differently)
   for (const c of CHECKINS) {
-    if (!usedIds.has(c.id)) rows.push({ name: c.name, c, onList: false });
+    if (!usedIds.has(c.id)) rows.push({ name: c.name, c, onList: false, address: '', code: '', tier: '' });
   }
 
   const done = rows.filter(r => r.c).length;
@@ -487,10 +496,18 @@ function checkinPanel() {
     const addrCell = (addr) => addr
       ? `<td class="addr">${esc(addr)}</td>`
       : `<td class="addr"><span class="muted">—</span></td>`;
+    const tierCell = (t) => t
+      ? `<td><span class="tier ${esc(t)}">${esc(t)}</span></td>`
+      : `<td><span class="muted">—</span></td>`;
+    /* The link is the thing you copy and send, so it's selectable text rather than
+       an anchor: clicking through as an admin would burn the guest's own greeting. */
+    const linkCell = (code) => code
+      ? `<td><code class="invite">secretslumberparty.com/${esc(code)}</code></td>`
+      : `<td><span class="muted">not minted</span></td>`;
     if (!r.c) {
       // 7 = when, phone, email, pyjamas, meal, id, remove. Keep in step with
       // <thead>: a short row silently skews every column to its right.
-      return `<tr><td>${esc(r.name)}</td>${addrCell(r.address)}
+      return `<tr><td>${esc(r.name)}</td>${tierCell(r.tier)}${linkCell(r.code)}${addrCell(r.address)}
         <td><span class="muted">waiting</span></td>
         <td colspan="7" class="muted">—</td></tr>`;
     }
@@ -504,7 +521,7 @@ function checkinPanel() {
       : '<span class="muted">none</span>';
     return `<tr>
       <td>${esc(r.name)}${r.onList ? '' : ' <span class="muted">(not on list)</span>'}</td>
-      ${addrCell(r.address)}
+      ${tierCell(r.tier)}${linkCell(r.code)}${addrCell(r.address)}
       <td>✓ done</td><td>${esc(when)}</td>
       <td>${esc(c.phone)}</td><td>${esc(c.email)}</td>
       <td>${esc(c.pyjama_size)}</td><td>${esc(meal)}${notes}</td><td>${idCell}</td>
@@ -591,7 +608,7 @@ document.getElementById('ciAdd')?.addEventListener('click', async () => {
 
 document.getElementById('ciCsv')?.addEventListener('click', () => {
   // address and invite code included: this file is what you post invites from
-  const head = ['name','checked_in','address','invite_code','when','phone','email',
+  const head = ['name','tier','invite_link','checked_in','address','when','phone','email',
                 'pyjama_size','meal','meal_notes','id_doc'];
   const byId = new Set();
   const lines = [];
@@ -599,12 +616,13 @@ document.getElementById('ciCsv')?.addEventListener('click', () => {
     const c = CHECKINS.find(x => x.guest_id === g.id)
       || CHECKINS.find(x => String(x.name).trim().toLowerCase() === g.name.trim().toLowerCase());
     if (c) byId.add(c.id);
-    lines.push([g.name, c ? 'yes' : 'no', g.address || '', g.code || '',
+    lines.push([g.name, g.tier || '', g.code ? 'secretslumberparty.com/' + g.code : '',
+                c ? 'yes' : 'no', g.address || '',
                 c?.created_at ? istStamp(c.created_at) : '', c?.phone || '', c?.email || '',
                 c?.pyjama_size || '', c?.meal || '', c?.meal_notes || '', c?.id_doc_path || '']);
   }
   for (const c of CHECKINS) {
-    if (!byId.has(c.id)) lines.push([c.name, 'yes (not on list)', '', '', istStamp(c.created_at), c.phone,
+    if (!byId.has(c.id)) lines.push([c.name, '', '', 'yes (not on list)', '', istStamp(c.created_at), c.phone,
       c.email, c.pyjama_size, c.meal, c.meal_notes || '', c.id_doc_path || '']);
   }
   const csv = [head, ...lines]
