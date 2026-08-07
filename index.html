@@ -1501,45 +1501,65 @@ function submitAnswer(rawVal){
   } else { composeMode('none'); if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }
   askQuestion(next);
 }
-/* Send the application. Supabase is the real store: its Edge Function validates,
-   saves, emails the confirmation, and — unlike the Google Form — returns a reply
-   we can actually read, so we KNOW whether it landed. The Google Form post runs
-   alongside during the migration; it's fire-and-forget (mode:'no-cors' makes the
-   response unreadable by design) so it can never report success or failure. */
+/* Send the application to BOTH stores, and treat it as sent if EITHER took it.
+   ==========================================================================
+   The Google Sheet and Supabase fail independently, and the applicant must never
+   be punished for that. The rule here is: `ok` means at least one store has this
+   application. Only when BOTH are gone do we admit failure and offer a retry.
+
+   Why that matters more than it looks: the two posts are not equivalent.
+     · Supabase returns a readable reply, so we KNOW whether it saved.
+     · The Google Form is mode:'no-cors' — the response is opaque by design, so we
+       can never know it was accepted. We only know the request left the browser
+       without a network error. That's the best signal available, and it is a good
+       one: Google's endpoint accepting a well-formed post is not the flaky part.
+
+   The old version returned ok:false whenever Supabase failed, which showed
+   "that didn't go through — mind trying again?" to someone whose application was
+   already sitting in the Sheet. Retrying then posted a SECOND Sheet row, and
+   anyone who believed the message and left was lost entirely. A false failure is
+   worse than a silent partial success, because the applicant acts on it.
+
+   Both requests start together so the second doesn't wait on the first. */
 async function submitApplication(data){
   PLAYER = {...data};                        // remember the applicant for the leaderboard
   const cfg = window.SLUMBER_CONFIG || {};
 
+  let sheetSent = Promise.resolve(null);     // null = not attempted
   if(GFORM.id && cfg.alsoPostGoogleForm!==false){
     const body=new URLSearchParams();
     for(const k in data){ if(GFORM.fields[k]) body.append(GFORM.fields[k], data[k]); }
     body.append(GFORM.fields.visitor_id, visitorId());   // link to any earlier incomplete row
     body.append(GFORM.fields.status, 'complete');
-    fetch(`https://docs.google.com/forms/d/e/${GFORM.id}/formResponse`,
+    sheetSent = fetch(`https://docs.google.com/forms/d/e/${GFORM.id}/formResponse`,
       { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body })
-      .catch(err=>console.warn('google form mirror failed', err));
+      .then(()=>true)
+      .catch(err=>{ console.warn('google form mirror failed', err); return false; });
   }
 
-  if(!(cfg.useSupabase && cfg.supabaseUrl && cfg.supabaseAnonKey)){
-    console.log('Application (Supabase not configured yet):', data);
-    return { ok:false, unconfigured:true };
-  }
-  try{
-    const res = await fetch(cfg.supabaseUrl.replace(/\/$/,'')+'/functions/v1/submit', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', apikey:cfg.supabaseAnonKey,
-                Authorization:'Bearer '+cfg.supabaseAnonKey },
-      body: JSON.stringify({ ...data, tz:localTz(), referrer:document.referrer||null,
-                             user_agent:navigator.userAgent })
-    });
-    const out = await res.json().catch(()=>({}));
-    if(!res.ok){ console.error('submit rejected', res.status, out); return { ok:false, error:out.error }; }
-    track('submitted');
-    return { ok:true, ...out };
-  }catch(err){
-    console.error('submit failed', err);
-    return { ok:false, error:'network' };
-  }
+  const supa = (cfg.useSupabase && cfg.supabaseUrl && cfg.supabaseAnonKey)
+    ? fetch(cfg.supabaseUrl.replace(/\/$/,'')+'/functions/v1/submit', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', apikey:cfg.supabaseAnonKey,
+                  Authorization:'Bearer '+cfg.supabaseAnonKey },
+        body: JSON.stringify({ ...data, tz:localTz(), referrer:document.referrer||null,
+                               user_agent:navigator.userAgent })
+      }).then(async res=>{
+        const out = await res.json().catch(()=>({}));
+        if(!res.ok){ console.error('supabase submit rejected', res.status, out); return { ok:false, error:out.error }; }
+        return { ok:true, ...out };
+      }).catch(err=>{ console.error('supabase submit failed', err); return { ok:false, error:'network' }; })
+    : Promise.resolve({ ok:false, unconfigured:true });
+
+  const [sheet, db] = await Promise.all([sheetSent, supa]);
+
+  if(db.ok) track('submitted');
+  const ok = !!db.ok || sheet === true;
+  if(!ok) console.error('application saved NOWHERE', { sheet, db, data });
+  else if(!db.ok) console.warn('application is in the Sheet but not Supabase', db.error || db);
+  else if(sheet === false) console.warn('application is in Supabase but the Sheet post failed');
+
+  return { ok, sheet, supabase: !!db.ok, error: db.error, unconfigured: db.unconfigured, id: db.id };
 }
 
 /* ---------- funnel breadcrumbs ----------
@@ -1584,7 +1604,11 @@ function finishApply(){
   submitApplication(qAns).then(res=>{
     if(!inside) return;                          // they backed out mid-send
     clearTyping();
-    if(res && res.ok===false && !res.unconfigured) return submitFailed();
+    /* res.ok now means "at least one store has it", so this only fires when the
+       application really is nowhere. The old `!res.unconfigured` special case is
+       gone: an unconfigured Supabase with a working Sheet is a success, and the
+       ok flag already says so. */
+    if(res && res.ok===false) return submitFailed();
     sendOutro(0);
   });
 }
