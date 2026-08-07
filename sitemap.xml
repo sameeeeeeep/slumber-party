@@ -7,4 +7,17 @@
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  <!-- The legal pages: low value to rank, but they're public, linked from the
+       gate, and a site whose only indexable page is the front door looks thinner
+       to a crawler than it is. /checkin is NOT here — it's for invited guests. -->
+  <url>
+    <loc>https://secretslumberparty.com/terms.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  <url>
+    <loc>https://secretslumberparty.com/privacy.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+  </url>
 </urlset>

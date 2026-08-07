@@ -3,8 +3,100 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Khushi's Secret Slumber Party</title>
-<meta name="description" content="An invite-only night for creators, artists & dreamers. 30 spots open by application." />
+<!-- ============================================================================
+     SEO — EDIT THESE FOUR STRINGS AND NOTHING ELSE
+     ============================================================================
+     The heading and description Google shows come from <title> and
+     <meta name="description">. The two og:/twitter: copies below are the same
+     words again, for the card WhatsApp and X draw when someone pastes the link.
+     KEEP ALL FOUR IN STEP — they are duplicated on purpose: a static site has no
+     build step to copy one into the others, and search engines and chat apps read
+     different tags.
+
+     Rules of thumb, so an edit doesn't quietly lose you the result:
+       · title ≤ 60 characters, or Google truncates it. Put the distinctive words
+         first: nobody searches for a tagline.
+       · description 140–160 characters. It is NOT a ranking factor — it's the ad.
+         Its only job is to make the click worth it, so say what the thing IS.
+       · Say the city. "Mumbai" is how most of this traffic will actually search.
+
+     Only this page is meant to be found. /besties, /checkin and /admin each carry
+     noindex in their own <head> and are absent from sitemap.xml — see robots.txt
+     for why they are deliberately still crawlable.
+     ========================================================================= -->
+<title>Khushi's Secret Slumber Party — invite-only sleepover in Mumbai</title>
+<meta name="description" content="An invite-only slumber party in Mumbai for creators, artists and dreamers. 30 spots, by application only — apply before the form closes." />
+
+<!-- the same words again, for shared links -->
+<meta property="og:title" content="Khushi's Secret Slumber Party" />
+<meta property="og:description" content="An invite-only slumber party in Mumbai for creators, artists and dreamers. 30 spots, by application only." />
+<meta name="twitter:title" content="Khushi's Secret Slumber Party" />
+<meta name="twitter:description" content="An invite-only slumber party in Mumbai for creators, artists and dreamers. 30 spots, by application only." />
+
+<!-- ---- the rest of the sharing card: rarely needs touching ---- -->
+<!-- One canonical spelling of the address. Without this, secretslumberparty.com,
+     www., /index.html and any ?utm_ link are four pages competing with each other
+     for the same ranking instead of one page holding it. -->
+<link rel="canonical" href="https://secretslumberparty.com/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Khushi's Secret Slumber Party" />
+<meta property="og:url" content="https://secretslumberparty.com/" />
+<meta property="og:image" content="https://secretslumberparty.com/assets/og.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="(secret;) Khushi's Slumber Party" />
+<meta property="og:locale" content="en_IN" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://secretslumberparty.com/assets/og.jpg" />
+<!-- crawl this one; it's the only page that wants to be found -->
+<meta name="robots" content="index, follow, max-image-preview:large" />
+
+<!-- Structured data: tells Google this is one named thing with a site and a
+     logo, rather than a page it has to guess about. Feeds the knowledge panel
+     and the site name shown above a result.
+
+     DELIBERATELY NOT AN Event. Event schema is the bigger prize — it can win a
+     date-and-place rich result — but it REQUIRES startDate, and the dates live
+     only inside the sealed /besties payload. Publishing them here would hand the
+     party's date to anyone searching, which is the one thing this site keeps
+     back. If that trade ever becomes worth it, add an Event node with startDate,
+     endDate and a city-level location — never the venue. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://secretslumberparty.com/#website",
+      "url": "https://secretslumberparty.com/",
+      "name": "Khushi's Secret Slumber Party",
+      "description": "An invite-only slumber party in Mumbai for creators, artists and dreamers.",
+      "inLanguage": "en-IN",
+      "publisher": { "@id": "https://secretslumberparty.com/#org" }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://secretslumberparty.com/#org",
+      "name": "Khushi's Secret Slumber Party",
+      "url": "https://secretslumberparty.com/",
+      "logo": "https://secretslumberparty.com/assets/logo.png",
+      "image": "https://secretslumberparty.com/assets/og.jpg",
+      "areaServed": "Mumbai, India",
+      "email": "khushi@secretslumberparty.com"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://secretslumberparty.com/#page",
+      "url": "https://secretslumberparty.com/",
+      "name": "Khushi's Secret Slumber Party — invite-only sleepover in Mumbai",
+      "isPartOf": { "@id": "https://secretslumberparty.com/#website" },
+      "primaryImageOfPage": "https://secretslumberparty.com/assets/og.jpg",
+      "description": "An invite-only slumber party in Mumbai for creators, artists and dreamers. 30 spots, by application only."
+    }
+  ]
+}
+</script>
 
 <!-- meta domain verification (secretslumberparty.com) -->
 <meta name="facebook-domain-verification" content="l6xskk0uub1m0qga2cxq7xqumvj6qc" />
