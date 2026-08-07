@@ -181,6 +181,18 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
   .ci-meta{ flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:.45em; }
   .ci-time{ font-family:var(--mono); font-size:.95em; color:var(--brand-pink); }
   .ci-dot{ width:.6em; height:.6em; border-radius:100px; background:var(--brand-pink); box-shadow:0 0 .5em rgba(235,100,140,.85); }
+  /* the auto-open line: same gradient as the page's progress bar, so a filling
+     line already means "this is going somewhere" by the time you see it here */
+  .ci-auto{ height:2px; margin:.1em .9em .7em; border-radius:2px; overflow:hidden;
+    background:rgba(255,255,255,.12); opacity:0; transition:opacity .3s ease; }
+  .ci-auto.on{ opacity:1; }
+  .ci-auto i{ display:block; height:100%; width:0;
+    background:linear-gradient(90deg,var(--brand-pink),var(--brand-orange),var(--brand-yellow));
+    box-shadow:0 0 8px rgba(235,100,140,.55); }
+  .ci-auto.run i{ animation:ciFill var(--ci-fill,1.8s) linear forwards; }
+  @keyframes ciFill{ from{ width:0 } to{ width:100% } }
+  /* someone who asked for less motion still gets the line, it just doesn't crawl */
+  @media (prefers-reduced-motion:reduce){ .ci-auto.run i{ animation-duration:.01s; } }
   .ci-hint{ font-family:var(--pixel); font-size:.6em; letter-spacing:.06em; text-transform:lowercase;
     color:rgba(255,255,255,.55); text-align:center; padding:.7em 0 1.1em; animation:ciPulse 1.8s ease-in-out infinite; }
   @keyframes ciPulse{ 0%,100%{opacity:.5} 50%{opacity:1} }
@@ -344,7 +356,10 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     background:var(--card-a); backdrop-filter:blur(6px); box-shadow:0 .4rem 1.6rem rgba(235,100,140,.16); }
   .countdown .cd-label{ font-family:var(--mono); font-size:clamp(.78rem,3.4vw,.95rem); letter-spacing:.22em; text-transform:uppercase;
     color:var(--rose); opacity:.72; }
-  .countdown .cd-time{ font-family:var(--mono); font-size:clamp(1.6rem,7vw,2.3rem); line-height:1; letter-spacing:.08em;
+  /* the digits are the point of the box, so they carry it — the label above is
+     small print by comparison. `nowrap` on .countdown keeps 05:10:57:45 on one
+     line, and the vw term is what stops it touching the edges on a phone. */
+  .countdown .cd-time{ font-family:var(--mono); font-size:clamp(2.15rem,9.2vw,3.1rem); line-height:1; letter-spacing:.08em;
     color:var(--rose); font-variant-numeric:tabular-nums; }
 
   .progress{ position:fixed; top:0; left:0; height:2px; width:0%; z-index:21;
@@ -686,7 +701,10 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
             </span>
             <span class="ci-meta"><span class="ci-time">now</span><span class="ci-dot"></span></span>
           </button>
-          <p class="ci-hint">tap to open ▸</p>
+          <p class="ci-hint">click here to open ▸</p>
+          <!-- nobody should get stranded on the teaser: if the notification goes
+               unclicked, this line fills and the DM opens itself -->
+          <div class="ci-auto" id="ciAuto" aria-hidden="true"><i></i></div>
         </div>
         <div class="chat-card" id="chatThread" hidden>
           <div class="ct-head">
@@ -850,7 +868,7 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
   <div id="gateway" aria-hidden="true">
     <div id="gatePos">
       <img id="gateLogo" src="assets/logo2.png" alt="(secret;) khushi's slumber party" />
-      <span class="countdown" id="countdown" aria-label="countdown to when the form closes"></span>
+      <span class="countdown" id="countdown" aria-label="countdown to when the application closes"></span>
       <div id="gateRow">
         <button id="gateYes" class="gateBtn" type="button"><span>enter</span><i aria-hidden="true">▸</i></button>
       </div>
@@ -1591,8 +1609,36 @@ function showNotif(){
     chatInbox.classList.add('ready');               // the card starts dropping in
     // fire the nokia tone as the card LANDS, not as it starts sliding in — otherwise the beep
     // leads the visual by the ~0.5s drop-in animation
-    showNotif._t2=setTimeout(()=>{ if(lastStage===0) CHATFX.nokia(); }, NOTIF_DROP_MS);
+    showNotif._t2=setTimeout(()=>{ if(lastStage===0) CHATFX.nokia(); armAutoOpen(); }, NOTIF_DROP_MS);
   }, 650);
+}
+/* ---------- auto-open the DM if the teaser goes untouched ----------
+   The teaser is the one screen with nothing on it but an invitation to tap, so
+   it's also the one place a visitor can quietly stall. Five seconds after the
+   notification lands, a line fills and the DM opens itself.
+
+   The line matters as much as the timer: something moving on screen before the
+   page acts on its own is the difference between "it's loading" and "why did it
+   do that". The clock only starts once the card has actually LANDED (not when it
+   starts dropping in), so the five seconds are five seconds of it being visible.
+
+   Any real interaction cancels it — see enterScreen(), which every tap routes
+   through, so there's a single place this can be forgotten. */
+const AUTO_OPEN_DELAY = 5000, AUTO_OPEN_FILL = 1800;
+function armAutoOpen(){
+  cancelAutoOpen();
+  if(lastStage!==0 || inside) return;
+  armAutoOpen._t=setTimeout(()=>{
+    if(lastStage!==0 || inside || flying || gateOpen || !veilGone) return;
+    const bar=document.getElementById('ciAuto');
+    if(bar){ bar.style.setProperty('--ci-fill', AUTO_OPEN_FILL+'ms'); bar.classList.add('on','run'); }
+    armAutoOpen._t2=setTimeout(()=>{ if(lastStage===0 && !inside) enterScreen(); }, AUTO_OPEN_FILL);
+  }, AUTO_OPEN_DELAY);
+}
+function cancelAutoOpen(){
+  clearTimeout(armAutoOpen._t); clearTimeout(armAutoOpen._t2);
+  const bar=document.getElementById('ciAuto');
+  if(bar){ bar.classList.remove('on','run'); }
 }
 function renderChat(stage){
   if(stage===lastStage) return;
@@ -1605,6 +1651,7 @@ function renderChat(stage){
     if(notifReady) showNotif();      // else the veil-clear handler fires it once you can see the screen
     return;
   }
+  cancelAutoOpen();                  // off the teaser: nothing left to auto-open
   if(stage>CHAT.length){            // stage 4 — the application: khushi starts asking. Kicked off
     qIndex=-1;                      // HERE (not by the caller) so the thread is settled before her
     clearTimeout(askQuestion._t1); clearTimeout(askQuestion._t2);   // first "typing" bubble lands.
@@ -1788,7 +1835,7 @@ function renderCountdown(){
   const d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60), sec = s%60;
   const p = n => String(n).padStart(2,'0');
   const t = p(d)+':'+p(h)+':'+p(m)+':'+p(sec);   // days read as another clock segment, not a "14d" suffix
-  cdEl.innerHTML = '<span class="cd-label">form closes in</span><span class="cd-time">'+t+'</span>';
+  cdEl.innerHTML = '<span class="cd-label">application closes in</span><span class="cd-time">'+t+'</span>';
 }
 renderCountdown(); cdTimer=setInterval(renderCountdown, 1000);
 
@@ -1832,6 +1879,7 @@ function lockPage(on){
 }
 function enterScreen(){
   if(inside || flying || !veilGone || gateOpen) return;
+  cancelAutoOpen();                                   // a real tap beat the timer to it
   inside=true; insideStage=0; applyStarted=false; applyCompleted=false; chatStick=true;
   track('opened_dm');
   document.documentElement.classList.add('inside');   // masthead out, thread goes full-bleed
