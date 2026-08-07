@@ -9,3 +9,7 @@
 besties/content.json
 besties/guests.json
 besties/.password
+
+# Supabase CLI scratch — written by `functions deploy`. Local machine state
+# (which project this checkout is linked to), not part of the project.
+supabase/.temp/
