@@ -362,7 +362,22 @@ function flashLive(what = 'new application') {
 
 /* ------------------------------------------------------------------ render */
 const DAY = 86400000;
-const dayKey = d => new Date(d).toISOString().slice(0, 10);
+/* ============================================================================
+   EVERYTHING ON THIS PAGE IS IST.
+   The party, the guests and whoever is reading this dashboard are all in India,
+   so the timezone is fixed rather than left to the viewer's machine — a laptop
+   set to the wrong zone shouldn't change what the numbers mean.
+
+   dayKey used toISOString(), which is UTC. IST is UTC+5:30, so every application
+   between midnight and 5:30am IST was counted on the PREVIOUS day, and the
+   "applications a day" chart was quietly shifted by five and a half hours.
+   en-CA is used only because it formats as YYYY-MM-DD, which sorts. */
+const IST = 'Asia/Kolkata';
+const dayKey = d => new Date(d).toLocaleDateString('en-CA', { timeZone: IST });
+const istStamp = d => new Date(d).toLocaleString('en-IN', {
+  timeZone: IST, day: 'numeric', month: 'short', year: 'numeric',
+  hour: 'numeric', minute: '2-digit', hour12: true,
+});
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const norm = s => String(s ?? '').trim().toLowerCase();
 
@@ -419,7 +434,7 @@ function checkinPanel() {
         <td colspan="7" class="muted">${r.address ? 'address on file' : '—'}</td></tr>`;
     }
     const c = r.c;
-    const when = new Date(c.created_at).toLocaleString();
+    const when = istStamp(c.created_at);
     const meal = MEAL_LABEL[c.meal] || c.meal;
     const notes = c.meal_notes ? ` (${esc(c.meal_notes)})` : '';
     const idCell = c.id_doc_path
@@ -523,11 +538,11 @@ document.getElementById('ciCsv')?.addEventListener('click', () => {
       || CHECKINS.find(x => String(x.name).trim().toLowerCase() === g.name.trim().toLowerCase());
     if (c) byId.add(c.id);
     lines.push([g.name, c ? 'yes' : 'no', g.address || '', g.code || '',
-                c?.created_at || '', c?.phone || '', c?.email || '',
+                c?.created_at ? istStamp(c.created_at) : '', c?.phone || '', c?.email || '',
                 c?.pyjama_size || '', c?.meal || '', c?.meal_notes || '', c?.id_doc_path || '']);
   }
   for (const c of CHECKINS) {
-    if (!byId.has(c.id)) lines.push([c.name, 'yes (not on list)', '', '', c.created_at, c.phone,
+    if (!byId.has(c.id)) lines.push([c.name, 'yes (not on list)', '', '', istStamp(c.created_at), c.phone,
       c.email, c.pyjama_size, c.meal, c.meal_notes || '', c.id_doc_path || '']);
   }
   const csv = [head, ...lines]
@@ -572,7 +587,10 @@ function days() {
   const out = [];
   const counts = new Map();
   for (const r of APPS) counts.set(dayKey(r.created_at), (counts.get(dayKey(r.created_at)) || 0) + 1);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
+  /* Anchored to IST NOON today, not local midnight: stepping back in 24h hops
+     from midday can't drift across a day boundary the way midnight can, and IST
+     has no daylight saving to complicate it. */
+  const today = new Date(dayKey(new Date()) + 'T12:00:00+05:30');
   const series = [];
   for (let i = 13; i >= 0; i--) {
     const d = new Date(+today - i * DAY);
@@ -581,7 +599,7 @@ function days() {
   const max = Math.max(1, ...series.map(s => s.n));
   for (const s of series) {
     const h = Math.round(s.n / max * 100);
-    const lab = s.d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    const lab = s.d.toLocaleDateString('en-IN', { timeZone: IST, day: 'numeric', month: 'short' });
     out.push(`<div class="day" data-tip="${lab} — ${s.n} application${s.n === 1 ? '' : 's'}">
       <div class="col" style="height:${h}%"></div>
       <div class="cap">${s.d.getDate()}</div></div>`);
@@ -693,8 +711,8 @@ function table() {
     : APPS;
   document.getElementById('tblEmpty').hidden = rows.length > 0;
   document.getElementById('tbody').innerHTML = rows.map(r => {
-    const when = new Date(r.created_at).toLocaleString(undefined,
-      { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const when = new Date(r.created_at).toLocaleString('en-IN',
+      { timeZone: IST, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     const h = (r.handle || '').replace(/^@/, '');
     return `<tr>
       <td>${esc(when)}</td>
@@ -714,7 +732,9 @@ function table() {
 document.getElementById('csv').addEventListener('click', () => {
   const cols = ['created_at','name','city','age','role','handle','email','phone','why','tz','followers','status','notes'];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const csv = [cols.join(','), ...APPS.map(r => cols.map(c => cell(r[c])).join(','))].join('\r\n');
+  // created_at as IST, not the raw UTC ISO string — the sheet gets read by people
+  const csv = [cols.join(','), ...APPS.map(r => cols.map(c =>
+    cell(c === 'created_at' && r[c] ? istStamp(r[c]) : r[c])).join(','))].join('\r\n');
   const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url; a.download = `slumber-party-applications-${new Date().toISOString().slice(0, 10)}.csv`;

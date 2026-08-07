@@ -1975,7 +1975,11 @@ addEventListener('load', maybeHideVeil); setTimeout(hideVeil, MAX_VEIL);   // ha
 
    (It was called PARTY, with a note to "change when the date's confirmed", which
    is exactly how the real date would have ended up here.) */
-const FORM_CLOSES = new Date('2026-08-13T00:00:00');   // 13 Aug 2026, 12am local
+/* +05:30 is load-bearing, not decoration. Without an offset this string is parsed
+   in the VIEWER's timezone, so the same countdown closed at midnight London and
+   midnight New York — hours after it closed in Mumbai. The party is IST, so the
+   deadline is IST for everyone, wherever they're reading from. */
+const FORM_CLOSES = new Date('2026-08-13T00:00:00+05:30');   // 13 Aug 2026, midnight IST
 const cdEl = document.getElementById('countdown');
 let cdTimer=0;
 function renderCountdown(){
