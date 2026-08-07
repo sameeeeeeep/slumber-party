@@ -314,7 +314,25 @@ function render(q){
   inp.type = q.type; inp.placeholder = q.ph || '';
   inp.autocomplete = q.key === 'name' ? 'name' : q.key === 'email' ? 'email'
     : q.key === 'phone' ? 'tel' : 'off';
-  if (q.type === 'tel') inp.inputMode = 'numeric';
+  if (q.type === 'tel'){
+    /* Stop at ten digits rather than validating after the fact. The field would
+       accept twenty and only complain on send, which is a worse way to learn the
+       rule — and maxlength alone doesn't hold, because a pasted "+91 98765 43210"
+       spends its allowance on punctuation. So strip to digits first, then cap. */
+    inp.inputMode = 'numeric';
+    inp.maxLength = 10;
+    inp.addEventListener('input', () => {
+      const raw = inp.value.replace(/\D/g, '');
+      /* Keep the LAST ten, not the first. Someone pasting "+91 98765 43210" has
+         twelve digits; taking the first ten gives 9198765432 — a plausible-looking
+         number that isn't theirs, and it passes every check downstream. The last
+         ten drops the country code (and a leading 0) and leaves the real number.
+         maxLength already stops an eleventh keystroke, so this is the paste path.
+         Same rule the Edge Function uses, so the two can't disagree. */
+      const digits = raw.length > 10 ? raw.slice(-10) : raw;
+      if (inp.value !== digits) inp.value = digits;
+    });
+  }
   fld.appendChild(inp);
   const send = document.createElement('button');
   send.className = 'send'; send.textContent = 'SEND ▸'; send.disabled = true;

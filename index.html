@@ -1443,6 +1443,12 @@ function readyAnswer(q, prefill){
   ctInput.inputMode = q.type==='tel'?'tel' : q.type==='email'?'email' : (q.type==='age'?'numeric':'text');
   // iOS only opens the number pad for a text input when a digits-only pattern is on it too
   if(q.type==='age'||q.type==='tel') ctInput.setAttribute('pattern','[0-9]*'); else ctInput.removeAttribute('pattern');
+  /* Cap the length as they type instead of only complaining on send. The same
+     input is reused for every question, so the limit has to be cleared again for
+     the free-text ones — otherwise "why" inherits a 10-character field. */
+  if(q.type==='tel')       ctInput.maxLength = 10;
+  else if(q.type==='age')  ctInput.maxLength = 2;
+  else                     ctInput.removeAttribute('maxlength');
   ctInput.placeholder = q.ph||'message…';
   ctInput.value = (typeof prefill==='string') ? prefill : '';   // stepped back → your old answer, ready to edit
   // a fixed prefix in the compose row: "@" for instagram, "+91" for the phone number

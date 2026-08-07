@@ -8,13 +8,47 @@
 <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet" />
 <!-- this page receives /besties/<code>; never hand that URL to another host -->
 <meta name="referrer" content="no-referrer" />
+
+<!-- A personalised link resolves through THIS page, so anything a chat app knows
+     about it, it learns here. Says nothing about the party, on purpose: the card
+     should make someone curious, not brief them. Note the ceiling — GitHub Pages
+     serves this file with a 404 status, and most crawlers won't build a preview
+     card for a 404 at all, so these tags only help the ones that do. -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="besties only 🤫" />
+<meta property="og:description" content="Khushi left you something." />
+<meta property="og:image" content="https://secretslumberparty.com/besties/og.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="besties only 🤫" />
+<meta name="twitter:description" content="Khushi left you something." />
+<meta name="twitter:image" content="https://secretslumberparty.com/besties/og.jpg" />
 <link rel="icon" type="image/png" href="/assets/favicon.png" />
 <style>
   html,body{ height:100%; margin:0; background:#12040c; color:#f5c3cf;
     font-family:'Caveat',cursive,system-ui,sans-serif; display:grid; place-items:center; }
   a{ color:#eb648c; }
   p{ font-size:1.6rem; opacity:.8; }
+  /* While we're working out whether this is an invite, show NOTHING but the
+     background. "nothing to see here" flashing up before a guest's own greeting
+     is the worst possible first frame of an invitation, and it got worse when
+     verification started taking a moment. The background colour still paints, so
+     this reads as the page loading rather than as a blank failure. */
+  html.resolving body{ visibility:hidden; }
 </style>
+<script>
+/* Runs before <body> exists, which is the whole point — a class set here means
+   the 404 copy never gets a frame on screen. Kept deliberately tiny and
+   dependency-free; the real work happens in the script below. */
+(function(){
+  var seg = location.pathname.replace(/^\/+/,'').replace(/\/+$/,'');
+  if (/^besties(\/|$)/.test(seg) || /^[a-z][a-z0-9]*-[a-z0-9]{4}$/.test(seg)) {
+    document.documentElement.className = 'resolving';
+  }
+})();
+</script>
 <script>
 /* GitHub Pages serves this file for any path it can't find, which is how
    personalised links work without a server: they land here and we hand the code
@@ -34,6 +68,16 @@
 (function () {
   var path = location.pathname;
 
+  /* Show the 404 copy. Called the moment we know this isn't an invite — and by a
+     safety timer, because a page that stays blank forever because some crypto
+     stalled on an old phone is worse than a 404 that appears late. */
+  var revealed = false;
+  function reveal(){
+    if (revealed) return; revealed = true;
+    document.documentElement.className = '';
+  }
+  var guard = setTimeout(reveal, 2500);
+
   // ---- the original /besties/<code> form -----------------------------------
   var m = path.match(/^\/besties\/([A-Za-z0-9_-]{1,64})\/?$/);
   if (m) return location.replace('/besties/?g=' + encodeURIComponent(m[1]));
@@ -42,16 +86,22 @@
   // ---- root level: /<code> -------------------------------------------------
   var seg = path.replace(/^\/+/, '').replace(/\/+$/, '');
   // cheap gate first, so a normal 404 never pays for the crypto below
-  if (!/^[a-z][a-z0-9]*-[a-z0-9]{4}$/.test(seg)) return;
-  if (!(window.crypto && crypto.subtle)) return;      // no verifying, so no hijacking
+  if (!/^[a-z][a-z0-9]*-[a-z0-9]{4}$/.test(seg)) { reveal(); return; }
+  if (!(window.crypto && crypto.subtle)) { reveal(); return; }   // can't verify, so don't hijack
 
   var s = document.createElement('script');
   s.src = '/besties/guests.js';
+  s.onerror = reveal;                                 // couldn't even load the roster
   s.onload = function () {
-    if (!window.BESTIES_GUESTS) return;
+    if (!window.BESTIES_GUESTS) return reveal();
     guestIndex(seg).then(function (idx) {
-      if (window.BESTIES_GUESTS[idx]) location.replace('/besties/?g=' + encodeURIComponent(seg));
-    }).catch(function () {});
+      if (window.BESTIES_GUESTS[idx]) {
+        clearTimeout(guard);                          // going somewhere: stay hidden
+        location.replace('/besties/?g=' + encodeURIComponent(seg));
+      } else {
+        reveal();                                     // code-shaped, but nobody's
+      }
+    }).catch(reveal);
   };
   document.head.appendChild(s);
 
