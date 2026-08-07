@@ -135,6 +135,12 @@
   td.why{ white-space:normal; min-width:240px; max-width:340px; }
   .empty{ padding:26px; text-align:center; color:var(--ink-3); font-size:.9rem; }
 
+  /* ---- check-in panel ---- */
+  .pill{ font-size:.72rem; color:var(--ink-2); border:1px solid #262735; border-radius:100px;
+    padding:.25rem .6rem; white-space:nowrap; }
+  .muted{ color:var(--ink-3); }
+  #ciTbl td, #ciTbl th{ white-space:nowrap; }
+
   /* ---- tooltip ---- */
   #tip{ position:fixed; z-index:50; pointer-events:none; opacity:0; transition:opacity .1s;
     background:var(--ink); color:var(--surface-1); font-size:.78rem; line-height:1.35;
@@ -229,6 +235,45 @@
     <p class="empty" id="tblEmpty" hidden>nothing yet.</p>
     <p class="note">instagram follower counts aren't shown: Meta's API only reports them for accounts that authorise you, and scraping breaks constantly and violates their terms. Each handle links to the profile instead, and there's a <code>followers</code> column in the database you can fill in by hand or from a paid provider.</p>
   </section>
+
+  <!-- ------------------------------------------------------------ check-in -->
+  <section class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">check-in</h2>
+      <span class="pill" id="ciCount">—</span>
+      <button class="btn ghost" id="ciCsv" type="button">download csv</button>
+    </div>
+    <p class="sub">who has filled in <code>/checkin</code>, against the guest list. paste the
+      roster below and the two line up by name.</p>
+
+    <div class="scroll" style="margin-top:12px">
+      <table id="ciTbl">
+        <thead><tr>
+          <th>guest</th><th>status</th><th>when</th><th>phone</th><th>email</th>
+          <th>pyjamas</th><th>meal</th><th>id</th>
+        </tr></thead>
+        <tbody id="ciBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="ciEmpty" hidden>no guests on the list yet — paste them below.</p>
+
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;color:var(--muted)">the guest list</summary>
+      <p class="sub" style="margin-top:8px">one name per line. adding names never removes
+        anyone, and a name that's already there is skipped.</p>
+      <textarea id="ciRoster" rows="6" placeholder="Pearl Mallik&#10;Adhiraj Singh&#10;Orry"
+        style="width:100%;margin-top:8px;background:#12131a;color:#e9e9ee;border:1px solid #262735;
+               border-radius:10px;padding:10px 12px;font:14px ui-monospace,monospace"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <button class="btn" id="ciAdd" type="button">add to guest list</button>
+        <span class="sub" id="ciRosterMsg"></span>
+      </div>
+    </details>
+
+    <p class="note"><b>ID documents.</b> These are held in a private bucket and are never served
+      publicly — “view” mints a link that expires in 60 seconds. Delete them once the door list
+      is done: the reason to hold someone's Aadhaar for a party is gone the moment the party is.</p>
+  </section>
 </main>
 
 <div id="tip" role="status" aria-live="polite"></div>
@@ -279,18 +324,24 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [];
 
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v] = await Promise.all([
+  const [a, v, c, g] = await Promise.all([
     sb.from('applications').select('*').order('created_at', { ascending: false }),
     sb.from('visits').select('reached,tz,created_at,session_id'),
+    // these two 404 until schema-checkin.sql has been run; the panel just stays
+    // empty rather than taking the whole dashboard down with it
+    sb.from('checkins').select('*').order('created_at', { ascending: false }),
+    sb.from('guests').select('*').order('name'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || [];
+  if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
   renderAll();
 
@@ -299,12 +350,14 @@ async function boot() {
         p => { APPS.unshift(p.new); renderAll(); flashLive(); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'visits' },
         p => { VISITS.push(p.new); renderAll(); })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checkins' },
+        p => { CHECKINS.unshift(p.new); renderAll(); flashLive('new check-in'); })
     .subscribe();
 }
 
-function flashLive() {
+function flashLive(what = 'new application') {
   const t = document.getElementById('liveTxt');
-  t.textContent = 'new application'; setTimeout(() => t.textContent = 'live', 4000);
+  t.textContent = what; setTimeout(() => t.textContent = 'live', 4000);
 }
 
 /* ------------------------------------------------------------------ render */
@@ -319,7 +372,123 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { tiles(); days(); funnel(); cities(); roles(); zones(); table(); }
+function renderAll() { tiles(); days(); funnel(); cities(); roles(); zones(); table(); checkinPanel(); }
+
+/* ============================================================================
+   CHECK-IN PANEL
+   The roster is the spine: every guest gets a row whether or not they've checked
+   in, because the useful question is "who is missing", not "who replied". Anyone
+   who checks in without matching a roster name is appended at the bottom rather
+   than dropped — a spelling mismatch shouldn't make someone invisible.
+   ========================================================================== */
+const MEAL_LABEL = { 'veg':'veg', 'non-veg':'non-veg', 'vegan':'vegan',
+                     'jain':'jain', 'allergic':'allergic' };
+
+function checkinPanel() {
+  const body = document.getElementById('ciBody');
+  if (!body) return;
+  const byName = new Map(CHECKINS.map(c => [String(c.name || '').trim().toLowerCase(), c]));
+  const usedIds = new Set();
+
+  const rows = GUESTS.map(g => {
+    const c = CHECKINS.find(x => x.guest_id === g.id)
+           || byName.get(String(g.name).trim().toLowerCase()) || null;
+    if (c) usedIds.add(c.id);
+    return { name: g.name, c, onList: true };
+  });
+  // checked in but not on the roster (or spelled differently)
+  for (const c of CHECKINS) {
+    if (!usedIds.has(c.id)) rows.push({ name: c.name, c, onList: false });
+  }
+
+  const done = rows.filter(r => r.c).length;
+  document.getElementById('ciCount').textContent =
+    GUESTS.length ? `${done} of ${GUESTS.length} checked in` : `${CHECKINS.length} checked in`;
+
+  document.getElementById('ciEmpty').hidden = rows.length > 0;
+  body.innerHTML = rows.map(r => {
+    if (!r.c) {
+      return `<tr><td>${esc(r.name)}</td><td><span class="muted">waiting</span></td>
+        <td colspan="6" class="muted">—</td></tr>`;
+    }
+    const c = r.c;
+    const when = new Date(c.created_at).toLocaleString();
+    const meal = MEAL_LABEL[c.meal] || c.meal;
+    const notes = c.meal_notes ? ` (${esc(c.meal_notes)})` : '';
+    const idCell = c.id_doc_path
+      ? `<button class="btn ghost ciDoc" data-path="${esc(c.id_doc_path)}"
+           style="padding:4px 10px;font-size:12px">view ${esc(c.id_doc_type || '')}</button>`
+      : '<span class="muted">none</span>';
+    return `<tr>
+      <td>${esc(r.name)}${r.onList ? '' : ' <span class="muted">(not on list)</span>'}</td>
+      <td>✓ done</td><td>${esc(when)}</td>
+      <td>${esc(c.phone)}</td><td>${esc(c.email)}</td>
+      <td>${esc(c.pyjama_size)}</td><td>${esc(meal)}${notes}</td><td>${idCell}</td>
+    </tr>`;
+  }).join('');
+
+  body.querySelectorAll('.ciDoc').forEach(b => {
+    b.addEventListener('click', () => openDoc(b.dataset.path, b));
+  });
+}
+
+/* A signed URL, not a public one, and short-lived on purpose: the link is good
+   for 60 seconds, so a copied address is useless a minute later. */
+async function openDoc(path, btn) {
+  const was = btn.textContent;
+  btn.disabled = true; btn.textContent = 'opening…';
+  const { data, error } = await sb.storage.from('checkin-ids').createSignedUrl(path, 60);
+  btn.disabled = false; btn.textContent = was;
+  if (error || !data?.signedUrl) {
+    // `tip` is the tooltip ELEMENT, not a function — say it where the panel can show it
+    const m = document.getElementById('ciRosterMsg');
+    if (m) m.textContent = error?.message || "couldn't open that document";
+    console.error('signed url failed', error);
+    return;
+  }
+  window.open(data.signedUrl, '_blank', 'noopener');
+}
+
+/* the roster: paste names, one per line */
+document.getElementById('ciAdd')?.addEventListener('click', async () => {
+  const box = document.getElementById('ciRoster');
+  const msg = document.getElementById('ciRosterMsg');
+  const names = [...new Set(box.value.split('\n').map(s => s.trim()).filter(Boolean))];
+  if (!names.length) { msg.textContent = 'nothing to add'; return; }
+  const have = new Set(GUESTS.map(g => g.name.trim().toLowerCase()));
+  const fresh = names.filter(n => !have.has(n.toLowerCase()));
+  if (!fresh.length) { msg.textContent = 'all of those are already on the list'; return; }
+  msg.textContent = 'adding…';
+  const { data, error } = await sb.from('guests')
+    .insert(fresh.map(name => ({ name }))).select('*');
+  if (error) { msg.textContent = error.message; return; }
+  GUESTS = GUESTS.concat(data || []).sort((a, b) => a.name.localeCompare(b.name));
+  box.value = '';
+  msg.textContent = `added ${data.length}`;
+  renderAll();
+});
+
+document.getElementById('ciCsv')?.addEventListener('click', () => {
+  const head = ['name','checked_in','when','phone','email','pyjama_size','meal','meal_notes','id_doc'];
+  const byId = new Set();
+  const lines = [];
+  for (const g of GUESTS) {
+    const c = CHECKINS.find(x => x.guest_id === g.id)
+      || CHECKINS.find(x => String(x.name).trim().toLowerCase() === g.name.trim().toLowerCase());
+    if (c) byId.add(c.id);
+    lines.push([g.name, c ? 'yes' : 'no', c?.created_at || '', c?.phone || '', c?.email || '',
+                c?.pyjama_size || '', c?.meal || '', c?.meal_notes || '', c?.id_doc_path || '']);
+  }
+  for (const c of CHECKINS) {
+    if (!byId.has(c.id)) lines.push([c.name, 'yes (not on list)', c.created_at, c.phone, c.email,
+      c.pyjama_size, c.meal, c.meal_notes || '', c.id_doc_path || '']);
+  }
+  const csv = [head, ...lines]
+    .map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'checkins.csv'; a.click();
+});
 
 function tiles() {
   const now = Date.now();
