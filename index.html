@@ -507,6 +507,15 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     padding:calc(1.5rem + env(safe-area-inset-top,0px)) clamp(1.2rem,6vw,2rem) calc(1.5rem + env(safe-area-inset-bottom,0px)); }
   #gateLogo{ display:block; width:min(78vw,32rem); max-height:34vh; height:auto; object-fit:contain;
     filter:drop-shadow(0 .5rem 1.6rem rgba(235,100,140,.3)); }
+  /* Same hand and colour as the veil's "shhh…", so the gate reads as the same
+     voice continuing rather than a new one starting. Deliberately NOT pulsing:
+     that animation is how the veil says "loading", and repeating it on a screen
+     that's finished loading would make the page look stuck.
+     Pulled up toward the logo so it belongs to it, and leads into the countdown
+     below rather than floating between the two. */
+  #gateAsk{ font-family:var(--script); font-weight:700; color:var(--rose);
+    font-size:clamp(1.5rem,6vw,2rem); line-height:1; margin:0;
+    margin-top:calc(-1 * clamp(.7rem,2.6vh,1.3rem)); }
   /* one tap = audio on for the whole visit. the button reads like the in-chat send button */
   #gateRow{ display:flex; gap:.8em; justify-content:center; }
   /* Consent line: footer small print, out of the centred stack and pinned to the
@@ -983,6 +992,8 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
   <div id="gateway" aria-hidden="true">
     <div id="gatePos">
       <img id="gateLogo" src="assets/logo2.png" alt="(secret;) khushi's slumber party" />
+      <!-- the ask, in the same hand as the "shhh…" the veil opens on -->
+      <p id="gateAsk">wanna join?</p>
       <span class="countdown" id="countdown" aria-label="countdown to when the application closes"></span>
       <div id="gateRow">
         <button id="gateYes" class="gateBtn" type="button"><span>enter</span><i aria-hidden="true">▸</i></button>
