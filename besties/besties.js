@@ -608,7 +608,7 @@ function pinkyPromise() {
   return new Promise(resolve => {
     ev('pinky_promise_started');
     const sheet = $('pinky'), btn = $('holdBtn'), fill = $('holdFill'),
-          label = $('holdState'), hL = $('handL'), hR = $('handR'),
+          label = $('holdState'), apart = $('pinkyApart'), hooked = $('pinkyHooked'),
           glow = $('hookGlow'), stars = $('hookStars');
     reveal(sheet);
 
@@ -616,12 +616,13 @@ function pinkyPromise() {
 
     function paint(v) {
       fill.style.width = (v * 100) + '%';
-      /* They close from 48 apart to 14, not to 0 — the drawing's own geometry
-         already overlaps at the centre, so travelling all the way tangles the
-         two hands instead of hooking them. 14 is where the pinkies link. */
-      const gap = 14 + 34 * (1 - v);
-      hL.setAttribute('transform', 'translate(' + (-gap).toFixed(1) + ' 0)');
-      hR.setAttribute('transform', 'translate(' + gap.toFixed(1) + ' 0)');
+      /* Cross-dissolve apart → hooked. It holds on the apart frame through the
+         first third and lands fully hooked a little before the end, so the link
+         reads as something that happened rather than something still mid-fade
+         when the fill completes. */
+      const mix = v <= .34 ? 0 : Math.min(1, (v - .34) / .52);
+      hooked.style.opacity = mix.toFixed(3);
+      apart.style.opacity = (1 - mix).toFixed(3);
       glow.setAttribute('opacity', v > .82 ? ((v - .82) / .18).toFixed(2) : '0');
       stars.setAttribute('opacity', v > .9 ? ((v - .9) / .1).toFixed(2) : '0');
       let s = 0; for (let i = 0; i < STAGES.length; i++) if (v >= STAGES[i].at) s = i;
