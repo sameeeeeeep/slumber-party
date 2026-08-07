@@ -81,6 +81,7 @@ drop policy if exists "admins write guests"    on public.guests;
 drop policy if exists "admins delete guests"   on public.guests;
 drop policy if exists "admins read checkins"   on public.checkins;
 drop policy if exists "admins update checkins" on public.checkins;
+drop policy if exists "admins delete checkins" on public.checkins;
 
 create policy "admins read guests" on public.guests
   for select to authenticated using (public.is_admin());
@@ -94,6 +95,12 @@ create policy "admins read checkins" on public.checkins
   for select to authenticated using (public.is_admin());
 create policy "admins update checkins" on public.checkins
   for update to authenticated using (public.is_admin()) with check (public.is_admin());
+-- Deletion is a feature here, not a risk: the privacy policy promises ID
+-- documents are gone within 30 days, and a promise that needs a SQL console to
+-- keep is a promise that gets forgotten. The dashboard deletes the document and
+-- the row together.
+create policy "admins delete checkins" on public.checkins
+  for delete to authenticated using (public.is_admin());
 
 -- ============================================================================
 --  Storage — the ID documents
@@ -113,6 +120,12 @@ on conflict (id) do update
 drop policy if exists "admins read id docs" on storage.objects;
 create policy "admins read id docs" on storage.objects
   for select to authenticated
+  using (bucket_id = 'checkin-ids' and public.is_admin());
+
+-- and delete them, so an ID document never outlives the check-in it belongs to
+drop policy if exists "admins delete id docs" on storage.objects;
+create policy "admins delete id docs" on storage.objects
+  for delete to authenticated
   using (bucket_id = 'checkin-ids' and public.is_admin());
 
 -- ============================================================================

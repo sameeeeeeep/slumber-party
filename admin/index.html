@@ -250,7 +250,7 @@
       <table id="ciTbl">
         <thead><tr>
           <th>guest</th><th>status</th><th>when</th><th>phone</th><th>email</th>
-          <th>pyjamas</th><th>meal</th><th>id</th>
+          <th>pyjamas</th><th>meal</th><th>id</th><th></th>
         </tr></thead>
         <tbody id="ciBody"></tbody>
       </table>
@@ -408,8 +408,9 @@ function checkinPanel() {
   document.getElementById('ciEmpty').hidden = rows.length > 0;
   body.innerHTML = rows.map(r => {
     if (!r.c) {
+      // 7 = the remaining columns after guest + status; keep in step with <thead>
       return `<tr><td>${esc(r.name)}</td><td><span class="muted">waiting</span></td>
-        <td colspan="6" class="muted">—</td></tr>`;
+        <td colspan="7" class="muted">—</td></tr>`;
     }
     const c = r.c;
     const when = new Date(c.created_at).toLocaleString();
@@ -424,12 +425,49 @@ function checkinPanel() {
       <td>✓ done</td><td>${esc(when)}</td>
       <td>${esc(c.phone)}</td><td>${esc(c.email)}</td>
       <td>${esc(c.pyjama_size)}</td><td>${esc(meal)}${notes}</td><td>${idCell}</td>
+      <td><button class="btn ghost ciDel" data-id="${esc(c.id)}"
+            data-path="${esc(c.id_doc_path || '')}" data-name="${esc(c.name)}"
+            style="padding:4px 10px;font-size:12px">remove</button></td>
     </tr>`;
   }).join('');
 
   body.querySelectorAll('.ciDoc').forEach(b => {
     b.addEventListener('click', () => openDoc(b.dataset.path, b));
   });
+  body.querySelectorAll('.ciDel').forEach(b => {
+    b.addEventListener('click', () => removeCheckin(b));
+  });
+}
+
+/* Delete a check-in and its ID document.
+   THE DOCUMENT GOES FIRST, deliberately. If the row went first and the storage
+   delete then failed, an ID document would be left in the bucket with nothing
+   pointing at it — the exact thing that quietly outlives a party. This way the
+   worst case is a row whose document is already gone, which is visible in the
+   table and harmless. */
+async function removeCheckin(btn) {
+  const { id, path, name } = btn.dataset;
+  if (!confirm(`Remove ${name}'s check-in?\n\nThis deletes their details and their ID document. It cannot be undone.`)) return;
+  const msg = document.getElementById('ciRosterMsg');
+  btn.disabled = true; btn.textContent = 'removing…';
+
+  if (path) {
+    const rm = await sb.storage.from('checkin-ids').remove([path]);
+    if (rm.error) {
+      btn.disabled = false; btn.textContent = 'remove';
+      if (msg) msg.textContent = 'could not delete the document: ' + rm.error.message;
+      return;                                   // stop: don't orphan the file
+    }
+  }
+  const { error } = await sb.from('checkins').delete().eq('id', id);
+  if (error) {
+    btn.disabled = false; btn.textContent = 'remove';
+    if (msg) msg.textContent = 'document deleted, but the row would not: ' + error.message;
+    return;
+  }
+  CHECKINS = CHECKINS.filter(c => c.id !== id);
+  if (msg) msg.textContent = `removed ${name}`;
+  renderAll();
 }
 
 /* A signed URL, not a public one, and short-lived on purpose: the link is good
