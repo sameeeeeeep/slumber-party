@@ -1,23 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The public page only. /besties and /admin are deliberately absent: a sitemap
-     is a request to index, which is the opposite of what those two want. -->
+<!-- The public front door only. /terms and /privacy now carry noindex (they hold
+     check-in / ID details not meant for search), and /besties, /admin, /checkin are
+     private — so the homepage is the one URL we ask Google to index. Listing a
+     noindex page here would only earn a "Submitted URL marked noindex" warning. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://secretslumberparty.com/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-  </url>
-  <!-- The legal pages: low value to rank, but they're public, linked from the
-       gate, and a site whose only indexable page is the front door looks thinner
-       to a crawler than it is. /checkin is NOT here — it's for invited guests. -->
-  <url>
-    <loc>https://secretslumberparty.com/terms.html</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://secretslumberparty.com/privacy.html</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
   </url>
 </urlset>
