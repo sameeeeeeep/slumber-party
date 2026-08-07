@@ -63,9 +63,10 @@
   @keyframes blink{ 0%,60%,100%{ opacity:.35 } 30%{ opacity:1 } }
 
   /* the answer rail */
+  /* Opaque, not translucent-with-blur: a frosted bar over a scrolling thread
+     shows the bubble underneath as a smear that reads like a rendering fault. */
   .compose{ position:sticky; bottom:0; padding:.7rem .9rem calc(.9rem + env(safe-area-inset-bottom,0px));
-    background:linear-gradient(180deg,rgba(28,16,23,.6),rgba(28,16,23,.96)); backdrop-filter:blur(8px);
-    border-top:1px solid rgba(245,195,207,.14); }
+    background:#1a0f16; border-top:1px solid rgba(245,195,207,.14); }
   .row{ display:flex; gap:.5rem; align-items:center; }
   .fld{ flex:1; min-width:0; display:flex; align-items:center; gap:.4rem;
     background:rgba(255,255,255,.06); border:1px solid rgba(245,195,207,.28); border-radius:100px;
@@ -85,14 +86,25 @@
   .chip.sel{ background:linear-gradient(120deg,var(--pink),#d8447a); border-color:transparent; }
   .err{ color:#ffb3c6; font-size:1.1rem; padding:.35rem .3rem 0; min-height:1.4rem; }
 
-  /* the document step */
-  .drop{ display:block; cursor:pointer; border:1px dashed rgba(245,195,207,.45); border-radius:1rem;
-    padding:1rem; text-align:center; color:var(--soft); font-size:1.15rem; }
-  .drop b{ color:var(--cream); font-weight:400; }
-  .drop.has{ border-style:solid; border-color:rgba(125,220,155,.5); color:#bfe9cc; }
-  input[type=file]{ position:absolute; width:1px; height:1px; opacity:0; }
-  .thumb{ display:block; max-width:min(100%,220px); max-height:150px; margin:.6rem auto 0;
-    border-radius:.5rem; border:1px solid rgba(245,195,207,.3); }
+  /* the document step — an attachment, the way a chat does it: a paperclip in
+     the compose row, then the file as a chip, then it sends as a photo bubble */
+  .attach{ flex:1; min-width:0; display:flex; align-items:center; gap:.5rem; cursor:pointer;
+    background:rgba(255,255,255,.06); border:1px solid rgba(245,195,207,.28); border-radius:100px;
+    padding:.5rem .95rem; color:var(--soft); font-size:1.25rem; }
+  .attach:active{ transform:scale(.99); }
+  .attach b{ color:var(--cream); font-weight:400; }
+  .attach.has{ border-color:rgba(125,220,155,.45); color:#bfe9cc; }
+  .attach .clip{ flex:none; font-size:1.1rem; }
+  .attach .nm{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .attach img{ flex:none; width:2rem; height:2rem; object-fit:cover; border-radius:.35rem;
+    border:1px solid rgba(245,195,207,.3); }
+  input[type=file]{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  /* the sent attachment, as a photo message */
+  .msg.photo{ padding:.4rem; }
+  .msg.photo img{ display:block; max-width:100%; width:min(15rem,52vw); height:auto;
+    border-radius:.85rem; }
+  .msg.photo .cap{ font-size:1.05rem; opacity:.85; padding:.3rem .35rem .1rem; }
+  .msg.photo .pdf{ display:flex; align-items:center; gap:.5rem; padding:.5rem .6rem; font-size:1.2rem; }
 
   .done{ text-align:center; padding:2rem 1rem 3rem; }
   .done h1{ font-family:var(--serif); font-style:italic; font-size:2.4rem; margin:.2rem 0 .4rem; }
@@ -244,19 +256,21 @@ function render(q){
   }
 
   if (q.type === 'file'){
+    // one row, like every other question: attach on the left, send on the right
+    const row = document.createElement('div');
+    row.className = 'row';
     const lab = document.createElement('label');
-    lab.className = 'drop';
-    lab.innerHTML = '<b>tap to add your ID</b><br>jpg, png or pdf';
+    lab.className = 'attach';
+    lab.innerHTML = '<span class="clip">📎</span><span class="nm"><b>attach your ID</b></span>';
     const inp = document.createElement('input');
     inp.type = 'file'; inp.accept = 'image/jpeg,image/png,image/webp,application/pdf';
     lab.appendChild(inp);
-    const row = document.createElement('div');
-    row.className = 'row'; row.style.marginTop = '.6rem';
     const send = document.createElement('button');
     send.className = 'send'; send.textContent = 'SEND ▸'; send.disabled = true;
-    row.appendChild(send);
-    answerEl.appendChild(lab); answerEl.appendChild(row);
+    row.appendChild(lab); row.appendChild(send);
+    answerEl.appendChild(row);
 
+    let thumb = null;
     inp.addEventListener('change', async () => {
       const f = inp.files && inp.files[0];
       if (!f) return;
@@ -265,13 +279,12 @@ function render(q){
         const prepared = await prepareDoc(f);
         answers.id_doc = prepared.dataUrl;
         answers.id_doc_type = guessDocType(f.name);
+        thumb = prepared.thumb;
         lab.classList.add('has');
-        lab.innerHTML = '<b>' + esc(f.name) + '</b><br>' + prepared.note;
+        lab.innerHTML = prepared.thumb
+          ? '<img alt="" src="' + prepared.thumb + '"><span class="nm">' + esc(f.name) + '</span>'
+          : '<span class="clip">📄</span><span class="nm">' + esc(f.name) + '</span>';
         lab.appendChild(inp);
-        if (prepared.thumb){
-          const im = document.createElement('img');
-          im.className = 'thumb'; im.src = prepared.thumb; lab.appendChild(im);
-        }
         send.disabled = false; errEl.textContent = '';
       } catch (e){
         console.error(e);
@@ -280,7 +293,11 @@ function render(q){
     });
     send.addEventListener('click', () => {
       if (!answers.id_doc) return;
-      accept(q, answers.id_doc, 'sent my ID 📎');
+      // it leaves as a photo message, not the words "sent my ID"
+      answers[q.key] = answers.id_doc;
+      photoBubble(thumb);
+      compose.hidden = true; answerEl.innerHTML = ''; errEl.textContent = '';
+      next();
     });
     return;
   }
@@ -316,6 +333,17 @@ function render(q){
   send.addEventListener('click', go);
   inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); go(); } });
   setTimeout(() => inp.focus({ preventScroll:true }), 60);
+}
+
+/** the attachment as it leaves — an image shows itself, a pdf gets a paper icon */
+function photoBubble(thumb){
+  const p = document.createElement('p');
+  p.className = 'msg you photo';
+  p.innerHTML = thumb
+    ? '<img alt="the ID you attached" src="' + thumb + '"><span class="cap">my ID 📎</span>'
+    : '<span class="pdf">📄 my ID (pdf)</span>';
+  thread.appendChild(p);
+  p.scrollIntoView({ block:'end', behavior:'smooth' });
 }
 
 function accept(q, value, echo){
