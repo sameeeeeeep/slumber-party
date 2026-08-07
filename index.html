@@ -1546,7 +1546,10 @@ async function submitApplication(data){
       method:'POST',
       headers:{ 'Content-Type':'application/json', apikey:cfg.supabaseAnonKey,
                 Authorization:'Bearer '+cfg.supabaseAnonKey },
-      body: JSON.stringify({ ...data, tz:localTz(), referrer:document.referrer||null,
+      // visitor_id is what makes the per-person rate limit possible — without it
+      // the function can only throttle by IP, which punishes shared networks
+      body: JSON.stringify({ ...data, visitor_id:visitorId(), tz:localTz(),
+                             referrer:document.referrer||null,
                              user_agent:navigator.userAgent })
     }).then(async res=>{
       const out = await res.json().catch(()=>({}));

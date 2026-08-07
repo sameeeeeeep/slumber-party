@@ -35,7 +35,26 @@ const ALLOWED_ORIGINS = [
   'http://localhost:4321',
 ];
 
-const MAX_PER_IP_PER_HOUR = 5;
+/* THROTTLING, AND WHY THE IP NUMBER IS SO HIGH
+   ------------------------------------------------------------------
+   This was 5 per IP per hour, which would have blocked real applicants the moment
+   Khushi posted. Indian mobile carriers put thousands of subscribers behind a
+   handful of NAT addresses, so on Jio or Airtel — or one college's wifi — the
+   sixth applicant in an hour is a different person on a different phone and would
+   have been told "too many applications from here".
+
+   So the IP ceiling is now only a flood stop: high enough that no plausible crowd
+   of genuine applicants can reach it, low enough to blunt a script.
+
+   The precise limit is the per-VISITOR one. Every browser already carries a
+   persistent `visitor_id` (localStorage, set on first visit) which the Google Form
+   post has always included; it's now sent here too. That's per-person rather than
+   per-network, so it can't be defeated by NAT and can't punish a crowd.
+
+   Neither number is the real duplicate guard: the unique index on email is. These
+   only exist to keep a runaway script from filling the table. */
+const MAX_PER_IP_PER_HOUR = 120;
+const MAX_PER_VISITOR_PER_HOUR = 6;
 
 function cors(origin: string | null) {
   const allow = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
@@ -186,9 +205,13 @@ Deno.serve(async (req) => {
      succeed, and the dashboard simply never mentions them. That is exactly how an
      application went missing on 7 Aug with nothing to point at.
      Never let the logging itself break the response. */
+  // set once the body has been read; the failure log records it when known
+  let vidHash: string | null = null;
+
   async function logFailure(note: string) {
     try {
-      await db.from('submit_log').insert({ ip_hash: ipHash, kind: 'application_failed', note });
+      await db.from('submit_log')
+        .insert({ ip_hash: ipHash, vid: vidHash, kind: 'application_failed', note });
     } catch (e) { console.error('could not log the failure', e); }
   }
 
@@ -205,13 +228,34 @@ Deno.serve(async (req) => {
 
   // ---- throttle -----------------------------------------------------------
   const hourAgo = new Date(Date.now() - 3600_000).toISOString();
-  const { count } = await db
-    .from('submit_log')
-    .select('id', { count: 'exact', head: true })
-    .eq('ip_hash', ipHash).eq('kind', 'application').gte('created_at', hourAgo);
-  if ((count ?? 0) >= MAX_PER_IP_PER_HOUR) {
-    await logFailure(`rate limited: ${count} in the last hour`);
-    return json({ error: 'too many applications from here — try again in a bit' }, 429, origin);
+
+  /* Hashed like the IP, and for the same reason: stored only to count, never to
+     identify. A raw visitor_id next to an application would be a durable handle
+     on a person across visits, which is more than throttling needs. */
+  const vidRaw = str(body.visitor_id, 80);
+  vidHash = vidRaw ? await hashIp(`vid:${vidRaw}`) : null;
+
+  const recent = async (col: 'ip_hash' | 'vid', val: string) => {
+    const { count } = await db.from('submit_log')
+      .select('id', { count: 'exact', head: true })
+      .eq(col, val).eq('kind', 'application').gte('created_at', hourAgo);
+    return count ?? 0;
+  };
+
+  // per person first: it's the limit that should actually bite
+  if (vidHash) {
+    const mine = await recent('vid', vidHash);
+    if (mine >= MAX_PER_VISITOR_PER_HOUR) {
+      await logFailure(`rate limited (visitor): ${mine} in the last hour`);
+      return json({ error: "you've already sent that a few times — give it an hour?" }, 429, origin);
+    }
+  }
+
+  // then the flood stop, which a genuine crowd should never reach
+  const fromHere = await recent('ip_hash', ipHash);
+  if (fromHere >= MAX_PER_IP_PER_HOUR) {
+    await logFailure(`rate limited (network): ${fromHere} in the last hour`);
+    return json({ error: 'too many applications from this network — try again in a bit' }, 429, origin);
   }
 
   // ---- store --------------------------------------------------------------
@@ -228,7 +272,7 @@ Deno.serve(async (req) => {
     return json({ error: "couldn't save that — try again?" }, 500, origin);
   }
 
-  await db.from('submit_log').insert({ ip_hash: ipHash, kind: 'application' });
+  await db.from('submit_log').insert({ ip_hash: ipHash, vid: vidHash, kind: 'application' });
 
   // ---- confirmation email -------------------------------------------------
   // Sent after the row is safe. A mail failure must NOT fail the submission:

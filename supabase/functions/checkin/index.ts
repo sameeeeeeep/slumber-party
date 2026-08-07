@@ -31,7 +31,11 @@ const ALLOWED_ORIGINS = [
   'http://localhost:4321',
 ];
 
-const MAX_PER_IP_PER_HOUR = 8;
+/* A flood stop, not a duplicate guard — the unique index on phone is that, and it
+   can't be worked around. 8 per IP was too tight for the obvious real case: a
+   group of guests checking in from the same wifi, or several on the same carrier
+   NAT, would have started being refused at the ninth person. */
+const MAX_PER_IP_PER_HOUR = 60;
 const MAX_DOC_BYTES = 6 * 1024 * 1024;      // the bucket caps at 8MB; stay under
 const DOC_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg',
