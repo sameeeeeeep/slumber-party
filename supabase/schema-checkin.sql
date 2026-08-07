@@ -76,6 +76,21 @@ create index if not exists checkins_created_idx on public.checkins (created_at d
 -- ------------------------------------------------------------ rate limiting
 -- Reuses public.submit_log from schema.sql with kind='checkin'.
 
+-- ------------------------------------------------- the failure log
+-- submit_log doubles as the record of submissions that DIDN'T land. A rejected
+-- application leaves no row in `applications` by definition, so without this a
+-- failure is invisible: the applicant sees the Sheet succeed and the dashboard
+-- simply never mentions them. `note` carries the reason.
+alter table public.submit_log add column if not exists note text;
+
+-- and let the dashboard read it. schema.sql deliberately gave submit_log no
+-- policy at all, which was right while it held nothing but IP hashes; now that
+-- it records why a submission failed, someone has to be able to look.
+alter table public.submit_log enable row level security;
+drop policy if exists "admins read submit_log" on public.submit_log;
+create policy "admins read submit_log" on public.submit_log
+  for select to authenticated using (public.is_admin());
+
 -- ============================================================================
 --  Row Level Security
 -- ============================================================================

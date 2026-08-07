@@ -171,25 +171,46 @@ Deno.serve(async (req) => {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json({ error: 'bad json' }, 400, origin); }
 
-  const check = validate(body);
-  if ('error' in check) return json({ error: check.error }, 400, origin);
-  const row = check.row!;
-
   const db = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,   // server-side only; never shipped to the browser
     { auth: { persistSession: false } },
   );
 
-  // ---- throttle -----------------------------------------------------------
   const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';
   const ipHash = await hashIp(ip);
+
+  /* Record a submission that did NOT land.
+     A rejected application leaves no row in `applications` — by definition — so
+     without this the failure is invisible: the applicant sees the Google Sheet
+     succeed, and the dashboard simply never mentions them. That is exactly how an
+     application went missing on 7 Aug with nothing to point at.
+     Never let the logging itself break the response. */
+  async function logFailure(note: string) {
+    try {
+      await db.from('submit_log').insert({ ip_hash: ipHash, kind: 'application_failed', note });
+    } catch (e) { console.error('could not log the failure', e); }
+  }
+
+  // ---- validate -----------------------------------------------------------
+  const check = validate(body);
+  if ('error' in check) {
+    // which field, and what was wrong with it — but never the value itself
+    const keys = Object.keys(body || {}).join(',');
+    await logFailure(`rejected: ${check.error} · fields sent: ${keys}`);
+    console.error('validation rejected', check.error, keys);
+    return json({ error: check.error }, 400, origin);
+  }
+  const row = check.row!;
+
+  // ---- throttle -----------------------------------------------------------
   const hourAgo = new Date(Date.now() - 3600_000).toISOString();
   const { count } = await db
     .from('submit_log')
     .select('id', { count: 'exact', head: true })
     .eq('ip_hash', ipHash).eq('kind', 'application').gte('created_at', hourAgo);
   if ((count ?? 0) >= MAX_PER_IP_PER_HOUR) {
+    await logFailure(`rate limited: ${count} in the last hour`);
     return json({ error: 'too many applications from here — try again in a bit' }, 429, origin);
   }
 
@@ -203,6 +224,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, duplicate: true }, 200, origin);
     }
     console.error('insert failed', error);
+    await logFailure(`insert failed: ${(error as { code?: string }).code || ''} ${error.message || ''}`.trim());
     return json({ error: "couldn't save that — try again?" }, 500, origin);
   }
 

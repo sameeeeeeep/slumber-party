@@ -1537,18 +1537,43 @@ async function submitApplication(data){
       .catch(err=>{ console.warn('google form mirror failed', err); return false; });
   }
 
+  /* Retry the Supabase post, but only when retrying can actually help.
+     A dropped connection or a 5xx is a moment in time and usually succeeds on the
+     next go. A 400 is a verdict on the data — the same body will be rejected the
+     same way forever, so retrying it just delays the applicant for nothing. 429
+     is worth one patient retry, since the window may have rolled over. */
+  const supaOnce = () => fetch(cfg.supabaseUrl.replace(/\/$/,'')+'/functions/v1/submit', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey:cfg.supabaseAnonKey,
+                Authorization:'Bearer '+cfg.supabaseAnonKey },
+      body: JSON.stringify({ ...data, tz:localTz(), referrer:document.referrer||null,
+                             user_agent:navigator.userAgent })
+    }).then(async res=>{
+      const out = await res.json().catch(()=>({}));
+      if(!res.ok){
+        console.error('supabase submit rejected', res.status, out);
+        return { ok:false, error:out.error, status:res.status, retryable:res.status>=500||res.status===429 };
+      }
+      return { ok:true, ...out };
+    }).catch(err=>{
+      console.error('supabase submit failed', err);
+      return { ok:false, error:'network', retryable:true };
+    });
+
+  const supaWithRetry = async () => {
+    const delays = [600, 1800];                 // ~2.4s of patience, total
+    let last = await supaOnce();
+    for (const wait of delays){
+      if (last.ok || !last.retryable) break;
+      await new Promise(r=>setTimeout(r, wait));
+      console.warn('retrying the supabase submit…');
+      last = await supaOnce();
+    }
+    return last;
+  };
+
   const supa = (cfg.useSupabase && cfg.supabaseUrl && cfg.supabaseAnonKey)
-    ? fetch(cfg.supabaseUrl.replace(/\/$/,'')+'/functions/v1/submit', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json', apikey:cfg.supabaseAnonKey,
-                  Authorization:'Bearer '+cfg.supabaseAnonKey },
-        body: JSON.stringify({ ...data, tz:localTz(), referrer:document.referrer||null,
-                               user_agent:navigator.userAgent })
-      }).then(async res=>{
-        const out = await res.json().catch(()=>({}));
-        if(!res.ok){ console.error('supabase submit rejected', res.status, out); return { ok:false, error:out.error }; }
-        return { ok:true, ...out };
-      }).catch(err=>{ console.error('supabase submit failed', err); return { ok:false, error:'network' }; })
+    ? supaWithRetry()
     : Promise.resolve({ ok:false, unconfigured:true });
 
   const [sheet, db] = await Promise.all([sheetSent, supa]);
@@ -1558,6 +1583,24 @@ async function submitApplication(data){
   if(!ok) console.error('application saved NOWHERE', { sheet, db, data });
   else if(!db.ok) console.warn('application is in the Sheet but not Supabase', db.error || db);
   else if(sheet === false) console.warn('application is in Supabase but the Sheet post failed');
+
+  /* If Supabase refused but the Sheet took the application, put the REASON in the
+     Sheet too. The Sheet is the store we know is working in that moment, so it's
+     the only place a note is guaranteed to survive — and it lands next to the row
+     it explains. One extra row, only ever on failure, carrying the same
+     visitor_id so the two can be matched. */
+  if(!db.ok && !db.unconfigured && sheet === true && GFORM.id){
+    try{
+      const b=new URLSearchParams();
+      if(GFORM.fields.name)  b.append(GFORM.fields.name,  '⚠️ not saved to admin: ' + (data.name || ''));
+      if(GFORM.fields.email) b.append(GFORM.fields.email, data.email || '');
+      b.append(GFORM.fields.visitor_id, visitorId());
+      b.append(GFORM.fields.status, 'supabase failed: ' + String(db.error || 'unknown').slice(0,80));
+      fetch(`https://docs.google.com/forms/d/e/${GFORM.id}/formResponse`,
+        { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:b })
+        .catch(()=>{});
+    }catch(e){ console.warn('could not write the failure marker to the sheet', e); }
+  }
 
   return { ok, sheet, supabase: !!db.ok, error: db.error, unconfigured: db.unconfigured, id: db.id };
 }

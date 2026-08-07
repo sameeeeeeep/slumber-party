@@ -274,6 +274,22 @@
       publicly — “view” mints a link that expires in 60 seconds. Delete them once the door list
       is done: the reason to hold someone's Aadhaar for a party is gone the moment the party is.</p>
   </section>
+
+  <!-- Only rendered when there's something to say. A permanent "0 failures" panel
+       trains you to ignore the space it occupies. -->
+  <section class="panel" id="failPanel" style="margin-top:18px; display:none">
+    <div class="tablebar">
+      <h2 style="flex:1">didn't reach the admin</h2>
+      <span class="pill" id="failCount">—</span>
+    </div>
+    <p class="sub">Applications the site sent that this database refused. These people are almost
+      certainly in the Google Sheet — that write happens first and doesn't depend on Supabase — so
+      treat this as a to-do list for copying them across, not as lost applications.</p>
+    <div class="scroll">
+      <table><thead><tr><th>when</th><th>why it was refused</th></tr></thead>
+        <tbody id="failBody"></tbody></table>
+    </div>
+  </section>
 </main>
 
 <div id="tip" role="status" aria-live="polite"></div>
@@ -324,23 +340,26 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [];
 
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g] = await Promise.all([
+  const [a, v, c, g, f] = await Promise.all([
     sb.from('applications').select('*').order('created_at', { ascending: false }),
     sb.from('visits').select('reached,tz,created_at,session_id'),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
     // empty rather than taking the whole dashboard down with it
     sb.from('checkins').select('*').order('created_at', { ascending: false }),
     sb.from('guests').select('*').order('name'),
+    // submissions that never landed — the only record that they happened
+    sb.from('submit_log').select('kind,note,created_at')
+      .eq('kind', 'application_failed').order('created_at', { ascending: false }).limit(50),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || [];
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
   renderAll();
@@ -387,7 +406,22 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { tiles(); days(); funnel(); cities(); roles(); zones(); table(); checkinPanel(); }
+function renderAll() { tiles(); days(); funnel(); cities(); roles(); zones(); table(); checkinPanel(); failPanel(); }
+
+/* Submissions this database refused. Hidden entirely when there are none. */
+function failPanel() {
+  const sec = document.getElementById('failPanel');
+  if (!sec) return;
+  if (!FAILS.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  const DAYMS = 86400000;
+  const recent = FAILS.filter(f => Date.now() - +new Date(f.created_at) < 7 * DAYMS).length;
+  document.getElementById('failCount').textContent =
+    `${FAILS.length} total · ${recent} in the last 7 days`;
+  document.getElementById('failBody').innerHTML = FAILS.map(f =>
+    `<tr><td>${esc(istStamp(f.created_at))}</td>
+         <td style="white-space:normal">${esc(f.note || '—')}</td></tr>`).join('');
+}
 
 /* ============================================================================
    CHECK-IN PANEL
