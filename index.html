@@ -537,6 +537,26 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     background:radial-gradient(120% 120% at 50% 0%, #241636 0%, #160f22 62%, #100a18 100%); }
   #game.on{ display:block; pointer-events:auto; }
   #gamecanvas{ position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; touch-action:none; }
+  /* "turn your phone": only worth saying on a handheld held upright, and only
+     while the arcade is actually up. It sits BELOW the pad (z-index 4 vs 6) so it
+     can never swallow a tap meant for the joystick, and is pointer-events:none
+     besides. Landscape, or anything desktop-sized, never sees it. */
+  #rotateHint{ display:none; }
+  @media (orientation:portrait) and (max-width:900px){
+    #game.on #rotateHint{ position:fixed; left:50%; transform:translateX(-50%);
+      bottom:calc(1.1rem + env(safe-area-inset-bottom,0px)); z-index:4;
+      display:flex; align-items:center; gap:.5em; margin:0; pointer-events:none;
+      font-family:var(--mono); font-size:1.05rem; letter-spacing:.04em; white-space:nowrap;
+      color:#ffdfe9; background:rgba(28,16,26,.72); border:1px solid rgba(245,195,207,.28);
+      border-radius:100px; padding:.5em 1em; backdrop-filter:blur(4px);
+      box-shadow:0 .3rem 1rem rgba(0,0,0,.35); animation:rotNudge 2.6s ease-in-out infinite; }
+    #game.on #rotateHint span{ font-size:1.2em; display:inline-block; animation:rotSpin 2.6s ease-in-out infinite; }
+  }
+  @keyframes rotNudge{ 0%,100%{ opacity:.85 } 50%{ opacity:1 } }
+  @keyframes rotSpin{ 0%,60%,100%{ transform:rotate(0) } 30%{ transform:rotate(90deg) } }
+  @media (prefers-reduced-motion:reduce){
+    #game.on #rotateHint, #game.on #rotateHint span{ animation:none; }
+  }
   /* UI layer, positioned by JS to the on-screen visible slice of the CRT so it never clips off a narrow phone */
   #gframe{ position:absolute; left:0; top:0; overflow:hidden; z-index:2; }
   .g-scan{ position:absolute; inset:0; pointer-events:none; z-index:3; opacity:.5; mix-blend-mode:overlay;
@@ -790,6 +810,9 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
       <!-- easter egg: a little arcade on the CRT, unlocked once the form is sent -->
       <div id="game">
         <canvas id="gamecanvas"></canvas>
+        <!-- the games are drawn wide; held upright, a phone squeezes them into a
+             letterbox with dead space above and below. Portrait-only nudge. -->
+        <p id="rotateHint" aria-hidden="true"><span>↻</span> turn your phone sideways to play</p>
         <div id="gframe">
           <div class="g-scan"></div>
           <div class="g-hud"><span><i id="gunit">pillows</i>&nbsp;<b id="gscore">0</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
@@ -2810,15 +2833,39 @@ renderStep();
   }
 
   /* ---------- controls ---------- */
+  /* One door into the arcade without walking the application: take the gate down
+     first (that click is also what unlocks audio, since arriving by URL involves
+     no gesture of its own), then unlock and open. Used by the "k" hotkey and by
+     /?arcade, which is the link on the besties invite. */
+  function jumpToArcade(){
+    try{ const gb=document.getElementById('gateYes'); if(gb) gb.click(); }catch(err){}
+    unlock(); openArcade();
+  }
+  /* the besties invite links here directly, so it can't depend on the form.
+     Waits for the gate to be UP and bound rather than guessing a delay: its
+     click handler is attached in showGateway(), and clicking a beat too early
+     is a silent no-op that leaves the arcade open behind a gate which never
+     comes down. Falls through after a few seconds in case there's no gate. */
+  try{
+    if(new URLSearchParams(location.search).has('arcade')){
+      let waited=0;
+      const t=setInterval(()=>{
+        waited+=120;
+        if(open){ clearInterval(t); return; }
+        // BOTH flags matter: gateOpen means the gate's click is bound, veilGone
+        // means the scene has been measured. Opening on gateOpen alone catches
+        // the CRT pre-zoom and the arcade renders inside the little screen.
+        if((gateOpen && veilGone) || waited>6000){ clearInterval(t); jumpToArcade(); }
+      }, 120);
+    }
+  }catch(err){}
   addEventListener('keydown', e=>{
     // bypass hotkey: press "k" to jump straight into the arcade (skips the form) — ignored while typing in a field
     if((e.key==='k'||e.key==='K') && !open){
       const el=document.activeElement;
       if(!(el && /^(INPUT|TEXTAREA)$/.test(el.tagName))){
         e.preventDefault();
-        // if the tap-to-enter gate is still up, take it down first (also unlocks audio)
-        try{ const gb=document.getElementById('gateYes'); if(gb) gb.click(); }catch(err){}
-        unlock(); openArcade(); return;
+        jumpToArcade(); return;
       }
     }
     // …and once inside the arcade menu, "k" leaps straight into the inner circle's level menu

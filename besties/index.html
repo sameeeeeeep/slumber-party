@@ -143,6 +143,7 @@
   .btn.wide{ width:100%; }
   .btn.ghost{ background:none; border:1px solid rgba(245,195,207,.4); box-shadow:none; color:var(--soft); }
   .btn.ghost::after{ display:none; }
+  a.btn{ text-decoration:none; }   /* .btn is used on anchors too (the arcade link) */
 
   #gateGo{ margin-top:1.1rem; width:100%; }
   .gate-foot{ font-family:var(--mono); font-size:1.05rem; color:rgba(255,246,242,.42); margin-top:1.5rem; }
@@ -503,6 +504,11 @@
       <div class="card" id="inviteCard"></div>
       <div class="invite-btns">
         <button class="btn wide" id="rsvpBtn" type="button">RSVP — I'M COMING</button>
+        <!-- ghost, so it never competes with the RSVP above it. New tab on
+             purpose: the invite card is the thing she came for and shouldn't be
+             navigated away from to go and play a game. -->
+        <a class="btn wide ghost" id="arcadeBtn" href="/?arcade" target="_blank"
+           rel="noopener">▸ KHUSHI'S ARCADE</a>
       </div>
       <p id="rsvpDone" hidden></p>
     </div>
