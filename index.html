@@ -2840,6 +2840,21 @@ renderStep();
   function jumpToArcade(){
     try{ const gb=document.getElementById('gateYes'); if(gb) gb.click(); }catch(err){}
     unlock(); openArcade();
+    // The gate click kicks off the CRT boot/zoom; openArcade measured the game frame
+    // before it settled, collapsing it to a 40x40 frame with a 0x0 canvas — a black
+    // screen. A full resize re-applies the frozen camera AND re-measures. The zoom
+    // settles late and at a variable time, so poll: re-measure whenever the CRT changes
+    // size, and once more after it's held steady, then stop (hard cap so it can't spin).
+    (function(){
+      let lastW=-1, steady=0;
+      const iv=setInterval(function(){
+        if(!open){ clearInterval(iv); return; }
+        const w=Math.round(document.getElementById('game').getBoundingClientRect().width);
+        if(w!==lastW){ lastW=w; steady=0; dispatchEvent(new Event('resize')); }
+        else if(++steady>=4){ dispatchEvent(new Event('resize')); clearInterval(iv); }
+      }, 150);
+      setTimeout(function(){ clearInterval(iv); }, 6000);
+    })();
   }
   /* the besties invite links here directly, so it can't depend on the form.
      Waits for the gate to be UP and bound rather than guessing a delay: its
