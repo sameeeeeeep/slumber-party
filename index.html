@@ -1939,14 +1939,25 @@ function maybeHideVeil(){ if(veilGone)return; setTimeout(hideVeil, Math.max(0, M
 roomimg.complete ? maybeHideVeil() : roomimg.addEventListener('load', maybeHideVeil);
 addEventListener('load', maybeHideVeil); setTimeout(hideVeil, MAX_VEIL);   // hard cap so it never sticks
 
-/* ---------- countdown to when the form closes (gate screen only) ---------- */
-const PARTY = new Date('2026-08-13T00:00:00');   // 13 Aug 2026, 12am (local) — change when the date's confirmed
+/* ---------- countdown to when the application closes (gate screen only) ----
+   THIS IS THE APPLICATION DEADLINE. IT IS NOT THE PARTY DATE, AND THE PARTY DATE
+   MUST NEVER BE PUT HERE.
+
+   Everything in this file is public: it ships to every visitor and reads straight
+   out of view-source. The party's actual dates live only inside the sealed
+   /besties payload, which is ciphertext until someone types the password — that
+   is the whole point of sealing it. A date pasted into this constant would undo
+   that quietly, with nothing on screen to show it had happened.
+
+   (It was called PARTY, with a note to "change when the date's confirmed", which
+   is exactly how the real date would have ended up here.) */
+const FORM_CLOSES = new Date('2026-08-13T00:00:00');   // 13 Aug 2026, 12am local
 const cdEl = document.getElementById('countdown');
 let cdTimer=0;
 function renderCountdown(){
   if(!cdEl) return;
   if(!cdEl.isConnected){ clearInterval(cdTimer); return; }   // the gate's gone — stop ticking into a detached node
-  const s = Math.max(0, Math.floor((PARTY - new Date())/1000));
+  const s = Math.max(0, Math.floor((FORM_CLOSES - new Date())/1000));
   const d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60), sec = s%60;
   const p = n => String(n).padStart(2,'0');
   const t = p(d)+':'+p(h)+':'+p(m)+':'+p(sec);   // days read as another clock segment, not a "14d" suffix
