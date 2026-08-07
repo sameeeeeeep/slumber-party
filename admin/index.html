@@ -543,13 +543,30 @@ function tiles() {
   const sessions = new Set(VISITS.map(v => v.session_id)).size;
   const cityCount = new Set(APPS.map(r => norm(r.city)).filter(Boolean)).size;
   const rate = sessions ? Math.round(APPS.length / sessions * 100) : null;
-  const put = (k, v, n) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`;
+  /* WHO'S ON THE SITE RIGHT NOW.
+     The site pings /visit at each funnel step, so there is no heartbeat to count
+     and no true concurrency figure to be had. This counts distinct sessions that
+     pinged in the last 5 minutes, which is the honest version: someone reading
+     the same screen for ten minutes without advancing drops out of it, and the
+     label says "active" rather than "online" for exactly that reason. */
+  const LIVE_WINDOW = 5 * 60 * 1000;
+  const live = new Set(
+    VISITS.filter(v => now - +new Date(v.created_at) < LIVE_WINDOW).map(v => v.session_id)
+  ).size;
+
+  const put = (k, v, n, cls) =>
+    `<div class="tile"><div class="k">${k}</div><div class="v"${cls ? ` class="${cls}"` : ''}>${v}</div><div class="n">${n}</div></div>`;
   document.getElementById('tiles').innerHTML =
+    put('active now', live || '0', 'sessions in the last 5 min') +
     put('applications', APPS.length, `${last24} in the last 24h`) +
     put('sessions', sessions || '—', 'browser tabs that landed') +
     put('completion', rate === null ? '—' : rate + '%', 'landed → applied') +
     put('cities', cityCount, 'distinct places');
 }
+
+/* The live count decays with the clock, not with new rows — without this it would
+   sit at whatever it was when the last visit landed and look stuck. */
+setInterval(() => { if (VISITS.length || CHECKINS.length || APPS.length) tiles(); }, 15000);
 
 function days() {
   const out = [];

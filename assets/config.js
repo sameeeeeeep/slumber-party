@@ -19,11 +19,12 @@ window.SLUMBER_CONFIG = {
   // its writes are refused with a row-level-security violation (42501).
   supabaseAnonKey: 'sb_publishable_eyh8o8PCrMBfjZ0199Ki4A_cyKjbXJZ',
 
-  // OFF until the Edge Functions are deployed. While false the site posts to the
-  // Google Form only and skips Supabase entirely — no failed-submit message, no
-  // visit tracking, nothing written to Postgres. Flip to true the moment
-  // `supabase functions deploy submit && supabase functions deploy visit` is done.
-  useSupabase: false,
+  // ON — submit + visit + checkin are all deployed (7 Aug 2026). Applications now
+  // write to BOTH: the Google Form as before, and Supabase for the live dashboard.
+  // Visit pings also start flowing, which is what fills the funnel and the
+  // live-visitor count. Set back to false to fall out of Supabase entirely; the
+  // Google Form keeps working either way, which is the point of keeping both.
+  useSupabase: true,
 
   // Keep writing to the Google Form as well during the migration, so nothing
   // is lost while we cut over. Set to false once Supabase has been running
