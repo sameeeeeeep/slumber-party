@@ -304,18 +304,10 @@
 
   .promise-q{ font-family:var(--script); font-size:1.7rem; line-height:1.3; color:#fff; }
   .promise-q em{ font-style:normal; color:var(--pink); }
-  /* aspect-ratio matches the two masks (600×511) so the box never reflows as
-     they load, and the fx overlay lines up with the drawing underneath */
-  #pinkyArt{ position:relative; width:min(17rem,80vw); aspect-ratio:600/511;
-    margin:1.4rem auto .4rem; }
-  /* the mask carries the drawing; the background carries the colour */
-  .pinky-hands{ position:absolute; inset:0; background:#ffeaf0;
-    -webkit-mask:var(--frame) center/contain no-repeat;
-            mask:var(--frame) center/contain no-repeat; }
-  #pinkyApart{  --frame:url('pinky-apart.png'); }
-  #pinkyHooked{ --frame:url('pinky-hooked.png'); opacity:0; }
-  #pinkyFx{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
-  .hand{ transition:transform .12s linear; }
+  /* the pinky-promise clip; square source, scrubbed to the hold in JS.
+     image-rendering:pixelated keeps the chunky pixel art crisp when scaled up. */
+  #pinkyArt{ width:min(17rem,80vw); aspect-ratio:1/1; margin:1.4rem auto .4rem; display:block;
+    border-radius:12px; image-rendering:pixelated; -webkit-user-select:none; user-select:none; pointer-events:none; }
   #holdBtn{ position:relative; width:100%; margin-top:1.2rem; padding:1.25rem 1.4rem; border-radius:100px;
     font-family:var(--pixel); font-size:.62rem; letter-spacing:.09em; color:#fff; overflow:hidden;
     background:rgba(255,255,255,.07); border:1px solid rgba(245,195,207,.35);
@@ -459,34 +451,11 @@
            Both masks were cropped to one shared bounding box, so the hands sit
            in exactly the same place in both frames and the dissolve doesn't
            jump. Re-exporting one without the other will break that. -->
-      <div id="pinkyArt" aria-hidden="true">
-        <div class="pinky-hands" id="pinkyApart"></div>
-        <div class="pinky-hands" id="pinkyHooked"></div>
-        <svg id="pinkyFx" viewBox="0 0 300 250" fill="none">
-          <defs>
-            <radialGradient id="gl">
-              <stop offset="0" stop-color="#ebd81b" stop-opacity=".55"/>
-              <stop offset="1" stop-color="#ebd81b" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-
-          <g id="hookGlow" opacity="0" stroke="none">
-            <circle cx="150" cy="52" r="54" fill="url(#gl)"/>
-          </g>
-
-          <!-- the heart, which only shows up once the promise is sealed -->
-          <g id="hookStars" opacity="0">
-            <path d="M150 24 C150 12 133 6 133 20 C133 30 143 36 150 42
-                     C157 36 167 30 167 20 C167 6 150 12 150 24 Z"
-                  stroke="#ffb9cd" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- clear of the fists, which reach in to about x=55 and x=245 -->
-            <path d="M112 14 l1.6 4.2 4.2 1.6 -4.2 1.6 -1.6 4.2 -1.6 -4.2 -4.2 -1.6 4.2 -1.6z"
-                  fill="#ffe9a8" stroke="none"/>
-            <path d="M188 26 l1.9 4.8 4.8 1.9 -4.8 1.9 -1.9 4.8 -1.9 -4.8 -4.8 -1.9 4.8 -1.9z"
-                  fill="#ffe9a8" stroke="none"/>
-          </g>
-        </svg>
-      </div>
+      <!-- A pixel-art pinky-promise clip (silent, heart baked in). JS scrubs its
+           currentTime to the hold, so holding drags the hands together until the
+           pinkies entangle and the heart glows; letting go rewinds. -->
+      <video id="pinkyArt" src="pinky-promise.mp4" muted playsinline preload="auto"
+             disablepictureinpicture aria-hidden="true"></video>
      <button id="holdBtn" type="button">
         <span id="holdFill"></span>
         <span id="holdLabel">HOLD TO PINKY PROMISE</span>

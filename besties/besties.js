@@ -608,23 +608,19 @@ function pinkyPromise() {
   return new Promise(resolve => {
     ev('pinky_promise_started');
     const sheet = $('pinky'), btn = $('holdBtn'), fill = $('holdFill'),
-          label = $('holdState'), apart = $('pinkyApart'), hooked = $('pinkyHooked'),
-          glow = $('hookGlow'), stars = $('hookStars');
+          label = $('holdState'), vid = $('pinkyArt');
     reveal(sheet);
 
     let raf = null, t0 = 0, p = 0, done = false, stage = -1;
 
     function paint(v) {
       fill.style.width = (v * 100) + '%';
-      /* Cross-dissolve apart → hooked. It holds on the apart frame through the
-         first third and lands fully hooked a little before the end, so the link
-         reads as something that happened rather than something still mid-fade
-         when the fill completes. */
-      const mix = v <= .34 ? 0 : Math.min(1, (v - .34) / .52);
-      hooked.style.opacity = mix.toFixed(3);
-      apart.style.opacity = (1 - mix).toFixed(3);
-      glow.setAttribute('opacity', v > .82 ? ((v - .82) / .18).toFixed(2) : '0');
-      stars.setAttribute('opacity', v > .9 ? ((v - .9) / .1).toFixed(2) : '0');
+      /* Scrub the clip to the hold: 0 = hands apart, end = pinkies entangled with the
+         heart glowing (the heart is baked into the video). Seek a hair short of the
+         very end so the final frame renders rather than looping to the start. */
+      if (vid && isFinite(vid.duration) && vid.duration > 0) {
+        vid.currentTime = Math.min(vid.duration - 0.05, v * vid.duration);
+      }
       let s = 0; for (let i = 0; i < STAGES.length; i++) if (v >= STAGES[i].at) s = i;
       if (s !== stage) {
         stage = s;
@@ -644,6 +640,9 @@ function pinkyPromise() {
       e.preventDefault();
       if (done) return;
       FX.unlock(); buzz(20);
+      // iOS renders seeks on a paused <video> only after it has played once; prime it
+      // within this pointer gesture so the scrub shows frames from the first hold.
+      if (vid && !vid._primed) { vid._primed = true; try { vid.play().then(() => vid.pause()).catch(() => {}); } catch (_) {} }
       t0 = performance.now() - p * HOLD_MS;
       cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
     }
