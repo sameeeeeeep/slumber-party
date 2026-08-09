@@ -20,7 +20,17 @@ const ALLOWED_ORIGINS = [
   'http://localhost:4321',
 ];
 
-const STEPS = new Set(['landed', 'entered', 'opened_dm', 'started_form', 'submitted']);
+/* q1…q8 are the individual application questions. "started_form" only ever said
+   that someone began; it couldn't say where they stopped, which is the thing worth
+   knowing about a form that loses people. The existing per-(session, reached)
+   dedupe means each session contributes at most one row per question, so the cost
+   of this is bounded at eight extra rows per applicant.
+   Kept in step with the check constraint on visits.reached — a value missing from
+   either side is silently dropped. */
+const STEPS = new Set([
+  'landed', 'entered', 'opened_dm', 'started_form', 'submitted',
+  'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8',
+]);
 
 function cors(origin: string | null) {
   const allow = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];

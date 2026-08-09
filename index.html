@@ -1412,6 +1412,11 @@ function startApply(){                       // called by renderChat once stage 
 function askQuestion(i, replay){
   if(i>=APPLY_Q.length){ finishApply(); return; }
   qIndex=i; qBusy=true;
+  /* Which question they got as far as. Only on the first pass — a replay is
+     someone stepping back through answers they've already given, and counting it
+     would show questions being "reached" more often than they were. The visit
+     function dedupes per session anyway, so this is belt and braces. */
+  if(!replay && i < 8) track('q' + (i + 1));
   const q=APPLY_Q[i];
   const raw=(typeof q.ask==='function') ? q.ask(qAns) : q.ask;
   const lines=Array.isArray(raw)?raw:[raw];

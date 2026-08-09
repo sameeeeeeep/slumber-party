@@ -147,6 +147,7 @@
   /* tier is a label, not a magnitude, so it gets a border rather than a fill —
      the fill in this dashboard means "how much", and it shouldn't start meaning
      "which kind" in one table */
+  .lost{ color:var(--critical); font-size:.75rem; font-weight:500; margin-left:.35rem; }
   .tier{ font-size:.7rem; letter-spacing:.04em; text-transform:uppercase;
     border:1px solid var(--line); border-radius:100px; padding:.1rem .45rem; color:var(--ink-2); }
   .tier.creator{ border-color:var(--series); color:var(--series); }
@@ -206,6 +207,17 @@
       <p class="sub">how far each session got</p>
       <div class="rows" id="funnel"></div>
       <p class="note">counted per browser tab, from a random id that's forgotten when the tab closes — no cookie, no IP, no fingerprint.</p>
+    </section>
+
+    <section class="panel">
+      <h2>where the form loses people</h2>
+      <p class="sub">sessions that reached each question · the drop is what to fix</p>
+      <div class="rows" id="dropoff"></div>
+      <p class="empty" id="dropEmpty" hidden>nobody has started the application yet.</p>
+      <p class="note">Counted the first time a question is shown, not on the way back through —
+        stepping back to edit an answer shouldn't make a question look more popular than it was.
+        Sessions that started before this was added show no question data at all, so give it a day
+        before reading much into small numbers.</p>
     </section>
 
     <section class="panel">
@@ -439,7 +451,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { tiles(); days(); funnel(); sources(); cities(); roles(); zones(); table(); checkinPanel(); failPanel(); }
+function renderAll() { tiles(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -702,6 +714,70 @@ function funnel() {
     const n = per.get(k).size, pct = Math.round(n / top * 100);
     return bar(label, n, pct, `${label} — ${n} session${n === 1 ? '' : 's'} (${pct}% of everyone who landed)`);
   }).join('');
+}
+
+/* ============================================================================
+   WHERE THE FORM LOSES PEOPLE
+   One row per question, with the number of sessions that got that far and how
+   many were lost since the previous one. The drop is the actionable number — a
+   question that everyone reaches and nobody passes is the one to rewrite — so it
+   sits on the row rather than being left for you to subtract.
+
+   Labels must stay in step with APPLY_Q in index.html. They're duplicated because
+   the dashboard can't import from a page it doesn't load; if a question is added
+   there, add it here and widen the check constraint on visits.reached.
+   ========================================================================== */
+const QUESTIONS = [
+  ['q1', '1 · name'],
+  ['q2', '2 · city'],
+  ['q3', '3 · age'],
+  ['q4', '4 · what describes you'],
+  ['q5', '5 · instagram'],
+  ['q6', '6 · phone'],
+  ['q7', '7 · email'],
+  ['q8', '8 · why / perfect party'],
+];
+
+function dropoff() {
+  const el = document.getElementById('dropoff');
+  if (!el) return;
+  const per = new Map(QUESTIONS.map(([k]) => [k, new Set()]));
+  const started = new Set();
+  for (const v of VISITS) {
+    if (v.reached === 'started_form') started.add(v.session_id);
+    if (per.has(v.reached)) per.get(v.reached).add(v.session_id);
+  }
+  const counts = QUESTIONS.map(([k, label]) => ({ label, n: per.get(k).size }));
+  const submitted = new Set(VISITS.filter(v => v.reached === 'submitted').map(v => v.session_id)).size;
+
+  const any = counts.some(c => c.n) || started.size;
+  document.getElementById('dropEmpty').hidden = !!any;
+  if (!any) { el.innerHTML = ''; return; }
+
+  /* Baseline: the largest of q1, started_form, or any single question. Using q1
+     alone looks obvious but breaks when a ping is lost — one dropped q1 beacon and
+     a later question reports MORE sessions than the first, which renders as 150%
+     and an overflowing bar. Taking the max means a lost ping understates a step
+     rather than producing a number that can't be true. */
+  const top = Math.max(1, counts[0].n, started.size, ...counts.map(c => c.n));
+  let prev = null;
+  const rows = counts.map(c => {
+    const pct = Math.min(100, Math.round(c.n / top * 100));
+    const lost = prev === null ? 0 : Math.max(0, prev - c.n);
+    prev = c.n;
+    const lostTxt = lost ? ` <span class="lost">−${lost}</span>` : '';
+    return `<div class="row" data-tip="${esc(c.label)} — ${c.n} of ${top} (${pct}%)${lost ? `, ${lost} lost here` : ''}">
+      <span class="lab">${esc(c.label)}</span>
+      <span class="track"><span class="bar" style="width:${Math.max(1.5, pct)}%"></span></span>
+      <span class="val">${c.n}${lostTxt}</span></div>`;
+  });
+  // the finish line, so the last question's drop has something to be measured against
+  const spct = Math.min(100, Math.round(submitted / top * 100));
+  rows.push(`<div class="row" data-tip="submitted — ${submitted} of ${top} (${spct}%)">
+      <span class="lab" style="color:var(--series)">✓ submitted</span>
+      <span class="track"><span class="bar" style="width:${Math.max(1.5, spct)}%"></span></span>
+      <span class="val">${submitted}</span></div>`);
+  el.innerHTML = rows.join('');
 }
 
 /* ============================================================================
