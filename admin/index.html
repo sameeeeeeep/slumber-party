@@ -485,6 +485,22 @@
         <label style="flex:3 1 260px;margin:0">one line about them <span class="sub" style="margin:0">(shown on their card)</span>
           <input id="gAddBlurb" type="text" maxlength="240" placeholder="DJ for the night — she picks what we dance to." style="margin:0" /></label>
       </div>
+      <!-- the introduction round at /housemates -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0 0">
+        <label style="flex:4 1 320px;margin:0">how you'll introduce them
+          <span class="sub" style="margin:0">(read aloud at the table — /housemates)</span>
+          <textarea id="gAddIntro" rows="2" maxlength="600"
+            placeholder="Ria runs the decks. She's played every rooftop in Bombay and she's picking tonight's music."></textarea></label>
+        <label style="flex:0 1 92px;margin:0">order
+          <input id="gAddPos" type="number" min="1" max="99" placeholder="—" style="margin:0" /></label>
+        <div style="flex:0 1 150px">
+          <span class="flab">their character</span>
+          <label class="pick" for="gAddArt" id="gAddArtLabel">upload art</label>
+          <input id="gAddArt" type="file" accept="image/*" hidden />
+        </div>
+        <img id="gAddArtPrev" alt="" style="width:54px;height:54px;object-fit:cover;border-radius:9px;
+          border:1px solid var(--line);display:none" />
+      </div>
       <p class="sub" id="gAddMsg" style="min-height:1.1rem;margin:0 0 10px"></p>
 
       <details style="margin-bottom:10px"><summary class="sub" style="cursor:pointer">or paste several names at once</summary>
@@ -622,6 +638,8 @@
          style="text-decoration:none">open guest view</a>
       <a class="btn ghost" href="/house/" target="_blank" rel="noopener"
          style="text-decoration:none">open the house</a>
+      <a class="btn ghost" href="/housemates/" target="_blank" rel="noopener"
+         style="text-decoration:none">the intro round</a>
     </div>
     <p class="sub">what guests see at <b>/itinerary</b> (password: <code>nailinit</code>).
       Changes land on their phones within a minute. Hidden items are drafts —
@@ -1350,6 +1368,12 @@ document.getElementById('ciBody').addEventListener('click', async (e) => {
     gAddIg.value = g.instagram || '';
     gAddRoom.value = g.room || '';
     gAddBlurb.value = g.blurb || '';
+    gAddIntro.value = g.intro || '';
+    gAddPos.value = g.intro_pos || '';
+    pendingArt = null;
+    const prev = document.getElementById('gAddArtPrev');
+    if (g.avatar_url){ prev.src = g.avatar_url; prev.style.display = 'block'; }
+    else prev.style.display = 'none';
     document.querySelector('#gAddForm button[type=submit]').textContent = 'save changes';
     document.getElementById('gAddCancel').hidden = false;
     msg.textContent = `editing ${g.name}` + (g.code ? ` · link stays ${g.code}` : '');
@@ -1376,10 +1400,62 @@ document.getElementById('ciBody').addEventListener('click', async (e) => {
 document.getElementById('gAddCancel')?.addEventListener('click', () => {
   gEditing = null;
   gAddForm.reset();
+  gAddIntro.value = ''; gAddPos.value = ''; pendingArt = null;
+  document.getElementById('gAddArtPrev').style.display = 'none';
+  document.getElementById('gAddArtLabel').textContent = 'upload art';
   document.querySelector('#gAddForm button[type=submit]').textContent = 'add & mint link';
   document.getElementById('gAddCancel').hidden = true;
   document.getElementById('gAddMsg').textContent = '';
 });
+
+/* ---- their character art, for the introduction round ----------------------
+   Squared off and downscaled here rather than server-side: a phone photo is
+   several megabytes and this gets loaded by everyone at the table at once.
+   The bucket is public-read on purpose — these are Y2K avatars shown to the room,
+   not ID documents, and a signed URL per face would make the page crawl. */
+let pendingArt = null;
+document.getElementById('gAddArt')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const msg = document.getElementById('gAddMsg');
+  try {
+    const img = await new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onerror = () => rej(new Error('could not read that file'));
+      fr.onload = () => { const i = new Image(); i.onload = () => res(i);
+        i.onerror = () => rej(new Error("that doesn't look like an image")); i.src = fr.result; };
+      fr.readAsDataURL(file);
+    });
+    const N = 480, c = document.createElement('canvas');
+    c.width = N; c.height = N;
+    const g = c.getContext('2d');
+    g.fillStyle = '#f0dbe4'; g.fillRect(0, 0, N, N);
+    const k = Math.max(N / img.naturalWidth, N / img.naturalHeight);
+    const w = img.naturalWidth * k, h = img.naturalHeight * k;
+    g.drawImage(img, (N - w) / 2, (N - h) / 2, w, h);
+    pendingArt = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86));
+    const prev = document.getElementById('gAddArtPrev');
+    prev.src = c.toDataURL('image/jpeg', 0.7); prev.style.display = 'block';
+    document.getElementById('gAddArtLabel').textContent = 'art ready ✓';
+    msg.textContent = 'art will save with the guest'; msg.className = 'sub';
+  } catch (err) {
+    msg.textContent = err.message; msg.className = 'sub err';
+  }
+});
+async function uploadArt(blob, name){
+  const slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'guest';
+  const path = slug + '-' + Math.random().toString(36).slice(2, 8) + '.jpg';
+  const { error } = await sb.storage.from('housemates').upload(path, blob, {
+    contentType: 'image/jpeg', upsert: false,
+  });
+  if (error){
+    const msg = document.getElementById('gAddMsg');
+    msg.textContent = 'art upload failed: ' + error.message; msg.className = 'sub err';
+    return null;
+  }
+  pendingArt = null;
+  document.getElementById('gAddArtLabel').textContent = 'upload art';
+  return sb.storage.from('housemates').getPublicUrl(path).data.publicUrl;
+}
 
 /* one guest, with their tier and a freshly minted code */
 document.getElementById('gAddForm')?.addEventListener('submit', async (e) => {
@@ -1394,7 +1470,10 @@ document.getElementById('gAddForm')?.addEventListener('submit', async (e) => {
       instagram: gAddIg.value.trim().replace(/^@+/, '')
         .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null,
       room: gAddRoom.value || null,
-      blurb: gAddBlurb.value.trim() || null };
+      blurb: gAddBlurb.value.trim() || null,
+      intro: gAddIntro.value.trim() || null,
+      intro_pos: parseInt(gAddPos.value, 10) || null };
+    if (pendingArt) patch.avatar_url = await uploadArt(pendingArt, name);
     const res = await save(sb.from('guests').update(patch).eq('id', gEditing), 'that guest');
     if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
     Object.assign(GUESTS.find(g => g.id === gEditing) || {}, patch);
@@ -1414,7 +1493,10 @@ document.getElementById('gAddForm')?.addEventListener('submit', async (e) => {
                 instagram: gAddIg.value.trim().replace(/^@+/, '')
                   .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null,
                 room: gAddRoom.value || null,
-                blurb: gAddBlurb.value.trim() || null };
+                blurb: gAddBlurb.value.trim() || null,
+                intro: gAddIntro.value.trim() || null,
+                intro_pos: parseInt(gAddPos.value, 10) || null };
+  if (pendingArt) row.avatar_url = await uploadArt(pendingArt, name);
   const { data, error } = await sb.from('guests').insert(row).select().single();
   if (error) { msg.textContent = error.message; return; }
   GUESTS = GUESTS.concat([data]).sort((a, b) => a.name.localeCompare(b.name));
