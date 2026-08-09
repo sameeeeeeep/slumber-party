@@ -548,10 +548,12 @@ document.getElementById('emotes').addEventListener('click', (e) => {
    still broadcasting, otherwise drifting. One answer, used by both the renderer
    and the proximity check, so a card can never open on a body that isn't there. */
 const STALE = 6000;                      // no word for six seconds = they've gone
-const SMOOTH = 210;                      // just over the send interval, so motion never stalls
+/* A little over the current send interval, so a body is always still travelling
+   when the next packet lands and never freezes between them. */
+const smoothWindow = () => sendEvery() * 1.35;
 function smooth(pos){
   if (pos.fx === undefined) return pos;
-  const k = Math.min(1, (performance.now() - pos.t0) / SMOOTH);
+  const k = Math.min(1, (performance.now() - pos.t0) / smoothWindow());
   return { ...pos, x: pos.fx + (pos.x - pos.fx) * k, y: pos.fy + (pos.y - pos.fy) * k };
 }
 function liveAt(name){
@@ -696,17 +698,7 @@ async function joinPresence(){
            Presence now updates only when the claim changes, and movement rides a
            broadcast, which is what broadcast is for. */
         await chan.track(claimState());
-        if (!beat) beat = setInterval(() => {
-          if (!chan || chan.state !== 'joined') return;
-          /* Send when moving; otherwise a heartbeat every couple of seconds so a
-             player standing still doesn't age past STALE and vanish. Broadcast is
-             cheap — it was PRESENCE that had the rate limit. */
-          const idle = Date.now() - lastSent > 2000;
-          if (!moved && !idle) return;
-          moved = false; lastSent = Date.now();
-          chan.send({ type:'broadcast', event:'pos',
-                      payload:{ id:meId, g: MINE ? MINE.name : null, x:me.x, y:me.y, f:me.facing } });
-        }, 130);
+        if (!beat) beat = true, pump();
       }
       /* Phones sleep, wifi drops, and a party lasts two days — so a closed channel
          retries instead of silently leaving someone invisible to the room. */
@@ -730,6 +722,37 @@ window.__house = {
                   livePositions: LIVE.size, online, presenceError,
                   channel: chan ? chan.state : 'none', subLog: [...subLog] }),
 };
+/* ============================================================================
+   HOW OFTEN TO SPEAK
+   Broadcast has a per-channel ceiling in the order of a hundred events a second.
+   One person sending every 130ms is 7.7/sec — fine. Twenty people doing it is
+   154/sec, and thirty-seven is 285: the channel would be throttled or closed at
+   exactly the moment the whole party is in the house, which is the same failure
+   that already cost us presence.
+
+   So the rate scales with the room. Each client knows how many are here, so it
+   backs off on its own — no coordination needed — and the interpolation window
+   follows the interval, so motion stays continuous at every rate. Six people move
+   at 140ms; the full party settles around 700ms and still looks smooth because
+   nobody is drawing packets, they're drawing the path between them.
+   ========================================================================== */
+const SEND_MIN = 140, SEND_MAX = 700;
+function sendEvery(){
+  const n = Math.max(1, online);
+  return Math.min(SEND_MAX, Math.max(SEND_MIN, Math.round(SEND_MIN * Math.ceil(n / 6))));
+}
+function pump(){
+  const gap = sendEvery();
+  setTimeout(pump, gap);
+  if (!chan || chan.state !== 'joined') return;
+  /* Send when moving; otherwise a heartbeat well inside STALE so someone standing
+     still doesn't age out of the room. */
+  const idle = Date.now() - lastSent > Math.min(2500, STALE * 0.4);
+  if (!moved && !idle) return;
+  moved = false; lastSent = Date.now();
+  chan.send({ type:'broadcast', event:'pos',
+              payload:{ id:meId, g: MINE ? MINE.name : null, x:me.x, y:me.y, f:me.facing } });
+}
 const myLook = Math.floor(Math.random() * LOOKS.length);
 function paintWho(){
   const n = Math.max(1, online);
