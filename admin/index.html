@@ -75,31 +75,47 @@
   .msg{ font-size:.85rem; margin-top:.7rem; min-height:1.2em; }
   .msg.err{ color:var(--critical); }
 
-  /* ---- the jump rail ----
-     Fifteen panels is more than anyone should scroll through to reach the one
-     they want. Fixed on desktop; on a phone it becomes a horizontal strip at the
-     top, because a fixed side rail on a 390px screen is just lost width. */
+  /* ---- the shell ----
+     Thirteen panels in one column meant a 3,000px scroll to reach the itinerary.
+     They are now six views, one on screen at a time, addressable by hash so a
+     refresh (or a bookmark) lands where you were. The panels themselves are
+     untouched — the shell moves them, it doesn't rebuild them. */
   #side{ display:none; }
-  #side a{ display:block; padding:.3rem .55rem; border-radius:7px; color:var(--ink-2);
-    text-decoration:none; font-size:.79rem; line-height:1.35; white-space:nowrap; }
+  #side a{ display:flex; align-items:center; gap:6px; padding:.44rem .6rem; border-radius:8px;
+    color:var(--ink-2); text-decoration:none; font-size:.85rem; line-height:1.3; white-space:nowrap; }
   #side a:hover{ background:var(--surface-2); color:var(--ink); }
-  #side a.on{ background:var(--surface-2); color:var(--ink); font-weight:600; }
-  .sideTop{ display:block; font-size:.64rem; letter-spacing:.1em; text-transform:uppercase;
-    color:var(--ink-3); padding:0 .55rem .35rem; }
-  @media (min-width:1120px){
-    #side{ display:block; position:fixed; top:0; left:0; bottom:0; width:150px;
+  #side a.on{ background:var(--series); color:#fff; font-weight:600; }
+  #side a.on .nvc{ background:rgba(255,255,255,.25); color:#fff; }
+  .nvc{ margin-left:auto; font-size:.7rem; font-weight:600; color:var(--ink-2);
+    background:var(--surface-2); border-radius:100px; padding:.05rem .4rem; min-width:1.1rem;
+    text-align:center; }
+  .nvc:empty{ display:none; }
+  .sideBrand{ display:block; font-size:.95rem; line-height:1.15; color:var(--ink-3);
+    padding:0 .6rem .9rem; letter-spacing:.02em; }
+  .sideBrand b{ color:var(--ink); font-size:1.05rem; }
+
+  .view{ display:none; }
+  .view.on{ display:block; animation:viewIn .18s ease both; }
+  @keyframes viewIn{ from{ opacity:0; transform:translateY(3px) } to{ opacity:1; transform:none } }
+  .viewHead{ margin:-6px 0 14px; }
+  .viewHead p{ margin:0; color:var(--ink-3); font-size:.85rem; }
+
+  /* the rail belongs to the dashboard, not to the login card — `body.in` is set
+     once a session is confirmed, so a signed-out visitor sees only the card */
+  body:not(.in) #side{ display:none !important; }
+  @media (min-width:1000px){
+    #side{ display:block; position:fixed; top:0; left:0; bottom:0; width:178px;
       border-right:1px solid var(--line); background:var(--surface-1); z-index:20;
-      overflow-y:auto; padding:20px 8px; }
-    #app{ padding-left:170px !important; max-width:1330px; }
+      overflow-y:auto; padding:20px 10px; }
+    #app{ padding-left:200px !important; max-width:1400px; }
   }
-  @media (max-width:1119px){
+  @media (max-width:999px){
     #side{ display:block; position:sticky; top:0; z-index:20; background:var(--surface-1);
       border-bottom:1px solid var(--line); padding:8px 10px; }
-    #side .sideIn{ display:flex; gap:4px; overflow-x:auto; }
-    #side .sideTop{ display:none; }
+    #side .sideIn{ display:flex; gap:5px; overflow-x:auto; }
+    #side .sideBrand{ display:none; }
     #side a{ flex:none; border:1px solid var(--line); }
   }
-  section[id^="sec-"]{ scroll-margin-top:64px; }
 
   /* ---- shell ---- */
   #app{ display:none; max-width:1180px; margin:0 auto; padding:22px 20px 70px; }
@@ -296,25 +312,21 @@
 </section>
 
 <!-- ===================== dashboard ===================== -->
-<nav id="side" aria-label="dashboard sections">
+<nav id="side" aria-label="sections">
   <div class="sideIn">
-    <span class="sideTop">jump to</span>
-      <a href="#sec-applied">applications</a>
-      <a href="#sec-dropoff">drop-off</a>
-      <a href="#sec-sources">traffic</a>
-      <a href="#sec-checkin">check-in</a>
-      <a href="#sec-stay">rooms &amp; stay</a>
-      <a href="#sec-crew">team &amp; vendors</a>
-      <a href="#sec-itin">itinerary</a>
-      <a href="#sec-late">late list</a>
-      <a href="#sec-drafts">unfinished</a>
-      <a href="#sec-seo">sharing &amp; SEO</a>
+    <span class="sideBrand">slumber<br /><b>admin</b></span>
+    <a href="#/overview"     data-view="overview">overview<span class="nvc" id="nv-overview"></span></a>
+    <a href="#/applications" data-view="applications">applications<span class="nvc" id="nv-applications"></span></a>
+    <a href="#/guests"       data-view="guests">guests &amp; check-in<span class="nvc" id="nv-guests"></span></a>
+    <a href="#/stay"         data-view="stay">rooms &amp; crew<span class="nvc" id="nv-stay"></span></a>
+    <a href="#/day"          data-view="day">the day<span class="nvc" id="nv-day"></span></a>
+    <a href="#/reach"        data-view="reach">reach<span class="nvc" id="nv-reach"></span></a>
   </div>
 </nav>
 
 <main id="app">
   <header class="top">
-    <h1>applications</h1>
+    <h1 id="topTitle">overview</h1>
     <span class="live"><span class="dot"></span><span id="liveTxt">live</span></span>
     <button class="btn ghost" id="csv" type="button">download csv</button>
     <button class="btn ghost" id="out" type="button">sign out</button>
@@ -781,6 +793,7 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
 });
 
 document.getElementById('out').addEventListener('click', async () => {
+  document.body.classList.remove('in');
   await sb.auth.signOut(); location.reload();
 });
 
@@ -832,6 +845,8 @@ async function boot() {
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
+  document.body.classList.add('in');
+  buildShell();
   renderAll();
 
   sb.channel('live')
@@ -880,25 +895,113 @@ async function boot() {
     .subscribe();
 }
 
-/* highlight the section you're actually looking at — a rail that never responds
-   reads as decoration rather than navigation */
-(function railHighlight(){
-  const links = [...document.querySelectorAll('#side a')];
-  if (!links.length || !('IntersectionObserver' in window)) return;
-  const byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
-  const io = new IntersectionObserver((entries) => {
-    for (const en of entries) {
-      if (!en.isIntersecting) continue;
-      links.forEach(a => a.classList.remove('on'));
-      const a = byId.get(en.target.id);
-      if (a) a.classList.add('on');
+/* ============================================================================
+   THE SHELL
+   Six views composed from the panels that already exist. The panels are MOVED,
+   not rebuilt: every id survives, so every listener bound at load and every
+   render function keeps pointing at the same element. That is the whole reason
+   this is a shell and not a rewrite — the dashboard is a week from doing real
+   work and its internals are the part worth not breaking.
+   ========================================================================== */
+const VIEWS = [
+  { id:'overview',     title:'overview',            blurb:'the funnel, end to end' },
+  { id:'applications', title:'applications',        blurb:'everyone who applied, and everyone who nearly did' },
+  { id:'guests',       title:'guests & check-in',   blurb:'the list, their links, and who has checked in' },
+  { id:'stay',         title:'rooms & crew',        blurb:'who sleeps where, and who is working' },
+  { id:'day',          title:'the day',             blurb:'the programme guests see at /itinerary' },
+  { id:'reach',        title:'reach',               blurb:'the late list, and how the link looks when shared' },
+];
+
+/* which panels belong to which view, by the ids they already carry. Anything not
+   listed stays where it is rather than vanishing — a panel added later shows up
+   in overview instead of disappearing without trace. */
+const VIEW_MAP = {
+  overview:     ['@tiles', '@grid0', '@grid1'],
+  applications: ['sec-applied', 'sec-drafts', 'failPanel'],
+  guests:       ['sec-checkin'],
+  stay:         ['sec-stay', 'sec-crew'],
+  day:          ['sec-itin'],
+  reach:        ['sec-late', 'sec-seo'],
+};
+
+function buildShell() {
+  const app = document.getElementById('app');
+  if (!app || document.querySelector('.view')) return;      // already built
+
+  const kids = [...app.children];
+  const header = kids.find(el => el.tagName === 'HEADER');
+  const grids  = kids.filter(el => el.classList.contains('grid'));
+  const pick = (key) => key === '@tiles' ? document.getElementById('tiles')
+             : key === '@grid0' ? grids[0]
+             : key === '@grid1' ? grids[1]
+             : document.getElementById(key);
+
+  const frag = document.createDocumentFragment();
+  for (const v of VIEWS) {
+    const sec = document.createElement('div');
+    sec.className = 'view'; sec.id = 'view-' + v.id;
+    sec.innerHTML = `<div class="viewHead"><p>${v.blurb}</p></div>`;
+    for (const key of (VIEW_MAP[v.id] || [])) {
+      const el = pick(key);
+      if (el) sec.appendChild(el);                          // move, don't clone
     }
-  }, { rootMargin: '-15% 0px -70% 0px' });
-  for (const id of byId.keys()) {
-    const el = document.getElementById(id);
-    if (el) io.observe(el);
+    frag.appendChild(sec);
   }
-})();
+  // anything unclaimed joins overview rather than being orphaned
+  const leftovers = [...app.children].filter(el => el !== header && !el.classList.contains('view'));
+  const ov = frag.getElementById ? null : null;
+  app.appendChild(frag);
+  const overview = document.getElementById('view-overview');
+  for (const el of leftovers) overview.appendChild(el);
+
+  document.getElementById('side').addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-view]');
+    if (!a) return;
+    e.preventDefault();
+    location.hash = '#/' + a.dataset.view;
+  });
+  addEventListener('hashchange', showView);
+  showView();
+}
+
+function showView() {
+  const want = (location.hash.match(/^#\/(\w+)/) || [])[1];
+  const v = VIEWS.find(x => x.id === want) ? want : 'overview';
+  for (const x of VIEWS) {
+    const el = document.getElementById('view-' + x.id);
+    if (el) el.classList.toggle('on', x.id === v);
+    const a = document.querySelector(`#side a[data-view="${x.id}"]`);
+    if (a) a.classList.toggle('on', x.id === v);
+  }
+  /* the header names the view, so the title sits with the actions instead of
+     being repeated inside the scroll area */
+  const t = document.getElementById('topTitle');
+  const meta = VIEWS.find(x => x.id === v);
+  if (t && meta) t.textContent = meta.title;
+  /* "download csv" is the applications export — it only means something there */
+  const csvBtn = document.getElementById('csv');
+  if (csvBtn) csvBtn.hidden = (v !== 'applications');
+  scrollTo({ top: 0 });
+}
+
+/* Structure, not data: build it now. Waiting for login would show the old
+   stacked layout for as long as the session check takes. */
+buildShell();
+window.__shell = { VIEWS, showView };   // for smoke-testing the shell without a login
+
+/* the counts on the rail — a dashboard should say how much is behind each door
+   before you open it */
+function navCounts() {
+  const set = (id, n) => { const el = document.getElementById('nv-' + id); if (el) el.textContent = n || ''; };
+  set('applications', APPS.length);
+  set('guests', GUESTS.filter(g => g.code).length);
+  set('stay', ROOMS.length);
+  set('day', ITIN.length);
+  set('reach', WAITLIST.length);
+  const live = new Set(VISITS.filter(v => Date.now() - +new Date(v.created_at) < 5 * 60 * 1000)
+    .map(v => v.session_id)).size;
+  set('overview', live);
+}
 
 function flashLive(what = 'new application') {
   const t = document.getElementById('liveTxt');
@@ -932,7 +1035,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); tiles(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
