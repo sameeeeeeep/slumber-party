@@ -470,6 +470,21 @@
         <button class="btn" type="submit" style="width:auto">add &amp; mint link</button>
         <button class="btn ghost" id="gAddCancel" type="button" hidden>cancel</button>
       </form>
+      <!-- what guests see about each other in the house at /house -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0 0">
+        <label style="flex:0 1 150px;margin:0">instagram <span class="sub" style="margin:0">(no @)</span>
+          <input id="gAddIg" type="text" placeholder="khushikapoor" style="margin:0" /></label>
+        <label style="flex:0 1 130px;margin:0">room in the house
+          <select id="gAddRoom" style="margin:0">
+            <option value="">— auto —</option>
+            <option value="fort">pillow fort</option>
+            <option value="nails">nail bar</option>
+            <option value="terrace">terrace</option>
+            <option value="arcade">arcade room</option>
+          </select></label>
+        <label style="flex:3 1 260px;margin:0">one line about them <span class="sub" style="margin:0">(shown on their card)</span>
+          <input id="gAddBlurb" type="text" maxlength="240" placeholder="DJ for the night — she picks what we dance to." style="margin:0" /></label>
+      </div>
       <p class="sub" id="gAddMsg" style="min-height:1.1rem;margin:0 0 10px"></p>
 
       <details style="margin-bottom:10px"><summary class="sub" style="cursor:pointer">or paste several names at once</summary>
@@ -605,6 +620,8 @@
       <span class="pill" id="itCount">—</span>
       <a class="btn ghost" href="/itinerary/" target="_blank" rel="noopener"
          style="text-decoration:none">open guest view</a>
+      <a class="btn ghost" href="/house/" target="_blank" rel="noopener"
+         style="text-decoration:none">open the house</a>
     </div>
     <p class="sub">what guests see at <b>/itinerary</b> (password: <code>nailinit</code>).
       Changes land on their phones within a minute. Hidden items are drafts —
@@ -1330,6 +1347,9 @@ document.getElementById('ciBody').addEventListener('click', async (e) => {
     gAddName.value = g.name;
     gAddTier.value = g.tier || 'bestie';
     gAddAddr.value = g.address || '';
+    gAddIg.value = g.instagram || '';
+    gAddRoom.value = g.room || '';
+    gAddBlurb.value = g.blurb || '';
     document.querySelector('#gAddForm button[type=submit]').textContent = 'save changes';
     document.getElementById('gAddCancel').hidden = false;
     msg.textContent = `editing ${g.name}` + (g.code ? ` · link stays ${g.code}` : '');
@@ -1369,7 +1389,12 @@ document.getElementById('gAddForm')?.addEventListener('submit', async (e) => {
   if (!name) return;
 
   if (gEditing) {
-    const patch = { name, tier: gAddTier.value, address: gAddAddr.value.trim() || null };
+    const patch = { name, tier: gAddTier.value, address: gAddAddr.value.trim() || null,
+      // stored bare so the house can build the URL; a pasted profile link still works
+      instagram: gAddIg.value.trim().replace(/^@+/, '')
+        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null,
+      room: gAddRoom.value || null,
+      blurb: gAddBlurb.value.trim() || null };
     const res = await save(sb.from('guests').update(patch).eq('id', gEditing), 'that guest');
     if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
     Object.assign(GUESTS.find(g => g.id === gEditing) || {}, patch);
@@ -1385,7 +1410,11 @@ document.getElementById('gAddForm')?.addEventListener('submit', async (e) => {
   }
   msg.textContent = 'adding…';
   const row = { name, tier: gAddTier.value, code: mintCode(name),
-                address: gAddAddr.value.trim() || null };
+                address: gAddAddr.value.trim() || null,
+                instagram: gAddIg.value.trim().replace(/^@+/, '')
+                  .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null,
+                room: gAddRoom.value || null,
+                blurb: gAddBlurb.value.trim() || null };
   const { data, error } = await sb.from('guests').insert(row).select().single();
   if (error) { msg.textContent = error.message; return; }
   GUESTS = GUESTS.concat([data]).sort((a, b) => a.name.localeCompare(b.name));

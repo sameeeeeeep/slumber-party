@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="referrer" content="no-referrer" />
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+<title>the house 🤫 · khushi's slumber party</title>
+<meta name="description" content="For guests." />
+<link rel="icon" type="image/png" href="/assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Playfair+Display:ital,wght@0,500&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* THE HOUSE — a top-down slumber party you can walk around.
+     Deliberately 2D canvas and procedurally-drawn characters: no engine, no
+     downloads, no asset pipeline, and it starts instantly on a phone over hotel
+     wifi. The point isn't the graphics, it's "who else is coming" — so the whole
+     thing is built around walking up to someone and reading their card. */
+  :root{
+    --wine:#2a1520; --wine-2:#1c1017; --cream:#fff6f8; --ink:#2b1a22;
+    --pink:#eb648c; --rose:#c2456b; --soft:#c9a0ae; --yellow:#ffe9a8;
+    --mono:'VT323',monospace; --pixel:'Press Start 2P',monospace;
+    --hand:'Caveat',cursive; --serif:'Playfair Display',serif;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  p,h1,h2{ margin:0; }
+  html,body{ margin:0; height:100%; overflow:hidden; }
+  body{ background:var(--wine-2); color:var(--cream); font-family:var(--mono);
+    touch-action:none; user-select:none; -webkit-user-select:none; }
+
+  /* ---- the word ---- */
+  #gate{ position:fixed; inset:0; display:grid; place-items:center; padding:1.4rem; z-index:30;
+    background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%); }
+  .gbox{ text-align:center; width:min(22rem,100%); }
+  .gbox img{ display:block; width:min(74%,15rem); margin:0 auto .8rem; }
+  .gbox h1{ font-family:var(--serif); font-style:italic; font-size:1.75rem; margin:0 0 1.1rem; color:#fff; }
+  .gbox form{ display:flex; gap:.5rem; }
+  .gbox input{ flex:1; min-width:0; background:rgba(255,255,255,.06);
+    border:1px solid rgba(245,195,207,.28); border-radius:100px; padding:.6rem 1rem;
+    color:var(--cream); font-family:var(--mono); font-size:1.3rem; outline:none; text-align:center; }
+  .gbox input:focus{ border-color:var(--pink); }
+  .gbox button{ flex:none; border:0; cursor:pointer; border-radius:100px; padding:.55rem 1.05rem;
+    font-family:var(--pixel); font-size:.6rem; color:#fff;
+    background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .25rem .9rem rgba(235,100,140,.4); }
+  .gbox .err{ min-height:1.5rem; margin-top:.7rem; font-size:1.1rem; color:#ffb3c6; }
+  .gbox.no input{ animation:no .35s; }
+  @keyframes no{ 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+
+  /* ---- the world ---- */
+  #world{ position:fixed; inset:0; display:none; }
+  #world.on{ display:block; }
+  canvas{ display:block; width:100%; height:100%; image-rendering:pixelated; }
+
+  /* room name, top-centre — the only persistent chrome */
+  #roomTag{ position:fixed; top:calc(.7rem + env(safe-area-inset-top,0px)); left:0; right:0;
+    text-align:center; font-family:var(--pixel); font-size:.62rem; letter-spacing:.14em;
+    color:var(--yellow); text-shadow:0 0 10px rgba(255,233,168,.5); pointer-events:none; z-index:6; }
+  #hint{ position:fixed; bottom:calc(.8rem + env(safe-area-inset-bottom,0px)); left:0; right:0;
+    text-align:center; font-size:1.05rem; color:var(--soft); pointer-events:none; z-index:6;
+    transition:opacity .4s; }
+
+  /* who's online, top-left */
+  #who{ position:fixed; top:calc(.6rem + env(safe-area-inset-top,0px)); left:.7rem; z-index:6;
+    font-size:1rem; color:var(--soft); pointer-events:none; }
+  #who i{ font-style:normal; color:#7ddc9b; }
+
+  /* ---- the profile card ---- */
+  #card{ position:fixed; left:50%; bottom:calc(4.6rem + env(safe-area-inset-bottom,0px));
+    transform:translateX(-50%) translateY(14px); width:min(20rem,calc(100vw - 2rem));
+    background:var(--cream); color:var(--ink); border-radius:1.1rem; padding:.85rem 1rem;
+    box-shadow:0 14px 40px rgba(0,0,0,.5); opacity:0; pointer-events:none;
+    transition:opacity .18s ease, transform .18s ease; z-index:8; }
+  #card.on{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+  #card .nm{ font-size:1.5rem; line-height:1.1; }
+  #card .tr{ display:inline-block; font-family:var(--pixel); font-size:.5rem; letter-spacing:.08em;
+    border:1px solid rgba(43,26,34,.3); border-radius:100px; padding:.2rem .4rem; margin-left:.35rem;
+    vertical-align:middle; color:var(--rose); }
+  #card .bl{ font-size:1.12rem; line-height:1.3; color:rgba(43,26,34,.72); margin-top:.25rem; }
+  #card a{ display:inline-block; margin-top:.45rem; color:var(--rose); font-size:1.15rem;
+    text-decoration:underline; text-underline-offset:2px; }
+
+  /* ---- touch stick, mobile only ---- */
+  #stick{ position:fixed; left:calc(1rem + env(safe-area-inset-left,0px));
+    bottom:calc(1.4rem + env(safe-area-inset-bottom,0px));
+    width:8.4rem; height:8.4rem; border-radius:50%; z-index:7; display:none;
+    background:rgba(255,255,255,.06); border:1px solid rgba(245,195,207,.22); touch-action:none; }
+  #stick b{ position:absolute; left:50%; top:50%; width:3.1rem; height:3.1rem; margin:-1.55rem 0 0 -1.55rem;
+    border-radius:50%; background:rgba(235,100,140,.55); box-shadow:0 0 1rem rgba(235,100,140,.5); }
+  body.touch #stick{ display:block; }
+
+  /* the arcade door, when you're standing on it */
+  #door{ position:fixed; left:50%; bottom:calc(4.6rem + env(safe-area-inset-bottom,0px));
+    transform:translateX(-50%); z-index:9; display:none; }
+  #door.on{ display:block; }
+  #door a{ display:block; font-family:var(--pixel); font-size:.62rem; letter-spacing:.06em; color:#fff;
+    text-decoration:none; padding:.7rem 1.1rem; border-radius:100px;
+    background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .3rem 1rem rgba(235,100,140,.45); }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gbox" id="gbox">
+    <img src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <h1>what's the word?</h1>
+    <form id="gform">
+      <input id="gpw" type="password" autocomplete="off" autocapitalize="none" placeholder="•••••" />
+      <button type="submit">GO IN ▸</button>
+    </form>
+    <p class="err" id="gerr"></p>
+  </div>
+</div>
+
+<div id="world">
+  <canvas id="cv"></canvas>
+  <p id="who"></p>
+  <p id="roomTag"></p>
+  <div id="card"></div>
+  <div id="door"><a href="/?arcade">▸ ENTER THE ARCADE</a></div>
+  <p id="hint"></p>
+  <div id="stick"><b></b></div>
+</div>
+
+<script src="/assets/config.js"></script>
+<script type="module">
+/* ============================================================================
+   THE HOUSE
+   One map, four rooms, everyone who's coming standing in them. Walk up to
+   somebody and their card opens — name, a line about them, their instagram.
+
+   Everything is drawn in code: eight characters built from a palette rather
+   than a spritesheet, so there's nothing to download and nothing to keep in
+   sync. The map is a tile grid; walls are solid, doorways are gaps.
+   ========================================================================== */
+const CFG = window.SLUMBER_CONFIG || {};
+const cv = document.getElementById('cv');
+const cx = cv.getContext('2d');
+let TOUCH = matchMedia('(hover:none) and (pointer:coarse)').matches;
+if (TOUCH) document.body.classList.add('touch');
+/* Some in-app browsers misreport pointer capabilities, and a guest who can't see
+   the stick has no way to walk. A real touch is proof, so trust it over the query. */
+addEventListener('touchstart', () => {
+  TOUCH = true; document.body.classList.add('touch');
+}, { once:true, passive:true });
+
+/* ---------- the map ----------
+   . floor   # wall   ~ doorway(floor)   A arcade portal
+   Four rooms around a central landing, so every room is two steps from the
+   middle and nobody gets lost. 40x26 keeps the whole house on one screen at
+   desktop while still needing a camera on a phone. */
+const MAP = [
+  '########################################',
+  '#........#............#................#',
+  '#........#............#................#',
+  '#..FORT..#...NAILS....#....TERRACE.....#',
+  '#........#............#................#',
+  '#........#............#................#',
+  '#........#............#................#',
+  '#........~............~................#',
+  '#........#............#................#',
+  '#........#............#................#',
+  '##~#######............#######~##########',
+  '#.....................................#.',
+  '#.....................................#.',
+  '#............................ ........#.',
+  '#.....................................#.',
+  '##~####################~###############.',
+  '#........#..........................#..#',
+  '#........#..........................#..#',
+  '#..ARCADE#.........LOUNGE...........#..#',
+  '#...AAA..#..........................#..#',
+  '#...AAA..#..........................#..#',
+  '#........#..........................#..#',
+  '#........#..........................#..#',
+  '########################################',
+].map(r => r.padEnd(40, '#'));
+const MH = MAP.length, MW = 40;
+const TILE = 22;                       // world units per tile; the camera scales it
+
+/* room lookup by tile, so the tag at the top always names where you are */
+const ROOM_AT = (tx, ty) => {
+  if (ty < 10) return tx < 9 ? 'fort' : tx < 22 ? 'nails' : 'terrace';
+  if (ty < 15) return 'landing';
+  return tx < 9 ? 'arcade' : 'lounge';
+};
+const ROOM_NAME = { fort:'THE PILLOW FORT', nails:'THE NAIL BAR', terrace:'THE TERRACE',
+                    arcade:'THE ARCADE ROOM', lounge:'THE LOUNGE', landing:'THE LANDING' };
+/* where each room's guests stand — a rectangle of floor to scatter them across */
+const ROOM_BOX = {
+  fort:    { x:2,  y:4,  w:6,  h:5 },
+  nails:   { x:10, y:4,  w:11, h:5 },
+  terrace: { x:23, y:4,  w:15, h:5 },
+  arcade:  { x:2,  y:20, w:6,  h:2 },
+  lounge:  { x:11, y:16, w:23, h:6 },
+};
+const solid = (tx, ty) => {
+  if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) return true;
+  const ch = MAP[ty][tx];
+  return ch === '#';
+};
+const isPortal = (tx, ty) => MAP[ty] && MAP[ty][tx] === 'A';
+
+/* ---------- characters ----------
+   Eight looks from one drawing routine. Hair, skin and pyjama colour are the
+   only differences, which is enough to tell 37 people apart at a glance while
+   keeping every character on-brand. */
+const LOOKS = [
+  { hair:'#3a2418', skin:'#f0c9a8', pj:'#eb648c' },
+  { hair:'#1d1420', skin:'#e3b088', pj:'#8fd7ff' },
+  { hair:'#7a4a2a', skin:'#f7dcc0', pj:'#ffe08a' },
+  { hair:'#2b1a22', skin:'#c98d63', pj:'#a6f0c0' },
+  { hair:'#4b2e5a', skin:'#f0c9a8', pj:'#eb9cff' },
+  { hair:'#12100f', skin:'#8d5a3b', pj:'#ffc48a' },
+  { hair:'#8a5a3c', skin:'#e8bd97', pj:'#9ab0ff' },
+  { hair:'#241a2e', skin:'#d79c72', pj:'#ff9ab0' },
+];
+
+function drawPerson(px, py, s, look, facing, walkT, label){
+  const L = LOOKS[look % LOOKS.length];
+  const bob = Math.sin(walkT * 0.018) * s * 0.05;
+  const y = py + bob;
+  // shadow first, so bodies never look like they're floating
+  cx.fillStyle = 'rgba(0,0,0,.28)';
+  cx.beginPath(); cx.ellipse(px, py + s * 0.46, s * 0.3, s * 0.11, 0, 0, 7); cx.fill();
+  // pyjamas
+  cx.fillStyle = L.pj;
+  rr(px - s * 0.24, y - s * 0.06, s * 0.48, s * 0.5, s * 0.14); cx.fill();
+  // legs, alternating while walking
+  const step = Math.sin(walkT * 0.02) * s * 0.08;
+  cx.fillStyle = L.pj;
+  cx.fillRect(px - s * 0.17, y + s * 0.38, s * 0.13, s * 0.12 + step);
+  cx.fillRect(px + s * 0.04, y + s * 0.38, s * 0.13, s * 0.12 - step);
+  // head
+  cx.fillStyle = L.skin;
+  cx.beginPath(); cx.arc(px, y - s * 0.24, s * 0.22, 0, 7); cx.fill();
+  // hair — a fringe that shifts with facing, which is all the direction cue needed
+  cx.fillStyle = L.hair;
+  cx.beginPath();
+  cx.arc(px, y - s * 0.28, s * 0.23, Math.PI * 0.98, Math.PI * 2.02);
+  cx.fill();
+  if (facing !== 'up') {
+    cx.fillStyle = '#2b1a22';
+    const ex = facing === 'left' ? -s * 0.07 : facing === 'right' ? s * 0.07 : 0;
+    cx.beginPath();
+    cx.arc(px + ex - s * 0.07, y - s * 0.22, s * 0.028, 0, 7);
+    cx.arc(px + ex + s * 0.07, y - s * 0.22, s * 0.028, 0, 7);
+    cx.fill();
+  }
+  if (label){
+    cx.font = '600 ' + Math.max(9, s * 0.26) + 'px ui-monospace, monospace';
+    cx.textAlign = 'center'; cx.textBaseline = 'alphabetic';
+    cx.fillStyle = 'rgba(26,10,18,.75)';
+    const w = cx.measureText(label).width + s * 0.2;
+    rr(px - w / 2, y - s * 0.78, w, s * 0.3, s * 0.1); cx.fill();
+    cx.fillStyle = '#ffe9a8';
+    cx.fillText(label, px, y - s * 0.57);
+  }
+}
+function rr(x, y, w, h, r){
+  cx.beginPath();
+  cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + h, r);
+  cx.arcTo(x + w, y + h, x, y + h, r); cx.arcTo(x, y + h, x, y, r);
+  cx.arcTo(x, y, x + w, y, r); cx.closePath();
+}
+
+/* ---------- state ---------- */
+let PEOPLE = [], me = { x: 20 * TILE, y: 12.5 * TILE, facing:'down', walkT: 0 },
+    keys = {}, stick = { dx:0, dy:0, on:false },
+    near = null, room = '', online = 1, others = new Map(), chan = null, PW = null;
+try { PW = sessionStorage.getItem('ssp-itin'); } catch(e){}
+
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ---------- the word ---------- */
+async function fetchPeople(pw){
+  const r = await fetch(CFG.supabaseUrl.replace(/\/$/,'') + '/functions/v1/house', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', apikey:CFG.supabaseAnonKey,
+              Authorization:'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: pw })
+  });
+  if (r.status === 401) return { wrong:true };
+  if (r.status === 429) return { rate:true };
+  const j = await r.json().catch(() => ({}));
+  return j.ok ? j : {};
+}
+
+async function enter(pw, quiet){
+  const res = await fetchPeople(pw);
+  if (res.people){
+    PW = pw;
+    try { sessionStorage.setItem('ssp-itin', pw); } catch(e){}
+    place(res.people);
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('world').classList.add('on');
+    hint(TOUCH ? 'drag the circle to walk · go up to someone'
+               : 'arrows or wasd to walk · go up to someone');
+    paintWho();                 // truthful before presence connects: it's you
+    resize(); joinPresence();
+    if (!raf) loop();
+    return true;
+  }
+  if (!quiet){
+    const box = document.getElementById('gbox');
+    document.getElementById('gerr').textContent =
+      res.rate ? 'too many tries — give it a while 🙏' : res.wrong ? "that's not it 👀" : 'hmm, try again';
+    box.classList.remove('no'); void box.offsetWidth; box.classList.add('no');
+  }
+  return false;
+}
+
+/* Scatter each room's guests over its floor, deterministically — the same person
+   stands in the same spot every visit, so the house has a memory. */
+function place(people){
+  const byRoom = {};
+  for (const p of people) (byRoom[p.room] = byRoom[p.room] || []).push(p);
+  PEOPLE = [];
+  for (const key in byRoom){
+    const box = ROOM_BOX[key] || ROOM_BOX.lounge, list = byRoom[key];
+    const cols = Math.max(1, Math.min(box.w, Math.ceil(Math.sqrt(list.length * (box.w / box.h)))));
+    list.forEach((p, i) => {
+      const c = i % cols, r = Math.floor(i / cols);
+      const tx = box.x + (c * (box.w - 1)) / Math.max(1, cols - 1);
+      const rows = Math.max(1, Math.ceil(list.length / cols));
+      const ty = box.y + (r * (box.h - 1)) / Math.max(1, rows - 1);
+      PEOPLE.push({ ...p, x:(tx + 0.5) * TILE, y:(ty + 0.5) * TILE, walkT: i * 400 });
+    });
+  }
+}
+
+/* ---------- presence ----------
+   The reason to come back: you can see who else is in the house right now. One
+   Realtime channel, positions broadcast a few times a second. No database
+   writes — presence is ephemeral by nature, and a party lobby doesn't need a
+   history of where people stood. */
+async function joinPresence(){
+  if (chan || !CFG.supabaseUrl) return;
+  try {
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const sb = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, { auth:{ persistSession:false } });
+    const meId = Math.random().toString(36).slice(2, 9);
+    chan = sb.channel('house', { config:{ presence:{ key: meId } } });
+    chan.on('presence', { event:'sync' }, () => {
+      const st = chan.presenceState();
+      online = Math.max(1, Object.keys(st).length);
+      others.clear();
+      for (const k in st){
+        if (k === meId) continue;
+        const v = st[k][0];
+        if (v && typeof v.x === 'number') others.set(k, v);
+      }
+      paintWho();
+    });
+    await chan.subscribe(async (s) => {
+      if (s === 'SUBSCRIBED'){
+        await chan.track({ x:me.x, y:me.y, look: myLook });
+        setInterval(() => { if (chan) chan.track({ x:me.x, y:me.y, look: myLook }); }, 900);
+      }
+    });
+  } catch(e){ /* presence is a bonus; the house works without it */ }
+}
+const myLook = Math.floor(Math.random() * LOOKS.length);
+function paintWho(){
+  document.getElementById('who').innerHTML =
+    '<i>●</i> ' + online + (online === 1 ? ' person here' : ' people here');
+}
+
+/* ---------- input ---------- */
+addEventListener('keydown', e => {
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+  keys[e.key.toLowerCase()] = true;
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+(function stickSetup(){
+  const el = document.getElementById('stick'), nub = el.querySelector('b');
+  let id = null, cxp = 0, cyp = 0, R = 1;
+  const start = e => { const t = e.changedTouches ? e.changedTouches[0] : e;
+    id = t.identifier ?? 'm'; const r = el.getBoundingClientRect();
+    cxp = r.left + r.width / 2; cyp = r.top + r.height / 2; R = r.width * 0.34; stick.on = true; move(e); };
+  const move = e => {
+    if (!stick.on) return;
+    const list = e.changedTouches ? [...e.changedTouches] : [e];
+    const t = list.find(t => (t.identifier ?? 'm') === id) || list[0];
+    let dx = t.clientX - cxp, dy = t.clientY - cyp;
+    const d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / R);
+    dx = dx / d * k; dy = dy / d * k;
+    stick.dx = dx; stick.dy = dy;
+    nub.style.transform = 'translate(' + (dx * R) + 'px,' + (dy * R) + 'px)';
+  };
+  const end = () => { stick.on = false; stick.dx = stick.dy = 0; nub.style.transform = ''; };
+  el.addEventListener('touchstart', start, { passive:true });
+  el.addEventListener('touchmove', move, { passive:true });
+  el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+  el.addEventListener('pointerdown', e => { if (!TOUCH) return; start(e); });
+  addEventListener('pointermove', e => { if (stick.on && !e.changedTouches) move(e); });
+  addEventListener('pointerup', end);
+})();
+
+/* ---------- camera + resize ---------- */
+let view = { s:1, ox:0, oy:0 }, raf = 0;
+function resize(){
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const w = innerWidth, h = innerHeight;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  /* COVER, not fit. The house is much wider than it is tall, so fitting it left
+     half a portrait phone as black bands above and below. Covering fills the
+     screen at every shape and lets the camera pan instead — which is also how
+     faces stay big enough to recognise on a small screen. Capped so a tiny
+     viewport can't zoom to absurdity. */
+  view.s = Math.min(2.4, Math.max(w / (MW * TILE), h / (MH * TILE)));
+}
+addEventListener('resize', resize);
+addEventListener('orientationchange', () => setTimeout(resize, 250));
+
+/* ---------- the loop ---------- */
+let last = 0, lastFrameAt = 0;
+function frame(now){
+  const t = now || performance.now();
+  const dt = Math.min(50, last ? t - last : 16); last = t; lastFrameAt = Date.now();
+  step(dt); draw();
+}
+function loop(t){
+  raf = requestAnimationFrame(loop);
+  frame(t);
+}
+/* requestAnimationFrame is the right driver, but it isn't guaranteed: it's paused
+   in a background tab (correct — nobody needs the house simulated while they read
+   a message) and some in-app browsers starve it in states we can't detect. Guests
+   will open this inside Instagram, so a watchdog steps the world if no frame has
+   run for a quarter second. Belt and braces, and it costs one timer. */
+setInterval(() => {
+  if (!PEOPLE.length) return;                       // not in the house yet
+  if (document.hidden) { last = 0; return; }         // don't accumulate while away
+  if (Date.now() - lastFrameAt > 250) frame();
+}, 120);
+function step(dt){
+  let dx = 0, dy = 0;
+  if (keys['arrowleft'] || keys['a']) dx -= 1;
+  if (keys['arrowright'] || keys['d']) dx += 1;
+  if (keys['arrowup'] || keys['w']) dy -= 1;
+  if (keys['arrowdown'] || keys['s']) dy += 1;
+  dx += stick.dx; dy += stick.dy;
+  const m = Math.hypot(dx, dy);
+  if (m > 1){ dx /= m; dy /= m; }
+  const spd = TILE * 0.0062 * dt;
+  if (dx || dy){
+    me.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+    me.walkT += dt * 2.2;
+    // axes resolved separately so you slide along a wall instead of sticking to it
+    tryMove(dx * spd, 0); tryMove(0, dy * spd);
+  }
+  for (const p of PEOPLE) p.walkT += dt * 0.5;   // idle sway
+
+  // nearest guest within reach
+  let best = null, bd = TILE * 1.5;
+  for (const p of PEOPLE){
+    const d = Math.hypot(p.x - me.x, p.y - me.y);
+    if (d < bd){ bd = d; best = p; }
+  }
+  if (best !== near){ near = best; paintCard(); }
+
+  const tx = Math.floor(me.x / TILE), ty = Math.floor(me.y / TILE);
+  const r = ROOM_AT(tx, ty);
+  if (r !== room){ room = r; document.getElementById('roomTag').textContent = ROOM_NAME[r] || ''; }
+  document.getElementById('door').classList.toggle('on', isPortal(tx, ty));
+}
+function tryMove(dx, dy){
+  const nx = me.x + dx, ny = me.y + dy, pad = TILE * 0.3;
+  for (const cxp of [nx - pad, nx + pad]) for (const cyp of [ny - pad, ny + pad])
+    if (solid(Math.floor(cxp / TILE), Math.floor(cyp / TILE))) return;
+  me.x = nx; me.y = ny;
+}
+
+function paintCard(){
+  const el = document.getElementById('card');
+  if (!near){ el.classList.remove('on'); return; }
+  const ig = near.instagram
+    ? `<a href="https://instagram.com/${encodeURIComponent(near.instagram)}" target="_blank" rel="noopener">@${esc(near.instagram)} ↗</a>`
+    : '';
+  const tier = near.tier === 'super' ? 'SUPER GUEST' : String(near.tier || '').toUpperCase();
+  el.innerHTML = `<p class="nm">${esc(near.name)}<span class="tr">${esc(tier)}</span></p>` +
+    (near.blurb ? `<p class="bl">${esc(near.blurb)}</p>` : '<p class="bl">one of the thirty-five 🤫</p>') + ig;
+  el.classList.add('on');
+}
+
+let hintT = 0;
+function hint(text){
+  const el = document.getElementById('hint');
+  el.textContent = text; el.style.opacity = '1';
+  clearTimeout(hintT); hintT = setTimeout(() => el.style.opacity = '0', 5200);
+}
+
+function draw(){
+  const W = innerWidth, H = innerHeight, s = view.s, T = TILE * s;
+  cx.fillStyle = '#140b12'; cx.fillRect(0, 0, W, H);
+  // camera follows, then is clamped so you never see past the walls
+  let ox = W / 2 - me.x * s, oy = H / 2 - me.y * s;
+  if (MW * T <= W) ox = (W - MW * T) / 2; else ox = Math.min(0, Math.max(W - MW * T, ox));
+  if (MH * T <= H) oy = (H - MH * T) / 2; else oy = Math.min(0, Math.max(H - MH * T, oy));
+  view.ox = ox; view.oy = oy;
+  cx.save(); cx.translate(ox, oy);
+
+  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++){
+    const ch = MAP[y][x], px = x * T, py = y * T;
+    if (ch === '#'){
+      cx.fillStyle = '#3a2438'; cx.fillRect(px, py, T + 1, T + 1);
+      cx.fillStyle = 'rgba(255,255,255,.04)'; cx.fillRect(px, py, T + 1, T * 0.18);
+    } else {
+      const r = ROOM_AT(x, y);
+      cx.fillStyle = r === 'fort' ? '#40243a' : r === 'nails' ? '#3b2340'
+                   : r === 'terrace' ? '#2f2b46' : r === 'arcade' ? '#341f33'
+                   : r === 'lounge' ? '#3d2436' : '#2c1c2b';
+      cx.fillRect(px, py, T + 1, T + 1);
+      if ((x + y) % 2 === 0){ cx.fillStyle = 'rgba(255,255,255,.018)'; cx.fillRect(px, py, T + 1, T + 1); }
+      if (ch === 'A'){ cx.fillStyle = 'rgba(255,216,74,.14)'; cx.fillRect(px, py, T + 1, T + 1); }
+    }
+  }
+  // room labels, painted into the floor
+  cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  for (const k in ROOM_BOX){
+    const b = ROOM_BOX[k];
+    cx.font = '700 ' + Math.max(8, T * 0.5) + 'px "Press Start 2P", ui-monospace, monospace';
+    cx.fillStyle = 'rgba(255,255,255,.055)';
+    cx.fillText((ROOM_NAME[k] || k).replace('THE ', ''), (b.x + b.w / 2) * T, (b.y - 1.4) * T);
+  }
+
+  // everyone, sorted by y so nearer bodies overlap further ones
+  const cast = PEOPLE.map(p => ({ ...p, label: p.first }));
+  for (const [, o] of others) cast.push({ x:o.x, y:o.y, sprite:o.look ?? 0, walkT:0, label:'guest', ghost:true });
+  cast.push({ x:me.x, y:me.y, sprite:myLook, walkT:me.walkT, label:'you', mine:true });
+  cast.sort((a, b) => a.y - b.y);
+  for (const p of cast){
+    if (p.ghost) cx.globalAlpha = 0.72;
+    drawPerson(p.x * s, p.y * s, T * 1.35, p.sprite, p.mine ? me.facing : 'down', p.walkT,
+      (near && p.name === near.name) || p.mine || p.ghost ? p.label : '');
+    cx.globalAlpha = 1;
+  }
+  cx.restore();
+}
+
+/* ---------- go ---------- */
+document.getElementById('gform').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = document.getElementById('gpw').value.trim();
+  if (v) enter(v, false);
+});
+resize();
+if (PW) enter(PW, true);      // came from the programme in the same session
+</script>
+</body>
+</html>

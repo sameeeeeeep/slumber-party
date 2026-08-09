@@ -447,3 +447,20 @@ end $$;
 drop policy if exists "admins update guests" on public.guests;
 create policy "admins update guests" on public.guests for update to authenticated
   using (public.is_admin()) with check (public.is_admin());
+
+-- ============================================================================
+--  THE HOUSE — guest profiles for /house
+--  blurb / instagram / sprite / room are the only guest fields any OTHER guest
+--  can see. They are served by the `house` Edge Function behind the same word as
+--  /itinerary (one word for guests to remember), and that function selects a
+--  hand-written column list rather than `*` — so adding a column to `guests`
+--  can never quietly publish it to the whole party. Addresses, codes, phones,
+--  emails and check-in records stay admin-only.
+--  `room` is one of fort | nails | terrace | arcade; NULL means "spread them out".
+--  `sprite` NULL means "derive a character from the name", so the house is
+--  populated before anyone fills anything in.
+-- ============================================================================
+alter table public.guests add column if not exists blurb     text;
+alter table public.guests add column if not exists instagram text;
+alter table public.guests add column if not exists sprite    smallint;
+alter table public.guests add column if not exists room      text;
