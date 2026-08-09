@@ -73,8 +73,6 @@
       "name": "Khushi's Secret Slumber Party",
       "alternateName": [
         "Secret Slumber Party",
-        "Khushi Kapoor's Secret Slumber Party",
-        "Khushi Kapoor Slumber Party",
         "The Secret Party"
       ],
       "description": "Khushi has a secret to share. 35 friends, creators, artists, dreamers and some of you get to know what she's been building before everyone else!",
@@ -88,40 +86,13 @@
       "@id": "https://secretslumberparty.com/#org",
       "name": "Khushi's Secret Slumber Party",
       "alternateName": [
-        "Secret Slumber Party",
-        "Khushi Kapoor's Slumber Party"
+        "Secret Slumber Party"
       ],
       "url": "https://secretslumberparty.com/",
       "logo": "https://secretslumberparty.com/assets/logo.png",
       "image": "https://secretslumberparty.com/assets/og.jpg",
       "areaServed": "Mumbai, India",
-      "email": "khushi@secretslumberparty.com",
-      "founder": {
-        "@id": "https://secretslumberparty.com/#khushi"
-      },
-      "parentOrganization": {
-        "@id": "https://nailin.it/#org"
-      }
-    },
-    {
-      "@type": "Person",
-      "@id": "https://secretslumberparty.com/#khushi",
-      "name": "Khushi Kapoor",
-      "alternateName": "Khushi",
-      "url": "https://secretslumberparty.com/",
-      "sameAs": [
-        "https://www.instagram.com/khushikapoor/"
-      ]
-    },
-    {
-      "@type": "Organization",
-      "@id": "https://nailin.it/#org",
-      "name": "Nailin.it",
-      "alternateName": [
-        "Nailinit",
-        "nailinit"
-      ],
-      "url": "https://nailin.it/"
+      "email": "khushi@secretslumberparty.com"
     },
     {
       "@type": "WebPage",
@@ -130,9 +101,6 @@
       "name": "Khushi's Secret Slumber Party 🥳",
       "isPartOf": {
         "@id": "https://secretslumberparty.com/#website"
-      },
-      "about": {
-        "@id": "https://secretslumberparty.com/#khushi"
       },
       "primaryImageOfPage": "https://secretslumberparty.com/assets/og.jpg",
       "description": "Khushi has a secret to share. 35 friends, creators, artists, dreamers and some of you get to know what she's been building before everyone else!"
@@ -156,7 +124,7 @@ window.SSP_VID=(function(){
 })();
 </script>
 
-<!-- Meta Pixel — shared Nailin.it dataset (637257295363759). Independent of the parked Supabase analytics.
+<!-- Meta Pixel — shared dataset (637257295363759). Independent of the parked Supabase analytics.
      external_id = SSP_VID ties pixel events to the same visitor id used in the Google Sheet. -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -568,30 +536,15 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
      it needs a larger px value than the old Inter to look SMALLER than it did. */
   /* centred with auto margins, NOT translateX(-50%): the gateRise animation below
      animates transform to `none`, which would wipe a centring translate out. */
-  /* One stack, not two independently-pinned lines. At 320px the credit wraps to
-     two lines, and separately-positioned lines would then overlap the consent
-     text above it — as a column, wrapping just grows the stack upward instead. */
-  #gateFoot{ position:absolute; left:0; right:0; margin:0 auto;
-    bottom:calc(1.1rem + env(safe-area-inset-bottom,0px));
-    display:flex; flex-direction:column; align-items:center; gap:.5rem;
-    width:max-content; max-width:min(92vw,30rem); }
-  #gateConsent{ margin:0;
+  #gateConsent{ position:absolute; left:0; right:0; margin:0 auto;
+    bottom:calc(1.15rem + env(safe-area-inset-bottom,0px));
+    width:max-content; max-width:min(90vw,26rem);
     font-family:var(--mono); font-size:1.02rem; letter-spacing:.03em;
     line-height:1.3; text-align:center;
     color:var(--brand-pink); text-shadow:0 0 10px rgba(235,100,140,.4); }
   /* it belongs to the gate, so it arrives and leaves with it */
   #gateway.on #gateConsent{ animation:gateRise .85s .3s cubic-bezier(.2,.85,.3,1) both; }
   #gateway.leaving #gateConsent{ opacity:0; transition:opacity .32s ease; }
-  /* the only readable text on the site carrying the full name and the studio.
-     Deliberately visible and deliberately quiet: hiding it to game a search would
-     be cloaking, which earns a penalty rather than a ranking. */
-  #gateCredit{ margin:0;
-    font-family:var(--mono); font-size:.92rem; letter-spacing:.03em;
-    line-height:1.3; text-align:center; color:rgba(235,100,140,.62); }
-  #gateCredit a{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
-  #gateCredit a:hover{ color:var(--brand-yellow); }
-  #gateway.on #gateCredit{ animation:gateRise .85s .38s cubic-bezier(.2,.85,.3,1) both; }
-  #gateway.leaving #gateCredit{ opacity:0; transition:opacity .32s ease; }
   #gateConsent a{ color:var(--brand-pink); text-decoration:underline; text-underline-offset:2px; }
   #gateConsent a:hover{ color:var(--brand-yellow); }
   /* the whole stack breathes in as the veil lifts, then dives INTO the CRT on the way out */
@@ -1063,11 +1016,7 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     </div>
     <!-- small print, pinned to the foot of the screen rather than sitting in the
          centred stack. the T&C page carries the privacy policy, so it's one link. -->
-    <div id="gateFoot">
-      <p id="gateConsent">by entering you accept our <a href="/terms.html" target="_blank" rel="noopener">T&amp;C</a></p>
-      <p id="gateCredit">a secret party by Khushi Kapoor · made by
-        <a href="https://nailin.it" target="_blank" rel="noopener">Nailin.it</a></p>
-    </div>
+    <p id="gateConsent">by entering you accept our <a href="/terms.html" target="_blank" rel="noopener">T&amp;C</a></p>
   </div>
 
 
