@@ -468,8 +468,8 @@
       <span class="pill" id="crewCount">—</span>
       <button class="btn ghost" id="crewCsv" type="button">download csv</button>
     </div>
-    <p class="sub">everyone working the party, and who needs a bed. one row can cover several
-      people — set the headcount rather than adding a row each.</p>
+    <p class="sub">everyone working the party — all of them staying over. one row can cover
+      several people, so set the headcount rather than adding a row each.</p>
 
     <div class="scroll">
       <table id="crewTbl">
@@ -496,8 +496,6 @@
         <input id="crewRole" type="text" placeholder="photographer, catering…" style="margin:0" /></label>
       <label style="flex:0 0 92px">people
         <input id="crewHead" type="number" min="1" max="99" value="1" style="margin:0" /></label>
-      <label style="flex:0 0 auto;display:flex;align-items:center;gap:.4rem;padding-bottom:.55rem">
-        <input id="crewStay" type="checkbox" style="width:auto;margin:0" /> staying over</label>
       <button class="btn" type="submit" style="width:auto">add</button>
       <span class="sub" id="crewMsg" style="margin:0"></span>
     </form>
@@ -1086,9 +1084,8 @@ function crewPanel() {
   if (!body) return;
 
   const h = headcount();
-  const staying = CREW.filter(r => r.staying).reduce((n, r) => n + (Number(r.headcount) || 1), 0);
   document.getElementById('crewCount').textContent =
-    CREW.length ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} · ${staying} staying over` : '—';
+    CREW.length ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} staying over` : '—';
   document.getElementById('crewEmpty').hidden = CREW.length > 0;
 
   // team first, then vendors, alphabetical inside each — the order you'd read it
@@ -1132,7 +1129,7 @@ document.getElementById('crewForm').addEventListener('submit', async (e) => {
     /* the input allows anything typeable; the column allows 1–99. Clamp here so a
        stray keystroke reads as a sane number instead of a database error. */
     headcount: Math.min(99, Math.max(1, parseInt(crewHead.value, 10) || 1)),
-    staying: crewStay.checked,
+    staying: true,          // everyone in this table is staying over
   };
   msg.textContent = 'adding…';
   const { data, error } = await sb.from('crew').insert(row).select().single();

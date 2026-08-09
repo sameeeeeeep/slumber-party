@@ -176,7 +176,7 @@ create table if not exists public.crew (
   kind       text not null default 'team' check (kind in ('team','vendor')),
   role       text,                      -- photographer, catering, security…
   headcount  smallint not null default 1 check (headcount between 1 and 99),
-  staying    boolean not null default false,
+  staying    boolean not null default true,   -- everyone in this table stays over
   notes      text
 );
 create index if not exists crew_kind_idx on public.crew (kind, name);
