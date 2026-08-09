@@ -3182,25 +3182,41 @@ renderStep();
     try{ const gb=document.getElementById('gateYes'); if(gb) gb.click(); }catch(err){}
     unlock(); openArcade();
   }
+
+  /* Is the scene settled enough to open the arcade over it?
+       · the veil must have LEFT THE DOM, not merely started fading — opening
+         during its 0.9s fade catches the CRT mid power-on and paints a collapsed
+         black frame that only a click recovers;
+       · and either the gate is up AND bound (gateOpen is set in the same breath
+         as its click handler), or it's already gone because they walked in
+         normally. Mid-dive — gateway present but gateOpen false — is not ready. */
+  const arcadeReady = () =>
+    !document.getElementById('veil') &&
+    (gateOpen || !document.getElementById('gateway'));
+
+  /* Both doors go through here. The ?arcade link already waited for the scene;
+     the "k" hotkey did not, so a key pressed during the veil opened the arcade
+     onto a half-built room. An early hotkey should QUEUE, not break the scene. */
+  let jumpPending = false;
+  function jumpWhenReady(){
+    if(open || jumpPending) return;                 // already in, or already waiting
+    if(arcadeReady()){ jumpToArcade(); return; }
+    jumpPending = true;
+    let waited = 0;
+    const t = setInterval(()=>{
+      waited += 120;
+      if(open){ clearInterval(t); jumpPending=false; return; }
+      // the fall-through exists so a missing veil/gate can never wedge this shut
+      if(arcadeReady() || waited > 7000){ clearInterval(t); jumpPending=false; jumpToArcade(); }
+    }, 120);
+  }
   /* the besties invite links here directly, so it can't depend on the form.
      Waits for the gate to be UP and bound rather than guessing a delay: its
      click handler is attached in showGateway(), and clicking a beat too early
      is a silent no-op that leaves the arcade open behind a gate which never
      comes down. Falls through after a few seconds in case there's no gate. */
   try{
-    if(new URLSearchParams(location.search).has('arcade')){
-      let waited=0;
-      const t=setInterval(()=>{
-        waited+=120;
-        if(open){ clearInterval(t); return; }
-        // Fire the SAME jump the "k" hotkey uses, but only once the scene is as settled
-        // as it is when a user would press k: gate up AND the veil element fully removed
-        // (its 0.9s fade-out has finished). Opening any earlier — e.g. the instant
-        // veilGone flips — catches the CRT mid power-on and renders a collapsed black
-        // frame. Waiting for the veil to actually leave the DOM is the reliable signal.
-        if((gateOpen && !document.getElementById('veil')) || waited>7000){ clearInterval(t); jumpToArcade(); }
-      }, 120);
-    }
+    if(new URLSearchParams(location.search).has('arcade')) jumpWhenReady();
   }catch(err){}
   addEventListener('keydown', e=>{
     // bypass hotkey: press "k" to jump straight into the arcade (skips the form) — ignored while typing in a field
@@ -3208,7 +3224,7 @@ renderStep();
       const el=document.activeElement;
       if(!(el && /^(INPUT|TEXTAREA)$/.test(el.tagName))){
         e.preventDefault();
-        jumpToArcade(); return;
+        jumpWhenReady(); return;         // waits for the scene if it isn't ready yet
       }
     }
     // …and once inside the arcade menu, "k" leaps straight into the inner circle's level menu
