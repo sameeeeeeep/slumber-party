@@ -1192,7 +1192,7 @@ function itineraryPanel() {
       <td>${r.is_now ? '<span class="yes">●</span>' : ''}</td>
       <td style="white-space:nowrap">${esc(r.t || '—')}</td>
       <td>${r.emoji ? esc(r.emoji) + ' ' : ''}${esc(r.title)}${r.visible ? '' : ' <span class="pill">hidden</span>'}</td>
-      <td style="white-space:normal;font-size:.8rem;color:var(--ink-2)">${esc(r.detail || '')}</td>
+      <td style="white-space:normal;font-size:.8rem;color:var(--ink-2)">${esc(r.detail || '').replace(/(https?:\/\/[^\s<]*[^\s<.,)!?;:'"])/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn ghost itAct" data-act="now"  type="button" style="padding:3px 8px;font-size:11px">${r.is_now ? 'un-now' : 'now'}</button>
         <button class="btn ghost itAct" data-act="up"   type="button" style="padding:3px 8px;font-size:11px" ${i === 0 ? 'disabled' : ''}>↑</button>
