@@ -331,3 +331,14 @@ do $$ begin
   begin execute 'alter publication supabase_realtime add table public.itinerary';
   exception when duplicate_object then null; end;
 end $$;
+
+-- ============================================================================
+--  GUEST TIERS
+--  Three tiers, and the constraint documents the vocabulary so a typo in a tier
+--  can't silently create a fourth: 'bestie', 'creator', and 'super' — the last
+--  for the guests chosen out of the applications. NULL stays legal for roster
+--  names added for check-in only, who never get an invite link.
+-- ============================================================================
+alter table public.guests drop constraint if exists guests_tier_check;
+alter table public.guests add constraint guests_tier_check
+  check (tier is null or tier in ('bestie','creator','super'));

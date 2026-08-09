@@ -145,7 +145,9 @@ async function cmdGuests(argv) {
   }
   await writeFile(P('besties/guests.js'), banner() + `window.BESTIES_GUESTS=${JSON.stringify(out)};\n`);
   console.log(`sealed ${list.length} guest${list.length === 1 ? '' : 's'} → besties/guests.js`);
-  const tier = (g) => g.voice === 'creator' ? 'creator' : g.voice === 'neutral' ? 'neutral' : 'bestie';
+  const tier = (g) => g.voice === 'creator' ? 'creator'
+                    : g.voice === 'super'   ? 'SUPER'
+                    : g.voice === 'neutral' ? 'neutral' : 'bestie';
   for (const g of list) {
     console.log(`  ${g.name.padEnd(20)} ${tier(g).padEnd(8)} ${link(g.code)}`);
   }
@@ -161,16 +163,29 @@ async function cmdAdd(argv) {
   const flags = argv.filter(a => a.startsWith('--'));
   const name = argv.slice(1).filter(a => !a.startsWith('--')).join(' ');
   if (!name) return console.error(
-    'usage: node tools/besties-seal.mjs add "Shanaya Kapoor" [--creator|--neutral]');
+    'usage: node tools/besties-seal.mjs add "Shanaya Kapoor" [--creator|--super|--neutral] [--code=arya-x7k2]');
 
   /* Which copy they hear. The variant only swaps lines that content.json lists
-     under that name, so an unknown voice just falls through to the default. */
+     under that name, so an unknown voice just falls through to the default —
+     which is why --super works before its copy is written. */
   const voice = flags.includes('--creator') ? 'creator'
+              : flags.includes('--super')   ? 'super'
               : flags.includes('--neutral') ? 'neutral' : null;
 
   const list = existsSync(P('besties/guests.json'))
     ? JSON.parse(await readFile(P('besties/guests.json'), 'utf8')) : [];
-  const code = `${slugify(name)}-${suffix()}`;
+
+  /* --code= seals a code that ALREADY exists somewhere — the admin dashboard
+     mints it when the guest is added, so the sealed index has to agree with the
+     database rather than inventing a second code for the same person. */
+  const given = (flags.find(f => f.startsWith('--code=')) || '').slice(7).trim().toLowerCase();
+  if (given && !/^[a-z][a-z0-9]*-[a-z0-9]{4}$/.test(given)) {
+    return console.error(`  ✗ "${given}" isn't a code shape (name-xxxx)`);
+  }
+  if (given && list.some(g => g.code === given)) {
+    return console.error(`  ✗ ${given} is already sealed — nothing to do`);
+  }
+  const code = given || `${slugify(name)}-${suffix()}`;
   const record = { name, first: name.split(/\s+/)[0], code, plus_one: false, notes: '' };
   if (voice) record.voice = voice;
   list.push(record);
