@@ -342,3 +342,50 @@ end $$;
 alter table public.guests drop constraint if exists guests_tier_check;
 alter table public.guests add constraint guests_tier_check
   check (tier is null or tier in ('bestie','creator','super'));
+
+-- ============================================================================
+--  CARS, and WHERE EVERYONE STAYS
+--  crew gains `cars` (per row, so a vendor arriving in two vans is one entry)
+--  and a third kind, 'car', for vehicles themselves. headcount now allows 0,
+--  because a car can legitimately carry nobody — the old `between 1 and 99`
+--  rejected exactly that row.
+--
+--  venues are the places people sleep. guests.venue_id / crew.venue_id point at
+--  them with ON DELETE SET NULL, so removing a place un-places its occupants
+--  rather than deleting them. A crew row occupies its whole headcount: "nail
+--  artists · 5" is five beds, not one.
+--  Admin-only in every direction; nothing public reads or writes any of it.
+-- ============================================================================
+alter table public.crew add column if not exists cars smallint not null default 0
+  check (cars between 0 and 99);
+alter table public.crew drop constraint if exists crew_kind_check;
+alter table public.crew add constraint crew_kind_check check (kind in ('team','vendor','car'));
+alter table public.crew drop constraint if exists crew_headcount_check;
+alter table public.crew add constraint crew_headcount_check check (headcount between 0 and 99);
+
+create table if not exists public.venues (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null,
+  address    text,
+  capacity   smallint not null default 0 check (capacity between 0 and 999),
+  notes      text,
+  position   integer not null default 0
+);
+alter table public.guests add column if not exists venue_id uuid references public.venues(id) on delete set null;
+alter table public.crew   add column if not exists venue_id uuid references public.venues(id) on delete set null;
+
+alter table public.venues enable row level security;
+drop policy if exists "admins read venues"   on public.venues;
+drop policy if exists "admins write venues"  on public.venues;
+drop policy if exists "admins update venues" on public.venues;
+drop policy if exists "admins delete venues" on public.venues;
+create policy "admins read venues"   on public.venues for select to authenticated using (public.is_admin());
+create policy "admins write venues"  on public.venues for insert to authenticated with check (public.is_admin());
+create policy "admins update venues" on public.venues for update to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admins delete venues" on public.venues for delete to authenticated using (public.is_admin());
+
+do $$ begin
+  begin execute 'alter publication supabase_realtime add table public.venues';
+  exception when duplicate_object then null; end;
+end $$;

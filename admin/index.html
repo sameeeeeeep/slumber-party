@@ -159,9 +159,29 @@
      others visually rather than sitting alongside them */
   .tier.super{ border-color:var(--good); color:var(--good); font-weight:600; }
   .tier.pending{ border-color:var(--critical); color:var(--critical); }
+  .tier.car{ border-color:#c9a227; color:var(--ink-2); }
+  /* ---- where they stay ---- */
+  .vnCard{ border:1px solid var(--line); border-radius:11px; padding:.7rem .85rem; margin-bottom:8px;
+    background:var(--surface-2); }
+  .vnCard.over{ border-color:var(--critical); }
+  .vnHead{ display:flex; align-items:center; gap:8px; }
+  .vnHead b{ font-size:.92rem; }
+  .vnWho{ display:flex; flex-wrap:wrap; gap:5px; margin-top:.2rem; }
+  .vnChip{ font-size:.76rem; color:var(--ink-2); border:1px solid var(--line);
+    border-radius:100px; padding:.15rem .5rem; white-space:nowrap; }
   #crewTbl td, #crewTbl th{ white-space:nowrap; }
   #crewTbl td:nth-child(6){ font-size:.78rem; color:var(--ink-2); min-width:160px; }
   .yes{ color:var(--series); }
+  /* every control on one baseline. margin:0 on ALL of them, not just the inputs —
+     the base rule's margin-bottom is what pushed the select above the line. */
+  .crewForm{ display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:14px; }
+  .crewForm label{ margin:0; }
+  .crewForm input, .crewForm select{ margin:0; height:38px; }
+  .crewForm select{ appearance:none; background-image:
+      linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),
+      linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);
+    background-position:calc(100% - 15px) 16px, calc(100% - 10px) 16px;
+    background-size:5px 5px, 5px 5px; background-repeat:no-repeat; padding-right:1.9rem; }
   .pill.warnpill{ border-color:var(--critical); color:var(--critical); }
 
   /* ---- sharing & search ---- */
@@ -578,6 +598,32 @@
     <p class="empty" id="wlEmpty" hidden>no one yet — it fills once applications close.</p>
   </section>
 
+  <!-- --------------------------------------------------------- where they stay -->
+  <section class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">where everyone stays</h2>
+      <span class="pill" id="vnCount">—</span>
+      <button class="btn ghost" id="vnCsv" type="button">download csv</button>
+    </div>
+    <p class="sub">add the places people sleep, then put each guest and each crew
+      entry into one. A crew row takes its whole headcount with it, so "nail
+      artists · 5" fills five beds.</p>
+
+    <form id="vnForm" class="crewForm">
+      <label style="flex:2 1 160px">place
+        <input id="vnName" type="text" placeholder="villa · room 2 / tent A" required /></label>
+      <label style="flex:2 1 170px">address <span class="sub" style="margin:0">(optional)</span>
+        <input id="vnAddr" type="text" placeholder="where it is" /></label>
+      <label style="flex:0 0 90px">beds
+        <input id="vnCap" type="number" min="0" max="999" value="0" /></label>
+      <button class="btn" id="vnSubmit" type="submit" style="width:auto">add place</button>
+      <button class="btn ghost" id="vnCancel" type="button" hidden>cancel</button>
+    </form>
+    <p class="sub" id="vnMsg" style="min-height:1.1rem;margin:6px 0 12px"></p>
+
+    <div id="vnBoard"></div>
+  </section>
+
   <!-- ------------------------------------------------------- team & vendors -->
   <section class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -586,36 +632,42 @@
       <button class="btn ghost" id="crewCsv" type="button">download csv</button>
     </div>
     <p class="sub">everyone working the party — all of them staying over. one row can cover
-      several people, so set the headcount rather than adding a row each.</p>
+      several people, so set the headcount rather than adding a row each. cars count
+      per row, so a vendor arriving in two vans is one entry.</p>
 
     <div class="scroll">
       <table id="crewTbl">
         <thead><tr>
-          <th>name</th><th>kind</th><th>doing what</th><th>people</th><th>staying</th>
-          <th>notes</th><th></th>
+          <th>name</th><th>kind</th><th>doing what</th><th>people</th><th>cars</th>
+          <th>staying</th><th>where</th><th></th>
         </tr></thead>
         <tbody id="crewBody"></tbody>
       </table>
     </div>
     <p class="empty" id="crewEmpty" hidden>nobody added yet.</p>
 
-    <form id="crewForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:14px">
-      <label style="flex:2;min-width:150px">name
-        <input id="crewName" type="text" placeholder="e.g. Ravi / Sunrise Catering" required
-          style="margin:0" /></label>
-      <label style="flex:1;min-width:110px">kind
-        <select id="crewKind" style="width:100%;font:inherit;color:var(--ink);background:var(--surface-2);
-          border:1px solid var(--line);border-radius:9px;padding:.6rem .75rem">
+    <!-- one row, everything bottom-aligned. The controls all get margin:0 from
+         .crewForm below rather than per-element inline styles — the select was
+         the only one missing it, which is what knocked it out of line. -->
+    <form id="crewForm" class="crewForm">
+      <label style="flex:2 1 150px">name
+        <input id="crewName" type="text" placeholder="e.g. Ravi / Sunrise Catering" required /></label>
+      <label style="flex:0 1 108px">kind
+        <select id="crewKind">
           <option value="team">team</option>
           <option value="vendor">vendor</option>
+          <option value="car">car</option>
         </select></label>
-      <label style="flex:2;min-width:140px">doing what
-        <input id="crewRole" type="text" placeholder="photographer, catering…" style="margin:0" /></label>
-      <label style="flex:0 0 92px">people
-        <input id="crewHead" type="number" min="1" max="99" value="1" style="margin:0" /></label>
-      <button class="btn" type="submit" style="width:auto">add</button>
-      <span class="sub" id="crewMsg" style="margin:0"></span>
+      <label style="flex:2 1 150px">doing what
+        <input id="crewRole" type="text" placeholder="photographer, catering…" /></label>
+      <label style="flex:0 0 82px">people
+        <input id="crewHead" type="number" min="0" max="99" value="1" /></label>
+      <label style="flex:0 0 74px">cars
+        <input id="crewCars" type="number" min="0" max="99" value="0" /></label>
+      <button class="btn" id="crewSubmit" type="submit" style="width:auto">add</button>
+      <button class="btn ghost" id="crewCancel" type="button" hidden>cancel</button>
     </form>
+    <p class="sub" id="crewMsg" style="min-height:1.1rem;margin:6px 0 0"></p>
   </section>
 
   <!-- Only rendered when there's something to say. A permanent "0 failures" panel
@@ -683,7 +735,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -703,7 +755,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it, vn] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -718,11 +770,12 @@ async function boot() {
     fetchAll(() => sb.from('waitlist').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('drafts').select('*').order('updated_at', { ascending: false })),
     sb.from('itinerary').select('*').order('position'),
+    sb.from('venues').select('*').order('position'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -737,6 +790,12 @@ async function boot() {
         p => { CHECKINS.unshift(p.new); renderAll(); flashLive('new check-in'); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waitlist' },
         p => { WAITLIST.unshift(p.new); renderAll(); flashLive('new late-list email'); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'venues' }, p => {
+      if (p.eventType === 'DELETE')      VENUES = VENUES.filter(r => r.id !== p.old.id);
+      else if (p.eventType === 'UPDATE') VENUES = VENUES.map(r => r.id === p.new.id ? p.new : r);
+      else if (!VENUES.some(r => r.id === p.new.id)) VENUES.push(p.new);
+      renderAll();
+    })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'itinerary' }, p => {
       if (p.eventType === 'DELETE')      ITIN = ITIN.filter(r => r.id !== p.old.id);
       else if (p.eventType === 'UPDATE') ITIN = ITIN.map(r => r.id === p.new.id ? p.new : r);
@@ -793,7 +852,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); tiles(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); tiles(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -1537,9 +1596,182 @@ document.getElementById('wlCsv').addEventListener('click', () => {
 function headcount() {
   const creators = GUESTS.filter(g => norm(g.tier) === 'creator').length;
   const besties  = GUESTS.length - creators;
-  const crew     = CREW.reduce((n, r) => n + (Number(r.headcount) || 1), 0);
+  /* `|| 0`, not `|| 1`: a car row can legitimately carry nobody, and the old
+     default would have invented a passenger for every vehicle on the list. */
+  const crew     = CREW.reduce((n, r) => n + (Number(r.headcount) || 0), 0);
   return { creators, besties, crew, total: besties + creators + crew };
 }
+
+/* ============================================================================
+   WHERE EVERYONE STAYS
+   Places, and who sleeps in them. Guests count one each; a crew row takes its
+   whole headcount, because "nail artists · 5" is five beds and pretending it's
+   one row would under-book the house by four.
+   ========================================================================== */
+const venueName = (id) => { const v = VENUES.find(x => x.id === id); return v ? v.name : ''; };
+const venueCell = (id) => id
+  ? `<td>${esc(venueName(id))}</td>`
+  : `<td><span class="muted">—</span></td>`;
+
+let vnEditing = null;
+
+/* Everyone who needs a bed, guests and crew in one list, so the assignment UI
+   doesn't care which table someone came from. */
+function sleepers() {
+  const out = [];
+  for (const g of GUESTS) {
+    if (!g.code) continue;                 // roster-only names aren't attending
+    out.push({ kind: 'guest', id: g.id, name: g.name, heads: 1,
+               tag: g.tier || 'guest', venue_id: g.venue_id });
+  }
+  for (const c of CREW) {
+    if (c.kind === 'car') continue;        // a car doesn't sleep anywhere
+    out.push({ kind: 'crew', id: c.id, name: c.name, heads: Number(c.headcount) || 0,
+               tag: c.kind, venue_id: c.venue_id });
+  }
+  return out;
+}
+
+function stayPanel() {
+  const board = document.getElementById('vnBoard');
+  if (!board) return;
+  const all = sleepers();
+  const beds = VENUES.reduce((n, v) => n + (Number(v.capacity) || 0), 0);
+  const placed = all.filter(s => s.venue_id).reduce((n, s) => n + s.heads, 0);
+  const total = all.reduce((n, s) => n + s.heads, 0);
+  document.getElementById('vnCount').textContent = VENUES.length
+    ? `${placed}/${total} placed · ${beds} bed${beds === 1 ? '' : 's'}`
+    : '—';
+
+  const opts = (sel) => ['<option value="">— not placed —</option>']
+    .concat(VENUES.map(v => `<option value="${esc(v.id)}"${v.id === sel ? ' selected' : ''}>${esc(v.name)}</option>`))
+    .join('');
+
+  let html = '';
+  for (const v of VENUES) {
+    const mine = all.filter(s => s.venue_id === v.id);
+    const used = mine.reduce((n, s) => n + s.heads, 0);
+    const cap = Number(v.capacity) || 0;
+    const over = cap > 0 && used > cap;
+    html += `<div class="vnCard${over ? ' over' : ''}">
+      <div class="vnHead">
+        <b>${esc(v.name)}</b>
+        <span class="pill${over ? ' warnpill' : ''}">${used}${cap ? ' / ' + cap : ''}</span>
+        <span style="flex:1"></span>
+        <button class="btn ghost vnAct" data-act="edit" data-vn="${esc(v.id)}" type="button"
+          style="padding:3px 8px;font-size:11px">edit</button>
+        <button class="btn ghost vnAct" data-act="del" data-vn="${esc(v.id)}" type="button"
+          style="padding:3px 8px;font-size:11px">remove</button>
+      </div>
+      ${v.address ? `<p class="sub" style="margin:.2rem 0 .4rem">${esc(v.address)}</p>` : ''}
+      ${over ? '<p class="sub err" style="margin:0 0 .4rem">more people than beds</p>' : ''}
+      ${mine.length
+        ? `<div class="vnWho">${mine.map(s =>
+            `<span class="vnChip">${esc(s.name)}${s.heads > 1 ? ` ×${s.heads}` : ''}</span>`).join('')}</div>`
+        : '<p class="sub" style="margin:0">nobody here yet</p>'}
+    </div>`;
+  }
+  if (!VENUES.length) html = '<p class="empty">no places yet — add the first one above.</p>';
+
+  /* the assignment list: one row per person, one dropdown each. Unplaced first,
+     because that's the list you're actually working through. */
+  const sorted = [...all].sort((a, b) =>
+    (a.venue_id ? 1 : 0) - (b.venue_id ? 1 : 0) || a.name.localeCompare(b.name));
+  html += `<div class="scroll" style="margin-top:14px"><table>
+    <thead><tr><th>who</th><th></th><th>beds</th><th>staying at</th></tr></thead>
+    <tbody>${sorted.map(s => `<tr>
+      <td>${esc(s.name)}</td>
+      <td><span class="tier ${s.tag === 'team' ? '' : esc(s.tag)}">${esc(s.tag)}</span></td>
+      <td>${s.heads}</td>
+      <td><select class="vnPick" data-kind="${s.kind}" data-id="${esc(s.id)}"
+            style="margin:0;height:32px;padding:.2rem .5rem;font-size:.82rem">${opts(s.venue_id)}</select></td>
+    </tr>`).join('')}</tbody></table></div>`;
+  board.innerHTML = html;
+}
+
+/* one dropdown change = one row updated, in whichever table they came from */
+document.getElementById('vnBoard').addEventListener('change', async (e) => {
+  const sel = e.target.closest('.vnPick');
+  if (!sel) return;
+  const table = sel.dataset.kind === 'guest' ? 'guests' : 'crew';
+  const venue_id = sel.value || null;
+  sel.disabled = true;
+  const { error } = await sb.from(table).update({ venue_id }).eq('id', sel.dataset.id);
+  sel.disabled = false;
+  if (error) { document.getElementById('vnMsg').textContent = error.message; return; }
+  const list = table === 'guests' ? GUESTS : CREW;
+  const row = list.find(r => r.id === sel.dataset.id);
+  if (row) row.venue_id = venue_id;
+  renderAll();
+});
+
+document.getElementById('vnBoard').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.vnAct');
+  if (!btn) return;
+  const v = VENUES.find(x => x.id === btn.dataset.vn);
+  if (!v) return;
+  if (btn.dataset.act === 'edit') {
+    vnEditing = v.id;
+    vnName.value = v.name; vnAddr.value = v.address || ''; vnCap.value = Number(v.capacity) || 0;
+    document.getElementById('vnSubmit').textContent = 'save';
+    document.getElementById('vnCancel').hidden = false;
+    vnName.focus();
+    return;
+  }
+  /* the FK is ON DELETE SET NULL, so removing a place un-places its people
+     rather than deleting them — say so, because it looks destructive */
+  if (!confirm(`Remove ${v.name}? Anyone staying there becomes unplaced.`)) return;
+  const { error } = await sb.from('venues').delete().eq('id', v.id);
+  if (error) { document.getElementById('vnMsg').textContent = error.message; return; }
+  VENUES = VENUES.filter(x => x.id !== v.id);
+  for (const g of GUESTS) if (g.venue_id === v.id) g.venue_id = null;
+  for (const c of CREW)   if (c.venue_id === v.id) c.venue_id = null;
+  renderAll();
+});
+
+document.getElementById('vnCancel').addEventListener('click', () => {
+  vnEditing = null; vnForm.reset(); vnCap.value = 0;
+  document.getElementById('vnSubmit').textContent = 'add place';
+  document.getElementById('vnCancel').hidden = true;
+  document.getElementById('vnMsg').textContent = '';
+});
+
+document.getElementById('vnForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('vnMsg');
+  const row = { name: vnName.value.trim(), address: vnAddr.value.trim() || null,
+                capacity: Math.min(999, Math.max(0, parseInt(vnCap.value, 10) || 0)) };
+  if (!row.name) return;
+  if (vnEditing) {
+    const { error } = await sb.from('venues').update(row).eq('id', vnEditing);
+    if (error) { msg.textContent = error.message; return; }
+    Object.assign(VENUES.find(v => v.id === vnEditing) || {}, row);
+    document.getElementById('vnCancel').click();
+    msg.textContent = `saved ${row.name}`;
+  } else {
+    row.position = VENUES.length ? Math.max(...VENUES.map(v => v.position)) + 1 : 1;
+    const { data, error } = await sb.from('venues').insert(row).select().single();
+    if (error) { msg.textContent = error.message; return; }
+    VENUES.push(data);
+    vnForm.reset(); vnCap.value = 0; vnName.focus();
+    msg.textContent = `added ${data.name}`;
+  }
+  renderAll();
+  setTimeout(() => { const m = msg.textContent; if (m.startsWith('added') || m.startsWith('saved')) msg.textContent = ''; }, 4000);
+});
+
+document.getElementById('vnCsv').addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['who','type','beds','staying at','address'].map(cell).join(',')];
+  for (const s of sleepers()) {
+    const v = VENUES.find(x => x.id === s.venue_id);
+    lines.push([s.name, s.tag, s.heads, v ? v.name : 'NOT PLACED', v ? (v.address || '') : ''].map(cell).join(','));
+  }
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'stay-plan.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
 
 /* ============================================================================
    TEAM & VENDORS
@@ -1553,37 +1785,70 @@ function crewPanel() {
   if (!body) return;
 
   const h = headcount();
-  document.getElementById('crewCount').textContent =
-    CREW.length ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} staying over` : '—';
+  const cars = CREW.reduce((n, r) => n + (Number(r.cars) || 0), 0);
+  document.getElementById('crewCount').textContent = CREW.length
+    ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} staying over` + (cars ? ` · ${cars} car${cars === 1 ? '' : 's'}` : '')
+    : '—';
   document.getElementById('crewEmpty').hidden = CREW.length > 0;
 
-  // team first, then vendors, alphabetical inside each — the order you'd read it
+  // team, then vendors, then cars — alphabetical inside each, the order you'd read it
+  const ORDER = { team: 0, vendor: 1, car: 2 };
   const rows = [...CREW].sort((a, b) =>
-    (a.kind === b.kind ? 0 : a.kind === 'team' ? -1 : 1) ||
+    (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9) ||
     String(a.name).localeCompare(String(b.name)));
 
   body.innerHTML = rows.map(r => `<tr>
     <td>${esc(r.name)}</td>
-    <td><span class="tier ${r.kind === 'vendor' ? 'vendor' : ''}">${esc(r.kind)}</span></td>
+    <td><span class="tier ${r.kind === 'team' ? '' : esc(r.kind)}">${esc(r.kind)}</span></td>
     <td>${esc(r.role || '—')}</td>
-    <td>${Number(r.headcount) || 1}</td>
+    <td>${Number(r.headcount) || 0}</td>
+    <td>${Number(r.cars) ? '\u{1F697} ' + Number(r.cars) : '<span class="muted">—</span>'}</td>
     <td>${r.staying ? '<span class="yes">yes</span>' : '<span class="muted">no</span>'}</td>
-    <td style="white-space:normal">${esc(r.notes || '—')}</td>
-    <td><button class="btn ghost" data-crew="${esc(r.id)}" type="button"
-          style="padding:4px 10px;font-size:12px">remove</button></td>
+    <td>${venueCell(r.venue_id)}</td>
+    <td style="text-align:right;white-space:nowrap">
+      <button class="btn ghost crewAct" data-act="edit" data-crew="${esc(r.id)}" type="button"
+        style="padding:4px 9px;font-size:12px">edit</button>
+      <button class="btn ghost crewAct" data-act="del" data-crew="${esc(r.id)}" type="button"
+        style="padding:4px 9px;font-size:12px">remove</button></td>
   </tr>`).join('');
 }
 
+let crewEditing = null;   // row id being edited, or null = the form adds
+
 document.getElementById('crewBody').addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-crew]');
+  const btn = e.target.closest('.crewAct');
   if (!btn) return;
-  const row = CREW.find(r => r.id === btn.dataset.crew);
-  if (!confirm(`Remove ${row ? row.name : 'this entry'} from team & vendors?`)) return;
+  const id = btn.dataset.crew;
+  const row = CREW.find(r => r.id === id);
+  if (!row) return;
+
+  if (btn.dataset.act === 'edit') {
+    crewEditing = id;
+    crewName.value = row.name; crewKind.value = row.kind;
+    crewRole.value = row.role || ''; crewHead.value = Number(row.headcount) || 0;
+    crewCars.value = Number(row.cars) || 0;
+    document.getElementById('crewSubmit').textContent = 'save';
+    document.getElementById('crewCancel').hidden = false;
+    crewMsg.textContent = `editing ${row.name}`;
+    crewName.focus();
+    return;
+  }
+
+  if (!confirm(`Remove ${row.name} from team & vendors?`)) return;
   btn.disabled = true; btn.textContent = 'removing…';
-  const { error } = await sb.from('crew').delete().eq('id', btn.dataset.crew);
+  const { error } = await sb.from('crew').delete().eq('id', id);
   if (error) { btn.disabled = false; btn.textContent = 'remove'; crewMsg.textContent = error.message; return; }
-  CREW = CREW.filter(r => r.id !== btn.dataset.crew);
+  CREW = CREW.filter(r => r.id !== id);
+  if (crewEditing === id) document.getElementById('crewCancel').click();
   renderAll();
+});
+
+document.getElementById('crewCancel').addEventListener('click', () => {
+  crewEditing = null;
+  crewForm.reset(); crewHead.value = 1; crewCars.value = 0;
+  document.getElementById('crewSubmit').textContent = 'add';
+  document.getElementById('crewCancel').hidden = true;
+  crewMsg.textContent = '';
 });
 
 document.getElementById('crewForm').addEventListener('submit', async (e) => {
@@ -1591,30 +1856,46 @@ document.getElementById('crewForm').addEventListener('submit', async (e) => {
   const msg = document.getElementById('crewMsg');
   const name = crewName.value.trim();
   if (!name) return;
+  /* the inputs allow anything typeable; the columns allow 0–99. Clamp here so a
+     stray keystroke reads as a sane number instead of a database error. */
+  const clamp = (v) => Math.min(99, Math.max(0, parseInt(v, 10) || 0));
   const row = {
     name,
     kind: crewKind.value,
     role: crewRole.value.trim() || null,
-    /* the input allows anything typeable; the column allows 1–99. Clamp here so a
-       stray keystroke reads as a sane number instead of a database error. */
-    headcount: Math.min(99, Math.max(1, parseInt(crewHead.value, 10) || 1)),
+    headcount: clamp(crewHead.value),
+    cars: clamp(crewCars.value),
     staying: true,          // everyone in this table is staying over
   };
-  msg.textContent = 'adding…';
+
+  if (crewEditing) {
+    msg.textContent = 'saving…'; msg.className = 'sub';
+    const { error } = await sb.from('crew').update(row).eq('id', crewEditing);
+    if (error) { msg.textContent = error.message; msg.className = 'sub err'; return; }
+    Object.assign(CREW.find(r => r.id === crewEditing) || {}, row);
+    document.getElementById('crewCancel').click();
+    msg.textContent = `saved ${row.name}`;
+    renderAll();
+    setTimeout(() => { if (msg.textContent.startsWith('saved')) msg.textContent = ''; }, 4000);
+    return;
+  }
+
+  msg.textContent = 'adding…'; msg.className = 'sub';
   const { data, error } = await sb.from('crew').insert(row).select().single();
   if (error) { msg.textContent = error.message; msg.className = 'sub err'; return; }
   CREW.push(data);
-  msg.textContent = `added ${data.name}`; msg.className = 'sub';
-  crewForm.reset(); crewHead.value = 1; crewName.focus();
+  msg.textContent = `added ${data.name}`;
+  crewForm.reset(); crewHead.value = 1; crewCars.value = 0; crewName.focus();
   renderAll();
   setTimeout(() => { if (msg.textContent.startsWith('added')) msg.textContent = ''; }, 4000);
 });
 
 document.getElementById('crewCsv').addEventListener('click', () => {
-  const head = ['name', 'kind', 'doing what', 'people', 'staying over', 'notes'];
+  const head = ['name', 'kind', 'doing what', 'people', 'cars', 'staying over', 'where', 'notes'];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const body = CREW.map(r => [r.name, r.kind, r.role || '', Number(r.headcount) || 1,
-                              r.staying ? 'yes' : 'no', r.notes || ''].map(cell).join(','));
+  const body = CREW.map(r => [r.name, r.kind, r.role || '', Number(r.headcount) || 0,
+                              Number(r.cars) || 0, r.staying ? 'yes' : 'no',
+                              venueName(r.venue_id), r.notes || ''].map(cell).join(','));
   const url = URL.createObjectURL(new Blob([[head.map(cell).join(','), ...body].join('\n')],
     { type: 'text/csv' }));
   const a = document.createElement('a');
