@@ -291,3 +291,43 @@ do $$ begin
   begin execute 'alter publication supabase_realtime add table public.drafts';
   exception when duplicate_object then null; end;
 end $$;
+
+-- ============================================================================
+--  ITINERARY — the day's programme
+--  Admin writes it (full CRUD, admin-only RLS in every direction); guests read
+--  it ONLY through the itinerary Edge Function, which checks a password held in
+--  a Supabase secret (ITINERARY_PASS — this repo is public, so the word can
+--  never live in code) and returns visible items only. Ordering is one global
+--  `position`; days appear in the order their first item does. `is_now` is the
+--  single "happening now" marker the admin pins. Wrong guesses are rate-limited
+--  per IP via submit_log kind='itinerary', because this word gates the party's
+--  actual programme — including its dates.
+-- ============================================================================
+create table if not exists public.itinerary (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  day        text not null,
+  position   integer not null default 0,
+  t          text,
+  emoji      text,
+  title      text not null,
+  detail     text,
+  visible    boolean not null default true,
+  is_now     boolean not null default false
+);
+
+alter table public.itinerary enable row level security;
+drop policy if exists "admins read itinerary"   on public.itinerary;
+drop policy if exists "admins write itinerary"  on public.itinerary;
+drop policy if exists "admins update itinerary" on public.itinerary;
+drop policy if exists "admins delete itinerary" on public.itinerary;
+create policy "admins read itinerary"   on public.itinerary for select to authenticated using (public.is_admin());
+create policy "admins write itinerary"  on public.itinerary for insert to authenticated with check (public.is_admin());
+create policy "admins update itinerary" on public.itinerary for update to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admins delete itinerary" on public.itinerary for delete to authenticated using (public.is_admin());
+
+do $$ begin
+  begin execute 'alter publication supabase_realtime add table public.itinerary';
+  exception when duplicate_object then null; end;
+end $$;

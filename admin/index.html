@@ -461,6 +461,43 @@
     </div>
   </section>
 
+  <!-- ---------------------------------------------------------- itinerary -->
+  <section class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">itinerary</h2>
+      <span class="pill" id="itCount">—</span>
+      <a class="btn ghost" href="/itinerary/" target="_blank" rel="noopener"
+         style="text-decoration:none">open guest view</a>
+    </div>
+    <p class="sub">what guests see at <b>/itinerary</b> (password: <code>nailinit</code>).
+      Changes land on their phones within a minute. Hidden items are drafts —
+      only you see them. "now" pins the glowing <i>happening now</i> marker.</p>
+
+    <form id="itForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">
+      <label style="flex:1 1 130px;margin:0">day
+        <input id="itDay" type="text" placeholder="day one · 18 aug" required style="margin:0" /></label>
+      <label style="flex:0 1 110px;margin:0">time
+        <input id="itTime" type="text" placeholder="8:30 pm" style="margin:0" /></label>
+      <label style="flex:0 1 70px;margin:0">emoji
+        <input id="itEmoji" type="text" maxlength="8" placeholder="🎬" style="margin:0" /></label>
+      <label style="flex:2 1 200px;margin:0">what
+        <input id="itTitle" type="text" placeholder="movie under the fairy lights" required style="margin:0" /></label>
+      <button class="btn" id="itAdd" type="submit" style="width:auto">add</button>
+      <button class="btn ghost" id="itCancel" type="button" hidden>cancel edit</button>
+    </form>
+    <label style="display:block;margin:0 0 10px">details (optional)
+      <input id="itDetail" type="text" placeholder="pyjamas mandatory. popcorn provided." style="margin:0" /></label>
+    <p class="sub" id="itMsg" style="min-height:1.1rem;margin:0 0 8px"></p>
+
+    <div class="scroll">
+      <table id="itTbl">
+        <thead><tr><th></th><th>time</th><th>what</th><th>details</th><th style="text-align:right">manage</th></tr></thead>
+        <tbody id="itBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="itEmpty" hidden>nothing scheduled yet — add the first thing above.</p>
+  </section>
+
   <!-- ------------------------------------------------------------- drafts -->
   <section class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -604,7 +641,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -624,7 +661,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -638,11 +675,12 @@ async function boot() {
     sb.from('site_meta').select('*').eq('id', 1).maybeSingle(),
     fetchAll(() => sb.from('waitlist').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('drafts').select('*').order('updated_at', { ascending: false })),
+    sb.from('itinerary').select('*').order('position'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -657,6 +695,13 @@ async function boot() {
         p => { CHECKINS.unshift(p.new); renderAll(); flashLive('new check-in'); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waitlist' },
         p => { WAITLIST.unshift(p.new); renderAll(); flashLive('new late-list email'); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'itinerary' }, p => {
+      if (p.eventType === 'DELETE')      ITIN = ITIN.filter(r => r.id !== p.old.id);
+      else if (p.eventType === 'UPDATE') ITIN = ITIN.map(r => r.id === p.new.id ? p.new : r);
+      else if (!ITIN.some(r => r.id === p.new.id)) ITIN.push(p.new);
+      ITIN.sort((a, b) => a.position - b.position);
+      renderAll();
+    })
     /* drafts update in place as answers arrive, so listen for both verbs */
     .on('postgres_changes', { event: '*', schema: 'public', table: 'drafts' }, p => {
       if (p.eventType === 'UPDATE')      DRAFTS = DRAFTS.map(r => r.id === p.new.id ? p.new : r);
@@ -706,7 +751,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { tiles(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); failPanel(); }
+function renderAll() { tiles(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -1117,6 +1162,143 @@ document.getElementById('seoFav').addEventListener('change', async (e) => {
     msg.textContent = 'check it at 16px above — downloading favicon.png, replace assets/favicon.png';
     download(url, 'favicon.png');
   } catch (err) { msg.textContent = err.message; msg.className = 'fmsg err'; }
+});
+
+/* ============================================================================
+   ITINERARY
+   The same table the guest page reads through its Edge Function — this is the
+   writing end. Ordering is one global position; days appear in the order their
+   first item does, so reordering IS rearranging the day. Every edit is live on
+   guests' phones within their next poll (≤1 minute).
+   ========================================================================== */
+let itEditing = null;   // row id being edited, or null = the form adds
+
+function itineraryPanel() {
+  const body = document.getElementById('itBody');
+  if (!body) return;
+  const vis = ITIN.filter(r => r.visible).length;
+  document.getElementById('itCount').textContent =
+    ITIN.length ? `${ITIN.length} item${ITIN.length === 1 ? '' : 's'} · ${vis} live` : '—';
+  document.getElementById('itEmpty').hidden = ITIN.length > 0;
+
+  let html = '', day = null;
+  ITIN.forEach((r, i) => {
+    if (r.day !== day) {
+      day = r.day;
+      html += `<tr><td colspan="5" style="padding-top:14px"><span class="tier">${esc(day)}</span></td></tr>`;
+    }
+    const dim = r.visible ? '' : ' style="opacity:.45"';
+    html += `<tr data-id="${esc(r.id)}"${dim}>
+      <td>${r.is_now ? '<span class="yes">●</span>' : ''}</td>
+      <td style="white-space:nowrap">${esc(r.t || '—')}</td>
+      <td>${r.emoji ? esc(r.emoji) + ' ' : ''}${esc(r.title)}${r.visible ? '' : ' <span class="pill">hidden</span>'}</td>
+      <td style="white-space:normal;font-size:.8rem;color:var(--ink-2)">${esc(r.detail || '')}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn ghost itAct" data-act="now"  type="button" style="padding:3px 8px;font-size:11px">${r.is_now ? 'un-now' : 'now'}</button>
+        <button class="btn ghost itAct" data-act="up"   type="button" style="padding:3px 8px;font-size:11px" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn ghost itAct" data-act="down" type="button" style="padding:3px 8px;font-size:11px" ${i === ITIN.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn ghost itAct" data-act="vis"  type="button" style="padding:3px 8px;font-size:11px">${r.visible ? 'hide' : 'show'}</button>
+        <button class="btn ghost itAct" data-act="edit" type="button" style="padding:3px 8px;font-size:11px">edit</button>
+        <button class="btn ghost itAct" data-act="del"  type="button" style="padding:3px 8px;font-size:11px">remove</button>
+      </td>
+    </tr>`;
+  });
+  body.innerHTML = html;
+}
+
+async function itSave(patch, id) {
+  const msg = document.getElementById('itMsg');
+  const q = id ? sb.from('itinerary').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id)
+               : sb.from('itinerary').insert(patch);
+  const { error } = await q;
+  if (error) { msg.textContent = error.message; return false; }
+  return true;
+}
+
+document.getElementById('itBody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.itAct');
+  if (!btn) return;
+  const id = btn.closest('tr').dataset.id;
+  const row = ITIN.find(r => r.id === id);
+  if (!row) return;
+  const act = btn.dataset.act;
+  btn.disabled = true;
+
+  if (act === 'del') {
+    if (!confirm(`Remove "${row.title}" from the itinerary?`)) { btn.disabled = false; return; }
+    const { error } = await sb.from('itinerary').delete().eq('id', id);
+    if (!error) ITIN = ITIN.filter(r => r.id !== id);
+  } else if (act === 'vis') {
+    if (await itSave({ visible: !row.visible }, id)) row.visible = !row.visible;
+  } else if (act === 'now') {
+    /* one marker: pinning here unpins everywhere else. un-now just clears. */
+    const on = !row.is_now;
+    if (on) { await sb.from('itinerary').update({ is_now: false }).eq('is_now', true); ITIN.forEach(r => r.is_now = false); }
+    if (await itSave({ is_now: on }, id)) row.is_now = on;
+  } else if (act === 'up' || act === 'down') {
+    const i = ITIN.indexOf(row), j = act === 'up' ? i - 1 : i + 1;
+    const other = ITIN[j];
+    if (other) {
+      /* swap global positions — if the neighbour is in another day, the item
+         moves into that day's slot, which is what dragging across a boundary
+         should mean */
+      const a = row.position, b = other.position;
+      if (await itSave({ position: b }, row.id) && await itSave({ position: a }, other.id)) {
+        row.position = b; other.position = a;
+        ITIN.sort((x, y) => x.position - y.position);
+      }
+    }
+  } else if (act === 'edit') {
+    itEditing = id;
+    itDay.value = row.day; itTime.value = row.t || ''; itEmoji.value = row.emoji || '';
+    itTitle.value = row.title; itDetail.value = row.detail || '';
+    document.getElementById('itAdd').textContent = 'save';
+    document.getElementById('itCancel').hidden = false;
+    itTitle.focus();
+  }
+  renderAll();
+});
+
+document.getElementById('itCancel').addEventListener('click', () => {
+  itEditing = null; itForm.reset(); itDetail.value = '';
+  document.getElementById('itAdd').textContent = 'add';
+  document.getElementById('itCancel').hidden = true;
+});
+
+document.getElementById('itForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('itMsg');
+  const patch = {
+    day: itDay.value.trim(), t: itTime.value.trim() || null,
+    emoji: itEmoji.value.trim() || null, title: itTitle.value.trim(),
+    detail: itDetail.value.trim() || null,
+  };
+  if (!patch.day || !patch.title) return;
+  if (itEditing) {
+    if (await itSave(patch, itEditing)) {
+      Object.assign(ITIN.find(r => r.id === itEditing) || {}, patch);
+      msg.textContent = 'saved';
+      document.getElementById('itCancel').click();
+    }
+  } else {
+    /* new items join the END of their own day, not the end of the whole board —
+       adding "midnight snack" to day one shouldn't file it under day two */
+    const sameDay = ITIN.filter(r => r.day === patch.day);
+    const after = sameDay.length ? Math.max(...sameDay.map(r => r.position))
+                                 : (ITIN.length ? Math.max(...ITIN.map(r => r.position)) : 0);
+    /* nudge everything past the insertion point up, then take the gap */
+    for (const r of ITIN.filter(x => x.position > after).sort((x,y) => y.position - x.position)) {
+      await itSave({ position: r.position + 1 }, r.id); r.position += 1;
+    }
+    const row = { ...patch, position: after + 1, visible: true, is_now: false };
+    const { data, error } = await sb.from('itinerary').insert(row).select().single();
+    if (error) { msg.textContent = error.message; return; }
+    ITIN.push(data); ITIN.sort((x, y) => x.position - y.position);
+    msg.textContent = `added to ${patch.day}`;
+    itForm.reset(); itDetail.value = ''; itTitle.focus();
+  }
+  renderAll();
+  setTimeout(() => { if (['saved'].includes(msg.textContent) || msg.textContent.startsWith('added')) msg.textContent = ''; }, 3500);
 });
 
 /* ============================================================================
