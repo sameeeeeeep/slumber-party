@@ -197,3 +197,29 @@ begin
   begin execute 'alter publication supabase_realtime add table public.crew';
   exception when duplicate_object then null; end;
 end $$;
+
+-- ============================================================================
+--  SITE META — the wording the outside world sees
+--  A single row (id is pinned to 1) holding the title, the description and the
+--  card's alt text. This is NOT what the live site serves: crawlers read the
+--  static HTML in index.html and never run our JavaScript, so these tags cannot
+--  be applied from the browser. The row is the source of truth for what the
+--  wording SHOULD be, and the admin panel turns it into a block to commit.
+-- ============================================================================
+create table if not exists public.site_meta (
+  id          smallint primary key default 1 check (id = 1),
+  title       text,
+  description text,
+  og_alt      text,
+  updated_at  timestamptz not null default now(),
+  updated_by  text
+);
+
+alter table public.site_meta enable row level security;
+
+drop policy if exists "admins read meta"   on public.site_meta;
+drop policy if exists "admins write meta"  on public.site_meta;
+drop policy if exists "admins update meta" on public.site_meta;
+create policy "admins read meta"   on public.site_meta for select to authenticated using (public.is_admin());
+create policy "admins write meta"  on public.site_meta for insert to authenticated with check (public.is_admin());
+create policy "admins update meta" on public.site_meta for update to authenticated using (public.is_admin()) with check (public.is_admin());

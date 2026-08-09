@@ -61,7 +61,10 @@
   #login h1{ font-size:1.25rem; margin-bottom:.25rem; }
   #login p.sub{ color:var(--ink-2); font-size:.9rem; margin-bottom:1.4rem; }
   label{ display:block; font-size:.8rem; font-weight:500; color:var(--ink-2); margin:0 0 .35rem; }
-  input[type=email],input[type=password],input[type=search]{
+  /* text/number/tel were missing here, so every input added after the login form
+     rendered as an unstyled browser default at its own tiny intrinsic width */
+  input[type=email],input[type=password],input[type=search],
+  input[type=text],input[type=number],input[type=tel],input[type=url],textarea{
     width:100%; font:inherit; color:var(--ink); background:var(--surface-2);
     border:1px solid var(--line); border-radius:9px; padding:.6rem .75rem; margin-bottom:.9rem; }
   input:focus{ outline:2px solid var(--series); outline-offset:1px; }
@@ -155,6 +158,51 @@
   #crewTbl td, #crewTbl th{ white-space:nowrap; }
   #crewTbl td:nth-child(6){ font-size:.78rem; color:var(--ink-2); min-width:160px; }
   .yes{ color:var(--series); }
+  .pill.warnpill{ border-color:var(--critical); color:var(--critical); }
+
+  /* ---- sharing & search ---- */
+  .note{ font-size:.82rem; line-height:1.5; color:var(--ink-2); background:var(--surface-2);
+    border:1px solid var(--line); border-left:3px solid var(--series); border-radius:9px;
+    padding:.7rem .85rem; margin:0 0 16px; }
+  .note code{ font-family:var(--mono); }
+  .seoGrid{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  @media (max-width:860px){ .seoGrid{ grid-template-columns:1fr; } }
+  .seoGrid textarea{ resize:vertical; }
+  .seoGrid label{ display:block; }
+  .ct{ float:right; font-size:.72rem; color:var(--ink-3); font-weight:400; letter-spacing:0; }
+  .ct.warn{ color:var(--critical); }
+  .flab{ display:block; font-size:.72rem; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-3); margin-bottom:.4rem; }
+  .filerow{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+  @media (max-width:520px){ .filerow{ grid-template-columns:1fr; } }
+  .pick{ display:block; cursor:pointer; text-align:center; font-size:.8rem; color:var(--ink-2);
+    background:var(--surface-2); border:1px dashed var(--line); border-radius:9px; padding:.6rem .5rem; }
+  .pick:hover{ border-color:var(--series); color:var(--ink); }
+  .fmsg{ font-size:.74rem; color:var(--ink-3); margin:.4rem 0 0; }
+  .fmsg.err{ color:var(--critical); }
+  .favrow{ display:flex; align-items:center; gap:8px; margin-top:.5rem; }
+  .favrow img{ image-rendering:auto; border-radius:3px; }
+
+  /* a google result, close enough to judge truncation by */
+  .serp{ background:#fff; border-radius:10px; padding:14px 16px; font-family:Arial,sans-serif; }
+  .serpsite{ display:flex; align-items:center; gap:8px; font-size:12px; color:#4d5156; margin-bottom:4px; }
+  .serpsite b{ color:#202124; font-size:14px; font-weight:400; }
+  .serpsite i{ font-style:normal; color:#4d5156; }
+  .favdot{ width:26px; height:26px; border-radius:100px; border:1px solid #ecedef; flex:none;
+    display:grid; place-items:center; overflow:hidden; background:#fff; }
+  .favdot img{ width:18px; height:18px; }
+  .serptitle{ color:#1a0dab; font-size:20px; line-height:1.3; }
+  .serpdesc{ color:#4d5156; font-size:14px; line-height:1.58; margin-top:3px; }
+  /* google shows roughly this much before the ellipsis */
+  .serptitle,.serpdesc{ overflow:hidden; }
+
+  /* a chat preview card */
+  .waCard{ background:#1f2c33; border-radius:10px; overflow:hidden; max-width:330px; }
+  .waCard img{ display:block; width:100%; aspect-ratio:1200/630; object-fit:cover; background:#111; }
+  .waTxt{ padding:9px 11px 11px; font-family:Helvetica,Arial,sans-serif; }
+  .waTxt b{ display:block; color:#e9edef; font-size:13.5px; line-height:1.35; }
+  .waTxt span{ display:block; color:#8696a0; font-size:12.5px; line-height:1.35; margin-top:2px; }
+  .waTxt i{ display:block; color:#8696a0; font-size:11.5px; font-style:normal; margin-top:4px; }
   code.invite{ font-family:var(--mono); font-size:.95rem; color:var(--ink-2);
     user-select:all; }
 
@@ -324,6 +372,89 @@
       is done: the reason to hold someone's Aadhaar for a party is gone the moment the party is.</p>
   </section>
 
+  <!-- ------------------------------------------------- sharing & search -->
+  <section class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">sharing &amp; search</h2>
+      <span class="pill" id="seoSaved">—</span>
+    </div>
+    <p class="sub">the heading, the copy and the card people see when this link is
+      pasted or found on Google. Edit here, preview below, then publish.</p>
+
+    <!-- The honest bit. WhatsApp and Google read the raw HTML and never run our
+         JavaScript, so this panel cannot make a change go live on its own — a
+         static site has no server to re-render the tags. It saves the wording,
+         shows exactly how it will look, and hands over the block to commit. -->
+    <p class="note" id="seoNote">
+      <b>heads up:</b> chat apps and Google read the page's raw HTML and don't run
+      any of our scripts, so saving here doesn't change the live card by itself —
+      it saves the wording and builds the block to put into
+      <code>index.html</code>. Hit <b>copy the html</b> and send it over, or tell
+      Claude "publish the SEO block" and it'll do it.
+    </p>
+
+    <div class="seoGrid">
+      <div>
+        <label>title <span class="ct" id="ctTitle"></span>
+          <input id="seoTitle" type="text" maxlength="120" /></label>
+        <label>copy / description <span class="ct" id="ctDesc"></span>
+          <textarea id="seoDesc" rows="4" maxlength="400"></textarea></label>
+        <label>image alt text
+          <input id="seoAlt" type="text" maxlength="120" /></label>
+
+        <div class="filerow">
+          <div>
+            <span class="flab">preview image</span>
+            <label class="pick" for="seoOg">choose a 1200×630 image</label>
+            <input id="seoOg" type="file" accept="image/*" hidden />
+            <p class="fmsg" id="seoOgMsg">using the one on the site now</p>
+          </div>
+          <div>
+            <span class="flab">favicon</span>
+            <label class="pick" for="seoFav">choose a square image</label>
+            <input id="seoFav" type="file" accept="image/*" hidden />
+            <p class="fmsg" id="seoFavMsg">using the one on the site now</p>
+            <div class="favrow">
+              <img id="favPrev32" src="/assets/favicon.png" alt="" width="32" height="32" />
+              <img id="favPrev16" src="/assets/favicon.png" alt="" width="16" height="16" />
+              <span class="sub" style="margin:0">32px · 16px</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+          <button class="btn" id="seoSave" type="button" style="width:auto">save wording</button>
+          <button class="btn ghost" id="seoCopy" type="button">copy the html</button>
+          <button class="btn ghost" id="seoRevert" type="button">revert to live</button>
+        </div>
+        <p class="sub" id="seoMsg" style="min-height:1.2rem"></p>
+      </div>
+
+      <!-- previews. Deliberately styled like the real things rather than as a
+           neutral summary — the point is to catch "that truncates badly" before
+           it's published, and you can only see that in the real shape. -->
+      <div>
+        <span class="flab">on google</span>
+        <div class="serp">
+          <div class="serpsite"><span class="favdot"><img id="serpFav" src="/assets/favicon.png" alt="" /></span>
+            <span><b>Khushi's Secret Slumber Party</b><br /><i>secretslumberparty.com</i></span></div>
+          <div class="serptitle" id="serpTitle"></div>
+          <div class="serpdesc" id="serpDesc"></div>
+        </div>
+
+        <span class="flab" style="margin-top:16px">pasted in a chat</span>
+        <div class="waCard">
+          <img id="waImg" src="/assets/og.jpg" alt="" />
+          <div class="waTxt">
+            <b id="waTitle"></b>
+            <span id="waDesc"></span>
+            <i>secretslumberparty.com</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ------------------------------------------------------- team & vendors -->
   <section class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -436,7 +567,7 @@ let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [];
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w] = await Promise.all([
+  const [a, v, c, g, f, w, m] = await Promise.all([
     sb.from('applications').select('*').order('created_at', { ascending: false }),
     sb.from('visits').select('reached,tz,created_at,session_id,source,device'),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -447,11 +578,13 @@ async function boot() {
     sb.from('submit_log').select('kind,note,created_at')
       .eq('kind', 'application_failed').order('created_at', { ascending: false }).limit(50),
     sb.from('crew').select('*'),
+    sb.from('site_meta').select('*').eq('id', 1).maybeSingle(),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
   CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || [];
+  seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
   renderAll();
@@ -727,6 +860,191 @@ function tiles() {
     put('completion', rate === null ? '—' : rate + '%', 'landed → applied') +
     put('cities', cityCount, 'distinct places');
 }
+
+/* ============================================================================
+   SHARING & SEARCH
+   Edits the four strings the outside world actually sees, and previews them in
+   the two shapes that matter: a Google result and a pasted chat card.
+
+   It cannot publish them. Crawlers fetch the HTML and never execute our JS, so
+   a client-side edit is invisible to exactly the audience these tags exist for —
+   which is why the panel's output is a block of HTML to commit rather than a
+   "live" toggle that would quietly do nothing. The saved row is the source of
+   truth for what the wording SHOULD be; index.html is what it currently IS.
+   ========================================================================== */
+const LIVE_META = {                       // what index.html ships with right now
+  title: "Khushi's Secret Slumber Party — invite-only sleepover in Mumbai",
+  description: 'Something big is coming. 35 friends, creators, artists, dreamers '
+             + 'and some of you get to know before everyone else.',
+  og_alt: "(secret;) Khushi's Slumber Party",
+};
+/* Google truncates by pixel width, not characters, so these are the usual
+   rules-of-thumb rather than hard limits — the preview is the real check. */
+const LIMITS = { title: 60, description: 160 };
+
+function seoFields() {
+  return {
+    title: document.getElementById('seoTitle').value.trim(),
+    description: document.getElementById('seoDesc').value.trim(),
+    og_alt: document.getElementById('seoAlt').value.trim(),
+  };
+}
+
+function seoPaint() {
+  const f = seoFields();
+  const count = (id, val, max) => {
+    const el = document.getElementById(id);
+    el.textContent = val.length + '/' + max;
+    el.className = 'ct' + (val.length > max ? ' warn' : '');
+  };
+  count('ctTitle', f.title, LIMITS.title);
+  count('ctDesc', f.description, LIMITS.description);
+
+  // the previews. Text only — never innerHTML, or a stray < in the copy would
+  // start rewriting this dashboard instead of showing up in the card.
+  document.getElementById('serpTitle').textContent = f.title || '(no title)';
+  document.getElementById('serpDesc').textContent = f.description || '(no description)';
+  document.getElementById('waTitle').textContent = f.title || '(no title)';
+  document.getElementById('waDesc').textContent = f.description || '(no description)';
+  document.getElementById('waImg').alt = f.og_alt;
+
+  const live = f.title === LIVE_META.title
+            && f.description === LIVE_META.description
+            && f.og_alt === LIVE_META.og_alt;
+  const pill = document.getElementById('seoSaved');
+  pill.textContent = live ? 'matches the live site' : 'differs from live — needs publishing';
+  pill.className = 'pill' + (live ? '' : ' warnpill');
+}
+
+function seoFill(row) {
+  document.getElementById('seoTitle').value = (row && row.title) || LIVE_META.title;
+  document.getElementById('seoDesc').value = (row && row.description) || LIVE_META.description;
+  document.getElementById('seoAlt').value = (row && row.og_alt) || LIVE_META.og_alt;
+  seoPaint();
+}
+
+['seoTitle', 'seoDesc', 'seoAlt'].forEach(id =>
+  document.getElementById(id).addEventListener('input', seoPaint));
+
+document.getElementById('seoRevert').addEventListener('click', () => {
+  seoFill(LIVE_META);
+  document.getElementById('seoMsg').textContent = 'reset to what the site currently says';
+});
+
+document.getElementById('seoSave').addEventListener('click', async () => {
+  const msg = document.getElementById('seoMsg');
+  const f = seoFields();
+  if (!f.title || !f.description) { msg.textContent = 'title and copy can\'t be empty'; return; }
+  msg.textContent = 'saving…';
+  const { error } = await sb.from('site_meta')
+    .upsert({ id: 1, ...f, updated_at: new Date().toISOString(),
+              updated_by: (await sb.auth.getUser()).data.user?.email || null });
+  msg.textContent = error ? error.message
+    : 'saved — now hit "copy the html" and put it in index.html to go live';
+});
+
+/* The exact block, in the same order and with the same duplication index.html
+   already uses, so publishing is a paste over the old one rather than an edit
+   hunt through five places that must agree. */
+function seoBlock() {
+  const f = seoFields();
+  const a = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+                          .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<title>${a(f.title)}</title>
+<meta name="description" content="${a(f.description)}" />
+
+<!-- the same words again, for shared links -->
+<meta property="og:title" content="${a(f.title)}" />
+<meta property="og:description" content="${a(f.description)}" />
+<meta name="twitter:title" content="${a(f.title)}" />
+<meta name="twitter:description" content="${a(f.description)}" />
+<meta property="og:image:alt" content="${a(f.og_alt)}" />
+
+<!-- and in the JSON-LD @graph, both WebSite and WebPage:
+     "description": ${JSON.stringify(f.description)} -->`;
+}
+
+document.getElementById('seoCopy').addEventListener('click', async () => {
+  const msg = document.getElementById('seoMsg');
+  try {
+    await navigator.clipboard.writeText(seoBlock());
+    msg.textContent = 'copied — paste it over the matching tags in index.html';
+  } catch {
+    // clipboard needs a secure context and permission; fall back to selectable text
+    const ta = document.createElement('textarea');
+    ta.value = seoBlock();
+    ta.style.cssText = 'width:100%;height:11rem;margin-top:10px;font:12px/1.5 var(--mono)';
+    msg.textContent = 'clipboard blocked — copy it from here:';
+    msg.after(ta); ta.select();
+  }
+});
+
+/* ---- the two image pickers -------------------------------------------------
+   These preview locally and hand back a correctly-sized file. They deliberately
+   do NOT upload: the live card points at /assets/og.jpg in the repo, and putting
+   the real image somewhere else would trade a first-party URL for a third-party
+   dependency on the one asset every shared link depends on. */
+function readImage(file) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onerror = () => rej(new Error('could not read that file'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => rej(new Error('that doesn\'t look like an image'));
+      img.onload = () => res(img);
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* Draws to an exact-size canvas, cover-cropped, and exports baseline JPEG —
+   the same treatment the current card got by hand. WhatsApp has a history of
+   refusing to preview progressive JPEGs, and canvas only ever writes baseline. */
+function fitTo(img, W, H, type, quality) {
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  if (type === 'image/jpeg') { g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); }
+  const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+  const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+  g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+  return c.toDataURL(type, quality);
+}
+
+function download(dataUrl, name) {
+  const a = document.createElement('a');
+  a.href = dataUrl; a.download = name; a.click();
+}
+
+document.getElementById('seoOg').addEventListener('change', async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const msg = document.getElementById('seoOgMsg');
+  msg.className = 'fmsg';
+  try {
+    const img = await readImage(file);
+    const exact = img.naturalWidth === 1200 && img.naturalHeight === 630;
+    const url = fitTo(img, 1200, 630, 'image/jpeg', 0.9);
+    document.getElementById('waImg').src = url;      // preview in the card
+    msg.textContent = (exact ? '1200×630 ✓' : `was ${img.naturalWidth}×${img.naturalHeight}, cropped to 1200×630`)
+      + ' — downloading og.jpg, replace assets/og.jpg with it';
+    download(url, 'og.jpg');
+  } catch (err) { msg.textContent = err.message; msg.className = 'fmsg err'; }
+});
+
+document.getElementById('seoFav').addEventListener('change', async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const msg = document.getElementById('seoFavMsg');
+  msg.className = 'fmsg';
+  try {
+    const img = await readImage(file);
+    const url = fitTo(img, 512, 512, 'image/png');
+    for (const id of ['favPrev32', 'favPrev16', 'serpFav'])
+      document.getElementById(id).src = url;
+    msg.textContent = 'check it at 16px above — downloading favicon.png, replace assets/favicon.png';
+    download(url, 'favicon.png');
+  } catch (err) { msg.textContent = err.message; msg.className = 'fmsg err'; }
+});
 
 /* ============================================================================
    HEADCOUNT
