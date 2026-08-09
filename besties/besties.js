@@ -746,7 +746,10 @@ function markRsvped() {
   const d = $('rsvpDone');
   d.hidden = false;
   // one editable line, not a sentence stitched together out of two fields
-  d.textContent = state.content.rsvp.confirmed || "you're on the list";
+  /* through line() too, so a tier can have its own "what happens next" —
+     "more details in 48 hours" is not what someone picked out of the
+     applications needs to read. */
+  d.textContent = line(state.content.rsvp.confirmed || "you're on the list");
   /* Check-in and the arcade only exist once they've said they're coming: an ID
      upload before an RSVP is the wrong order to ask in. This runs for a
      returning guest too, since restoring a saved RSVP comes through here. */
@@ -771,8 +774,8 @@ async function runRSVP() {
   const r = state.content.rsvp;
   // tapping the button is you saying it — so it lands as your message first
   if (r.reply) await you(r.reply);
-  for (const line of r.intro) await her(line, 800, 700);
-  for (const line of r.outro) await her(line, 800, 700);
+  for (const l of r.intro) await her(line(l), 800, 700);
+  for (const l of r.outro) await her(line(l), 800, 700);
 
   state.rsvped = true; save();
   try {
