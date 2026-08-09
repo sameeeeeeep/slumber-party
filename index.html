@@ -62,6 +62,9 @@
      party's date to anyone searching, which is the one thing this site keeps
      back. If that trade ever becomes worth it, add an Event node with startDate,
      endDate and a city-level location — never the venue. -->
+<!-- Khushi is named here on purpose (the DM already shows @khushikapoor), and the
+     studio behind the site deliberately is NOT — this file is public source, so
+     anything named in here is revealed to anyone reading it. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -73,6 +76,8 @@
       "name": "Khushi's Secret Slumber Party",
       "alternateName": [
         "Secret Slumber Party",
+        "Khushi Kapoor's Secret Slumber Party",
+        "Khushi Kapoor Slumber Party",
         "The Secret Party"
       ],
       "description": "Khushi has a secret to share. 35 friends, creators, artists, dreamers and some of you get to know what she's been building before everyone else!",
@@ -86,13 +91,27 @@
       "@id": "https://secretslumberparty.com/#org",
       "name": "Khushi's Secret Slumber Party",
       "alternateName": [
-        "Secret Slumber Party"
+        "Secret Slumber Party",
+        "Khushi Kapoor's Slumber Party"
       ],
       "url": "https://secretslumberparty.com/",
       "logo": "https://secretslumberparty.com/assets/logo.png",
       "image": "https://secretslumberparty.com/assets/og.jpg",
       "areaServed": "Mumbai, India",
-      "email": "khushi@secretslumberparty.com"
+      "email": "khushi@secretslumberparty.com",
+      "founder": {
+        "@id": "https://secretslumberparty.com/#khushi"
+      }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://secretslumberparty.com/#khushi",
+      "name": "Khushi Kapoor",
+      "alternateName": "Khushi",
+      "url": "https://secretslumberparty.com/",
+      "sameAs": [
+        "https://www.instagram.com/khushikapoor/"
+      ]
     },
     {
       "@type": "WebPage",
@@ -101,6 +120,9 @@
       "name": "Khushi's Secret Slumber Party 🥳",
       "isPartOf": {
         "@id": "https://secretslumberparty.com/#website"
+      },
+      "about": {
+        "@id": "https://secretslumberparty.com/#khushi"
       },
       "primaryImageOfPage": "https://secretslumberparty.com/assets/og.jpg",
       "description": "Khushi has a secret to share. 35 friends, creators, artists, dreamers and some of you get to know what she's been building before everyone else!"
