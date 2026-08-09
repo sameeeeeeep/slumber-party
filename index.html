@@ -1551,6 +1551,7 @@ function submitAnswer(rawVal){
   qAns[q.name]=store;
   qRaw[q.name] = (q.type==='date') ? { dd:ctDD.value, mm:ctMM.value, yy:ctYY.value }
                                    : String(rawVal==null ? ctInput.value : rawVal);
+  saveDraft();                               // every answer lands in the database as it happens
   addBubble('you', disp);
   const next=qIndex+1;
   // keep the mobile keyboard alive across typed questions by re-focusing inside this tap
@@ -1769,6 +1770,10 @@ function finishApply(){
        gone: an unconfigured Supabase with a working Sheet is a success, and the
        ok flag already says so. */
     if(res && res.ok===false) return submitFailed();
+    /* only NOW is the draft not a fall-out: the application is stored somewhere.
+       On failure it stays unconverted, which is exactly what the panel should
+       show if they then give up on the retry. */
+    saveDraft(true);
     sendOutro(0);
   });
 }
@@ -1779,6 +1784,29 @@ function finishApply(){
    persistent visitor_id — so a later completed row can be matched back to this drop-off.
    Fires on tab-hide / unload via sendBeacon (survives the page closing); re-sends only if
    they've answered MORE since the last beacon, so we don't spam duplicate rows. */
+/* The database copy of the same idea, but per-STEP rather than per-exit: every
+   answered question replaces this session's draft row immediately, so a killed
+   tab, a dead battery or a crashed in-app browser still leaves everything typed
+   up to that moment. Fire-and-forget — a lost draft ping must never slow the
+   conversation down or surface an error into it. */
+function saveDraft(converted){
+  const cfg = window.SLUMBER_CONFIG || {};
+  if(!(cfg.useSupabase && cfg.supabaseUrl && cfg.supabaseAnonKey)) return;
+  try{
+    const body = converted
+      ? { session_id:sessionId(), converted:true }
+      : { session_id:sessionId(), visitor_id:visitorId(),
+          step:Object.keys(qAns).length, answers:{...qAns},
+          source:trafficSource(), user_agent:navigator.userAgent };
+    fetch(cfg.supabaseUrl.replace(/\/$/,'')+'/functions/v1/draft', {
+      method:'POST', keepalive:true,
+      headers:{ 'Content-Type':'application/json', apikey:cfg.supabaseAnonKey,
+                Authorization:'Bearer '+cfg.supabaseAnonKey },
+      body: JSON.stringify(body)
+    }).catch(()=>{});
+  }catch(e){}
+}
+
 let _partialCount=-1;
 function sendPartial(){
   if(!applyStarted || applyCompleted || !GFORM.id) return;

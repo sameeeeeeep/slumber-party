@@ -258,3 +258,36 @@ do $$ begin
   begin execute 'alter publication supabase_realtime add table public.waitlist';
   exception when duplicate_object then null; end;
 end $$;
+
+-- ============================================================================
+--  DRAFTS — the application, saved answer by answer
+--  One row per session, replaced with the latest snapshot at every answered
+--  question, so a fall-out at question five still leaves four answers. The
+--  Google Sheet keeps its exit-beacon partial row ("incomplete (n/8)"); this is
+--  the copy that doesn't depend on the tab dying gracefully. `converted` flips
+--  when the final submit succeeds, so the dashboard shows pure fall-out.
+--  Writes only through the draft Edge Function (whitelisted fields, hard caps,
+--  new sessions rate-limited per IP via submit_log kind='draft'); admin-only
+--  reads; anon sees zero rows.
+-- ============================================================================
+create table if not exists public.drafts (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  session_id text not null unique,
+  visitor_id text,
+  last_step  smallint not null default 0,
+  answers    jsonb not null default '{}'::jsonb,
+  source     text,
+  user_agent text,
+  converted  boolean not null default false
+);
+
+alter table public.drafts enable row level security;
+drop policy if exists "admins read drafts" on public.drafts;
+create policy "admins read drafts" on public.drafts for select to authenticated using (public.is_admin());
+
+do $$ begin
+  begin execute 'alter publication supabase_realtime add table public.drafts';
+  exception when duplicate_object then null; end;
+end $$;
