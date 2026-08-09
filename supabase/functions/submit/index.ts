@@ -53,7 +53,11 @@ const ALLOWED_ORIGINS = [
 
    Neither number is the real duplicate guard: the unique index on email is. These
    only exist to keep a runaway script from filling the table. */
-const MAX_PER_IP_PER_HOUR = 120;
+/* Carrier NAT can put hundreds of real phones behind one IP in India. In a
+   launch-day spike the per-IP cap is the number of REAL applicants an IP may
+   carry per hour, not a spam dial — abuse is already held by the per-visitor
+   cap below. 120 was survivable; thousands applying makes it a ceiling. */
+const MAX_PER_IP_PER_HOUR = 500;
 const MAX_PER_VISITOR_PER_HOUR = 6;
 
 function cors(origin: string | null) {

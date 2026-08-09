@@ -568,12 +568,27 @@ sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 /* -------------------------------------------------------------------- data */
 let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [];
 
+/* Supabase answers any single select with at most 1000 rows. At launch scale
+   that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
+   and completion all counting the first thousand rows and ignoring the rest. So
+   the two tables that grow with traffic are read in pages until a short page
+   says we've reached the end. */
+async function fetchAll(build) {
+  const PAGE = 1000, out = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build().range(from, from + PAGE - 1);
+    if (error) return { data: out, error };
+    out.push(...(data || []));
+    if (!data || data.length < PAGE) return { data: out, error: null };
+  }
+}
+
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
   const [a, v, c, g, f, w, m] = await Promise.all([
-    sb.from('applications').select('*').order('created_at', { ascending: false }),
-    sb.from('visits').select('reached,tz,created_at,session_id,source,device'),
+    fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
+    fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
     // empty rather than taking the whole dashboard down with it
     sb.from('checkins').select('*').order('created_at', { ascending: false }),
