@@ -67,13 +67,13 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
-  // one row per (session, step) — a reload shouldn't inflate the numbers
-  const { data: seen } = await db
-    .from('visits').select('id')
-    .eq('session_id', session_id).eq('reached', reached).limit(1);
-  if (seen && seen.length) return new Response('ok', { headers: cors(origin) });
-
-  await db.from('visits').insert({
+  /* One row per (session, step). This used to SELECT and then INSERT, which is
+     two problems at launch scale: it's two round trips on the hottest endpoint,
+     and it's a race — two pings for the same step can both pass the SELECT and
+     both insert, inflating the funnel exactly when the numbers matter. A unique
+     index on (session_id, reached) makes the database enforce it, so this is now
+     one call that simply ignores a duplicate. */
+  await db.from('visits').upsert({
     session_id,
     reached,
     tz: str(b.tz, 60),
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
        referrers are stripped on almost every social tap. */
     source: str(b.source, 40),
     user_agent: str(b.user_agent, 300),
-  });
+  }, { onConflict: 'session_id,reached', ignoreDuplicates: true });
 
   return new Response('ok', { headers: cors(origin) });
 });

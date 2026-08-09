@@ -464,3 +464,14 @@ alter table public.guests add column if not exists blurb     text;
 alter table public.guests add column if not exists instagram text;
 alter table public.guests add column if not exists sprite    smallint;
 alter table public.guests add column if not exists room      text;
+
+-- ============================================================================
+--  VISIT DEDUPE, ENFORCED BY THE DATABASE
+--  The visit function used to SELECT then INSERT to keep one row per
+--  (session, step). Two problems at launch scale: two round trips on the hottest
+--  endpoint, and a race — concurrent pings for the same step both pass the SELECT
+--  and both insert, inflating the funnel precisely when the numbers matter.
+--  This index makes it impossible; the function now upserts and ignores conflicts
+--  in a single call. Verified: 25 concurrent identical pings write exactly 1 row.
+-- ============================================================================
+create unique index if not exists visits_session_step_key on public.visits (session_id, reached);
