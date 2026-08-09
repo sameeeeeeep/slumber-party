@@ -113,6 +113,37 @@
     padding:0 .4rem; }
   .lock a{ color:var(--pink); }
   a.back{ display:inline-block; margin-top:1.2rem; color:var(--soft); font-size:1.15rem; }
+
+  /* ---------------------------------------------------------------- desktop --
+     Same treatment as the besties thread: on a wide screen this stops being a
+     page and becomes her phone, held in the middle of the room. Stretched across
+     a 27" monitor the bubbles read as a web form; at 30rem they read as a DM,
+     which is the whole point of doing check-in as a conversation.
+
+     The card is a fixed height, so the thread has to become its own scroll
+     container — otherwise `overflow:hidden` on the frame simply clips the
+     conversation. That also makes the sticky compose bar redundant here: it sits
+     outside the scroller now, permanently at the bottom of the card, so the
+     scroll-margin the bubbles carry to clear it is no longer needed. */
+  @media (min-width:800px){
+    body{ min-height:100dvh; display:grid; place-items:center; }
+    .wrap{ width:min(30rem,100%); min-height:0; height:min(46rem, calc(100dvh - 3rem));
+      border-radius:26px; overflow:hidden; border:1px solid rgba(245,195,207,.16);
+      /* the second shadow is a 100vmax spread — it dims the whole room around
+         the phone without needing an overlay element to do it */
+      box-shadow:0 40px 90px rgba(0,0,0,.6), 0 0 0 100vmax rgba(10,3,8,.5); }
+    /* no scroll-behavior here on purpose — every scrollIntoView call in the flow
+       already asks for smooth explicitly, and setting it in CSS too stacks a
+       second animation on the same scroll */
+    .thread{ min-height:0; overflow-y:auto; overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch; }
+    .thread::-webkit-scrollbar{ width:.3rem; }
+    .thread::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.14); border-radius:1rem; }
+    .msg,.sys,.done{ scroll-margin-bottom:0; }
+    /* the frame already ends the page; a sticky bar inside it would be a no-op
+       with a border that reads as a seam */
+    .compose{ position:static; }
+  }
 </style>
 </head>
 <body>
@@ -154,18 +185,41 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const esc = (s) => String(s).replace(/[&<>"']/g, c => (
   { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
+/* Keeps the newest thing in view. Every caller has just appended to the end of
+   the thread, so "follow the newest" and "go to the bottom" mean the same thing
+   here — which is what makes the desktop branch safe.
+
+   Two branches because there are two scrollers. On a phone the page itself
+   scrolls and scrollIntoView is the right call: the bubbles carry a
+   scroll-margin so they land clear of the sticky compose bar. Inside the desktop
+   card the thread is its own scroller, and there repeated smooth scrollIntoView
+   calls do NOT converge — each one interrupts the last and only animates part of
+   the way, so a quick run of bubbles leaves the thread stranded partway up with
+   the newest message below the fold. Aiming at the container's bottom fixes that
+   by construction: every call re-aims at the true end from wherever the previous
+   animation got to, and an over-large target simply clamps.
+   Read off the computed overflow rather than re-testing the breakpoint in JS, so
+   there's only one place the 800px boundary is written down. */
+function keepUp(el){
+  if (getComputedStyle(thread).overflowY === 'auto') {
+    thread.scrollTo({ top: thread.scrollHeight, behavior:'smooth' });
+  } else {
+    el.scrollIntoView({ block:'end', behavior:'smooth' });
+  }
+}
+
 function bubble(cls, text){
   const p = document.createElement('p');
   p.className = 'msg ' + cls;
   p.textContent = text;
   thread.appendChild(p);
-  p.scrollIntoView({ block:'end', behavior:'smooth' });
+  keepUp(p);
   return p;
 }
 function sys(text){
   const p = document.createElement('p');
   p.className = 'sys'; p.textContent = text;
-  thread.appendChild(p); p.scrollIntoView({ block:'end', behavior:'smooth' });
+  thread.appendChild(p); keepUp(p);
 }
 /** her line, with the typing beat first — the pause is what makes it read as
     someone typing rather than a form validating */
@@ -173,7 +227,7 @@ async function her(text, beat = 620){
   const t = document.createElement('div');
   t.className = 'msg her typing';
   t.innerHTML = '<i></i><i></i><i></i>';
-  thread.appendChild(t); t.scrollIntoView({ block:'end', behavior:'smooth' });
+  thread.appendChild(t); keepUp(t);
   await sleep(beat);
   t.remove();
   return bubble('her', text);
@@ -361,7 +415,7 @@ function photoBubble(thumb){
     ? '<img alt="the ID you attached" src="' + thumb + '"><span class="cap">my ID 📎</span>'
     : '<span class="pdf">📄 my ID (pdf)</span>';
   thread.appendChild(p);
-  p.scrollIntoView({ block:'end', behavior:'smooth' });
+  keepUp(p);
 }
 
 function accept(q, value, echo){
@@ -432,7 +486,7 @@ async function finish(){
     again.style.margin = '.6rem auto 0'; again.style.display = 'block';
     again.addEventListener('click', () => { again.remove(); finish(); });
     thread.appendChild(again);
-    again.scrollIntoView({ block:'end', behavior:'smooth' });
+    keepUp(again);
     return;
   }
   await her('done ✨ you\'re checked in.');
@@ -476,7 +530,7 @@ function outro(title, sub){
     'building\'s door list. see the <a href="/privacy.html">privacy policy</a>.</p>' +
     '<a class="back" href="/besties/">‹ back to the invite</a>';
   thread.appendChild(d);
-  d.scrollIntoView({ block:'end', behavior:'smooth' });
+  keepUp(d);
 }
 
 /* go */

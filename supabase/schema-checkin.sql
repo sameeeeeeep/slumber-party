@@ -159,3 +159,41 @@ begin
   begin execute 'alter publication supabase_realtime add table public.guests';
   exception when duplicate_object then null; end;
 end $$;
+
+-- ============================================================================
+--  TEAM & VENDORS
+--  The people working the party, as opposed to the people coming to it. Kept out
+--  of `guests` on purpose: guests have invite codes and sealed greetings, crew
+--  have a headcount and a bed. One row can cover several people — a catering
+--  company is one entry and six humans — which is why `headcount` exists rather
+--  than six near-identical rows.
+--  Admin-only in both directions. Nothing on the public site reads or writes it.
+-- ============================================================================
+create table if not exists public.crew (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null,
+  kind       text not null default 'team' check (kind in ('team','vendor')),
+  role       text,                      -- photographer, catering, security…
+  headcount  smallint not null default 1 check (headcount between 1 and 99),
+  staying    boolean not null default false,
+  notes      text
+);
+create index if not exists crew_kind_idx on public.crew (kind, name);
+
+alter table public.crew enable row level security;
+
+drop policy if exists "admins read crew"   on public.crew;
+drop policy if exists "admins write crew"  on public.crew;
+drop policy if exists "admins update crew" on public.crew;
+drop policy if exists "admins delete crew" on public.crew;
+create policy "admins read crew"   on public.crew for select to authenticated using (public.is_admin());
+create policy "admins write crew"  on public.crew for insert to authenticated with check (public.is_admin());
+create policy "admins update crew" on public.crew for update to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admins delete crew" on public.crew for delete to authenticated using (public.is_admin());
+
+do $$
+begin
+  begin execute 'alter publication supabase_realtime add table public.crew';
+  exception when duplicate_object then null; end;
+end $$;
