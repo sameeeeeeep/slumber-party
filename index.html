@@ -2134,6 +2134,7 @@ function showGateway(){
 
 /* ---------- flip-phone intro: closed phone flips open (video) → a little zoom → the DM pings in ---------- */
 function startPhoneIntro(){
+  if(window.__toArcade) return;              // straight to the arcade: no intro to play
   const fi=document.getElementById('flipintro');
   if(!fi || !fi.src){ zoomNudgeThenNotify(); return; }   // no clip → just do the zoom + message
   fi.style.display='block'; fi.classList.add('on');       // cover the scene with the flip clip
@@ -2149,6 +2150,12 @@ function startPhoneIntro(){
   try{ const p=fi.play(); if(p&&p.catch) p.catch(()=>handoff()); }catch(e){ handoff(); }
 }
 function zoomNudgeThenNotify(){
+  /* Skip the whole thing when we're arcade-bound. This eases the camera FROM 0 —
+     the whole-room view — so firing it after the arcade has framed itself yanked
+     the camera back out and left a dark CRT floating in the room, with only the
+     leave/mute buttons to show anything had happened. Both doors into the arcade
+     set the flag before this can run. */
+  if(window.__toArcade) return;
   // ease a gentle push toward the CRT as it boots, then land the unread DM. The camera stays
   // here — the only way onward is tapping the message open.
   easeP(0, TEASER_P, 850, ()=>{ notifReady=true; if(lastStage===0) showNotif(); });
@@ -3044,10 +3051,20 @@ renderStep();
       if(piece && collide(piece)) piece.y=Math.max(0,piece.y-1);
     }
     return {
-      unit:'lines', hint:TOUCH?'pad to move · A rotate · ▼ drop':'← → move · ↑ rotate · ↓ drop',
+      unit:'lines', hint:TOUCH?'pad to move · A rotate · hold ▼ to drop'
+                                :'← → move · ↑ rotate · ↓ down · x to slam',
       reset(){ newGrid(); level=1; dropMs=dropFor(1); acc=0; lines=0; api.setLevel(1); spawn(); },
       frame(dt){ acc+=dt; while(acc>=dropMs && api.alive()){ acc-=dropMs; if(!move(0,1)) lock(); } },
-      input(a){ if(a==='left')move(-1,0); else if(a==='right')move(1,0); else if(a==='up'||a==='action')rotate(); else if(a==='down')hardDrop(); },
+      input(a){
+        if(a==='left')move(-1,0);
+        else if(a==='right')move(1,0);
+        else if(a==='up'||a==='action')rotate();
+        /* soft drop: one row, and the gravity timer resets so holding ▼ slides the
+           piece down smoothly instead of teleporting it. If it can't fall, it locks
+           — which is what a player expects from pressing down on a resting piece. */
+        else if(a==='down'){ if(!move(0,1)) lock(); acc=0; }
+        else if(a==='drop') hardDrop();     // the committed one, on its own key
+      },
       draw(){
         const g=fieldGeom(COLS,ROWS); drawPanel(g.ox,g.oy,g.fw,g.fh);
         const c=g.cell,pad=Math.max(1,(c*0.08)|0),at=(x,y)=>({x:g.ox+x*c,y:g.oy+y*c});
@@ -3289,6 +3306,7 @@ renderStep();
      no gesture of its own), then unlock and open. Used by the "k" hotkey and by
      /?arcade, which is the link on the besties invite. */
   function jumpToArcade(){
+    window.__toArcade = true;                // stop the intro camera fighting us
     try{ const gb=document.getElementById('gateYes'); if(gb) gb.click(); }catch(err){}
     unlock(); openArcade();
   }
@@ -3310,6 +3328,9 @@ renderStep();
   let jumpPending = false;
   function jumpWhenReady(){
     if(open || jumpPending) return;                 // already in, or already waiting
+    /* Claimed as early as the intent exists — a k pressed during the veil, or an
+       ?arcade link — so the intro bails instead of racing us for the camera. */
+    window.__toArcade = true;
     if(arcadeReady()){ jumpToArcade(); return; }
     jumpPending = true;
     let waited = 0;
@@ -3357,6 +3378,9 @@ renderStep();
       const d=KEYDIR[k];
       if(d){ held[d]=true; G.input&&G.input(d); }
       else if(k===' '||k==='Enter') G.input&&G.input('action');
+      /* the committed slam gets its own key, because ↓ is now a soft drop and
+         space is already rotate. Games that don't use it simply ignore it. */
+      else if(k==='x'||k==='X'||k==='Shift') G.input&&G.input('drop');
       else if(k==='Escape') backToMenu();
       else if(k==='m'||k==='M') toggleMute();
     } else if(mode==='over'){

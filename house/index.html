@@ -47,6 +47,35 @@
   .gbox.no input{ animation:no .35s; }
   @keyframes no{ 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
 
+  /* ---- who are you? ----
+     Thirty-seven names is too many to scan, so it's a searchable grid with each
+     guest's own character drawn beside their name — you look for your face, not
+     your row. */
+  #pick{ position:fixed; inset:0; display:none; z-index:25; overflow-y:auto;
+    background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%); }
+  #pick.on{ display:block; }
+  .pkin{ max-width:44rem; margin:0 auto; padding:1.6rem 1rem 3rem; }
+  .pktop{ font-family:var(--serif); font-style:italic; font-size:2rem; color:#fff; text-align:center; }
+  .pksub{ font-size:1.1rem; color:var(--soft); text-align:center; margin:.3rem 0 1.1rem;
+    max-width:26rem; margin-left:auto; margin-right:auto; line-height:1.35; }
+  #pkq{ display:block; width:100%; max-width:22rem; margin:0 auto 1.1rem;
+    background:rgba(255,255,255,.06); border:1px solid rgba(245,195,207,.28); border-radius:100px;
+    padding:.55rem 1.1rem; color:var(--cream); font-family:var(--mono); font-size:1.25rem;
+    outline:none; text-align:center; -webkit-appearance:none; }
+  #pkq:focus{ border-color:var(--pink); }
+  #pkgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr)); gap:.55rem; }
+  .pkcard{ display:flex; align-items:center; gap:.5rem; cursor:pointer; text-align:left;
+    background:rgba(255,255,255,.05); border:1px solid rgba(245,195,207,.2); border-radius:.9rem;
+    padding:.5rem .6rem; color:var(--cream); font-family:var(--mono); font-size:1.12rem;
+    line-height:1.15; }
+  .pkcard:hover{ border-color:var(--pink); background:rgba(235,100,140,.12); }
+  .pkcard canvas{ width:2.6rem; height:2.6rem; flex:none; }
+  .pkcard span{ min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .pkcard i{ display:block; font-style:normal; font-size:.9rem; color:#7ddc9b; }
+  .pkghost{ display:block; margin:1.3rem auto 0; background:none; border:0; cursor:pointer;
+    color:var(--soft); font-family:var(--mono); font-size:1.15rem; text-decoration:underline;
+    text-underline-offset:3px; }
+
   /* ---- the world ---- */
   #world{ position:fixed; inset:0; display:none; }
   #world.on{ display:block; }
@@ -109,6 +138,17 @@
       <button type="submit">GO IN ▸</button>
     </form>
     <p class="err" id="gerr"></p>
+  </div>
+</div>
+
+<div id="pick">
+  <div class="pkin">
+    <p class="pktop">who are you?</p>
+    <p class="pksub">pick yourself and you'll walk around as you. everyone else
+      mills about on their own until they show up.</p>
+    <input id="pkq" type="search" placeholder="find your name…" autocomplete="off" />
+    <div id="pkgrid"></div>
+    <button class="pkghost" id="pkGuest" type="button">just having a look ▸</button>
   </div>
 </div>
 
@@ -216,58 +256,61 @@ const LOOKS = [
   { hair:'#241a2e', skin:'#d79c72', pj:'#ff9ab0' },
 ];
 
-function drawPerson(px, py, s, look, facing, walkT, label){
+/* Takes a context so the same routine draws the world AND the little portraits
+   in the character picker — one character definition, never two that drift. */
+function drawPersonOn(g, px, py, s, look, facing, walkT, label){
   const L = LOOKS[look % LOOKS.length];
   const bob = Math.sin(walkT * 0.018) * s * 0.05;
   const y = py + bob;
-  // shadow first, so bodies never look like they're floating
-  cx.fillStyle = 'rgba(0,0,0,.28)';
-  cx.beginPath(); cx.ellipse(px, py + s * 0.46, s * 0.3, s * 0.11, 0, 0, 7); cx.fill();
-  // pyjamas
-  cx.fillStyle = L.pj;
-  rr(px - s * 0.24, y - s * 0.06, s * 0.48, s * 0.5, s * 0.14); cx.fill();
-  // legs, alternating while walking
+  g.fillStyle = 'rgba(0,0,0,.28)';
+  g.beginPath(); g.ellipse(px, py + s * 0.46, s * 0.3, s * 0.11, 0, 0, 7); g.fill();
+  g.fillStyle = L.pj;
+  rrOn(g, px - s * 0.24, y - s * 0.06, s * 0.48, s * 0.5, s * 0.14); g.fill();
   const step = Math.sin(walkT * 0.02) * s * 0.08;
-  cx.fillStyle = L.pj;
-  cx.fillRect(px - s * 0.17, y + s * 0.38, s * 0.13, s * 0.12 + step);
-  cx.fillRect(px + s * 0.04, y + s * 0.38, s * 0.13, s * 0.12 - step);
-  // head
-  cx.fillStyle = L.skin;
-  cx.beginPath(); cx.arc(px, y - s * 0.24, s * 0.22, 0, 7); cx.fill();
-  // hair — a fringe that shifts with facing, which is all the direction cue needed
-  cx.fillStyle = L.hair;
-  cx.beginPath();
-  cx.arc(px, y - s * 0.28, s * 0.23, Math.PI * 0.98, Math.PI * 2.02);
-  cx.fill();
-  if (facing !== 'up') {
-    cx.fillStyle = '#2b1a22';
+  g.fillStyle = L.pj;
+  g.fillRect(px - s * 0.17, y + s * 0.38, s * 0.13, s * 0.12 + step);
+  g.fillRect(px + s * 0.04, y + s * 0.38, s * 0.13, s * 0.12 - step);
+  g.fillStyle = L.skin;
+  g.beginPath(); g.arc(px, y - s * 0.24, s * 0.22, 0, 7); g.fill();
+  g.fillStyle = L.hair;
+  g.beginPath(); g.arc(px, y - s * 0.28, s * 0.23, Math.PI * 0.98, Math.PI * 2.02); g.fill();
+  if (facing !== 'up'){
+    g.fillStyle = '#2b1a22';
     const ex = facing === 'left' ? -s * 0.07 : facing === 'right' ? s * 0.07 : 0;
-    cx.beginPath();
-    cx.arc(px + ex - s * 0.07, y - s * 0.22, s * 0.028, 0, 7);
-    cx.arc(px + ex + s * 0.07, y - s * 0.22, s * 0.028, 0, 7);
-    cx.fill();
+    g.beginPath();
+    g.arc(px + ex - s * 0.07, y - s * 0.22, s * 0.028, 0, 7);
+    g.arc(px + ex + s * 0.07, y - s * 0.22, s * 0.028, 0, 7);
+    g.fill();
   }
   if (label){
-    cx.font = '600 ' + Math.max(9, s * 0.26) + 'px ui-monospace, monospace';
-    cx.textAlign = 'center'; cx.textBaseline = 'alphabetic';
-    cx.fillStyle = 'rgba(26,10,18,.75)';
-    const w = cx.measureText(label).width + s * 0.2;
-    rr(px - w / 2, y - s * 0.78, w, s * 0.3, s * 0.1); cx.fill();
-    cx.fillStyle = '#ffe9a8';
-    cx.fillText(label, px, y - s * 0.57);
+    g.font = '600 ' + Math.max(9, s * 0.26) + 'px ui-monospace, monospace';
+    g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+    g.fillStyle = 'rgba(26,10,18,.75)';
+    const w = g.measureText(label).width + s * 0.2;
+    rrOn(g, px - w / 2, y - s * 0.78, w, s * 0.3, s * 0.1); g.fill();
+    g.fillStyle = '#ffe9a8';
+    g.fillText(label, px, y - s * 0.57);
   }
 }
-function rr(x, y, w, h, r){
-  cx.beginPath();
-  cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + h, r);
-  cx.arcTo(x + w, y + h, x, y + h, r); cx.arcTo(x, y + h, x, y, r);
-  cx.arcTo(x, y, x + w, y, r); cx.closePath();
+const drawPerson = (px, py, s, look, facing, walkT, label) =>
+  drawPersonOn(cx, px, py, s, look, facing, walkT, label);
+
+function rrOn(g, x, y, w, h, r){
+  g.beginPath();
+  g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r); g.closePath();
 }
+const rr = (x, y, w, h, r) => rrOn(cx, x, y, w, h, r);
 
 /* ---------- state ---------- */
 let PEOPLE = [], me = { x: 20 * TILE, y: 12.5 * TILE, facing:'down', walkT: 0 },
     keys = {}, stick = { dx:0, dy:0, on:false },
-    near = null, room = '', online = 1, others = new Map(), chan = null, PW = null;
+    near = null, room = '', online = 1, others = new Map(), chan = null, PW = null,
+    /* MINE is the guest I'm playing as, or null for a nameless onlooker.
+       CLAIMED maps guest name -> live state broadcast by whoever is playing them,
+       which is what turns a milling NPC into a person someone is driving. */
+    MINE = null, CLAIMED = new Map();
 try { PW = sessionStorage.getItem('ssp-itin'); } catch(e){}
 
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -293,12 +336,8 @@ async function enter(pw, quiet){
     try { sessionStorage.setItem('ssp-itin', pw); } catch(e){}
     place(res.people);
     document.getElementById('gate').style.display = 'none';
-    document.getElementById('world').classList.add('on');
-    hint(TOUCH ? 'drag the circle to walk · go up to someone'
-               : 'arrows or wasd to walk · go up to someone');
-    paintWho();                 // truthful before presence connects: it's you
-    resize(); joinPresence();
-    if (!raf) loop();
+    resize(); joinPresence();           // presence first, so the picker can show who's taken
+    openPicker();
     return true;
   }
   if (!quiet){
@@ -327,6 +366,59 @@ function place(people){
       PEOPLE.push({ ...p, x:(tx + 0.5) * TILE, y:(ty + 0.5) * TILE, walkT: i * 400 });
     });
   }
+}
+
+/* ---------- who are you? ----------
+   Claiming a character is the whole hook: from that moment the guest everyone
+   else sees milling about is you, moving where you move. Anyone still unclaimed
+   keeps drifting around their room on their own. */
+function openPicker(){
+  const grid = document.getElementById('pkgrid');
+  const q = document.getElementById('pkq');
+  const draw1 = (p) => {
+    const c = document.createElement('canvas');
+    c.width = 96; c.height = 96;
+    drawPersonOn(c.getContext('2d'), 48, 56, 74, p.sprite, 'down', 0, '');
+    return c;
+  };
+  function render(){
+    const term = q.value.trim().toLowerCase();
+    grid.innerHTML = '';
+    for (const p of PEOPLE){
+      if (term && !p.name.toLowerCase().includes(term)) continue;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'pkcard';
+      b.appendChild(draw1(p));
+      const label = document.createElement('span');
+      label.textContent = p.first;
+      if (CLAIMED.has(p.name)) label.innerHTML += '<i>● here now</i>';
+      b.appendChild(label);
+      b.addEventListener('click', () => become(p));
+      grid.appendChild(b);
+    }
+    if (!grid.children.length){
+      const e = document.createElement('p');
+      e.className = 'pksub'; e.textContent = 'no one by that name 👀';
+      grid.appendChild(e);
+    }
+  }
+  q.addEventListener('input', render);
+  document.getElementById('pkGuest').addEventListener('click', () => become(null));
+  render();
+  document.getElementById('pick').classList.add('on');
+}
+
+function become(p){
+  MINE = p;
+  if (p){ me.x = p.x; me.y = p.y; }            // you start where your character was standing
+  document.getElementById('pick').classList.remove('on');
+  document.getElementById('world').classList.add('on');
+  hint(TOUCH ? 'drag the circle to walk · go up to someone'
+             : 'arrows or wasd to walk · go up to someone');
+  paintWho();
+  resize();
+  if (chan) chan.track(myState());
+  if (!raf) loop();
 }
 
 /* ---------- presence ----------
