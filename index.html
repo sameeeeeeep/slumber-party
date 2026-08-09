@@ -696,8 +696,13 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
   #gframe{ position:absolute; left:0; top:0; overflow:hidden; z-index:2; }
   .g-scan{ position:absolute; inset:0; pointer-events:none; z-index:3; opacity:.5; mix-blend-mode:overlay;
     background:repeating-linear-gradient(0deg, rgba(0,0,0,.5) 0 1px, transparent 1px 3px); }
-  .g-hud{ position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center;
-    padding:1em 1.2em; font-size:.6em; letter-spacing:.05em; color:var(--brand-soft); pointer-events:none; z-index:2;
+  /* Pinned to the SCREEN, not to #gframe. On a phone in landscape the CRT frame
+     runs wider than the viewport, so a HUD positioned to its edges put "best"
+     240px off-screen — and the page chrome (leave + mute) floats in that same
+     corner, which is what the right padding clears. Fixed is safe here because
+     the HUD only shows once the arcade is open and the CRT has finished framing. */
+  .g-hud{ position:fixed; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center;
+    gap:.6em; padding:.9rem 8rem .9rem 1.1rem; font-size:.78rem; letter-spacing:.05em; color:var(--brand-soft); pointer-events:none; z-index:6;
     text-shadow:2px 0 0 #3a1526,-2px 0 0 #3a1526,0 2px 0 #3a1526,0 -2px 0 #3a1526; }
   .g-hud b{ color:var(--brand-yellow); }
   .g-hud i{ font-style:normal; }
@@ -950,7 +955,7 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
         <p id="rotateHint" aria-hidden="true"><span>↻</span> turn your phone sideways to play</p>
         <div id="gframe">
           <div class="g-scan"></div>
-          <div class="g-hud"><span><i id="gunit">pillows</i>&nbsp;<b id="gscore">0</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
+          <div class="g-hud"><span><i id="gunit">pillows</i>&nbsp;<b id="gscore">0</b></span><span id="glvlWrap" hidden>lvl&nbsp;<b id="glvl">1</b></span><span>best&nbsp;<b id="ghi">0</b></span></div>
           <div class="g-toast" id="gtoast"></div>
           <div class="g-menu off" id="gmenu">
             <div class="gm-wrap">
@@ -2517,6 +2522,7 @@ renderStep();
   const gameEl=document.getElementById('game'), gframe=document.getElementById('gframe');
   const cv=document.getElementById('gamecanvas'), cx=cv.getContext('2d');
   const scoreEl=document.getElementById('gscore'), hiEl=document.getElementById('ghi'), unitEl=document.getElementById('gunit');
+  const lvlEl=document.getElementById('glvl'), lvlWrap=document.getElementById('glvlWrap');
   const overEl=document.getElementById('gover'), titleEl=document.getElementById('gotitle'), subEl=document.getElementById('gosub');
   const boardEl=document.getElementById('goboard'), verifyEl=document.getElementById('goverify'), footEl=document.getElementById('gofoot');
   const gboard=document.getElementById('gboard'), lblist=document.getElementById('lblist'), lbtitle=document.getElementById('lbtitle'),
@@ -2544,6 +2550,7 @@ renderStep();
   const KEYDIR={ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right',ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down'};
 
   /* ---------- the arcade line-up (add a game: give it a make() and a GLEADER.games entry) ---------- */
+  let levelNow=1, levelFlash=0;      // the level banner's countdown, ticked in drawFrame
   const GAMES=[
     { key:'snake',       name:'slumber snake', unit:'pillows', make:makeSnake,
       blurb:"eat the pillows — don't bite your own tail.", controls:{stick:'turn'} },
@@ -2564,7 +2571,17 @@ renderStep();
     getScore(){ return score; },
     over(){ gameOver(); },
     alive(){ return mode==='play'; },
-    blip(k){ blip(k); }
+    blip(k){ blip(k); },
+    /* A level is only worth showing if the game actually has one, so the readout
+       stays hidden until a game sets it. Announcing the number is half the point
+       of escalating difficulty — a game that gets harder silently just feels
+       unfair. */
+    setLevel(n){
+      if(lvlWrap) lvlWrap.hidden=false;
+      if(lvlEl) lvlEl.textContent=n;
+      levelNow=n;
+    },
+    levelUp(n){ this.setLevel(n); levelFlash=900; blip('bonus'); }
   };
 
   function unlock(){
@@ -2724,6 +2741,7 @@ renderStep();
     setChrome(false);
     freeze();
     score=0; scoreEl.textContent='0';
+    levelNow=1; levelFlash=0; if(lvlWrap) lvlWrap.hidden=true;   // each game opts back in via api.setLevel
     hi=hiFor(key); hiEl.textContent=hi;
     unitEl.textContent=def.unit;
     view=layout();
@@ -2736,6 +2754,7 @@ renderStep();
   function loop(){
     if(mode!=='play'||!G) return;
     const t=Date.now(), dt=Math.min(60, t-lastT); lastT=t;
+    if(levelFlash>0) levelFlash=Math.max(0, levelFlash-dt);   // the banner's own clock
     if(G.frame) G.frame(dt);
     drawFrame();
     loopTimer=setTimeout(loop, 26);
@@ -2854,6 +2873,23 @@ renderStep();
     cx.setTransform(dpr,0,0,dpr,0,0); cx.clearRect(0,0,W,H);
     if(mode==='play' && G && G.draw) G.draw();
     else drawPanel(view.x, view.y, view.w, view.h);   // menu / over / board backdrop — clean starfield, no live game bleeding through
+    if(mode==='play' && levelFlash>0) drawLevelBanner();
+  }
+  /* "LEVEL 4" across the middle for a beat. Difficulty that arrives unannounced
+     reads as the game cheating; the same jump with a title on it reads as
+     progress. Fades by its own countdown so it never needs clearing. */
+  function drawLevelBanner(){
+    const t=levelFlash/900, a=Math.min(1, t*2.2);            // hold, then fade
+    const cxm=view.x+view.w/2, cym=view.y+view.h*0.42;
+    const size=Math.max(14, Math.min(34, view.h*0.11));
+    cx.save();
+    cx.globalAlpha=a*0.9;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.font='700 '+size+'px ui-monospace, monospace';
+    cx.fillStyle='#3a1526'; cx.fillText('LEVEL '+levelNow, cxm+2, cym+2);
+    cx.fillStyle='#ffd84a'; cx.shadowColor='#ffd84a'; cx.shadowBlur=size*0.7;
+    cx.fillText('LEVEL '+levelNow, cxm, cym);
+    cx.restore();
   }
   function drawPillow(x,y,s,fill){
     cx.fillStyle=fill||'#f7dfe8'; rr(x, y+s*0.08, s, s*0.84, s*0.3); cx.fill();
@@ -2875,26 +2911,62 @@ renderStep();
 
   /* ================= GAME 1 · SLUMBER SNAKE ================= */
   function makeSnake(api){
-    let COLS,ROWS,snake,dir,pending,food,bonus,stepMs,acc,sinceBonus;
+    /* LEVELS. Every 5 pillows is a level, and each one does three things: the
+       snake speeds up, the bonus star comes sooner and stays shorter, and from
+       level 3 the room starts filling with cushions to weave around. Before this
+       the speed bottomed out after 16 pillows and nothing changed again — a high
+       score was just how long you could hold your nerve at one fixed speed. */
+    const LVL_EVERY=5;
+    let COLS,ROWS,snake,dir,pending,food,bonus,stepMs,acc,sinceBonus,level,walls;
+    const lvlOf=sc=>1+Math.floor(sc/LVL_EVERY);
+    const speedFor=l=>Math.max(52,152-l*9);          // keeps falling well past the old floor of 70
+    const bonusEvery=l=>Math.max(2,5-Math.floor(l/3));
     function reset(){
       const W=view.w,H=view.h,S=15;
       if(W>=H){ ROWS=S; COLS=Math.min(38,Math.max(12,Math.round(S*W/H))); }
       else    { COLS=S; ROWS=Math.min(46,Math.max(12,Math.round(S*H/W))); }
       const mx=COLS>>1,my=ROWS>>1;
       snake=[{x:mx,y:my},{x:mx-1,y:my},{x:mx-2,y:my}];
-      dir={x:1,y:0}; pending={x:1,y:0}; stepMs=150; acc=0; sinceBonus=0; bonus=null; food=null; placeFood();
+      dir={x:1,y:0}; pending={x:1,y:0}; level=1; stepMs=speedFor(1); acc=0; sinceBonus=0;
+      bonus=null; food=null; walls=[]; api.setLevel(1); placeFood();
     }
-    const cf=(x,y)=>!snake.some(s=>s.x===x&&s.y===y)&&!(food&&food.x===x&&food.y===y)&&!(bonus&&bonus.x===x&&bonus.y===y);
+    const isWall=(x,y)=>walls.some(w=>w.x===x&&w.y===y);
+    const cf=(x,y)=>!snake.some(s=>s.x===x&&s.y===y)&&!(food&&food.x===x&&food.y===y)
+                    &&!(bonus&&bonus.x===x&&bonus.y===y)&&!isWall(x,y);
     function placeFood(){ let c,t=0; do{ c={x:rnd(COLS),y:rnd(ROWS)}; }while(!cf(c.x,c.y)&&++t<300); food=c; }
-    function placeBonus(){ let c,t=0; do{ c={x:rnd(COLS),y:rnd(ROWS)}; }while(!cf(c.x,c.y)&&++t<300); bonus={x:c.x,y:c.y,t:0,life:Math.max(30,Math.round(6000/stepMs))}; }
+    function placeBonus(){ let c,t=0; do{ c={x:rnd(COLS),y:rnd(ROWS)}; }while(!cf(c.x,c.y)&&++t<300);
+      // shorter fuse as levels climb: the star is worth 5, so it should cost nerve
+      bonus={x:c.x,y:c.y,t:0,life:Math.max(16,Math.round((6400-level*260)/stepMs))}; }
+    /* Cushions are single cells, never a wall, so they can't seal off a region —
+       and never within four steps of the head, so levelling up can't kill you
+       before you've seen the board change. */
+    function growWalls(){
+      const want=Math.min(14,(level-2)*2);
+      const head=snake[0];
+      let guard=0;
+      while(walls.length<want && guard++<400){
+        const x=rnd(COLS), y=rnd(ROWS);
+        if(!cf(x,y)) continue;
+        if(Math.abs(x-head.x)+Math.abs(y-head.y)<5) continue;
+        walls.push({x,y});
+      }
+    }
     function tick(){
       if(!(pending.x===-dir.x&&pending.y===-dir.y)) dir=pending;
       const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
       if(head.x<0||head.y<0||head.x>=COLS||head.y>=ROWS) return api.over();
+      if(isWall(head.x,head.y)) return api.over();
       const eat=food&&head.x===food.x&&head.y===food.y, body=eat?snake:snake.slice(0,-1);
       if(body.some(s=>s.x===head.x&&s.y===head.y)) return api.over();
       snake.unshift(head);
-      if(eat){ api.addScore(1); api.blip('eat'); stepMs=Math.max(70,stepMs-5); placeFood(); if(++sinceBonus>=5&&!bonus){ sinceBonus=0; placeBonus(); } }
+      if(eat){
+        api.addScore(1); api.blip('eat');
+        const nl=lvlOf(api.getScore());
+        if(nl>level){ level=nl; api.levelUp(level); growWalls(); }
+        stepMs=speedFor(level);
+        placeFood();
+        if(++sinceBonus>=bonusEvery(level)&&!bonus){ sinceBonus=0; placeBonus(); }
+      }
       else snake.pop();
       if(bonus){ if(head.x===bonus.x&&head.y===bonus.y){ api.addScore(5); api.blip('bonus'); bonus=null; snake.push({...snake[snake.length-1]}); } else if(++bonus.t>bonus.life) bonus=null; }
     }
@@ -2907,6 +2979,8 @@ renderStep();
       draw(){
         const g=fieldGeom(COLS,ROWS); drawPanel(g.ox,g.oy,g.fw,g.fh);
         const c=g.cell,pad=Math.max(1,(c*0.12)|0),at=(x,y)=>({x:g.ox+x*c,y:g.oy+y*c});
+        for(const w of walls){ const p=at(w.x,w.y); cx.fillStyle='#5a3f57';
+          rr(p.x+pad,p.y+pad,c-2*pad,c-2*pad,Math.max(2,c*0.28)); cx.fill(); }
         if(food){ const p=at(food.x,food.y); drawPillow(p.x+pad,p.y+pad,c-2*pad); }
         if(bonus&&bonus.t%2===0){ const p=at(bonus.x,bonus.y); drawStar(p.x+c/2,p.y+c/2,c*0.42); }
         for(let i=snake.length-1;i>=0;i--){ const s=snake[i],p=at(s.x,s.y),t=snake.length>1?i/(snake.length-1):0;
@@ -2930,8 +3004,14 @@ renderStep();
   const TYPES=Object.keys(TET);
   function rotCells(base,n,rot){ let cs=base.map(c=>[c[0],c[1]]); rot=((rot%4)+4)%4; for(let r=0;r<rot;r++) cs=cs.map(([x,y])=>[n-1-y,x]); return cs; }
   function makeStack(api){
-    const COLS=10, ROWS=18;
-    let grid, piece, dropMs, acc, lines;
+    /* LEVELS. Every 6 lines. Each level drops faster, and from level 3 a row of
+       cushions shoves up from the floor on every level-up — one hole in it, so
+       it's survivable but it eats your board. Before this the drop bottomed out
+       at 120ms after 26 lines and never changed again. */
+    const COLS=10, ROWS=18, LVL_EVERY=6;
+    let grid, piece, dropMs, acc, lines, level;
+    const lvlOf=n=>1+Math.floor(n/LVL_EVERY);
+    const dropFor=l=>Math.max(80,720-(l-1)*62);      // past the old 120ms floor
     function newGrid(){ grid=Array.from({length:ROWS},()=>Array(COLS).fill(null)); }
     function cellsOf(p){ return rotCells(TET[p.type].cells,TET[p.type].n,p.rot).map(([x,y])=>[p.x+x,p.y+y]); }
     function collide(p){ return cellsOf(p).some(([x,y])=> x<0||x>=COLS||y>=ROWS || (y>=0 && grid[y][x])); }
@@ -2942,13 +3022,30 @@ renderStep();
       for(const [x,y] of cellsOf(piece)) if(y>=0) grid[y][x]=TET[piece.type].c;
       let cleared=0;
       for(let y=ROWS-1;y>=0;){ if(grid[y].every(c=>c)){ grid.splice(y,1); grid.unshift(Array(COLS).fill(null)); cleared++; } else y--; }
-      if(cleared){ api.addScore(cleared); lines+=cleared; dropMs=Math.max(120,700-lines*22); api.blip(cleared>=3?'bonus':'eat'); }
+      if(cleared){
+        api.addScore(cleared); lines+=cleared;
+        api.blip(cleared>=3?'bonus':'eat');
+        const nl=lvlOf(lines);
+        if(nl>level){ level=nl; api.levelUp(level); if(level>=3) pushGarbage(); }
+        dropMs=dropFor(level);
+      }
       spawn();
     }
     function hardDrop(){ while(move(0,1)){} lock(); acc=0; }
+    /* A row rises from the floor with a single gap. If it shoves the stack out of
+       the top the game ends — which is the point: the board is closing in, not
+       just falling faster. Checked BEFORE the shift so it can't spawn a piece
+       inside a wall. */
+    function pushGarbage(){
+      if(grid[0].some(c=>c)) return api.over();
+      grid.shift();
+      const hole=rnd(COLS);
+      grid.push(Array.from({length:COLS},(_,x)=> x===hole?null:'#7d5f7a'));
+      if(piece && collide(piece)) piece.y=Math.max(0,piece.y-1);
+    }
     return {
       unit:'lines', hint:TOUCH?'pad to move · A rotate · ▼ drop':'← → move · ↑ rotate · ↓ drop',
-      reset(){ newGrid(); dropMs=700; acc=0; lines=0; spawn(); },
+      reset(){ newGrid(); level=1; dropMs=dropFor(1); acc=0; lines=0; api.setLevel(1); spawn(); },
       frame(dt){ acc+=dt; while(acc>=dropMs && api.alive()){ acc-=dropMs; if(!move(0,1)) lock(); } },
       input(a){ if(a==='left')move(-1,0); else if(a==='right')move(1,0); else if(a==='up'||a==='action')rotate(); else if(a==='down')hardDrop(); },
       draw(){
@@ -2986,23 +3083,35 @@ renderStep();
     function openList(){ const a=[]; for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++) if(grid[y][x]===0) a.push([x,y]); return a; }
     const remaining=()=>Object.keys(pellets).length+Object.keys(powers).length;
     const K=(x,y)=>x+','+y;
+    /* The maze already had levels, but everything about them stopped growing
+       almost immediately: the maze capped at level 4, the ghosts at four, and
+       both speeds hit their floor by level 7. Past that, level 20 played exactly
+       like level 8. Now the maze keeps growing (to what still fits the CRT), the
+       ghost count keeps climbing, they get sharper at chasing, and the power
+       star's mercy shortens. */
     function newLevel(){
-      const mc=6+Math.min(4,level), mr=4+Math.min(3,level); gen(mc,mr);
+      const mc=Math.min(11,6+level), mr=Math.min(8,4+level); gen(mc,mr);
       px=1; py=1; dir={x:1,y:0}; pending={x:0,y:0}; pAcc=0; gAcc=0; mouth=0;
-      pStep=Math.max(85,120-level*4); gStep=Math.max(120,165-level*6); fright=0;
+      pStep=Math.max(72,124-level*5);
+      gStep=Math.max(84,170-level*9);          // ghosts close the gap faster than you do
+      fright=0;
       pellets={}; powers={};
       for(const [x,y] of openList()) if(!(x===1&&y===1)) pellets[K(x,y)]=1;
       const cells=openList().filter(([x,y])=>!(x<=2&&y<=2));
-      for(let i=0;i<4 && cells.length;i++){ const c=cells.splice(rnd(cells.length),1)[0]; powers[K(c[0],c[1])]=1; delete pellets[K(c[0],c[1])]; }
+      // fewer safety stars the deeper you go: 4, 4, 3, 3, 2 …
+      const stars=Math.max(2,4-Math.floor(level/2));
+      for(let i=0;i<stars && cells.length;i++){ const c=cells.splice(rnd(cells.length),1)[0]; powers[K(c[0],c[1])]=1; delete pellets[K(c[0],c[1])]; }
       const far=openList().sort((a,b)=>(b[0]+b[1])-(a[0]+a[1]));   // spawn ghosts far from the start
-      ghosts=[]; const gn=2+Math.min(2,level);
+      ghosts=[]; const gn=Math.min(6,2+level);
       for(let i=0;i<gn;i++){ const c=far[i%far.length]; ghosts.push({x:c[0],y:c[1],dx:0,dy:0,col:GCOLS[i%4]}); }
+      api.setLevel(level+1);                   // level counts from 0 internally; players count from 1
     }
     function eatCell(){
       const k=K(px,py);
       if(pellets[k]){ delete pellets[k]; api.addScore(1); api.blip('eat'); }
-      if(powers[k]){ delete powers[k]; api.addScore(5); api.blip('bonus'); fright=6000; }
-      if(remaining()<=0){ level++; api.blip('bonus'); newLevel(); }
+      if(powers[k]){ delete powers[k]; api.addScore(5); api.blip('bonus');
+        fright=Math.max(2200,6000-level*450); }   // the tables turn for less time each level
+      if(remaining()<=0){ level++; api.levelUp(level+1); newLevel(); }
     }
     function movePlayer(){
       if((pending.x||pending.y) && openAt(px+pending.x,py+pending.y)) dir=pending;
@@ -3015,7 +3124,8 @@ renderStep();
         if(!opts.length) opts=[[-g.dx,-g.dy]].filter(([dx,dy])=>openAt(g.x+dx,g.y+dy));
         if(!opts.length) continue;
         opts.sort((a,b)=>{ const da=Math.abs(g.x+a[0]-px)+Math.abs(g.y+a[1]-py), db=Math.abs(g.x+b[0]-px)+Math.abs(g.y+b[1]-py); return fright>0? db-da : da-db; });
-        const pick=(opts.length>1 && Math.random()<0.2)? opts[1] : opts[0];
+        const slip=Math.max(0.05,0.22-level*0.025);   // they stop making mistakes
+        const pick=(opts.length>1 && Math.random()<slip)? opts[1] : opts[0];
         g.dx=pick[0]; g.dy=pick[1]; g.x+=g.dx; g.y+=g.dy;
       }
       checkCatch();
