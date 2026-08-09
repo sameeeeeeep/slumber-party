@@ -81,14 +81,24 @@
      refresh (or a bookmark) lands where you were. The panels themselves are
      untouched — the shell moves them, it doesn't rebuild them. */
   #side{ display:none; }
-  #side a{ display:flex; align-items:center; gap:6px; padding:.44rem .6rem; border-radius:8px;
-    color:var(--ink-2); text-decoration:none; font-size:.85rem; line-height:1.3; white-space:nowrap; }
+  #side a{ display:flex; align-items:center; gap:7px; padding:.42rem .55rem; border-radius:8px;
+    color:var(--ink-2); text-decoration:none; font-size:.85rem; line-height:1.3; }
+  /* the label yields, the number never does: a long label ellipsises rather than
+     shoving its count off the edge of the rail */
+  .nvl{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
   #side a:hover{ background:var(--surface-2); color:var(--ink); }
   #side a.on{ background:var(--series); color:#fff; font-weight:600; }
-  #side a.on .nvc{ background:rgba(255,255,255,.25); color:#fff; }
-  .nvc{ margin-left:auto; font-size:.7rem; font-weight:600; color:var(--ink-2);
-    background:var(--surface-2); border-radius:100px; padding:.05rem .4rem; min-width:1.1rem;
-    text-align:center; }
+  #side a.on .nvc{ background:rgba(255,255,255,.22); border-color:transparent; color:#fff; }
+  /* A pill, not a circle: it has to hold 4 digits the day a thousand people
+     apply, so nothing is fixed-width — min-width sets the floor for one digit and
+     padding does the rest. It sits right after the label rather than pinned to the
+     far edge, so the number reads as belonging to the word next to it.
+     tabular-nums keeps the digits from shifting width as counts tick up. */
+  .nvc{ flex:none; font-size:.7rem; font-weight:600; line-height:1;
+    color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line);
+    border-radius:100px; padding:3px 7px; min-width:15px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-variant-numeric:tabular-nums; }
   .nvc:empty{ display:none; }
   .sideBrand{ display:block; font-size:.95rem; line-height:1.15; color:var(--ink-3);
     padding:0 .6rem .9rem; letter-spacing:.02em; }
@@ -104,10 +114,10 @@
      once a session is confirmed, so a signed-out visitor sees only the card */
   body:not(.in) #side{ display:none !important; }
   @media (min-width:1000px){
-    #side{ display:block; position:fixed; top:0; left:0; bottom:0; width:178px;
+    #side{ display:block; position:fixed; top:0; left:0; bottom:0; width:184px;
       border-right:1px solid var(--line); background:var(--surface-1); z-index:20;
       overflow-y:auto; padding:20px 10px; }
-    #app{ padding-left:200px !important; max-width:1400px; }
+    #app{ padding-left:206px !important; max-width:1400px; }
   }
   @media (max-width:999px){
     #side{ display:block; position:sticky; top:0; z-index:20; background:var(--surface-1);
@@ -315,12 +325,12 @@
 <nav id="side" aria-label="sections">
   <div class="sideIn">
     <span class="sideBrand">slumber<br /><b>admin</b></span>
-    <a href="#/overview"     data-view="overview">overview<span class="nvc" id="nv-overview"></span></a>
-    <a href="#/applications" data-view="applications">applications<span class="nvc" id="nv-applications"></span></a>
-    <a href="#/guests"       data-view="guests">guests &amp; check-in<span class="nvc" id="nv-guests"></span></a>
-    <a href="#/stay"         data-view="stay">rooms &amp; crew<span class="nvc" id="nv-stay"></span></a>
-    <a href="#/day"          data-view="day">the day<span class="nvc" id="nv-day"></span></a>
-    <a href="#/reach"        data-view="reach">reach<span class="nvc" id="nv-reach"></span></a>
+    <a href="#/overview"     data-view="overview"><span class="nvl">overview</span><span class="nvc" id="nv-overview"></span></a>
+    <a href="#/applications" data-view="applications"><span class="nvl">applications</span><span class="nvc" id="nv-applications"></span></a>
+    <a href="#/guests"       data-view="guests"><span class="nvl">guests</span><span class="nvc" id="nv-guests"></span></a>
+    <a href="#/stay"         data-view="stay"><span class="nvl">rooms &amp; crew</span><span class="nvc" id="nv-stay"></span></a>
+    <a href="#/day"          data-view="day"><span class="nvl">the day</span><span class="nvc" id="nv-day"></span></a>
+    <a href="#/reach"        data-view="reach"><span class="nvl">reach</span><span class="nvc" id="nv-reach"></span></a>
   </div>
 </nav>
 
