@@ -11,8 +11,16 @@
 //  programme, including the days it happens — the one thing the public site
 //  never says.
 //
+//  The word is handled the way /besties handles its passwords: never stored and
+//  never compared in plaintext. The secret holds only a PBKDF2-SHA256 derivation
+//  (100,000 rounds, fixed salt — the same primitive and rounds as the besties
+//  guest index), the submitted word is lowercased and derived the same slow way,
+//  and the derivations are compared. Nowhere — code, secret store, or wire
+//  handler — does the plain word exist at rest, and the 100k rounds make each
+//  offline guess as expensive as besties makes theirs.
+//
 //  Deploy: supabase functions deploy itinerary
-//  Secret: supabase secrets set ITINERARY_PASS=…
+//  Secret: supabase secrets set ITINERARY_HASH=<pbkdf2 hex — see tools note>
 // ============================================================================
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -40,6 +48,18 @@ async function sha256(s: string) {
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/* Must mirror how the secret was derived — same salt, same rounds — or the
+   right word stops opening the door. Matches the besties derivation discipline:
+   PBKDF2-SHA256, 100k rounds, lowercased input. */
+async function pbkdf2Hex(word: string) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(word), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode('ssp-itinerary-pass'), iterations: 100000, hash: 'SHA-256' },
+    base, 256);
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin');
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors(origin) });
@@ -47,8 +67,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: false }), { status: 405, headers: cors(origin) });
   }
 
-  const REAL = Deno.env.get('ITINERARY_PASS');
-  if (!REAL) {
+  const REAL_HASH = Deno.env.get('ITINERARY_HASH');
+  if (!REAL_HASH) {
     // fail closed: no secret means no door, not an open one
     return new Response(JSON.stringify({ ok: false }), { status: 503, headers: cors(origin) });
   }
@@ -57,7 +77,7 @@ Deno.serve(async (req) => {
   try { b = await req.json(); } catch {
     return new Response(JSON.stringify({ ok: false }), { status: 400, headers: cors(origin) });
   }
-  const given = typeof b.password === 'string' ? b.password.trim() : '';
+  const given = typeof b.password === 'string' ? b.password.trim().toLowerCase() : '';
 
   const db = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -80,8 +100,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: false, error: 'rate' }), { status: 429, headers: cors(origin) });
   }
 
-  // compare digests, not strings — same length, no early exit on first wrong byte
-  if (await sha256('pw:' + given) !== await sha256('pw:' + REAL)) {
+  // derive the submitted word the same slow way and compare derivations —
+  // same length either way, no early exit on the first wrong byte
+  if (await pbkdf2Hex(given) !== REAL_HASH) {
     await db.from('submit_log').insert({ ip_hash: ipHash, kind: 'itinerary' });
     return new Response(JSON.stringify({ ok: false, error: 'wrong' }), { status: 401, headers: cors(origin) });
   }
