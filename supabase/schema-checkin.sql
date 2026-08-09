@@ -432,3 +432,18 @@ do $$ begin
   begin execute 'alter publication supabase_realtime add table public.rooms';
   exception when duplicate_object then null; end;
 end $$;
+
+-- ============================================================================
+--  THE MISSING GUESTS UPDATE POLICY  ← this one was a silent data-loss bug
+--  guests had INSERT, SELECT and DELETE policies but no UPDATE. RLS refuses a
+--  write by matching ZERO ROWS, not by raising an error — so every room
+--  assignment, tier change and address edit on a guest returned "no error, no
+--  data" and wrote nothing, which is indistinguishable from success unless the
+--  client checks the returned rows. It didn't, so the dashboard reported saves
+--  that never happened.
+--  The fix is both halves: this policy, and admin/index.html now routing every
+--  write through save(), which forces .select() and treats zero rows as failure.
+-- ============================================================================
+drop policy if exists "admins update guests" on public.guests;
+create policy "admins update guests" on public.guests for update to authenticated
+  using (public.is_admin()) with check (public.is_admin());

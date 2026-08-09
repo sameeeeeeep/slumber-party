@@ -25,6 +25,7 @@
      node tools/besties-seal.mjs unseal    besties/sealed.js    → besties/content.json
      node tools/besties-seal.mjs guests    besties/guests.json  → besties/guests.js
      node tools/besties-seal.mjs add "Shanaya Kapoor"     mint a personalised link
+     node tools/besties-seal.mjs rm  "Shanaya Kapoor"     take them off, killing the link
 
    The password comes from --pass=…, or $BESTIES_PASS, or besties/.password
    (gitignored), in that order. There is no default — the tool errors if none is
@@ -194,6 +195,34 @@ async function cmdAdd(argv) {
   console.log(`\n  ↳ send them:  ${link(code)}${voice ? `   (${voice} voice)` : ''}`);
 }
 
+/* Take someone off the list, and actually kill their link. Deleting the row in
+   the admin dashboard removes them from OUR view; the sealed index is a file that
+   ships with the site, so until it's rebuilt their code still resolves. This is
+   the other half of that delete. Matches on name or code, case-insensitively. */
+async function cmdRm(argv) {
+  const who = argv.slice(1).filter(a => !a.startsWith('--')).join(' ').trim().toLowerCase();
+  if (!who) return console.error('usage: node tools/besties-seal.mjs rm "Muskkan Rawat"   (or the code)');
+
+  const list = existsSync(P('besties/guests.json'))
+    ? JSON.parse(await readFile(P('besties/guests.json'), 'utf8')) : [];
+  const hit = list.filter(g =>
+    (g.name || '').toLowerCase() === who || (g.code || '').toLowerCase() === who);
+  if (!hit.length) {
+    const near = list.filter(g => (g.name || '').toLowerCase().includes(who)).map(g => g.name);
+    console.error(`  ✗ no guest matching "${who}"` + (near.length ? `\n    did you mean: ${near.join(', ')}` : ''));
+    return;
+  }
+  if (hit.length > 1) {
+    return console.error(`  ✗ "${who}" matches ${hit.length} guests — use the code instead:\n` +
+      hit.map(g => `    ${g.name}  ${g.code}`).join('\n'));
+  }
+  const g = hit[0];
+  const kept = list.filter(x => x !== g);
+  await writeFile(P('besties/guests.json'), JSON.stringify(kept, null, 2) + '\n');
+  await cmdGuests(argv);
+  console.log(`\n  ↳ removed ${g.name} (${g.code}). Commit besties/guests.js and push — the link dies on deploy.`);
+}
+
 /* The message Khushi actually sends. The link never carries the password — she
    sends the words separately (or says them out loud), so a forwarded screenshot
    of the link is not an invitation. */
@@ -208,8 +237,8 @@ async function cmdLink(argv) {
 
 const [cmd = 'seal', ...rest] = process.argv.slice(2);
 const argv = [cmd, ...rest];
-const run = { seal: cmdSeal, unseal: cmdUnseal, guests: cmdGuests, add: cmdAdd, link: cmdLink }[cmd];
-if (!run) { console.error(`unknown command "${cmd}" — try: seal | unseal | guests | add`); process.exit(1); }
+const run = { seal: cmdSeal, unseal: cmdUnseal, guests: cmdGuests, add: cmdAdd, rm: cmdRm, link: cmdLink }[cmd];
+if (!run) { console.error(`unknown command "${cmd}" — try: seal | unseal | guests | add | rm`); process.exit(1); }
 run(argv).catch(err => {
   if (String(err).includes('operation-specific reason') || err?.name === 'OperationError')
     console.error('could not decrypt — wrong password?');
