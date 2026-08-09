@@ -75,6 +75,32 @@
   .msg{ font-size:.85rem; margin-top:.7rem; min-height:1.2em; }
   .msg.err{ color:var(--critical); }
 
+  /* ---- the jump rail ----
+     Fifteen panels is more than anyone should scroll through to reach the one
+     they want. Fixed on desktop; on a phone it becomes a horizontal strip at the
+     top, because a fixed side rail on a 390px screen is just lost width. */
+  #side{ display:none; }
+  #side a{ display:block; padding:.3rem .55rem; border-radius:7px; color:var(--ink-2);
+    text-decoration:none; font-size:.79rem; line-height:1.35; white-space:nowrap; }
+  #side a:hover{ background:var(--surface-2); color:var(--ink); }
+  #side a.on{ background:var(--surface-2); color:var(--ink); font-weight:600; }
+  .sideTop{ display:block; font-size:.64rem; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-3); padding:0 .55rem .35rem; }
+  @media (min-width:1120px){
+    #side{ display:block; position:fixed; top:0; left:0; bottom:0; width:150px;
+      border-right:1px solid var(--line); background:var(--surface-1); z-index:20;
+      overflow-y:auto; padding:20px 8px; }
+    #app{ padding-left:170px !important; max-width:1330px; }
+  }
+  @media (max-width:1119px){
+    #side{ display:block; position:sticky; top:0; z-index:20; background:var(--surface-1);
+      border-bottom:1px solid var(--line); padding:8px 10px; }
+    #side .sideIn{ display:flex; gap:4px; overflow-x:auto; }
+    #side .sideTop{ display:none; }
+    #side a{ flex:none; border:1px solid var(--line); }
+  }
+  section[id^="sec-"]{ scroll-margin-top:64px; }
+
   /* ---- shell ---- */
   #app{ display:none; max-width:1180px; margin:0 auto; padding:22px 20px 70px; }
   header.top{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
@@ -168,7 +194,17 @@
   .vnHead b{ font-size:.92rem; }
   .vnWho{ display:flex; flex-wrap:wrap; gap:5px; margin-top:.2rem; }
   .vnChip{ font-size:.76rem; color:var(--ink-2); border:1px solid var(--line);
-    border-radius:100px; padding:.15rem .5rem; white-space:nowrap; }
+    border-radius:100px; padding:.15rem .5rem; white-space:nowrap; display:inline-block; margin:1px 0; }
+  /* the floor plan. auto-fill rather than fixed columns so 5 rooms and 10 rooms
+     both read as a row of rooms instead of a ragged grid */
+  .roomGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:6px; }
+  .roomBox{ border:1px solid var(--line); border-radius:9px; padding:.4rem .5rem; background:var(--surface-1);
+    min-height:74px; display:flex; flex-direction:column; gap:2px; }
+  .roomBox.filled{ border-color:var(--series); }
+  .roomTop{ display:flex; align-items:center; justify-content:space-between; }
+  .roomTop b{ font-size:.82rem; }
+  .roomMat{ margin:auto 0 0; font-size:.66rem; color:var(--ink-3); display:flex; align-items:center; gap:4px; }
+  .roomMat input{ margin:0; width:44px; height:22px; padding:0 4px; font-size:.72rem; text-align:center; }
   #crewTbl td, #crewTbl th{ white-space:nowrap; }
   #crewTbl td:nth-child(6){ font-size:.78rem; color:var(--ink-2); min-width:160px; }
   .yes{ color:var(--series); }
@@ -260,6 +296,22 @@
 </section>
 
 <!-- ===================== dashboard ===================== -->
+<nav id="side" aria-label="dashboard sections">
+  <div class="sideIn">
+    <span class="sideTop">jump to</span>
+      <a href="#sec-applied">applications</a>
+      <a href="#sec-dropoff">drop-off</a>
+      <a href="#sec-sources">traffic</a>
+      <a href="#sec-checkin">check-in</a>
+      <a href="#sec-stay">rooms &amp; stay</a>
+      <a href="#sec-crew">team &amp; vendors</a>
+      <a href="#sec-itin">itinerary</a>
+      <a href="#sec-late">late list</a>
+      <a href="#sec-drafts">unfinished</a>
+      <a href="#sec-seo">sharing &amp; SEO</a>
+  </div>
+</nav>
+
 <main id="app">
   <header class="top">
     <h1>applications</h1>
@@ -285,7 +337,7 @@
       <p class="note">counted per browser tab, from a random id that's forgotten when the tab closes — no cookie, no IP, no fingerprint.</p>
     </section>
 
-    <section class="panel">
+    <section id="sec-dropoff" class="panel">
       <h2>where the form loses people</h2>
       <p class="sub">sessions that reached each question · the drop is what to fix</p>
       <div class="rows" id="dropoff"></div>
@@ -296,7 +348,7 @@
         before reading much into small numbers.</p>
     </section>
 
-    <section class="panel">
+    <section id="sec-sources" class="panel">
       <div class="tablebar" style="margin-bottom:2px">
         <h2 style="flex:1">where they came from</h2>
         <span class="pill" id="srcLive">—</span>
@@ -339,7 +391,7 @@
     </section>
   </div>
 
-  <section class="panel">
+  <section id="sec-applied" class="panel">
     <div class="tablebar">
       <h2 style="flex:1">everyone who applied</h2>
       <input id="q" type="search" placeholder="search name, city, handle, email…" />
@@ -358,7 +410,7 @@
   </section>
 
   <!-- ------------------------------------------------------------ check-in -->
-  <section class="panel" style="margin-top:18px">
+  <section id="sec-checkin" class="panel" style="margin-top:18px">
     <div class="tablebar">
       <h2 style="flex:1">check-in</h2>
       <span class="pill" id="ciCount">—</span>
@@ -435,7 +487,7 @@
   </section>
 
   <!-- ------------------------------------------------- sharing & search -->
-  <section class="panel" style="margin-top:18px">
+  <section id="sec-seo" class="panel" style="margin-top:18px">
     <div class="tablebar">
       <h2 style="flex:1">sharing &amp; search</h2>
       <span class="pill" id="seoSaved">—</span>
@@ -524,7 +576,7 @@
   </section>
 
   <!-- ---------------------------------------------------------- itinerary -->
-  <section class="panel" style="margin-top:18px">
+  <section id="sec-itin" class="panel" style="margin-top:18px">
     <div class="tablebar">
       <h2 style="flex:1">itinerary</h2>
       <span class="pill" id="itCount">—</span>
@@ -561,7 +613,7 @@
   </section>
 
   <!-- ------------------------------------------------------------- drafts -->
-  <section class="panel" style="margin-top:18px">
+  <section id="sec-drafts" class="panel" style="margin-top:18px">
     <div class="tablebar">
       <h2 style="flex:1">didn't finish applying</h2>
       <span class="pill" id="drCount">—</span>
@@ -581,7 +633,7 @@
   </section>
 
   <!-- ------------------------------------------------------------ waitlist -->
-  <section class="panel" style="margin-top:18px">
+  <section id="sec-late" class="panel" style="margin-top:18px">
     <div class="tablebar">
       <h2 style="flex:1">the late list</h2>
       <span class="pill" id="wlCount">—</span>
@@ -599,7 +651,7 @@
   </section>
 
   <!-- --------------------------------------------------------- where they stay -->
-  <section class="panel" style="margin-top:18px">
+  <section id="sec-stay" class="panel" style="margin-top:18px">
     <div class="tablebar">
       <h2 style="flex:1">where everyone stays</h2>
       <span class="pill" id="vnCount">—</span>
@@ -625,7 +677,7 @@
   </section>
 
   <!-- ------------------------------------------------------- team & vendors -->
-  <section class="panel" style="margin-top:18px">
+  <section id="sec-crew" class="panel" style="margin-top:18px">
     <div class="tablebar">
       <h2 style="flex:1">team &amp; vendors</h2>
       <span class="pill" id="crewCount">—</span>
@@ -735,7 +787,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -755,7 +807,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it, vn] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -771,11 +823,12 @@ async function boot() {
     fetchAll(() => sb.from('drafts').select('*').order('updated_at', { ascending: false })),
     sb.from('itinerary').select('*').order('position'),
     sb.from('venues').select('*').order('position'),
+    sb.from('rooms').select('*').order('position'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -790,6 +843,13 @@ async function boot() {
         p => { CHECKINS.unshift(p.new); renderAll(); flashLive('new check-in'); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waitlist' },
         p => { WAITLIST.unshift(p.new); renderAll(); flashLive('new late-list email'); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, p => {
+      if (p.eventType === 'DELETE')      ROOMS = ROOMS.filter(r => r.id !== p.old.id);
+      else if (p.eventType === 'UPDATE') ROOMS = ROOMS.map(r => r.id === p.new.id ? p.new : r);
+      else if (!ROOMS.some(r => r.id === p.new.id)) ROOMS.push(p.new);
+      ROOMS.sort((a, b) => a.position - b.position);
+      renderAll();
+    })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'venues' }, p => {
       if (p.eventType === 'DELETE')      VENUES = VENUES.filter(r => r.id !== p.old.id);
       else if (p.eventType === 'UPDATE') VENUES = VENUES.map(r => r.id === p.new.id ? p.new : r);
@@ -819,6 +879,26 @@ async function boot() {
     })
     .subscribe();
 }
+
+/* highlight the section you're actually looking at — a rail that never responds
+   reads as decoration rather than navigation */
+(function railHighlight(){
+  const links = [...document.querySelectorAll('#side a')];
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  const byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const io = new IntersectionObserver((entries) => {
+    for (const en of entries) {
+      if (!en.isIntersecting) continue;
+      links.forEach(a => a.classList.remove('on'));
+      const a = byId.get(en.target.id);
+      if (a) a.classList.add('on');
+    }
+  }, { rootMargin: '-15% 0px -70% 0px' });
+  for (const id of byId.keys()) {
+    const el = document.getElementById(id);
+    if (el) io.observe(el);
+  }
+})();
 
 function flashLive(what = 'new application') {
   const t = document.getElementById('liveTxt');
@@ -1609,9 +1689,19 @@ function headcount() {
    one row would under-book the house by four.
    ========================================================================== */
 const venueName = (id) => { const v = VENUES.find(x => x.id === id); return v ? v.name : ''; };
-const venueCell = (id) => id
-  ? `<td>${esc(venueName(id))}</td>`
-  : `<td><span class="muted">—</span></td>`;
+const roomOf = (id) => ROOMS.find(r => r.id === id) || null;
+/* Where someone sleeps, in the shortest true form: a room implies its venue, so
+   "Mansion House · 101" rather than making you cross-reference two columns. */
+function stayLabel(row) {
+  const r = roomOf(row.room_id);
+  if (r) return `${venueName(r.venue_id)} · ${r.label}`;
+  return row.venue_id ? venueName(row.venue_id) : '';
+}
+const venueCell = (row_or_id) => {
+  const row = (row_or_id && typeof row_or_id === 'object') ? row_or_id : { venue_id: row_or_id };
+  const t = stayLabel(row);
+  return t ? `<td>${esc(t)}</td>` : `<td><span class="muted">—</span></td>`;
+};
 
 let vnEditing = null;
 
@@ -1622,12 +1712,12 @@ function sleepers() {
   for (const g of GUESTS) {
     if (!g.code) continue;                 // roster-only names aren't attending
     out.push({ kind: 'guest', id: g.id, name: g.name, heads: 1,
-               tag: g.tier || 'guest', venue_id: g.venue_id });
+               tag: g.tier || 'guest', venue_id: g.venue_id, room_id: g.room_id });
   }
   for (const c of CREW) {
     if (c.kind === 'car') continue;        // a car doesn't sleep anywhere
     out.push({ kind: 'crew', id: c.id, name: c.name, heads: Number(c.headcount) || 0,
-               tag: c.kind, venue_id: c.venue_id });
+               tag: c.kind, venue_id: c.venue_id, room_id: c.room_id });
   }
   return out;
 }
@@ -1636,47 +1726,88 @@ function stayPanel() {
   const board = document.getElementById('vnBoard');
   if (!board) return;
   const all = sleepers();
-  const beds = VENUES.reduce((n, v) => n + (Number(v.capacity) || 0), 0);
-  const placed = all.filter(s => s.venue_id).reduce((n, s) => n + s.heads, 0);
+  const placed = all.filter(s => s.room_id || s.venue_id).reduce((n, s) => n + s.heads, 0);
   const total = all.reduce((n, s) => n + s.heads, 0);
   document.getElementById('vnCount').textContent = VENUES.length
-    ? `${placed}/${total} placed · ${beds} bed${beds === 1 ? '' : 's'}`
+    ? `${placed}/${total} placed · ${ROOMS.length} room${ROOMS.length === 1 ? '' : 's'}`
     : '—';
 
-  const opts = (sel) => ['<option value="">— not placed —</option>']
-    .concat(VENUES.map(v => `<option value="${esc(v.id)}"${v.id === sel ? ' selected' : ''}>${esc(v.name)}</option>`))
-    .join('');
+  /* One dropdown lists every room in every location, grouped — so assigning
+     someone is one click from anywhere, and a location with no rooms yet still
+     takes people at the building level. */
+  const pickOptions = (sel) => {
+    let o = '<option value="">— not placed —</option>';
+    for (const v of VENUES) {
+      const rs = ROOMS.filter(r => r.venue_id === v.id);
+      o += `<optgroup label="${esc(v.name)}">`;
+      o += `<option value="v:${esc(v.id)}"${sel === 'v:' + v.id ? ' selected' : ''}>${esc(v.name)} — no room yet</option>`;
+      for (const r of rs) {
+        const used = all.filter(x => x.room_id === r.id).reduce((n, x) => n + x.heads, 0);
+        o += `<option value="r:${esc(r.id)}"${sel === 'r:' + r.id ? ' selected' : ''}>`
+           + `${esc(r.floor ? r.floor + ' · ' : '')}${esc(r.label)}${used ? ` (${used} in)` : ''}</option>`;
+      }
+      o += '</optgroup>';
+    }
+    return o;
+  };
+  const selOf = (s) => s.room_id ? 'r:' + s.room_id : s.venue_id ? 'v:' + s.venue_id : '';
 
   let html = '';
   for (const v of VENUES) {
-    const mine = all.filter(s => s.venue_id === v.id);
-    const used = mine.reduce((n, s) => n + s.heads, 0);
-    const cap = Number(v.capacity) || 0;
-    const over = cap > 0 && used > cap;
-    html += `<div class="vnCard${over ? ' over' : ''}">
+    const rs = ROOMS.filter(r => r.venue_id === v.id);
+    const atVenue = all.filter(s => {
+      const r = roomOf(s.room_id);
+      return (r && r.venue_id === v.id) || (!s.room_id && s.venue_id === v.id);
+    });
+    const heads = atVenue.reduce((n, s) => n + s.heads, 0);
+    const mats  = rs.reduce((n, r) => n + (Number(r.mattresses) || 0), 0);
+
+    html += `<div class="vnCard">
       <div class="vnHead">
         <b>${esc(v.name)}</b>
-        <span class="pill${over ? ' warnpill' : ''}">${used}${cap ? ' / ' + cap : ''}</span>
+        <span class="pill">${heads} in · ${rs.length} room${rs.length === 1 ? '' : 's'}${mats ? ` · +${mats} mattress${mats === 1 ? '' : 'es'}` : ''}</span>
         <span style="flex:1"></span>
+        <button class="btn ghost vnAct" data-act="addroom" data-vn="${esc(v.id)}" type="button"
+          style="padding:3px 8px;font-size:11px">+ room</button>
+        <button class="btn ghost vnAct" data-act="rooms" data-vn="${esc(v.id)}" type="button"
+          style="padding:3px 8px;font-size:11px">room list csv</button>
         <button class="btn ghost vnAct" data-act="edit" data-vn="${esc(v.id)}" type="button"
           style="padding:3px 8px;font-size:11px">edit</button>
         <button class="btn ghost vnAct" data-act="del" data-vn="${esc(v.id)}" type="button"
           style="padding:3px 8px;font-size:11px">remove</button>
       </div>
-      ${v.address ? `<p class="sub" style="margin:.2rem 0 .4rem">${esc(v.address)}</p>` : ''}
-      ${over ? '<p class="sub err" style="margin:0 0 .4rem">more people than beds</p>' : ''}
-      ${mine.length
-        ? `<div class="vnWho">${mine.map(s =>
-            `<span class="vnChip">${esc(s.name)}${s.heads > 1 ? ` ×${s.heads}` : ''}</span>`).join('')}</div>`
-        : '<p class="sub" style="margin:0">nobody here yet</p>'}
-    </div>`;
+      ${v.address ? `<p class="sub" style="margin:.2rem 0 .4rem">${esc(v.address)}</p>` : ''}`;
+
+    // the floor plan, laid out the way the room list is read
+    const floors = [...new Set(rs.map(r => r.floor || ''))];
+    for (const fl of floors) {
+      const mine = rs.filter(r => (r.floor || '') === fl);
+      if (fl) html += `<p class="flab" style="margin:.6rem 0 .3rem">${esc(fl)}</p>`;
+      html += '<div class="roomGrid">';
+      for (const r of mine) {
+        const who = all.filter(x => x.room_id === r.id);
+        const used = who.reduce((n, x) => n + x.heads, 0);
+        html += `<div class="roomBox${used ? ' filled' : ''}">
+          <div class="roomTop"><b>${esc(r.label)}</b>
+            <button class="btn ghost rmAct" data-act="delroom" data-rm="${esc(r.id)}" type="button"
+              title="remove room" style="padding:0 4px;font-size:11px;line-height:1.4">×</button></div>
+          ${who.map(x => `<span class="vnChip">${esc(x.name)}${x.heads > 1 ? ` ×${x.heads}` : ''}</span>`).join('')}
+          <label class="roomMat">+mattress
+            <input class="rmMat" data-rm="${esc(r.id)}" type="number" min="0" max="20"
+              value="${Number(r.mattresses) || 0}" /></label>
+        </div>`;
+      }
+      html += '</div>';
+    }
+    if (!rs.length) html += '<p class="sub" style="margin:0">no rooms yet — “+ room” adds them.</p>';
+    html += '</div>';
   }
   if (!VENUES.length) html = '<p class="empty">no places yet — add the first one above.</p>';
 
-  /* the assignment list: one row per person, one dropdown each. Unplaced first,
-     because that's the list you're actually working through. */
+  /* the working list: everyone, unplaced first, one dropdown each */
   const sorted = [...all].sort((a, b) =>
-    (a.venue_id ? 1 : 0) - (b.venue_id ? 1 : 0) || a.name.localeCompare(b.name));
+    ((a.room_id || a.venue_id) ? 1 : 0) - ((b.room_id || b.venue_id) ? 1 : 0) ||
+    a.name.localeCompare(b.name));
   html += `<div class="scroll" style="margin-top:14px"><table>
     <thead><tr><th>who</th><th></th><th>beds</th><th>staying at</th></tr></thead>
     <tbody>${sorted.map(s => `<tr>
@@ -1684,7 +1815,7 @@ function stayPanel() {
       <td><span class="tier ${s.tag === 'team' ? '' : esc(s.tag)}">${esc(s.tag)}</span></td>
       <td>${s.heads}</td>
       <td><select class="vnPick" data-kind="${s.kind}" data-id="${esc(s.id)}"
-            style="margin:0;height:32px;padding:.2rem .5rem;font-size:.82rem">${opts(s.venue_id)}</select></td>
+            style="margin:0;height:32px;padding:.2rem .5rem;font-size:.82rem">${pickOptions(selOf(s))}</select></td>
     </tr>`).join('')}</tbody></table></div>`;
   board.innerHTML = html;
 }
@@ -1692,24 +1823,111 @@ function stayPanel() {
 /* one dropdown change = one row updated, in whichever table they came from */
 document.getElementById('vnBoard').addEventListener('change', async (e) => {
   const sel = e.target.closest('.vnPick');
-  if (!sel) return;
-  const table = sel.dataset.kind === 'guest' ? 'guests' : 'crew';
-  const venue_id = sel.value || null;
-  sel.disabled = true;
-  const { error } = await sb.from(table).update({ venue_id }).eq('id', sel.dataset.id);
-  sel.disabled = false;
-  if (error) { document.getElementById('vnMsg').textContent = error.message; return; }
-  const list = table === 'guests' ? GUESTS : CREW;
-  const row = list.find(r => r.id === sel.dataset.id);
-  if (row) row.venue_id = venue_id;
-  renderAll();
+  if (sel) {
+    const table = sel.dataset.kind === 'guest' ? 'guests' : 'crew';
+    /* "r:<id>" is a room, "v:<id>" the building with no room chosen yet. Both
+       columns are always written together so they can never disagree about
+       where someone is. */
+    const val = sel.value;
+    const patch = val.startsWith('r:')
+      ? { room_id: val.slice(2), venue_id: (roomOf(val.slice(2)) || {}).venue_id || null }
+      : val.startsWith('v:') ? { room_id: null, venue_id: val.slice(2) }
+      : { room_id: null, venue_id: null };
+    sel.disabled = true;
+    const { error } = await sb.from(table).update(patch).eq('id', sel.dataset.id);
+    sel.disabled = false;
+    if (error) { document.getElementById('vnMsg').textContent = error.message; return; }
+    const row = (table === 'guests' ? GUESTS : CREW).find(r => r.id === sel.dataset.id);
+    if (row) Object.assign(row, patch);
+    renderAll();
+    return;
+  }
+  const mat = e.target.closest('.rmMat');
+  if (mat) {
+    const v = Math.min(20, Math.max(0, parseInt(mat.value, 10) || 0));
+    mat.value = v;
+    const { error } = await sb.from('rooms').update({ mattresses: v }).eq('id', mat.dataset.rm);
+    if (error) { document.getElementById('vnMsg').textContent = error.message; return; }
+    const r = roomOf(mat.dataset.rm); if (r) r.mattresses = v;
+    renderAll();
+  }
 });
 
 document.getElementById('vnBoard').addEventListener('click', async (e) => {
+  const rm = e.target.closest('.rmAct');
+  if (rm) {
+    const r = roomOf(rm.dataset.rm);
+    if (!r) return;
+    const who = sleepers().filter(x => x.room_id === r.id);
+    if (!confirm(`Remove room ${r.label}?` + (who.length ? ` ${who.length} person(s) become unplaced.` : ''))) return;
+    const { error } = await sb.from('rooms').delete().eq('id', r.id);
+    if (error) { document.getElementById('vnMsg').textContent = error.message; return; }
+    ROOMS = ROOMS.filter(x => x.id !== r.id);
+    for (const g of GUESTS) if (g.room_id === r.id) g.room_id = null;
+    for (const c of CREW)   if (c.room_id === r.id) c.room_id = null;
+    renderAll();
+    return;
+  }
+
   const btn = e.target.closest('.vnAct');
   if (!btn) return;
   const v = VENUES.find(x => x.id === btn.dataset.vn);
   if (!v) return;
+
+  if (btn.dataset.act === 'addroom') {
+    /* accepts a range in one go — "101-110" is ten rooms, because typing ten
+       rooms one at a time is how a 25-room house becomes a 6-room house */
+    const raw = prompt(`Room number(s) for ${v.name}\n\nOne, a list (101, 102), or a range (101-110):`);
+    if (!raw) return;
+    const floor = prompt('Floor label? (e.g. 1st Floor — blank for none)', '') || '';
+    const labels = [];
+    for (const part of raw.split(',').map(x => x.trim()).filter(Boolean)) {
+      const m = part.match(/^(\D*)(\d+)\s*-\s*(\D*)(\d+)$/);
+      if (m && (m[1] || '') === (m[3] || '')) {
+        const a = parseInt(m[2], 10), b = parseInt(m[4], 10);
+        const pad = m[2].length;
+        for (let i = Math.min(a, b); i <= Math.max(a, b); i++) {
+          labels.push((m[1] || '') + String(i).padStart(pad, '0'));
+        }
+      } else labels.push(part);
+    }
+    const existing = new Set(ROOMS.filter(r => r.venue_id === v.id).map(r => r.label));
+    const fresh = labels.filter(l => !existing.has(l));
+    if (!fresh.length) { document.getElementById('vnMsg').textContent = 'those rooms already exist'; return; }
+    let pos = ROOMS.length ? Math.max(...ROOMS.map(r => r.position)) : 0;
+    const rows = fresh.map(label => ({ venue_id: v.id, floor, label, position: ++pos }));
+    const { data, error } = await sb.from('rooms').insert(rows).select();
+    if (error) { document.getElementById('vnMsg').textContent = error.message; return; }
+    ROOMS = ROOMS.concat(data || []).sort((a, b) => a.position - b.position);
+    document.getElementById('vnMsg').textContent = `added ${data.length} room${data.length === 1 ? '' : 's'}`;
+    renderAll();
+    return;
+  }
+
+  if (btn.dataset.act === 'rooms') {
+    /* Exported in the shape of the venue's own ROOM LIST FORMAT: a row of room
+       numbers per floor, the guests underneath, then the mattress count — so it
+       can be handed over as-is instead of retyped. */
+    const all = sleepers();
+    const rs = ROOMS.filter(r => r.venue_id === v.id);
+    const cell = x => `"${String(x ?? '').replace(/"/g, '""')}"`;
+    const lines = [];
+    for (const fl of [...new Set(rs.map(r => r.floor || ''))]) {
+      const mine = rs.filter(r => (r.floor || '') === fl);
+      lines.push([fl || v.name, ...mine.map(r => r.label)].map(cell).join(','));
+      lines.push(['Names of Guests', ...mine.map(r =>
+        all.filter(x => x.room_id === r.id)
+           .map(x => x.name + (x.heads > 1 ? ` x${x.heads}` : '')).join(' / '))].map(cell).join(','));
+      lines.push(['Additional Mattress', ...mine.map(r => Number(r.mattresses) || 0)].map(cell).join(','));
+      lines.push('');
+    }
+    const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `room-list-${v.name.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
   if (btn.dataset.act === 'edit') {
     vnEditing = v.id;
     vnName.value = v.name; vnAddr.value = v.address || ''; vnCap.value = Number(v.capacity) || 0;
@@ -1720,12 +1938,16 @@ document.getElementById('vnBoard').addEventListener('click', async (e) => {
   }
   /* the FK is ON DELETE SET NULL, so removing a place un-places its people
      rather than deleting them — say so, because it looks destructive */
-  if (!confirm(`Remove ${v.name}? Anyone staying there becomes unplaced.`)) return;
+  const nRooms = ROOMS.filter(r => r.venue_id === v.id).length;
+  if (!confirm(`Remove ${v.name}?` + (nRooms ? ` Its ${nRooms} room(s) go too.` : '') +
+               ' Anyone staying there becomes unplaced.')) return;
   const { error } = await sb.from('venues').delete().eq('id', v.id);
   if (error) { document.getElementById('vnMsg').textContent = error.message; return; }
   VENUES = VENUES.filter(x => x.id !== v.id);
-  for (const g of GUESTS) if (g.venue_id === v.id) g.venue_id = null;
-  for (const c of CREW)   if (c.venue_id === v.id) c.venue_id = null;
+  const gone = new Set(ROOMS.filter(r => r.venue_id === v.id).map(r => r.id));
+  ROOMS = ROOMS.filter(r => r.venue_id !== v.id);
+  for (const g of GUESTS) if (g.venue_id === v.id || gone.has(g.room_id)) { g.venue_id = null; g.room_id = null; }
+  for (const c of CREW)   if (c.venue_id === v.id || gone.has(c.room_id)) { c.venue_id = null; c.room_id = null; }
   renderAll();
 });
 
@@ -1762,10 +1984,12 @@ document.getElementById('vnForm').addEventListener('submit', async (e) => {
 
 document.getElementById('vnCsv').addEventListener('click', () => {
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = [['who','type','beds','staying at','address'].map(cell).join(',')];
+  const lines = [['who','type','beds','location','room','address'].map(cell).join(',')];
   for (const s of sleepers()) {
-    const v = VENUES.find(x => x.id === s.venue_id);
-    lines.push([s.name, s.tag, s.heads, v ? v.name : 'NOT PLACED', v ? (v.address || '') : ''].map(cell).join(','));
+    const r = roomOf(s.room_id);
+    const v = VENUES.find(x => x.id === (r ? r.venue_id : s.venue_id));
+    lines.push([s.name, s.tag, s.heads, v ? v.name : 'NOT PLACED',
+                r ? r.label : '', v ? (v.address || '') : ''].map(cell).join(','));
   }
   const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
   const a = document.createElement('a');
@@ -1804,7 +2028,7 @@ function crewPanel() {
     <td>${Number(r.headcount) || 0}</td>
     <td>${Number(r.cars) ? '\u{1F697} ' + Number(r.cars) : '<span class="muted">—</span>'}</td>
     <td>${r.staying ? '<span class="yes">yes</span>' : '<span class="muted">no</span>'}</td>
-    <td>${venueCell(r.venue_id)}</td>
+    ${venueCell(r)}
     <td style="text-align:right;white-space:nowrap">
       <button class="btn ghost crewAct" data-act="edit" data-crew="${esc(r.id)}" type="button"
         style="padding:4px 9px;font-size:12px">edit</button>

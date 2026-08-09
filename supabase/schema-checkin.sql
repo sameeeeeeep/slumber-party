@@ -389,3 +389,46 @@ do $$ begin
   begin execute 'alter publication supabase_realtime add table public.venues';
   exception when duplicate_object then null; end;
 end $$;
+
+-- ============================================================================
+--  ROOMS — the venue's own room list
+--  Mansion House is the main location: 25 rooms across three floors, in the
+--  order the venue's ROOM LIST FORMAT reads them (G-001..G-005, 101..110,
+--  201..210). Other locations can be added with any rooms.
+--
+--  People are placed at ROOM level where rooms exist, and at building level
+--  where they don't — guests/crew carry both room_id and venue_id, always
+--  written together so the two can never disagree about where someone is.
+--  rooms.mattresses is the "Additional Mattress" row from that same format.
+--  ON DELETE CASCADE from venues (a removed location takes its rooms) and
+--  SET NULL onto people (a removed room un-places them, never deletes them).
+-- ============================================================================
+create table if not exists public.rooms (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  venue_id   uuid not null references public.venues(id) on delete cascade,
+  floor      text not null default '',
+  label      text not null,
+  position   integer not null default 0,
+  mattresses smallint not null default 0 check (mattresses between 0 and 20),
+  notes      text
+);
+create index if not exists rooms_venue_idx on public.rooms (venue_id, position);
+
+alter table public.guests add column if not exists room_id uuid references public.rooms(id) on delete set null;
+alter table public.crew   add column if not exists room_id uuid references public.rooms(id) on delete set null;
+
+alter table public.rooms enable row level security;
+drop policy if exists "admins read rooms"   on public.rooms;
+drop policy if exists "admins write rooms"  on public.rooms;
+drop policy if exists "admins update rooms" on public.rooms;
+drop policy if exists "admins delete rooms" on public.rooms;
+create policy "admins read rooms"   on public.rooms for select to authenticated using (public.is_admin());
+create policy "admins write rooms"  on public.rooms for insert to authenticated with check (public.is_admin());
+create policy "admins update rooms" on public.rooms for update to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admins delete rooms" on public.rooms for delete to authenticated using (public.is_admin());
+
+do $$ begin
+  begin execute 'alter publication supabase_realtime add table public.rooms';
+  exception when duplicate_object then null; end;
+end $$;
