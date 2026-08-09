@@ -395,8 +395,14 @@
 
     <div class="seoGrid">
       <div>
-        <label>title <span class="ct" id="ctTitle"></span>
+        <label>title on google <span class="ct" id="ctTitle"></span>
           <input id="seoTitle" type="text" maxlength="120" /></label>
+        <!-- Two titles on purpose. Google's wants the searchable words in it
+             ("sleepover in Mumbai"); a chat card is narrow and truncates, so it
+             wants the short one. Collapsing them into one field makes whichever
+             you optimise for spoil the other. -->
+        <label>title on the card <span class="ct" id="ctOgTitle"></span>
+          <input id="seoOgTitle" type="text" maxlength="120" /></label>
         <label>copy / description <span class="ct" id="ctDesc"></span>
           <textarea id="seoDesc" rows="4" maxlength="400"></textarea></label>
         <label>image alt text
@@ -874,17 +880,19 @@ function tiles() {
    ========================================================================== */
 const LIVE_META = {                       // what index.html ships with right now
   title: "Khushi's Secret Slumber Party — invite-only sleepover in Mumbai",
+  og_title: "Khushi's Secret Slumber Party",
   description: 'Something big is coming. 35 friends, creators, artists, dreamers '
              + 'and some of you get to know before everyone else.',
   og_alt: "(secret;) Khushi's Slumber Party",
 };
 /* Google truncates by pixel width, not characters, so these are the usual
    rules-of-thumb rather than hard limits — the preview is the real check. */
-const LIMITS = { title: 60, description: 160 };
+const LIMITS = { title: 60, og_title: 55, description: 160 };
 
 function seoFields() {
   return {
     title: document.getElementById('seoTitle').value.trim(),
+    og_title: document.getElementById('seoOgTitle').value.trim(),
     description: document.getElementById('seoDesc').value.trim(),
     og_alt: document.getElementById('seoAlt').value.trim(),
   };
@@ -898,17 +906,19 @@ function seoPaint() {
     el.className = 'ct' + (val.length > max ? ' warn' : '');
   };
   count('ctTitle', f.title, LIMITS.title);
+  count('ctOgTitle', f.og_title, LIMITS.og_title);
   count('ctDesc', f.description, LIMITS.description);
 
   // the previews. Text only — never innerHTML, or a stray < in the copy would
   // start rewriting this dashboard instead of showing up in the card.
   document.getElementById('serpTitle').textContent = f.title || '(no title)';
   document.getElementById('serpDesc').textContent = f.description || '(no description)';
-  document.getElementById('waTitle').textContent = f.title || '(no title)';
+  document.getElementById('waTitle').textContent = f.og_title || f.title || '(no title)';
   document.getElementById('waDesc').textContent = f.description || '(no description)';
   document.getElementById('waImg').alt = f.og_alt;
 
   const live = f.title === LIVE_META.title
+            && f.og_title === LIVE_META.og_title
             && f.description === LIVE_META.description
             && f.og_alt === LIVE_META.og_alt;
   const pill = document.getElementById('seoSaved');
@@ -918,12 +928,13 @@ function seoPaint() {
 
 function seoFill(row) {
   document.getElementById('seoTitle').value = (row && row.title) || LIVE_META.title;
+  document.getElementById('seoOgTitle').value = (row && row.og_title) || LIVE_META.og_title;
   document.getElementById('seoDesc').value = (row && row.description) || LIVE_META.description;
   document.getElementById('seoAlt').value = (row && row.og_alt) || LIVE_META.og_alt;
   seoPaint();
 }
 
-['seoTitle', 'seoDesc', 'seoAlt'].forEach(id =>
+['seoTitle', 'seoOgTitle', 'seoDesc', 'seoAlt'].forEach(id =>
   document.getElementById(id).addEventListener('input', seoPaint));
 
 document.getElementById('seoRevert').addEventListener('click', () => {
@@ -934,7 +945,8 @@ document.getElementById('seoRevert').addEventListener('click', () => {
 document.getElementById('seoSave').addEventListener('click', async () => {
   const msg = document.getElementById('seoMsg');
   const f = seoFields();
-  if (!f.title || !f.description) { msg.textContent = 'title and copy can\'t be empty'; return; }
+  if (!f.title || !f.og_title || !f.description) {
+    msg.textContent = 'both titles and the copy need to be filled in'; return; }
   msg.textContent = 'saving…';
   const { error } = await sb.from('site_meta')
     .upsert({ id: 1, ...f, updated_at: new Date().toISOString(),
@@ -954,9 +966,9 @@ function seoBlock() {
 <meta name="description" content="${a(f.description)}" />
 
 <!-- the same words again, for shared links -->
-<meta property="og:title" content="${a(f.title)}" />
+<meta property="og:title" content="${a(f.og_title)}" />
 <meta property="og:description" content="${a(f.description)}" />
-<meta name="twitter:title" content="${a(f.title)}" />
+<meta name="twitter:title" content="${a(f.og_title)}" />
 <meta name="twitter:description" content="${a(f.description)}" />
 <meta property="og:image:alt" content="${a(f.og_alt)}" />
 

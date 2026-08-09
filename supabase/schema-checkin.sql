@@ -208,7 +208,8 @@ end $$;
 -- ============================================================================
 create table if not exists public.site_meta (
   id          smallint primary key default 1 check (id = 1),
-  title       text,
+  title       text,        -- <title>: the searchable words, for Google
+  og_title    text,        -- og:/twitter:title: the short one, for a narrow card
   description text,
   og_alt      text,
   updated_at  timestamptz not null default now(),
