@@ -2076,6 +2076,7 @@ function showGateway(){
   if(!g){ revealIntro(); return; }                         // no gate in the DOM → reveal straight away
   gateOpen=true; g.classList.add('on'); document.documentElement.classList.add('gate-open');   // kill the monitor static while gated
   const enter=(e,soundOn)=>{
+    if(FORM_IS_CLOSED()){ location.href='/late/'; return; }   // closed → the late-night DM
     if(!gateOpen) return; gateOpen=false;
     if(e) e.stopPropagation();                              // this tap must NOT also advance the DM behind the gate
     // entering turns sound ON for good — there's no header toggle, so this tap is the only
@@ -2140,6 +2141,9 @@ addEventListener('load', maybeHideVeil); setTimeout(hideVeil, MAX_VEIL);   // ha
    midnight New York — hours after it closed in Mumbai. The party is IST, so the
    deadline is IST for everyone, wherever they're reading from. */
 const FORM_CLOSES = new Date('2026-08-16T00:00:00+05:30');   // 15 Aug 2026, 11:59pm IST — midnight into the 16th
+/* ?closed previews the closed state early — it reveals nothing someone couldn't
+   see by waiting, and it's how the closed experience gets tested before it's real */
+const FORM_IS_CLOSED = () => new Date() >= FORM_CLOSES || new URLSearchParams(location.search).has('closed');
 const cdEl = document.getElementById('countdown');
 let cdTimer=0;
 function renderCountdown(){
@@ -2150,8 +2154,17 @@ function renderCountdown(){
      reads as a broken page. Say what's true instead and stop ticking. The form
      itself stays open for anyone already mid-application; whether late
      submissions count is a call for the sheet, not for a hard cutoff here. */
-  if(s === 0){
+  if(s === 0 || FORM_IS_CLOSED()){
     cdEl.innerHTML = '<span class="cd-label">applications are closed</span>';
+    const gb = document.getElementById('gateYes');
+    if(gb && !gb.dataset.late){
+      gb.dataset.late = '1';
+      const sp = gb.querySelector('span'); if(sp) sp.textContent = 'too late?';
+      gb.addEventListener('click', (ev) => {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        location.href = '/late/';
+      });
+    }
     clearInterval(cdTimer);
     return;
   }

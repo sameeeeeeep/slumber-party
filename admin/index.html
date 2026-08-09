@@ -461,6 +461,24 @@
     </div>
   </section>
 
+  <!-- ------------------------------------------------------------ waitlist -->
+  <section class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">the late list</h2>
+      <span class="pill" id="wlCount">—</span>
+      <button class="btn ghost" id="wlCsv" type="button">download csv</button>
+    </div>
+    <p class="sub">emails left on /late after applications closed — the "special
+      surprise" list, newest first.</p>
+    <div class="scroll">
+      <table id="wlTbl">
+        <thead><tr><th>email</th><th>when</th><th>source</th></tr></thead>
+        <tbody id="wlBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="wlEmpty" hidden>no one yet — it fills once applications close.</p>
+  </section>
+
   <!-- ------------------------------------------------------- team & vendors -->
   <section class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -566,7 +584,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -586,7 +604,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -598,11 +616,12 @@ async function boot() {
       .eq('kind', 'application_failed').order('created_at', { ascending: false }).limit(50),
     sb.from('crew').select('*'),
     sb.from('site_meta').select('*').eq('id', 1).maybeSingle(),
+    fetchAll(() => sb.from('waitlist').select('*').order('created_at', { ascending: false })),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -615,6 +634,8 @@ async function boot() {
         p => { VISITS.push(p.new); renderAll(); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checkins' },
         p => { CHECKINS.unshift(p.new); renderAll(); flashLive('new check-in'); })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waitlist' },
+        p => { WAITLIST.unshift(p.new); renderAll(); flashLive('new late-list email'); })
     /* two people adding crew from different laptops is the normal case here, so
        this listens for all three verbs rather than just INSERT */
     .on('postgres_changes', { event: '*', schema: 'public', table: 'crew' }, p => {
@@ -658,7 +679,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { tiles(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); failPanel(); }
+function renderAll() { tiles(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -1069,6 +1090,34 @@ document.getElementById('seoFav').addEventListener('change', async (e) => {
     msg.textContent = 'check it at 16px above — downloading favicon.png, replace assets/favicon.png';
     download(url, 'favicon.png');
   } catch (err) { msg.textContent = err.message; msg.className = 'fmsg err'; }
+});
+
+/* ============================================================================
+   THE LATE LIST
+   Who left an email after the door shut. Read-only on purpose — an email given
+   for "a special surprise" is a promise to keep, not a row to tidy.
+   ========================================================================== */
+function waitlistPanel() {
+  const body = document.getElementById('wlBody');
+  if (!body) return;
+  document.getElementById('wlCount').textContent =
+    WAITLIST.length ? `${WAITLIST.length} email${WAITLIST.length === 1 ? '' : 's'}` : '—';
+  document.getElementById('wlEmpty').hidden = WAITLIST.length > 0;
+  body.innerHTML = WAITLIST.map(r => `<tr>
+    <td>${esc(r.email)}</td>
+    <td class="muted">${esc(istStamp(r.created_at))}</td>
+    <td>${esc(r.source || '—')}</td>
+  </tr>`).join('');
+}
+
+document.getElementById('wlCsv').addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['email','when (IST)','source'].map(cell).join(',')];
+  for (const r of WAITLIST) lines.push([r.email, istStamp(r.created_at), r.source || ''].map(cell).join(','));
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'late-list.csv'; a.click();
+  URL.revokeObjectURL(url);
 });
 
 /* ============================================================================

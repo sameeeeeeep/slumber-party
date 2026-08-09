@@ -30,6 +30,8 @@ const ALLOWED_ORIGINS = [
 const STEPS = new Set([
   'landed', 'entered', 'opened_dm', 'started_form', 'submitted',
   'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8',
+  // the post-close chat: how many late arrivals, how many left an email
+  'late_landed', 'late_submitted',
 ]);
 
 function cors(origin: string | null) {

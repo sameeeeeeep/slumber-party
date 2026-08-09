@@ -224,3 +224,37 @@ drop policy if exists "admins update meta" on public.site_meta;
 create policy "admins read meta"   on public.site_meta for select to authenticated using (public.is_admin());
 create policy "admins write meta"  on public.site_meta for insert to authenticated with check (public.is_admin());
 create policy "admins update meta" on public.site_meta for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- ============================================================================
+--  THE LATE LIST — /late, the DM for people who arrive after applications close
+--  One email per person, deduped case-insensitively. Writes only through the
+--  waitlist Edge Function (rate-limited per IP and per visitor, logged in
+--  submit_log with kind='waitlist'); the anon key reads zero rows. Reads are
+--  admin-only, and there is deliberately no delete policy — an email given for
+--  "a special surprise" is a promise, not a row to tidy.
+--  visits.reached also gains 'late_landed' / 'late_submitted' so the dashboard
+--  can see how many late arrivals leave an email.
+-- ============================================================================
+create table if not exists public.waitlist (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  email      text not null,
+  session_id text,
+  source     text,
+  user_agent text
+);
+create unique index if not exists waitlist_email_key on public.waitlist (lower(email));
+
+alter table public.waitlist enable row level security;
+drop policy if exists "admins read waitlist" on public.waitlist;
+create policy "admins read waitlist" on public.waitlist for select to authenticated using (public.is_admin());
+
+alter table public.visits drop constraint if exists visits_reached_check;
+alter table public.visits add constraint visits_reached_check check (reached in
+  ('landed','entered','opened_dm','started_form','submitted',
+   'q1','q2','q3','q4','q5','q6','q7','q8','late_landed','late_submitted'));
+
+do $$ begin
+  begin execute 'alter publication supabase_realtime add table public.waitlist';
+  exception when duplicate_object then null; end;
+end $$;
