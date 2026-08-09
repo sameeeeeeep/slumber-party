@@ -65,9 +65,11 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
-  // throttle guessing BEFORE checking, counting attempts rather than failures —
-  // a correct password still costs an attempt, which keeps the counter simple
-  // and makes hammering with the right word as bounded as hammering without it
+  /* Only WRONG guesses count against the limit. The guest page re-sends the
+     word every minute to stay fresh — counting those polls as attempts locked
+     out anyone who simply kept the programme open for half an hour, which is
+     the page working as designed. Brute force is still bounded: thirty wrong
+     words an hour per IP, and a correct word costs nothing. */
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
   const ipHash = await sha256('itinerary:' + ip);
   const hourAgo = new Date(Date.now() - 3600_000).toISOString();
@@ -77,10 +79,10 @@ Deno.serve(async (req) => {
   if ((count ?? 0) >= MAX_TRIES_PER_IP_PER_HOUR) {
     return new Response(JSON.stringify({ ok: false, error: 'rate' }), { status: 429, headers: cors(origin) });
   }
-  await db.from('submit_log').insert({ ip_hash: ipHash, kind: 'itinerary' });
 
   // compare digests, not strings — same length, no early exit on first wrong byte
   if (await sha256('pw:' + given) !== await sha256('pw:' + REAL)) {
+    await db.from('submit_log').insert({ ip_hash: ipHash, kind: 'itinerary' });
     return new Response(JSON.stringify({ ok: false, error: 'wrong' }), { status: 401, headers: cors(origin) });
   }
 
