@@ -50,7 +50,10 @@
   #prog{ display:none; max-width:34rem; margin:0 auto; padding:2.2rem 1.1rem 3.5rem; }
   #prog.on{ display:block; }
   .top{ text-align:center; margin-bottom:1.6rem; }
-  .top .shh{ font-family:var(--hand); font-size:1.9rem; color:var(--soft); }
+  /* the cream-sticker logo, not the dark-ink one — this page is wine-dark, and
+     logo.png would disappear into it */
+  .topLogo{ display:block; width:min(78%,19rem); height:auto; margin:0 auto .5rem;
+    filter:drop-shadow(0 .35rem 1.1rem rgba(0,0,0,.35)); }
   .top h1{ font-family:var(--serif); font-style:italic; font-size:2.3rem; color:#fff; margin:.2rem 0 .3rem; }
   .top p{ font-size:1.1rem; color:var(--soft); }
 
@@ -95,7 +98,7 @@
 
 <div id="prog">
   <div class="top">
-    <p class="shh">for your eyes only</p>
+    <img class="topLogo" src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
     <h1>the programme</h1>
     <p>it updates as the day moves — check back whenever ♡</p>
   </div>
