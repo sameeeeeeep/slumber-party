@@ -118,6 +118,32 @@
     border-radius:50%; background:rgba(235,100,140,.55); box-shadow:0 0 1rem rgba(235,100,140,.5); }
   body.touch #stick{ display:block; }
 
+  /* ---- things to do ---- */
+  #act{ position:fixed; right:calc(1rem + env(safe-area-inset-right,0px));
+    bottom:calc(7.6rem + env(safe-area-inset-bottom,0px)); z-index:9;
+    border:0; cursor:pointer; border-radius:100px; color:#fff; font-family:var(--pixel);
+    font-size:.58rem; letter-spacing:.05em; padding:.85rem 1rem; max-width:9.5rem;
+    background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .3rem 1rem rgba(235,100,140,.45); }
+  #emotes{ position:fixed; right:calc(1rem + env(safe-area-inset-right,0px));
+    bottom:calc(1.4rem + env(safe-area-inset-bottom,0px)); z-index:9;
+    display:grid; grid-template-columns:repeat(2,1fr); gap:.4rem; }
+  #emotes button{ width:2.9rem; height:2.9rem; border-radius:50%; cursor:pointer; font-size:1.35rem;
+    border:1px solid rgba(245,195,207,.24); background:rgba(255,255,255,.07); color:#fff; }
+  #emotes button:active{ transform:scale(.92); }
+  #nails{ position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(11.6rem + env(safe-area-inset-bottom,0px)); z-index:10; text-align:center;
+    background:rgba(26,10,18,.86); border:1px solid rgba(245,195,207,.22); border-radius:1rem;
+    padding:.6rem .8rem; }
+  #nails p{ font-size:1rem; color:var(--soft); margin-bottom:.4rem; }
+  #nailRow{ display:flex; gap:.4rem; }
+  #nailRow button{ width:2rem; height:2rem; border-radius:50%; cursor:pointer;
+    border:2px solid rgba(255,255,255,.3); }
+  #shout{ position:fixed; left:0; right:0; bottom:calc(12.4rem + env(safe-area-inset-bottom,0px));
+    text-align:center; font-family:var(--serif); font-style:italic; font-size:1.5rem; color:var(--yellow);
+    text-shadow:0 2px 14px rgba(0,0,0,.7); z-index:10; opacity:0; transition:opacity .3s;
+    pointer-events:none; padding:0 1rem; }
+  #shout.on{ opacity:1; }
+
   /* the arcade door, when you're standing on it */
   #door{ position:fixed; left:50%; bottom:calc(4.6rem + env(safe-area-inset-bottom,0px));
     transform:translateX(-50%); z-index:9; display:none; }
@@ -160,6 +186,21 @@
   <div id="door"><a href="/?arcade">▸ ENTER THE ARCADE</a></div>
   <p id="hint"></p>
   <div id="stick"><b></b></div>
+  <!-- one button whose meaning follows the room you're standing in, plus emotes
+       everyone can always fire. Kept to a single contextual action on purpose: a
+       phone screen has no room for five verbs. -->
+  <button id="act" type="button" hidden></button>
+  <div id="emotes">
+    <button type="button" data-e="👋">👋</button>
+    <button type="button" data-e="💖">💖</button>
+    <button type="button" data-e="🤫">🤫</button>
+    <button type="button" data-e="😭">😭</button>
+  </div>
+  <div id="nails" hidden>
+    <p>pick a colour</p>
+    <div id="nailRow"></div>
+  </div>
+  <p id="shout"></p>
 </div>
 
 <script src="/assets/config.js"></script>
@@ -258,8 +299,9 @@ const LOOKS = [
 
 /* Takes a context so the same routine draws the world AND the little portraits
    in the character picker — one character definition, never two that drift. */
-function drawPersonOn(g, px, py, s, look, facing, walkT, label){
-  const L = LOOKS[look % LOOKS.length];
+function drawPersonOn(g, px, py, s, look, facing, walkT, label, pjOverride){
+  const base = LOOKS[look % LOOKS.length];
+  const L = pjOverride ? { ...base, pj: pjOverride } : base;
   const bob = Math.sin(walkT * 0.018) * s * 0.05;
   const y = py + bob;
   g.fillStyle = 'rgba(0,0,0,.28)';
@@ -292,9 +334,27 @@ function drawPersonOn(g, px, py, s, look, facing, walkT, label){
     g.fillText(label, px, y - s * 0.57);
   }
 }
-const drawPerson = (px, py, s, look, facing, walkT, label) =>
-  drawPersonOn(cx, px, py, s, look, facing, walkT, label);
+const drawPerson = (px, py, s, look, facing, walkT, label, pj) =>
+  drawPersonOn(cx, px, py, s, look, facing, walkT, label, pj);
 
+function drawStarAt(px, py, r){
+  cx.save(); cx.translate(px, py);
+  cx.fillStyle = '#ffd84a'; cx.shadowColor = '#ffd84a'; cx.shadowBlur = r * 1.6;
+  cx.beginPath();
+  for (let i = 0; i < 10; i++){
+    const a = i * Math.PI / 5 - Math.PI / 2, rad = (i % 2 ? r * 0.42 : r);
+    cx.lineTo(Math.cos(a) * rad, Math.sin(a) * rad);
+  }
+  cx.closePath(); cx.fill(); cx.restore();
+}
+function drawPillowAt(px, py, s){
+  cx.save(); cx.translate(px, py);
+  cx.fillStyle = '#fff6f8';
+  rrOn(cx, -s / 2, -s / 2 * 0.8, s, s * 0.8, s * 0.3); cx.fill();
+  cx.strokeStyle = 'rgba(60,20,40,.25)'; cx.lineWidth = Math.max(1, s * 0.05);
+  rrOn(cx, -s * 0.34, -s * 0.26, s * 0.68, s * 0.52, s * 0.14); cx.stroke();
+  cx.restore();
+}
 function rrOn(g, x, y, w, h, r){
   g.beginPath();
   g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r);
@@ -374,6 +434,107 @@ function place(people){
     });
   }
 }
+
+/* ============================================================================
+   THINGS TO DO
+   Every room has one verb, and it's the same button — its meaning follows where
+   you're standing, because a phone screen has no room for five of them. All of it
+   rides the broadcast channel that already exists: no new tables, nothing to
+   clean up afterwards, and everyone in the house sees it happen.
+   ========================================================================== */
+const NAIL_COLOURS = ['#eb648c','#ffd84a','#8fd7ff','#a6f0c0','#eb9cff','#ff9ab0','#ffc48a','#c9a0ae'];
+const ROOM_VERB = {
+  fort:    { label:'THROW A PILLOW', kind:'pillow' },
+  nails:   { label:'PAINT YOUR NAILS', kind:'nails' },
+  terrace: { label:'MAKE A WISH',     kind:'wish' },
+  lounge:  { label:'SPIN THE BOTTLE', kind:'bottle' },
+  arcade:  null,                       // the floor portal is the arcade's own door
+  landing: null,
+};
+let myPj = null;                       // your chosen nail colour, drawn on your character
+let pillows = [], wishes = [], bottle = null;
+try { myPj = sessionStorage.getItem('ssp-pj') || null; } catch(e){}
+
+function shout(text, ms = 3200){
+  const el = document.getElementById('shout');
+  el.textContent = text; el.classList.add('on');
+  clearTimeout(shout._t); shout._t = setTimeout(() => el.classList.remove('on'), ms);
+}
+
+/* Broadcast anything doable. Same channel as movement — it was never presence that
+   had the rate limit, and these are human-paced events, not per-frame. */
+function doAct(payload){
+  applyAct({ ...payload, id: meId });                    // show it locally at once
+  if (chan && chan.state === 'joined')
+    chan.send({ type:'broadcast', event:'act', payload:{ ...payload, id: meId } });
+}
+
+function applyAct(a){
+  if (a.kind === 'pillow'){
+    pillows.push({ x:a.x, y:a.y, vx:a.vx, vy:a.vy, t:0, who:a.who || '' });
+  } else if (a.kind === 'emote'){
+    emotes.set(a.id, { e:a.e, t:Date.now() });
+  } else if (a.kind === 'nails'){
+    if (a.id !== meId) nailsOf.set(a.id, a.c);
+  } else if (a.kind === 'wish'){
+    wishes.push({ x:a.x, y:a.y, t:Date.now() });
+    if (a.id !== meId) shout((a.who || 'someone') + ' made a wish ✨');
+  } else if (a.kind === 'bottle'){
+    bottle = { name:a.name, t:Date.now() };
+    shout('the bottle points at ' + a.name + ' 🍾');
+  }
+}
+const emotes = new Map();              // who is emoting, and what
+const nailsOf = new Map();             // presence key -> chosen colour
+
+function roomAction(){
+  const v = ROOM_VERB[room];
+  if (!v) return;
+  if (v.kind === 'pillow'){
+    /* thrown in the direction you're facing, so aiming is walking — no second
+       control to learn */
+    const d = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] }[me.facing] || [0,1];
+    doAct({ kind:'pillow', x:me.x, y:me.y, vx:d[0] * 0.42, vy:d[1] * 0.42,
+            who: MINE ? MINE.first : 'someone' });
+  } else if (v.kind === 'nails'){
+    const box = document.getElementById('nails');
+    box.hidden = !box.hidden;
+  } else if (v.kind === 'wish'){
+    doAct({ kind:'wish', x:me.x, y:me.y - TILE * 0.6, who: MINE ? MINE.first : 'someone' });
+    shout('you made a wish ✨');
+  } else if (v.kind === 'bottle'){
+    /* points at somebody who is ACTUALLY here where possible — a bottle that
+       picks an empty chair isn't a game. Falls back to the whole guest list. */
+    const here = PEOPLE.filter(p => liveAt(p.name) && (!MINE || p.name !== MINE.name));
+    const pool = here.length ? here : PEOPLE.filter(p => !MINE || p.name !== MINE.name);
+    if (!pool.length) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    doAct({ kind:'bottle', name: pick.first });
+  }
+}
+
+function paintNailRow(){
+  const row = document.getElementById('nailRow');
+  if (row.children.length) return;
+  for (const c of NAIL_COLOURS){
+    const b = document.createElement('button');
+    b.type = 'button'; b.style.background = c;
+    b.addEventListener('click', () => {
+      myPj = c;
+      try { sessionStorage.setItem('ssp-pj', c); } catch(e){}
+      doAct({ kind:'nails', c });
+      document.getElementById('nails').hidden = true;
+      shout('nails done 💅');
+    });
+    row.appendChild(b);
+  }
+}
+
+document.getElementById('act').addEventListener('click', roomAction);
+document.getElementById('emotes').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-e]');
+  if (b) doAct({ kind:'emote', e:b.dataset.e });
+});
 
 /* ---------- milling about ----------
    Unclaimed guests drift around the spot they were placed on. Deliberately a
@@ -461,6 +622,7 @@ function become(p){
   resize();
   if (chan && chan.state === 'joined') chan.track(claimState());
   moved = true;                       // and put a first position on the wire
+  if (myPj) doAct({ kind:'nails', c: myPj });   // nails you painted last visit still count
   if (!raf) loop();
 }
 
@@ -507,6 +669,10 @@ async function joinPresence(){
         x: v.x, y: v.y,                                      // to
         t0: performance.now(),
       });
+    });
+    chan.on('broadcast', { event:'act' }, ({ payload:a }) => {
+      if (!a || a.id === meId) return;          // ours already showed locally
+      applyAct(a);
     });
     chan.on('presence', { event:'sync' }, () => {
       const st = chan.presenceState();
@@ -660,6 +826,19 @@ function step(dt){
   }
   for (const p of PEOPLE) p.walkT += dt * 0.5;   // idle sway
 
+  /* thrown pillows: fly, then stop at the first wall — the same solid() the
+     walking uses, so nothing sails through the house */
+  for (const q of pillows){
+    q.t += dt;
+    const nx = q.x + q.vx * dt, ny = q.y + q.vy * dt;
+    if (solid(Math.floor(nx / TILE), Math.floor(ny / TILE))){ q.vx = q.vy = 0; }
+    else { q.x = nx; q.y = ny; }
+  }
+  pillows = pillows.filter(q => q.t < 2600);
+  wishes = wishes.filter(w => Date.now() - w.t < 60000);   // a wish lingers a minute
+  for (const [k, v] of emotes) if (Date.now() - v.t > 2600) emotes.delete(k);
+  if (bottle && Date.now() - bottle.t > 4000) bottle = null;
+
   /* nearest guest within reach — measured where they are RIGHT NOW, which for a
      milling guest is their drift position and for a claimed one is their player's.
      Testing against the home tile would open cards for someone stood elsewhere. */
@@ -675,7 +854,14 @@ function step(dt){
 
   const tx = Math.floor(me.x / TILE), ty = Math.floor(me.y / TILE);
   const r = ROOM_AT(tx, ty);
-  if (r !== room){ room = r; document.getElementById('roomTag').textContent = ROOM_NAME[r] || ''; }
+  if (r !== room){
+    room = r;
+    document.getElementById('roomTag').textContent = ROOM_NAME[r] || '';
+    const v = ROOM_VERB[r], btn = document.getElementById('act');
+    btn.hidden = !v;
+    if (v){ btn.textContent = v.label; if (v.kind === 'nails') paintNailRow(); }
+    document.getElementById('nails').hidden = true;      // never leave it open in another room
+  }
   document.getElementById('door').classList.toggle('on', isPortal(tx, ty));
 }
 function tryMove(dx, dy){
@@ -770,16 +956,42 @@ function draw(){
                          label:'you', isMe:true, ghost:true });
   cast.sort((a, b) => a.y - b.y);
 
+  // wishes first: they sit on the floor behind everybody
+  for (const w of wishes){
+    const age = (Date.now() - w.t) / 60000;
+    cx.save(); cx.globalAlpha = Math.max(0.15, 1 - age);
+    drawStarAt(w.x * s, w.y * s, T * 0.3);
+    cx.restore();
+  }
+
   for (const p of cast){
     if (p.ghost) cx.globalAlpha = 0.8;
+    const pj = p.isMe ? myPj : (p.name ? nailsOf.get(CLAIMS.get(p.name)) : null);
     drawPerson(p.x * s, p.y * s, T * 1.35, p.sprite, p.facing, p.walkT,
       // names appear for you, whoever you're standing next to, and anyone actually here
-      (p.isMe || p.live || (near && p.name === near.name)) ? p.label : '');
+      (p.isMe || p.live || (near && p.name === near.name)) ? p.label : '', pj);
     // a live person gets a green pip, so you can tell a real guest from a drifting one
     if (p.live && !p.isMe){
       cx.fillStyle = '#7ddc9b';
       cx.beginPath(); cx.arc(p.x * s + T * 0.42, p.y * s - T * 0.5, Math.max(2, T * 0.09), 0, 7); cx.fill();
     }
+    // an emote floats above whoever fired it
+    const key = p.isMe ? meId : (p.name ? CLAIMS.get(p.name) : null);
+    const em = key && emotes.get(key);
+    if (em){
+      const lift = Math.min(1, (Date.now() - em.t) / 900);
+      cx.font = Math.max(14, T * 0.7) + 'px system-ui, sans-serif';
+      cx.textAlign = 'center'; cx.textBaseline = 'middle';
+      cx.globalAlpha = 1 - lift * 0.55;
+      cx.fillText(em.e, p.x * s, p.y * s - T * (0.95 + lift * 0.6));
+    }
+    cx.globalAlpha = 1;
+  }
+
+  // pillows in flight, drawn over everyone so a throw is always readable
+  for (const q of pillows){
+    cx.globalAlpha = Math.max(0, 1 - q.t / 2600);
+    drawPillowAt(q.x * s, q.y * s, T * 0.5);
     cx.globalAlpha = 1;
   }
   cx.restore();
