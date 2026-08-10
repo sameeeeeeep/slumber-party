@@ -1247,6 +1247,9 @@
 
 <div id="tip" role="status" aria-live="polite"></div>
 
+<!-- the jigsaw geometry, shared with /puzzle/wall so the preview and the wall
+     can never disagree about the shape of a piece -->
+<script src="/assets/jigsaw.js"></script>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -3477,17 +3480,25 @@ function pzPreviewDraw(){
   if (!pzFileData) { box.innerHTML = ''; return; }
   const people = Math.max(1, parseInt(document.getElementById('pzPeople').value, 10) || 1);
   const g = gridFor(people, pzAspect);
+  /* the same generator the wall uses, so the preview shows the actual cut rather
+     than a rectangle grid that lies about what people will see */
+  const jg = JIGSAW.defs('preview', g.cols, g.rows);
   box.innerHTML = `<p class="sub" style="margin:0 0 6px">${g.cols}×${g.rows} =
     <b>${g.cols * g.rows} pieces</b> for ${people} ${people === 1 ? 'person' : 'people'}${
       g.cols * g.rows > people ? ` · ${g.cols * g.rows - people} spare, so nobody is left waiting` : ''}</p>
-    <div style="position:relative;width:min(30rem,100%)">
+    <div style="position:relative;width:min(30rem,100%)">${jg.svg}
       <img src="${pzFileData}" alt="" style="display:block;width:100%;border-radius:9px" />
-      <div style="position:absolute;inset:0;display:grid;gap:2px;
+      <div style="position:absolute;inset:0;display:grid;
         grid-template-columns:repeat(${g.cols},1fr);grid-template-rows:repeat(${g.rows},1fr)">
-        ${Array.from({ length: g.cols * g.rows }, () =>
-          '<span style="box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)"></span>').join('')}
+        ${Array.from({ length: g.cols * g.rows }, (_, i) => {
+          const q = JIGSAW.piece(i, g.cols, g.rows);
+          return `<span style="position:relative"><i style="position:absolute;
+            inset:${q.inset};clip-path:${jg.clipFor(i)};-webkit-clip-path:${jg.clipFor(i)};
+            box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7)"></i></span>`;
+        }).join('')}
       </div>
-    </div>`;
+    </div>
+    <p class="sub" style="margin:6px 0 0">the cut is different every time — this is the shape of it</p>`;
 }
 
 /* ---- cutting it up ------------------------------------------------------- */
