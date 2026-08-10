@@ -599,3 +599,6 @@ alter table public.deliverables add column if not exists direction text not null
 alter table public.deliverables drop constraint if exists deliverables_direction_check;
 alter table public.deliverables add constraint deliverables_direction_check
   check (direction in ('in', 'out'));
+
+-- A vendor list without a phone number is half a list.
+alter table public.crew add column if not exists contact text;

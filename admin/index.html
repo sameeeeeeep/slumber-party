@@ -494,7 +494,7 @@
       <table id="ciTbl">
         <thead><tr>
           <th>guest</th><th>tier</th><th>invite link</th><th>instagram</th><th>address</th>
-          <th>t-shirt</th><th>waist</th><th>box</th><th>courier</th><th>tracking</th>
+          <th>t-shirt</th><th>waist</th><th>box</th>
           <th>status</th><th>when</th>
           <th>phone</th><th>email</th><th>pyjamas</th><th>meal</th><th>id</th><th></th><th></th>
         </tr></thead>
@@ -504,10 +504,11 @@
     <p class="empty" id="ciEmpty" hidden>no guests on the list yet — paste them below.</p>
     <p class="sub" id="ciMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
 
-    <details style="margin-top:16px">
-      <summary style="cursor:pointer;color:var(--muted)">the guest list</summary>
-      <p class="sub" style="margin-top:8px">one name per line. adding names never removes
-        anyone, and a name that's already there is skipped.</p>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line)">
+      <h2 style="margin:0 0 2px">add a guest</h2>
+      <p class="sub" style="margin-top:4px">name and tier are enough — the link is minted
+        for you. Everything else can be filled in on their row afterwards, and adding
+        someone never removes anyone.</p>
       <form id="gAddForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:10px 0 4px">
         <label style="flex:2 1 170px;margin:0">name
           <input id="gAddName" type="text" placeholder="Arya Kotari" required style="margin:0" /></label>
@@ -569,7 +570,7 @@
         <button class="btn" id="ciAdd" type="button" style="width:auto">add &amp; mint links</button>
         <span class="sub" id="ciRosterMsg"></span>
       </div>
-      </details>
+      </div>
     </details>
 
     <!-- The honest bit about minting. A code in this database is only half a
@@ -886,8 +887,8 @@
     <div class="scroll">
       <table id="crewTbl">
         <thead><tr>
-          <th>name</th><th>kind</th><th>doing what</th><th>people</th><th>t-shirt</th><th>cars</th>
-          <th>staying</th><th>where</th><th></th>
+          <th>name</th><th>kind</th><th>doing what</th><th>people</th><th>t-shirt</th>
+          <th>cars</th><th>how to reach them</th><th>notes</th><th>where</th><th></th>
         </tr></thead>
         <tbody id="crewBody"></tbody>
       </table>
@@ -912,8 +913,9 @@
         <input id="crewHead" type="number" min="0" max="99" value="1" /></label>
       <label style="flex:0 0 74px">cars
         <input id="crewCars" type="number" min="0" max="99" value="0" /></label>
+      <label style="flex:2 1 150px">how to reach them
+        <input id="crewContact" type="text" placeholder="phone / whatsapp" /></label>
       <button class="btn" id="crewSubmit" type="submit" style="width:auto">add</button>
-      <button class="btn ghost" id="crewCancel" type="button" hidden>cancel</button>
     </form>
     <p class="sub" id="crewMsg" style="min-height:1.1rem;margin:6px 0 0"></p>
   </section>
@@ -1349,18 +1351,30 @@ function checkinPanel() {
     /* Addresses get their own column and are allowed to wrap. They were a tooltip
        on the name, which put "address on file" in the WHEN column via a colspan —
        accurate underneath, nonsense to read. */
-    const addrCell = (addr) => addr
-      ? `<td class="addr">${esc(addr)}</td>`
-      : `<td class="addr"><span class="muted">—</span></td>`;
+    /* Both edit in place. The address is the one field that arrives by WhatsApp
+       at midnight and gets corrected twice, and the name is how a guest is matched
+       to their check-in — neither should need a modal. */
+    const nameCell = (r) => r.onList && r.id
+      ? `<td><input class="gIn" data-gid="${esc(r.id)}" data-k="name" value="${esc(r.name)}"
+           style="margin:0;width:9.5rem;height:28px;padding:.1rem .45rem;font-size:.82rem" /></td>`
+      : `<td>${esc(r.name)} <span class="muted">(not on list)</span></td>`;
+    const addrCell = (r) => r.onList && r.id
+      ? `<td><input class="gIn" data-gid="${esc(r.id)}" data-k="address" value="${esc(r.address)}"
+           placeholder="flat, street, city, pin" spellcheck="false"
+           title="${esc(r.address)}"
+           style="margin:0;width:14rem;height:28px;padding:.1rem .45rem;font-size:.8rem${
+             r.address ? '' : ';border-color:var(--critical)'}" /></td>`
+      : '<td><span class="muted">—</span></td>';
     /* Editable in place. Thirty-six handles through a modal is thirty-six
        round-trips; here you tab down the column. Anything pasted gets trimmed to
        the handle, so a full profile URL or an @ works as well as the bare name. */
     const igCell = (r) => r.onList && r.id
       ? `<td style="white-space:nowrap"><input class="gIn" data-gid="${esc(r.id)}" data-k="instagram"
            value="${esc(r.ig)}" placeholder="handle" spellcheck="false"
-           style="margin:0;width:8rem;height:28px;padding:.1rem .45rem;font-size:.8rem" />${
-           r.ig ? ` <a class="igGo" href="https://instagram.com/${encodeURIComponent(r.ig)}"
-                     target="_blank" rel="noopener noreferrer">@${esc(r.ig)} ↗</a>` : ''}</td>`
+           style="margin:0;width:8.5rem;height:28px;padding:.1rem .45rem;font-size:.8rem" />${
+           r.ig ? `<a class="igGo" href="https://instagram.com/${encodeURIComponent(r.ig)}"
+                     target="_blank" rel="noopener noreferrer"
+                     title="open @${esc(r.ig)} on instagram">↗</a>` : ''}</td>`
       : '<td><span class="muted">—</span></td>';
     /* The box lives on the guest row now rather than in a table of its own —
        there is exactly one box per guest, and holding the same person in two
@@ -1382,15 +1396,12 @@ function checkinPanel() {
       </select></td>`;
     };
     const boxCells = (r) => {
-      if (!r.onList || !r.id) return '<td><span class="muted">—</span></td><td></td><td></td>';
+      if (!r.onList || !r.id) return '<td><span class="muted">—</span></td>';
       const g = GUESTS.find(x => x.id === r.id) || {};
-      const txt = (key, ph, w) => `<td><input class="gIn" data-gid="${esc(r.id)}" data-k="${key}"
-        value="${esc(g[key] || '')}" placeholder="${ph}" spellcheck="false"
-        style="margin:0;width:${w};height:28px;padding:.1rem .45rem;font-size:.8rem" /></td>`;
       return `<td><select class="gIn" data-gid="${esc(r.id)}" data-k="box_status"
           style="margin:0;width:6.4rem;height:28px;padding:.1rem .3rem;font-size:.8rem">
           ${BOX_STATES.map(v => `<option value="${v}"${(g.box_status || 'todo') === v ? ' selected' : ''}>${v}</option>`).join('')}
-        </select></td>${txt('box_courier', 'courier', '6rem')}${txt('box_tracking', 'tracking', '7rem')}`;
+        </select></td>`;
     };
     const TIER_LABEL = { bestie:'bestie', creator:'creator', super:'super guest' };
     const tierCell = (t) => t
@@ -1422,7 +1433,7 @@ function checkinPanel() {
     if (!r.c) {
       // 7 = when, phone, email, pyjamas, meal, id, check-in remove. Keep in step
       // with <thead>: a short row silently skews every column to its right.
-      return `<tr><td>${esc(r.name)}</td>${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r.address)}
+      return `<tr>${nameCell(r)}${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r)}
         ${sizeSel(r,'tshirt',TEE_SIZES,'')}${sizeSel(r,'waist',WAIST_SIZES,'"')}${boxCells(r)}
         <td><span class="muted">waiting</span></td>
         <td colspan="7" class="muted">—</td>${guestActions(r)}</tr>`;
@@ -1436,8 +1447,8 @@ function checkinPanel() {
            style="padding:4px 10px;font-size:12px">view ${esc(c.id_doc_type || '')}</button>`
       : '<span class="muted">none</span>';
     return `<tr>
-      <td>${esc(r.name)}${r.onList ? '' : ' <span class="muted">(not on list)</span>'}</td>
-      ${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r.address)}
+      ${nameCell(r)}
+      ${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r)}
       ${sizeSel(r,'tshirt',TEE_SIZES,'')}${sizeSel(r,'waist',WAIST_SIZES,'"')}${boxCells(r)}
       <td>✓ done</td><td>${esc(when)}</td>
       <td>${esc(c.phone)}</td><td>${esc(c.email)}</td>
@@ -1469,6 +1480,7 @@ document.getElementById('ciBody').addEventListener('change', async (e) => {
   const msg = document.getElementById('ciMsg');
   let value = el.value.trim() || null;
   // a pasted profile URL or an @handle both mean the handle
+  if (key === 'name' && !value) { renderAll(); return; }   // a nameless guest is nobody
   if (key === 'instagram' && value) {
     value = value.replace(/^@+/, '')
       .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null;
@@ -1537,7 +1549,25 @@ async function openDoc(path, btn) {
     console.error('signed url failed', error);
     return;
   }
-  window.open(data.signedUrl, '_blank', 'noopener');
+  /* A popup blocker eats window.open silently, and then there is no way back to
+     the document. Put the signed URL on the page as a link instead: a click on a
+     real anchor is never blocked, it opens in its own tab so this one keeps its
+     place, and it puts itself away when the URL expires. */
+  const link = document.createElement('a');
+  link.href = data.signedUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.className = 'btn ghost';
+  link.style.cssText = 'padding:4px 10px;font-size:12px;text-decoration:none';
+  link.textContent = 'open ↗';
+  btn.replaceWith(link);
+  link.focus();
+  window.open(data.signedUrl, '_blank', 'noopener');   // if it works, one click saved
+  setTimeout(() => {                                   // 60 seconds and it's dead
+    if (!link.isConnected) return;
+    btn.textContent = was;
+    link.replaceWith(btn);
+  }, 60000);
 }
 
 /* the roster: paste names, one per line */
@@ -3097,9 +3127,9 @@ function crewPanel() {
     [CREW.reduce((n, r) => n + (Number(r.headcount) || 0), 0), 'people'],
     [CREW.filter(r => r.kind === 'team').length, 'team'],
     [CREW.filter(r => r.kind === 'vendor').length, 'vendors'],
-    [h.crew, 'staying over'],
     [cars, 'cars'],
     [CREW.filter(r => !r.tshirt).length, 'without a size', true],
+    [CREW.filter(r => !r.contact).length, 'no phone number', true],
   ]);
   document.getElementById('crewCount').textContent = CREW.length
     ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} staying over` + (cars ? ` · ${cars} car${cars === 1 ? '' : 's'}` : '')
@@ -3114,44 +3144,63 @@ function crewPanel() {
     (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9) ||
     String(a.name).localeCompare(String(b.name)));
 
+  /* Same shape as the guest sheet: every field saves where it sits. A crew list
+     is worked on a row at a time — a size here, a phone number there — and a
+     modal for each of those was the slowest possible way to do it. */
+  const txt = (r, key, ph, w) => `<td><input class="crIn" data-crew="${esc(r.id)}" data-k="${key}"
+    value="${esc(r[key] ?? '')}" placeholder="${ph}" spellcheck="false"
+    style="margin:0;width:${w};height:28px;padding:.1rem .45rem;font-size:.8rem" /></td>`;
+  const num = (r, key) => `<td><input class="crIn" data-crew="${esc(r.id)}" data-k="${key}"
+    type="number" min="0" max="99" value="${Number(r[key]) || 0}"
+    style="margin:0;width:4.2rem;height:28px;padding:.1rem .45rem;font-size:.8rem" /></td>`;
+
   body.innerHTML = rows.map(r => `<tr>
-    <td>${esc(r.name)}</td>
-    <td><span class="tier ${r.kind === 'team' ? '' : esc(r.kind)}">${esc(r.kind)}</span></td>
-    <td>${esc(r.role || '—')}</td>
-    <td>${Number(r.headcount) || 0}</td>
-    <td><select class="crewTee" data-crew="${esc(r.id)}"
+    ${txt(r, 'name', 'name', '9rem')}
+    <td><select class="crIn" data-crew="${esc(r.id)}" data-k="kind"
+          style="margin:0;width:5.6rem;height:28px;padding:.1rem .3rem;font-size:.8rem">
+        ${['team','vendor','car'].map(v => `<option value="${v}"${r.kind === v ? ' selected' : ''}>${v}</option>`).join('')}
+      </select></td>
+    ${txt(r, 'role', 'photographer…', '9rem')}
+    ${num(r, 'headcount')}
+    <td><select class="crIn" data-crew="${esc(r.id)}" data-k="tshirt"
           style="margin:0;width:4.9rem;height:28px;padding:.1rem .3rem;font-size:.8rem${
             r.tshirt ? '' : ';border-color:var(--critical)'}">
         <option value=""${r.tshirt ? '' : ' selected'}>—</option>
         ${TEE_SIZES.map(v => `<option value="${v}"${r.tshirt === v ? ' selected' : ''}>${v}</option>`).join('')}
       </select></td>
-    <td>${Number(r.cars) ? '\u{1F697} ' + Number(r.cars) : '<span class="muted">—</span>'}</td>
-    <td>${r.staying ? '<span class="yes">yes</span>' : '<span class="muted">no</span>'}</td>
+    ${num(r, 'cars')}
+    ${txt(r, 'contact', 'phone / whatsapp', '9.5rem')}
+    ${txt(r, 'notes', 'notes', '9rem')}
     ${venueCell(r)}
     <td style="text-align:right;white-space:nowrap">
-      <button class="btn ghost crewAct" data-act="edit" data-crew="${esc(r.id)}" type="button"
-        style="padding:4px 9px;font-size:12px">edit</button>
       <button class="btn ghost crewAct" data-act="del" data-crew="${esc(r.id)}" type="button"
         style="padding:4px 9px;font-size:12px">remove</button></td>
   </tr>`).join('');
 }
 
-/* The size is the one field you fill in for twenty people in a row, so it saves
-   where it sits rather than through the edit form. */
+/* Every editable cell on a crew row comes through here. Bound once, outside the
+   render, so it survives each repaint; matching on data-k so a select, a text box
+   and a number box all take the same path. */
 document.getElementById('crewBody').addEventListener('change', async (e) => {
-  const sel = e.target.closest('.crewTee');
-  if (!sel) return;
-  const id = sel.dataset.crew;
-  sel.disabled = true;
-  const res = await save(sb.from('crew').update({ tshirt: sel.value || null }).eq('id', id), 'that size');
-  sel.disabled = false;
+  const el = e.target.closest('.crIn');
+  if (!el) return;
+  const id = el.dataset.crew, key = el.dataset.k;
   const msg = document.getElementById('crewMsg');
+  /* headcount and cars are 0–99 in the database; clamp here so a stray keystroke
+     reads as a sane number instead of coming back as an error */
+  const patch = { [key]: el.type === 'number'
+    ? Math.min(99, Math.max(0, parseInt(el.value, 10) || 0))
+    : (el.value.trim() || null) };
+  if (key === 'name' && !patch.name) { renderAll(); return; }   // a nameless row is nobody
+  el.disabled = true;
+  const res = await save(sb.from('crew').update(patch).eq('id', id), 'that change');
+  el.disabled = false;
   if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
-  const row = CREW.find(r => r.id === id); if (row) row.tshirt = sel.value || null;
+  msg.textContent = 'saved'; msg.className = 'sub';
+  Object.assign(CREW.find(r => r.id === id) || {}, patch);
   renderAll();
+  setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
 });
-
-let crewEditing = null;   // row id being edited, or null = the form adds
 
 document.getElementById('crewBody').addEventListener('click', async (e) => {
   const btn = e.target.closest('.crewAct');
@@ -3160,33 +3209,12 @@ document.getElementById('crewBody').addEventListener('click', async (e) => {
   const row = CREW.find(r => r.id === id);
   if (!row) return;
 
-  if (btn.dataset.act === 'edit') {
-    crewEditing = id;
-    crewName.value = row.name; crewKind.value = row.kind;
-    crewRole.value = row.role || ''; crewHead.value = Number(row.headcount) || 0;
-    crewCars.value = Number(row.cars) || 0;
-    document.getElementById('crewSubmit').textContent = 'save';
-    document.getElementById('crewCancel').hidden = false;
-    crewMsg.textContent = `editing ${row.name}`;
-    crewName.focus();
-    return;
-  }
-
   if (!confirm(`Remove ${row.name} from team & vendors?`)) return;
   btn.disabled = true; btn.textContent = 'removing…';
   const { error } = await sb.from('crew').delete().eq('id', id);
   if (error) { btn.disabled = false; btn.textContent = 'remove'; crewMsg.textContent = error.message; return; }
   CREW = CREW.filter(r => r.id !== id);
-  if (crewEditing === id) document.getElementById('crewCancel').click();
   renderAll();
-});
-
-document.getElementById('crewCancel').addEventListener('click', () => {
-  crewEditing = null;
-  crewForm.reset(); crewHead.value = 1; crewCars.value = 0;
-  document.getElementById('crewSubmit').textContent = 'add';
-  document.getElementById('crewCancel').hidden = true;
-  crewMsg.textContent = '';
 });
 
 document.getElementById('crewForm').addEventListener('submit', async (e) => {
@@ -3203,20 +3231,9 @@ document.getElementById('crewForm').addEventListener('submit', async (e) => {
     role: crewRole.value.trim() || null,
     headcount: clamp(crewHead.value),
     cars: clamp(crewCars.value),
+    contact: crewContact.value.trim() || null,
     staying: true,          // everyone in this table is staying over
   };
-
-  if (crewEditing) {
-    msg.textContent = 'saving…'; msg.className = 'sub';
-    const res = await save(sb.from('crew').update(row).eq('id', crewEditing), 'that entry');
-    if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
-    Object.assign(CREW.find(r => r.id === crewEditing) || {}, row);
-    document.getElementById('crewCancel').click();
-    msg.textContent = `saved ${row.name}`;
-    renderAll();
-    setTimeout(() => { if (msg.textContent.startsWith('saved')) msg.textContent = ''; }, 4000);
-    return;
-  }
 
   msg.textContent = 'adding…'; msg.className = 'sub';
   const { data, error } = await sb.from('crew').insert(row).select().single();
@@ -3229,11 +3246,11 @@ document.getElementById('crewForm').addEventListener('submit', async (e) => {
 });
 
 document.getElementById('crewCsv').addEventListener('click', () => {
-  const head = ['name', 'kind', 'doing what', 'people', 't-shirt', 'cars', 'staying over',
+  const head = ['name', 'kind', 'doing what', 'people', 't-shirt', 'cars', 'contact',
                 'where', 'notes'];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const body = CREW.map(r => [r.name, r.kind, r.role || '', Number(r.headcount) || 0,
-                              r.tshirt || '', Number(r.cars) || 0, r.staying ? 'yes' : 'no',
+                              r.tshirt || '', Number(r.cars) || 0, r.contact || '',
                               venueName(r.venue_id), r.notes || ''].map(cell).join(','));
   const url = URL.createObjectURL(new Blob([[head.map(cell).join(','), ...body].join('\n')],
     { type: 'text/csv' }));
