@@ -216,6 +216,22 @@
   .tier.super{ border-color:var(--good); color:var(--good); font-weight:600; }
   .tier.pending{ border-color:var(--critical); color:var(--critical); }
   .tier.car{ border-color:#c9a227; color:var(--ink-2); }
+  /* ---- sponsors ---- */
+  .spCard{ border:1px solid var(--line); border-radius:11px; padding:.7rem .85rem;
+    margin-bottom:8px; background:var(--surface-2); }
+  .spHead{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .spHead b{ font-size:.95rem; }
+  .spHead .ct{ font-size:.8rem; color:var(--ink-3); }
+  .dlRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:.35rem 0;
+    border-top:1px solid var(--line); font-size:.83rem; }
+  .dlRow .w{ flex:1; min-width:120px; }
+  .dlRow .dt{ color:var(--ink-3); font-size:.78rem; white-space:nowrap; }
+  .st{ font-size:.68rem; letter-spacing:.05em; text-transform:uppercase; border-radius:100px;
+    padding:.12rem .45rem; border:1px solid var(--line); color:var(--ink-2); white-space:nowrap; }
+  .st.done{ border-color:var(--good); color:var(--good); }
+  .st.doing{ border-color:var(--series); color:var(--series); }
+  .st.late{ border-color:var(--critical); color:var(--critical); }
+
   /* ---- slumber games ---- */
   .hsCard{ border:1px solid var(--line); border-left-width:5px; border-radius:11px;
     padding:.7rem .85rem; margin-bottom:8px; background:var(--surface-2); }
@@ -344,6 +360,7 @@
     <a href="#/applications" data-view="applications"><span class="nvl">applications</span><span class="nvc" id="nv-applications"></span></a>
     <a href="#/guests"       data-view="guests"><span class="nvl">guests</span><span class="nvc" id="nv-guests"></span></a>
     <a href="#/games"        data-view="games"><span class="nvl">slumber games</span><span class="nvc" id="nv-games"></span></a>
+    <a href="#/logistics"    data-view="logistics"><span class="nvl">boxes &amp; sponsors</span><span class="nvc" id="nv-logistics"></span></a>
     <a href="#/stay"         data-view="stay"><span class="nvl">rooms &amp; crew</span><span class="nvc" id="nv-stay"></span></a>
     <a href="#/day"          data-view="day"><span class="nvl">programming</span><span class="nvc" id="nv-day"></span></a>
     <a href="#/reach"        data-view="reach"><span class="nvl">reach</span><span class="nvc" id="nv-reach"></span></a>
@@ -724,6 +741,53 @@
     <p class="empty" id="wlEmpty" hidden>no one yet — it fills once applications close.</p>
   </section>
 
+  <!-- ----------------------------------------------------------- pr boxes -->
+  <section id="sec-boxes" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">BFF &amp; PR boxes</h2>
+      <span class="pill" id="bxCount">—</span>
+      <button class="btn ghost" id="bxCsv" type="button">packing list csv</button>
+    </div>
+    <p class="sub">one box per guest. Sizes come from their check-in and can be
+      overridden here — a box gets packed before anyone arrives, so a blank size is
+      the thing to chase.</p>
+    <div class="scroll">
+      <table id="bxTbl">
+        <thead><tr>
+          <th>guest</th><th>tier</th><th>pyjamas</th><th>t-shirt</th><th>waist</th>
+          <th>address</th><th>status</th><th>courier</th><th>tracking</th><th>notes</th>
+        </tr></thead>
+        <tbody id="bxBody"></tbody>
+      </table>
+    </div>
+    <p class="sub" id="bxMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
+  </section>
+
+  <!-- ---------------------------------------------------------- sponsors -->
+  <section id="sec-sponsors" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">sponsors &amp; deliverables</h2>
+      <span class="pill" id="spCount">—</span>
+      <button class="btn ghost" id="spCsv" type="button">download csv</button>
+    </div>
+    <p class="sub">who's involved and what we owe them. Every deliverable has an
+      owner and a date, because "we'll post something" is how a sponsor gets missed.</p>
+
+    <form id="spForm" class="crewForm">
+      <label style="flex:2 1 160px">sponsor
+        <input id="spName" type="text" placeholder="brand name" required /></label>
+      <label style="flex:2 1 160px">contact
+        <input id="spContact" type="text" placeholder="who, and how" /></label>
+      <label style="flex:2 1 160px">notes
+        <input id="spNotes" type="text" placeholder="what they're giving" /></label>
+      <button class="btn" id="spSubmit" type="submit" style="width:auto">add sponsor</button>
+      <button class="btn ghost" id="spCancel" type="button" hidden>cancel</button>
+    </form>
+    <p class="sub" id="spMsg" style="min-height:1.1rem;margin:6px 0 12px"></p>
+
+    <div id="spBoard"></div>
+  </section>
+
   <!-- ------------------------------------------------------- slumber games -->
   <section id="sec-games" class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -911,7 +975,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -931,7 +995,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -950,11 +1014,13 @@ async function boot() {
     sb.from('rooms').select('*').order('position'),
     sb.from('houses').select('*').order('position'),
     sb.from('points').select('*').order('created_at', { ascending: false }),
+    sb.from('sponsors').select('*').order('position'),
+    sb.from('deliverables').select('*').order('due'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -1044,6 +1110,7 @@ const VIEWS = [
   { id:'applications', title:'applications',        blurb:'everyone who applied, and everyone who nearly did' },
   { id:'guests',       title:'guests & check-in',   blurb:'the list, their links, and who has checked in' },
   { id:'games',        title:'slumber games',       blurb:'houses, who is in them, and the score' },
+  { id:'logistics',    title:'boxes & sponsors',    blurb:'what goes out, and what we owe' },
   { id:'stay',         title:'rooms & crew',        blurb:'who sleeps where, and who is working' },
   { id:'day',          title:'programming',         blurb:'the programme guests see at /itinerary' },
   { id:'reach',        title:'reach',               blurb:'the late list, and how the link looks when shared' },
@@ -1057,6 +1124,7 @@ const VIEW_MAP = {
   applications: ['sec-applied', 'sec-drafts', 'failPanel'],
   guests:       ['sec-checkin'],
   games:        ['sec-games'],
+  logistics:    ['sec-boxes', 'sec-sponsors'],
   stay:         ['sec-stay', 'sec-crew'],
   day:          ['sec-itin'],
   reach:        ['sec-late', 'sec-seo'],
@@ -1152,6 +1220,7 @@ function navCounts() {
   set('guests', GUESTS.filter(g => g.code).length);
   set('stay', ROOMS.length);
   set('games', HOUSES.length);
+  set('logistics', DELIVS.filter(d => d.status !== 'done').length);
   set('day', ITIN.length);
   set('reach', WAITLIST.length);
   const live = new Set(VISITS.filter(v => Date.now() - +new Date(v.created_at) < 5 * 60 * 1000)
@@ -1191,7 +1260,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); boxesPanel(); sponsorsPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -2089,6 +2158,257 @@ function headcount() {
   const crew     = CREW.reduce((n, r) => n + (Number(r.headcount) || 0), 0);
   return { creators, besties, crew, total: besties + creators + crew };
 }
+
+/* ============================================================================
+   BFF & PR BOXES
+   One box per guest, so its state lives on the guest rather than in a table of
+   its own. Sizes fall back to whatever they answered at check-in: the box is
+   packed before anyone arrives, so the useful view is "whose size is still
+   missing", not "who filled the form in".
+   ========================================================================== */
+const BOX_STATES = ['todo', 'packed', 'sent', 'delivered'];
+const sizeOf = (g, key) => {
+  if (g[key]) return { v: g[key], own: true };
+  const c = CHECKINS.find(x => x.guest_id === g.id)
+        || CHECKINS.find(x => String(x.name).trim().toLowerCase() === String(g.name).trim().toLowerCase());
+  return c && c[key] ? { v: c[key], own: false } : { v: '', own: false };
+};
+
+function boxesPanel(){
+  const body = document.getElementById('bxBody');
+  if (!body) return;
+  const people = GUESTS.filter(g => g.code);
+  const sent = people.filter(g => ['sent','delivered'].includes(g.box_status || 'todo')).length;
+  const missing = people.filter(g => !sizeOf(g,'tshirt').v || !sizeOf(g,'waist').v).length;
+  document.getElementById('bxCount').textContent =
+    `${sent}/${people.length} out` +
+    (missing ? ` · ${missing} without size${missing === 1 ? '' : 's'}` : ' · all sizes in');
+
+  const opts = (sel) => BOX_STATES.map(v =>
+    `<option value="${v}"${(sel || 'todo') === v ? ' selected' : ''}>${v}</option>`).join('');
+  /* anyone missing a size floats up, because that's the list you chase */
+  const sorted = [...people].sort((a, b) => {
+    const am = (!sizeOf(a,'tshirt').v || !sizeOf(a,'waist').v) ? 0 : 1;
+    const bm = (!sizeOf(b,'tshirt').v || !sizeOf(b,'waist').v) ? 0 : 1;
+    return am - bm || a.name.localeCompare(b.name);
+  });
+
+  const cell = (g, key, ph) => {
+    const s = sizeOf(g, key);
+    return `<td><input class="bxIn" data-g="${esc(g.id)}" data-k="${key}" value="${esc(g[key] || '')}"
+      placeholder="${s.v && !s.own ? esc(s.v) : ph}" title="${s.v && !s.own ? 'from their check-in' : ''}"
+      style="margin:0;width:4.4rem;height:30px;padding:.1rem .4rem;font-size:.8rem${s.v ? '' : ';border-color:var(--critical)'}" /></td>`;
+  };
+
+  body.innerHTML = sorted.map(g => `<tr>
+    <td>${esc(String(g.name).replace(/\(.*?\)/g,'').trim())}</td>
+    <td><span class="tier ${g.tier === 'bestie' ? '' : esc(g.tier || '')}">${esc(g.tier || '—')}</span></td>
+    <td>${esc(sizeOf(g,'pyjama_size').v || '—')}</td>
+    ${cell(g,'tshirt','size')}
+    ${cell(g,'waist','in')}
+    <td class="addr">${g.address ? esc(g.address) : '<span class="muted">no address</span>'}</td>
+    <td><select class="bxSt" data-g="${esc(g.id)}"
+          style="margin:0;height:30px;padding:.1rem .4rem;font-size:.8rem">${opts(g.box_status)}</select></td>
+    <td><input class="bxIn" data-g="${esc(g.id)}" data-k="box_courier" value="${esc(g.box_courier || '')}"
+          placeholder="courier" style="margin:0;width:6rem;height:30px;padding:.1rem .4rem;font-size:.8rem" /></td>
+    <td><input class="bxIn" data-g="${esc(g.id)}" data-k="box_tracking" value="${esc(g.box_tracking || '')}"
+          placeholder="tracking" style="margin:0;width:7.5rem;height:30px;padding:.1rem .4rem;font-size:.8rem" /></td>
+    <td><input class="bxIn" data-g="${esc(g.id)}" data-k="box_notes" value="${esc(g.box_notes || '')}"
+          placeholder="notes" style="margin:0;width:9rem;height:30px;padding:.1rem .4rem;font-size:.8rem" /></td>
+  </tr>`).join('');
+}
+
+/* every field saves on blur — a packing table is filled in by tabbing across it,
+   not by hunting for a save button on each row */
+document.getElementById('bxBody')?.addEventListener('change', async (e) => {
+  const msg = document.getElementById('bxMsg');
+  const inp = e.target.closest('.bxIn'), sel = e.target.closest('.bxSt');
+  const el = inp || sel;
+  if (!el) return;
+  const id = el.dataset.g;
+  const patch = sel ? { box_status: sel.value } : { [inp.dataset.k]: inp.value.trim() || null };
+  // stamp when it goes out, so "sent" has a date without asking for one
+  if (sel && ['sent','delivered'].includes(sel.value)){
+    const g = GUESTS.find(x => x.id === id);
+    if (g && !g.box_sent_at) patch.box_sent_at = new Date().toISOString();
+  }
+  el.disabled = true;
+  const res = await save(sb.from('guests').update(patch).eq('id', id), 'that box');
+  el.disabled = false;
+  if (!res.ok){ msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  msg.textContent = 'saved'; msg.className = 'sub';
+  Object.assign(GUESTS.find(x => x.id === id) || {}, patch);
+  renderAll();
+  setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
+});
+
+document.getElementById('bxCsv')?.addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const head = ['name','tier','pyjamas','t-shirt','waist','address','status','courier','tracking','notes'];
+  const lines = [head.map(cell).join(',')];
+  for (const g of GUESTS.filter(x => x.code)){
+    lines.push([String(g.name).replace(/\(.*?\)/g,'').trim(), g.tier || '',
+      sizeOf(g,'pyjama_size').v, sizeOf(g,'tshirt').v, sizeOf(g,'waist').v,
+      g.address || '', g.box_status || 'todo', g.box_courier || '',
+      g.box_tracking || '', g.box_notes || ''].map(cell).join(','));
+  }
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'pr-boxes-packing-list.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ============================================================================
+   SPONSORS & DELIVERABLES
+   One sponsor, many things owed. Every deliverable carries an owner and a date
+   because "we'll post something" is exactly how a sponsor gets missed — and
+   anything past its date with work left goes red on its own.
+   ========================================================================== */
+let spEditing = null;
+const isLate = (d) => d.status !== 'done' && d.due && d.due < new Date().toLocaleDateString('en-CA', { timeZone: IST });
+
+function sponsorsPanel(){
+  const board = document.getElementById('spBoard');
+  if (!board) return;
+  const open = DELIVS.filter(d => d.status !== 'done').length;
+  const late = DELIVS.filter(isLate).length;
+  document.getElementById('spCount').textContent = SPONSORS.length
+    ? `${SPONSORS.length} sponsors · ${open} open` + (late ? ` · ${late} overdue` : '') : 'none yet';
+
+  let html = '';
+  for (const sp of SPONSORS){
+    const mine = DELIVS.filter(d => d.sponsor_id === sp.id);
+    html += `<div class="spCard">
+      <div class="spHead">
+        <b>${esc(sp.name)}</b>
+        ${sp.contact ? `<span class="ct">${esc(sp.contact)}</span>` : ''}
+        <span style="flex:1"></span>
+        <span class="pill">${mine.filter(d => d.status === 'done').length}/${mine.length} done</span>
+        <button class="btn ghost spAct" data-act="add"  data-s="${esc(sp.id)}" type="button" style="padding:3px 8px;font-size:11px">+ deliverable</button>
+        <button class="btn ghost spAct" data-act="edit" data-s="${esc(sp.id)}" type="button" style="padding:3px 8px;font-size:11px">edit</button>
+        <button class="btn ghost spAct" data-act="del"  data-s="${esc(sp.id)}" type="button" style="padding:3px 8px;font-size:11px">remove</button>
+      </div>
+      ${sp.notes ? `<p class="sub" style="margin:.2rem 0 .3rem">${esc(sp.notes)}</p>` : ''}
+      ${mine.map(d => `<div class="dlRow">
+        <select class="dlSt" data-d="${esc(d.id)}" style="margin:0;height:26px;padding:0 .3rem;font-size:.76rem;width:5.4rem">
+          ${['todo','doing','done'].map(v => `<option value="${v}"${d.status === v ? ' selected' : ''}>${v}</option>`).join('')}
+        </select>
+        <span class="w">${esc(d.what)}</span>
+        ${d.owner ? `<span class="dt">${esc(d.owner)}</span>` : ''}
+        ${d.due ? `<span class="st ${isLate(d) ? 'late' : d.status === 'done' ? 'done' : ''}">${esc(d.due)}</span>` : ''}
+        <button class="btn ghost dlDel" data-d="${esc(d.id)}" type="button" style="padding:2px 7px;font-size:11px">×</button>
+      </div>`).join('')}
+      ${mine.length ? '' : '<p class="sub" style="margin:.3rem 0 0">nothing owed yet</p>'}
+    </div>`;
+  }
+  if (!SPONSORS.length) html = '<p class="empty">no sponsors yet — add the first above.</p>';
+  board.innerHTML = html;
+}
+
+document.getElementById('spForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('spMsg');
+  const row = { name: spName.value.trim(), contact: spContact.value.trim() || null,
+                notes: spNotes.value.trim() || null };
+  if (!row.name) return;
+  if (spEditing){
+    const res = await save(sb.from('sponsors').update(row).eq('id', spEditing), 'that sponsor');
+    if (!res.ok){ msg.textContent = res.msg; msg.className = 'sub err'; return; }
+    Object.assign(SPONSORS.find(x => x.id === spEditing) || {}, row);
+    document.getElementById('spCancel').click();
+    msg.textContent = `saved ${row.name}`; msg.className = 'sub';
+  } else {
+    row.position = SPONSORS.length ? Math.max(...SPONSORS.map(x => x.position)) + 1 : 1;
+    const { data, error } = await sb.from('sponsors').insert(row).select().single();
+    if (error){ msg.textContent = error.message; msg.className = 'sub err'; return; }
+    SPONSORS.push(data);
+    spForm.reset(); spName.focus();
+    msg.textContent = `added ${data.name}`; msg.className = 'sub';
+  }
+  renderAll();
+});
+document.getElementById('spCancel')?.addEventListener('click', () => {
+  spEditing = null; spForm.reset();
+  document.getElementById('spSubmit').textContent = 'add sponsor';
+  document.getElementById('spCancel').hidden = true;
+  document.getElementById('spMsg').textContent = '';
+});
+
+document.getElementById('spBoard')?.addEventListener('click', async (e) => {
+  const dd = e.target.closest('.dlDel');
+  if (dd){
+    if (!confirm('Remove this deliverable?')) return;
+    const { error } = await sb.from('deliverables').delete().eq('id', dd.dataset.d);
+    if (error){ document.getElementById('spMsg').textContent = error.message; return; }
+    DELIVS = DELIVS.filter(x => x.id !== dd.dataset.d);
+    renderAll(); return;
+  }
+  const btn = e.target.closest('.spAct');
+  if (!btn) return;
+  const sp = SPONSORS.find(x => x.id === btn.dataset.s);
+  if (!sp) return;
+
+  if (btn.dataset.act === 'add'){
+    const what = prompt(`What do we owe ${sp.name}?`);
+    if (!what || !what.trim()) return;
+    const owner = prompt('Who owns it? (blank for nobody yet)', '') || null;
+    const due = prompt('Due date? YYYY-MM-DD (blank for none)', '') || null;
+    if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)){
+      document.getElementById('spMsg').textContent = 'due date must look like 2026-08-18'; return;
+    }
+    const { data, error } = await sb.from('deliverables')
+      .insert({ sponsor_id: sp.id, what: what.trim(), owner, due }).select().single();
+    if (error){ document.getElementById('spMsg').textContent = error.message; return; }
+    DELIVS.push(data);
+    DELIVS.sort((a, b) => String(a.due || '9999').localeCompare(String(b.due || '9999')));
+    renderAll(); return;
+  }
+  if (btn.dataset.act === 'edit'){
+    spEditing = sp.id;
+    spName.value = sp.name; spContact.value = sp.contact || ''; spNotes.value = sp.notes || '';
+    document.getElementById('spSubmit').textContent = 'save';
+    document.getElementById('spCancel').hidden = false;
+    spName.focus(); return;
+  }
+  const n = DELIVS.filter(d => d.sponsor_id === sp.id).length;
+  if (!confirm(`Remove ${sp.name}?` + (n ? ` Its ${n} deliverable(s) go too.` : ''))) return;
+  const { error } = await sb.from('sponsors').delete().eq('id', sp.id);
+  if (error){ document.getElementById('spMsg').textContent = error.message; return; }
+  SPONSORS = SPONSORS.filter(x => x.id !== sp.id);
+  DELIVS = DELIVS.filter(d => d.sponsor_id !== sp.id);
+  renderAll();
+});
+
+document.getElementById('spBoard')?.addEventListener('change', async (e) => {
+  const sel = e.target.closest('.dlSt');
+  if (!sel) return;
+  sel.disabled = true;
+  const res = await save(sb.from('deliverables').update({ status: sel.value }).eq('id', sel.dataset.d), 'that deliverable');
+  sel.disabled = false;
+  if (!res.ok){ document.getElementById('spMsg').textContent = res.msg; return; }
+  const d = DELIVS.find(x => x.id === sel.dataset.d); if (d) d.status = sel.value;
+  renderAll();
+});
+
+document.getElementById('spCsv')?.addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['sponsor','contact','deliverable','owner','due','status','notes'].map(cell).join(',')];
+  for (const sp of SPONSORS){
+    const mine = DELIVS.filter(d => d.sponsor_id === sp.id);
+    if (!mine.length) lines.push([sp.name, sp.contact || '', '', '', '', '', sp.notes || ''].map(cell).join(','));
+    for (const d of mine)
+      lines.push([sp.name, sp.contact || '', d.what, d.owner || '', d.due || '', d.status, d.notes || ''].map(cell).join(','));
+  }
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'sponsors-and-deliverables.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* same reason as window.__shell: these two panels are the newest and the ones
+   most likely to be checked without a login in hand */
+window.__logistics = { boxesPanel, sponsorsPanel,
+  fake(g, sp, dl){ GUESTS = g; SPONSORS = sp; DELIVS = dl; boxesPanel(); sponsorsPanel(); } };
 
 /* ============================================================================
    SLUMBER GAMES

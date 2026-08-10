@@ -516,3 +516,59 @@ alter table public.houses enable row level security;
 alter table public.points enable row level security;
 -- admin-only in all four directions on both tables; guests read the standings
 -- through the `games` Edge Function behind the guest word, never directly.
+
+
+-- ============================================================================
+--  SIZES, PR BOXES, SPONSORS  (10 Aug 2026)
+--
+--  A box gets packed and couriered before anyone arrives, so the sizes have to
+--  be askable at check-in AND overridable by hand later — people give a size on
+--  the phone and then change their mind on WhatsApp. Both columns are nullable
+--  on purpose: guests who checked in before the questions existed are not
+--  suddenly invalid rows.
+--
+--  Box state lives on the guest rather than in a boxes table because there is
+--  exactly one box per guest — a separate table would only ever be a 1:1 join.
+-- ============================================================================
+alter table public.guests   add column if not exists tshirt text;
+alter table public.guests   add column if not exists waist  text;
+alter table public.checkins add column if not exists tshirt text;
+alter table public.checkins add column if not exists waist  text;
+
+alter table public.guests add column if not exists box_status text not null default 'todo'
+  check (box_status in ('todo', 'packed', 'sent', 'delivered'));
+alter table public.guests add column if not exists box_courier  text;
+alter table public.guests add column if not exists box_tracking text;
+alter table public.guests add column if not exists box_notes    text;
+-- stamped by the dashboard when the status first reaches sent/delivered, so
+-- "when did this go out" never needs to be typed in
+alter table public.guests add column if not exists box_sent_at timestamptz;
+
+--  Sponsors and what they are owed. One sponsor, many deliverables, each with an
+--  owner and a date — an undated deliverable is how a sponsor gets missed.
+create table if not exists public.sponsors (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null,
+  contact    text,
+  notes      text,
+  position   integer not null default 0
+);
+
+create table if not exists public.deliverables (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  sponsor_id uuid not null references public.sponsors(id) on delete cascade,
+  what       text not null,
+  owner      text,
+  due        date,
+  status     text not null default 'todo' check (status in ('todo', 'doing', 'done')),
+  notes      text
+);
+create index if not exists deliverables_sponsor_idx on public.deliverables (sponsor_id, due);
+
+alter table public.sponsors     enable row level security;
+alter table public.deliverables enable row level security;
+-- admin-only on all four verbs for both: nothing here is ever guest-facing, and
+-- an UPDATE policy that is missing fails by matching zero rows, not by erroring
+-- (which is how room assignments silently saved nothing for a day).

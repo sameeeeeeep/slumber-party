@@ -269,6 +269,16 @@ const QS = [
   { key:'pyjama_size', type:'chips', options:SIZES.map(s => ({ v:s, label:s })),
     ask:['okay fun part.', 'pyjama size? they\'re matching 🎀'] },
 
+  /* Two more sizes, asked right after the pyjamas while she's already talking
+     about clothes — it reads as one thought instead of a form growing. These feed
+     the PR boxes, which get packed before anyone arrives. */
+  { key:'tshirt', type:'chips', options:SIZES.map(s => ({ v:s, label:s })),
+    ask:['t-shirt size too?'] },
+
+  { key:'waist', type:'text', ph:'28, 30, 32…',
+    ask:['and your waist size? (for the shorts 🩳)'],
+    check:v => /^\d{2}(\.\d)?$/.test(v.trim()) ? null : 'just the number is fine — like 30' },
+
   { key:'meal', type:'chips', options:MEALS,
     ask:['and what do you eat?'] },
 
@@ -509,7 +519,8 @@ async function send(){
                 Authorization:'Bearer ' + CFG.supabaseAnonKey },
       body: JSON.stringify({
         name:answers.name, phone:answers.phone, email:answers.email,
-        pyjama_size:answers.pyjama_size, meal:answers.meal,
+        pyjama_size:answers.pyjama_size, tshirt:answers.tshirt, waist:answers.waist,
+        meal:answers.meal,
         meal_notes:answers.meal_notes || null,
         id_doc:answers.id_doc, id_doc_type:answers.id_doc_type || 'other',
         tz:(Intl.DateTimeFormat().resolvedOptions().timeZone || null),

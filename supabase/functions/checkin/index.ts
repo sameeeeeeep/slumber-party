@@ -99,6 +99,13 @@ function validate(b: Record<string, unknown>) {
 
   const pyjama_size = str(b.pyjama_size, 4)?.toUpperCase() ?? null;
   if (!pyjama_size || !SIZES.includes(pyjama_size)) return { error: 'pick a pyjama size' };
+  /* The two PR-box sizes. Validated but NOT required: they arrived after some
+     people had already checked in, and a returning guest shouldn't be blocked
+     because a question didn't exist when they answered. */
+  const tshirt = str(b.tshirt, 4)?.toUpperCase() ?? null;
+  if (tshirt && !SIZES.includes(tshirt)) return { error: 'pick a t-shirt size' };
+  const waistRaw = str(b.waist, 6);
+  const waist = waistRaw && /^\d{2}(\.\d)?$/.test(waistRaw) ? waistRaw : null;
 
   const meal = str(b.meal, 20)?.toLowerCase() ?? null;
   if (!meal || !MEALS.includes(meal)) return { error: 'pick a meal preference' };
@@ -111,7 +118,7 @@ function validate(b: Record<string, unknown>) {
 
   return {
     row: {
-      name, phone, email, pyjama_size, meal, meal_notes,
+      name, phone, email, pyjama_size, tshirt, waist, meal, meal_notes,
       id_doc_type: ['aadhaar', 'licence', 'other'].includes(id_doc_type) ? id_doc_type : 'other',
       tz: str(b.tz, 60),
       user_agent: str(b.user_agent, 300),
