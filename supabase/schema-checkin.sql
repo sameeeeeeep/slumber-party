@@ -577,3 +577,25 @@ alter table public.deliverables enable row level security;
 -- sending four people is one row, one size, four shirts — multiply by headcount
 -- when placing the order.
 alter table public.crew add column if not exists tshirt text;
+
+-- ============================================================================
+--  BOTH SIDES OF A SPONSOR DEAL  (10 Aug 2026)
+--
+--  A sponsorship is never one-directional: they give something, we owe something
+--  back. `direction` splits the same table into the two lists — 'in' is what we
+--  get, 'out' is what we owe — because both sides behave identically (a thing, an
+--  owner, a date, a status) and two tables would mean writing the same CRUD twice.
+--
+--  `deal` says whether the incoming side is money or goods. The amount is only
+--  meaningful on a cash deal, and the dashboard sends null on barter so a stale
+--  number left in a hidden field can never be stored.
+-- ============================================================================
+alter table public.sponsors add column if not exists deal text not null default 'barter';
+alter table public.sponsors drop constraint if exists sponsors_deal_check;
+alter table public.sponsors add constraint sponsors_deal_check check (deal in ('cash', 'barter'));
+alter table public.sponsors add column if not exists amount numeric(12,2);
+
+alter table public.deliverables add column if not exists direction text not null default 'out';
+alter table public.deliverables drop constraint if exists deliverables_direction_check;
+alter table public.deliverables add constraint deliverables_direction_check
+  check (direction in ('in', 'out'));

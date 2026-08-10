@@ -217,6 +217,15 @@
   .tier.pending{ border-color:var(--critical); color:var(--critical); }
   .tier.car{ border-color:#c9a227; color:var(--ink-2); }
   /* ---- sponsors ---- */
+  /* The strip at the top of a section: what is actually happening here, in
+     numbers, before you read a single row. */
+  .ovs{ display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 14px; }
+  .ovs > div{ border:1px solid var(--line); border-radius:10px; padding:.42rem .7rem;
+    min-width:5.4rem; background:var(--card-2, transparent); }
+  .ovs b{ display:block; font-size:1.2rem; line-height:1.25; font-variant-numeric:tabular-nums; }
+  .ovs i{ display:block; font-style:normal; font-size:.66rem; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--ink-3); }
+  .ovs .warn b{ color:var(--critical); }
   .spCard{ border:1px solid var(--line); border-radius:11px; padding:.7rem .85rem;
     margin-bottom:8px; background:var(--surface-2); }
   .spHead{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -359,9 +368,10 @@
     <a href="#/overview"     data-view="overview"><span class="nvl">overview</span><span class="nvc" id="nv-overview"></span></a>
     <a href="#/applications" data-view="applications"><span class="nvl">applications</span><span class="nvc" id="nv-applications"></span></a>
     <a href="#/guests"       data-view="guests"><span class="nvl">guests</span><span class="nvc" id="nv-guests"></span></a>
+    <a href="#/crew"         data-view="crew"><span class="nvl">team &amp; vendors</span><span class="nvc" id="nv-crew"></span></a>
     <a href="#/games"        data-view="games"><span class="nvl">slumber games</span><span class="nvc" id="nv-games"></span></a>
-    <a href="#/logistics"    data-view="logistics"><span class="nvl">boxes &amp; sponsors</span><span class="nvc" id="nv-logistics"></span></a>
-    <a href="#/stay"         data-view="stay"><span class="nvl">rooms &amp; crew</span><span class="nvc" id="nv-stay"></span></a>
+    <a href="#/sponsors"     data-view="sponsors"><span class="nvl">sponsors</span><span class="nvc" id="nv-sponsors"></span></a>
+    <a href="#/stay"         data-view="stay"><span class="nvl">rooms</span><span class="nvc" id="nv-stay"></span></a>
     <a href="#/day"          data-view="day"><span class="nvl">programming</span><span class="nvc" id="nv-day"></span></a>
     <a href="#/reach"        data-view="reach"><span class="nvl">reach</span><span class="nvc" id="nv-reach"></span></a>
   </div>
@@ -471,6 +481,7 @@
       <span class="pill" id="ciCount">—</span>
       <button class="btn ghost" id="ciCsv" type="button">download csv</button>
     </div>
+    <div class="ovs" id="ovGuests"></div>
     <p class="sub">who has filled in <code>/checkin</code>, against the guest list. paste the
       roster below and the two line up by name.</p>
 
@@ -749,6 +760,7 @@
       <span class="pill" id="bxCount">—</span>
       <button class="btn ghost" id="bxCsv" type="button">packing list csv</button>
     </div>
+    <div class="ovs" id="ovBoxes"></div>
     <p class="sub">one box per guest. Sizes come from their check-in and can be
       overridden here — a box gets packed before anyone arrives, so a blank size is
       the thing to chase.</p>
@@ -771,16 +783,26 @@
       <span class="pill" id="spCount">—</span>
       <button class="btn ghost" id="spCsv" type="button">download csv</button>
     </div>
-    <p class="sub">who's involved and what we owe them. Every deliverable has an
-      owner and a date, because "we'll post something" is how a sponsor gets missed.</p>
+    <div class="ovs" id="ovSponsors"></div>
+    <p class="sub">every deal has two sides, so each sponsor has two lists: what we
+      get from them, and what we owe back. Cash deals carry an amount; barter deals
+      carry the goods. Everything we owe has an owner and a date, because "we'll post
+      something" is how a sponsor gets missed.</p>
 
     <form id="spForm" class="crewForm">
-      <label style="flex:2 1 160px">sponsor
+      <label style="flex:2 1 150px">sponsor
         <input id="spName" type="text" placeholder="brand name" required /></label>
-      <label style="flex:2 1 160px">contact
+      <label style="flex:0 1 110px">deal
+        <select id="spDeal">
+          <option value="barter">barter</option>
+          <option value="cash">cash</option>
+        </select></label>
+      <label style="flex:0 1 120px" id="spAmtWrap" hidden>amount (₹)
+        <input id="spAmount" type="number" min="0" step="1000" placeholder="150000" /></label>
+      <label style="flex:2 1 150px">contact
         <input id="spContact" type="text" placeholder="who, and how" /></label>
-      <label style="flex:2 1 160px">notes
-        <input id="spNotes" type="text" placeholder="what they're giving" /></label>
+      <label style="flex:2 1 150px">notes
+        <input id="spNotes" type="text" placeholder="anything worth remembering" /></label>
       <button class="btn" id="spSubmit" type="submit" style="width:auto">add sponsor</button>
       <button class="btn ghost" id="spCancel" type="button" hidden>cancel</button>
     </form>
@@ -874,6 +896,8 @@
     <p class="sub">everyone working the party — all of them staying over. one row can cover
       several people, so set the headcount rather than adding a row each. cars count
       per row, so a vendor arriving in two vans is one entry.</p>
+
+    <div class="ovs" id="ovCrew"></div>
 
     <div class="scroll">
       <table id="crewTbl">
@@ -1109,10 +1133,11 @@ async function save(query, what) {
 const VIEWS = [
   { id:'overview',     title:'overview',            blurb:'the funnel, end to end' },
   { id:'applications', title:'applications',        blurb:'everyone who applied, and everyone who nearly did' },
-  { id:'guests',       title:'guests & check-in',   blurb:'the list, their links, and who has checked in' },
+  { id:'guests',       title:'guests',              blurb:'the list, their links, their sizes, and every box going out' },
+  { id:'crew',         title:'team & vendors',      blurb:'everyone working the party, and what they need' },
   { id:'games',        title:'slumber games',       blurb:'houses, who is in them, and the score' },
-  { id:'logistics',    title:'boxes & sponsors',    blurb:'what goes out, and what we owe' },
-  { id:'stay',         title:'rooms & crew',        blurb:'who sleeps where, and who is working' },
+  { id:'sponsors',     title:'sponsors',            blurb:'what we get from each brand, and what we owe back' },
+  { id:'stay',         title:'rooms',               blurb:'the venue, and who sleeps where' },
   { id:'day',          title:'programming',         blurb:'the programme guests see at /itinerary' },
   { id:'reach',        title:'reach',               blurb:'the late list, and how the link looks when shared' },
 ];
@@ -1123,10 +1148,11 @@ const VIEWS = [
 const VIEW_MAP = {
   overview:     ['@tiles', '@grid0', '@grid1'],
   applications: ['sec-applied', 'sec-drafts', 'failPanel'],
-  guests:       ['sec-checkin'],
+  guests:       ['sec-checkin', 'sec-boxes'],
+  crew:         ['sec-crew'],
   games:        ['sec-games'],
-  logistics:    ['sec-boxes', 'sec-sponsors'],
-  stay:         ['sec-stay', 'sec-crew'],
+  sponsors:     ['sec-sponsors'],
+  stay:         ['sec-stay'],
   day:          ['sec-itin'],
   reach:        ['sec-late', 'sec-seo'],
 };
@@ -1221,7 +1247,8 @@ function navCounts() {
   set('guests', GUESTS.filter(g => g.code).length);
   set('stay', ROOMS.length);
   set('games', HOUSES.length);
-  set('logistics', DELIVS.filter(d => d.status !== 'done').length);
+  set('crew', CREW.length);
+  set('sponsors', DELIVS.filter(d => d.status !== 'done').length);
   set('day', ITIN.length);
   set('reach', WAITLIST.length);
   const live = new Set(VISITS.filter(v => Date.now() - +new Date(v.created_at) < 5 * 60 * 1000)
@@ -1306,7 +1333,17 @@ function checkinPanel() {
     if (!usedIds.has(c.id)) rows.push({ name: c.name, c, onList: false, address: '', code: '', tier: '', ig: '' });
   }
 
+  const onList = GUESTS.filter(g => g.code);
   const done = rows.filter(r => r.c).length;
+  strip('ovGuests', [
+    [onList.length, 'on the list'],
+    [onList.filter(g => g.tier === 'bestie').length, 'besties'],
+    [onList.filter(g => g.tier === 'creator').length, 'creators'],
+    [done, 'checked in'],
+    [onList.length - done, 'still to check in', true],
+    [onList.filter(g => !g.address).length, 'no address yet', true],
+    [onList.filter(g => g.instagram).length, 'with a handle'],
+  ]);
   document.getElementById('ciCount').textContent =
     GUESTS.length ? `${done} of ${GUESTS.length} checked in` : `${CHECKINS.length} checked in`;
 
@@ -2191,6 +2228,16 @@ function headcount() {
    packed before anyone arrives, so the useful view is "whose size is still
    missing", not "who filled the form in".
    ========================================================================== */
+/* Every section opens with the same thing: what is happening here, in numbers,
+   before you read a single row. Pass [value, label] pairs; a third truthy value
+   turns the tile red, for the counts you want to be nagged about. */
+function strip(id, items){
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = items.map(([v, label, warn]) =>
+    `<div${warn && v ? ' class="warn"' : ''}><b>${esc(v)}</b><i>${esc(label)}</i></div>`).join('');
+}
+
 const BOX_STATES = ['todo', 'packed', 'sent', 'delivered'];
 const TEE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];        // same six /checkin offers
 /* inches, the way a tailor in Mumbai asks for it */
@@ -2208,6 +2255,15 @@ function boxesPanel(){
   const people = GUESTS.filter(g => g.code);
   const sent = people.filter(g => ['sent','delivered'].includes(g.box_status || 'todo')).length;
   const missing = people.filter(g => !sizeOf(g,'tshirt').v || !sizeOf(g,'waist').v).length;
+  strip('ovBoxes', [
+    [people.length, 'boxes'],
+    [people.filter(g => (g.box_status || 'todo') === 'todo').length, 'to pack'],
+    [people.filter(g => g.box_status === 'packed').length, 'packed'],
+    [people.filter(g => g.box_status === 'sent').length, 'in transit'],
+    [people.filter(g => g.box_status === 'delivered').length, 'delivered'],
+    [missing, 'missing a size', true],
+    [people.filter(g => !g.address).length, 'no address', true],
+  ]);
   document.getElementById('bxCount').textContent =
     `${sent}/${people.length} out` +
     (missing ? ` · ${missing} without size${missing === 1 ? '' : 's'}` : ' · all sizes in');
@@ -2308,50 +2364,87 @@ document.getElementById('bxCsv')?.addEventListener('click', () => {
    ========================================================================== */
 let spEditing = null;
 const isLate = (d) => d.status !== 'done' && d.due && d.due < new Date().toLocaleDateString('en-CA', { timeZone: IST });
+const money = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
+/* "in" is what the brand gives us, "out" is what we owe back. One table, one
+   direction column: both sides of a deal behave identically — a thing, an owner,
+   a date, a status — and splitting them into two tables would only mean writing
+   the same CRUD twice. */
+const DIRS = [
+  { k:'in',  label:'what we get',  add:'+ we get',  empty:'nothing logged yet' },
+  { k:'out', label:'what we owe',  add:'+ we owe',  empty:'nothing owed yet' },
+];
 
 function sponsorsPanel(){
   const board = document.getElementById('spBoard');
   if (!board) return;
-  const open = DELIVS.filter(d => d.status !== 'done').length;
-  const late = DELIVS.filter(isLate).length;
+
+  const owed = DELIVS.filter(d => d.direction === 'out');
+  const cash = SPONSORS.filter(x => x.deal === 'cash')
+    .reduce((n, x) => n + Number(x.amount || 0), 0);
+  strip('ovSponsors', [
+    [SPONSORS.length, 'sponsors'],
+    [money(cash), 'cash in'],
+    [SPONSORS.filter(x => x.deal === 'barter').length, 'barter'],
+    [DELIVS.filter(d => d.direction === 'in').length, 'things coming in'],
+    [owed.filter(d => d.status !== 'done').length, 'still owed'],
+    [DELIVS.filter(isLate).length, 'overdue', true],
+  ]);
   document.getElementById('spCount').textContent = SPONSORS.length
-    ? `${SPONSORS.length} sponsors · ${open} open` + (late ? ` · ${late} overdue` : '') : 'none yet';
+    ? `${SPONSORS.length} sponsor${SPONSORS.length === 1 ? '' : 's'}` +
+      (cash ? ` · ${money(cash)}` : '') : 'none yet';
 
   let html = '';
   for (const sp of SPONSORS){
     const mine = DELIVS.filter(d => d.sponsor_id === sp.id);
+    const out = mine.filter(d => d.direction === 'out');
     html += `<div class="spCard">
       <div class="spHead">
         <b>${esc(sp.name)}</b>
+        <span class="tier ${sp.deal === 'cash' ? '' : 'creator'}">${esc(sp.deal || 'barter')}</span>
+        ${sp.deal === 'cash' && sp.amount ? `<span class="pill">${money(sp.amount)}</span>` : ''}
         ${sp.contact ? `<span class="ct">${esc(sp.contact)}</span>` : ''}
         <span style="flex:1"></span>
-        <span class="pill">${mine.filter(d => d.status === 'done').length}/${mine.length} done</span>
-        <button class="btn ghost spAct" data-act="add"  data-s="${esc(sp.id)}" type="button" style="padding:3px 8px;font-size:11px">+ deliverable</button>
+        <span class="pill">${out.filter(d => d.status === 'done').length}/${out.length} delivered</span>
+        ${DIRS.map(d => `<button class="btn ghost spAct" data-act="add" data-dir="${d.k}"
+            data-s="${esc(sp.id)}" type="button" style="padding:3px 8px;font-size:11px">${d.add}</button>`).join('')}
         <button class="btn ghost spAct" data-act="edit" data-s="${esc(sp.id)}" type="button" style="padding:3px 8px;font-size:11px">edit</button>
         <button class="btn ghost spAct" data-act="del"  data-s="${esc(sp.id)}" type="button" style="padding:3px 8px;font-size:11px">remove</button>
       </div>
       ${sp.notes ? `<p class="sub" style="margin:.2rem 0 .3rem">${esc(sp.notes)}</p>` : ''}
-      ${mine.map(d => `<div class="dlRow">
-        <select class="dlSt" data-d="${esc(d.id)}" style="margin:0;height:26px;padding:0 .3rem;font-size:.76rem;width:5.4rem">
-          ${['todo','doing','done'].map(v => `<option value="${v}"${d.status === v ? ' selected' : ''}>${v}</option>`).join('')}
-        </select>
-        <span class="w">${esc(d.what)}</span>
-        ${d.owner ? `<span class="dt">${esc(d.owner)}</span>` : ''}
-        ${d.due ? `<span class="st ${isLate(d) ? 'late' : d.status === 'done' ? 'done' : ''}">${esc(d.due)}</span>` : ''}
-        <button class="btn ghost dlDel" data-d="${esc(d.id)}" type="button" style="padding:2px 7px;font-size:11px">×</button>
-      </div>`).join('')}
-      ${mine.length ? '' : '<p class="sub" style="margin:.3rem 0 0">nothing owed yet</p>'}
+      ${DIRS.map(dir => {
+        const list = mine.filter(d => d.direction === dir.k);
+        return `<p class="sub" style="margin:.5rem 0 .1rem;text-transform:uppercase;letter-spacing:.07em;font-size:.66rem">${dir.label}</p>
+        ${list.map(d => `<div class="dlRow">
+          <select class="dlSt" data-d="${esc(d.id)}" style="margin:0;height:26px;padding:0 .3rem;font-size:.76rem;width:5.4rem">
+            ${['todo','doing','done'].map(v => `<option value="${v}"${d.status === v ? ' selected' : ''}>${v}</option>`).join('')}
+          </select>
+          <span class="w">${esc(d.what)}</span>
+          ${d.owner ? `<span class="dt">${esc(d.owner)}</span>` : ''}
+          ${d.due ? `<span class="st ${isLate(d) ? 'late' : d.status === 'done' ? 'done' : ''}">${esc(d.due)}</span>` : ''}
+          <button class="btn ghost dlDel" data-d="${esc(d.id)}" type="button" style="padding:2px 7px;font-size:11px">&times;</button>
+        </div>`).join('')}
+        ${list.length ? '' : `<p class="sub" style="margin:.1rem 0 0;opacity:.7">${dir.empty}</p>`}`;
+      }).join('')}
     </div>`;
   }
   if (!SPONSORS.length) html = '<p class="empty">no sponsors yet — add the first above.</p>';
   board.innerHTML = html;
 }
 
+/* an amount only means something on a cash deal */
+function spDealToggle(){
+  document.getElementById('spAmtWrap').hidden = spDeal.value !== 'cash';
+}
+document.getElementById('spDeal')?.addEventListener('change', spDealToggle);
+spDealToggle();   // the form opens on barter, so the amount starts hidden
+
 document.getElementById('spForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const msg = document.getElementById('spMsg');
   const row = { name: spName.value.trim(), contact: spContact.value.trim() || null,
-                notes: spNotes.value.trim() || null };
+                notes: spNotes.value.trim() || null, deal: spDeal.value,
+                amount: spDeal.value === 'cash' && spAmount.value !== ''
+                  ? Number(spAmount.value) : null };
   if (!row.name) return;
   if (spEditing){
     const res = await save(sb.from('sponsors').update(row).eq('id', spEditing), 'that sponsor');
@@ -2364,13 +2457,13 @@ document.getElementById('spForm')?.addEventListener('submit', async (e) => {
     const { data, error } = await sb.from('sponsors').insert(row).select().single();
     if (error){ msg.textContent = error.message; msg.className = 'sub err'; return; }
     SPONSORS.push(data);
-    spForm.reset(); spName.focus();
+    spForm.reset(); spDealToggle(); spName.focus();
     msg.textContent = `added ${data.name}`; msg.className = 'sub';
   }
   renderAll();
 });
 document.getElementById('spCancel')?.addEventListener('click', () => {
-  spEditing = null; spForm.reset();
+  spEditing = null; spForm.reset(); spDealToggle();
   document.getElementById('spSubmit').textContent = 'add sponsor';
   document.getElementById('spCancel').hidden = true;
   document.getElementById('spMsg').textContent = '';
@@ -2379,7 +2472,7 @@ document.getElementById('spCancel')?.addEventListener('click', () => {
 document.getElementById('spBoard')?.addEventListener('click', async (e) => {
   const dd = e.target.closest('.dlDel');
   if (dd){
-    if (!confirm('Remove this deliverable?')) return;
+    if (!confirm('Remove this line?')) return;
     const { error } = await sb.from('deliverables').delete().eq('id', dd.dataset.d);
     if (error){ document.getElementById('spMsg').textContent = error.message; return; }
     DELIVS = DELIVS.filter(x => x.id !== dd.dataset.d);
@@ -2391,7 +2484,10 @@ document.getElementById('spBoard')?.addEventListener('click', async (e) => {
   if (!sp) return;
 
   if (btn.dataset.act === 'add'){
-    const what = prompt(`What do we owe ${sp.name}?`);
+    const dir = btn.dataset.dir;
+    const what = prompt(dir === 'in'
+      ? `What are we getting from ${sp.name}?`
+      : `What do we owe ${sp.name}?`);
     if (!what || !what.trim()) return;
     const owner = prompt('Who owns it? (blank for nobody yet)', '') || null;
     const due = prompt('Due date? YYYY-MM-DD (blank for none)', '') || null;
@@ -2399,7 +2495,7 @@ document.getElementById('spBoard')?.addEventListener('click', async (e) => {
       document.getElementById('spMsg').textContent = 'due date must look like 2026-08-18'; return;
     }
     const { data, error } = await sb.from('deliverables')
-      .insert({ sponsor_id: sp.id, what: what.trim(), owner, due }).select().single();
+      .insert({ sponsor_id: sp.id, what: what.trim(), owner, due, direction: dir }).select().single();
     if (error){ document.getElementById('spMsg').textContent = error.message; return; }
     DELIVS.push(data);
     DELIVS.sort((a, b) => String(a.due || '9999').localeCompare(String(b.due || '9999')));
@@ -2408,12 +2504,13 @@ document.getElementById('spBoard')?.addEventListener('click', async (e) => {
   if (btn.dataset.act === 'edit'){
     spEditing = sp.id;
     spName.value = sp.name; spContact.value = sp.contact || ''; spNotes.value = sp.notes || '';
+    spDeal.value = sp.deal || 'barter'; spAmount.value = sp.amount ?? ''; spDealToggle();
     document.getElementById('spSubmit').textContent = 'save';
     document.getElementById('spCancel').hidden = false;
     spName.focus(); return;
   }
   const n = DELIVS.filter(d => d.sponsor_id === sp.id).length;
-  if (!confirm(`Remove ${sp.name}?` + (n ? ` Its ${n} deliverable(s) go too.` : ''))) return;
+  if (!confirm(`Remove ${sp.name}?` + (n ? ` Its ${n} line(s) go too.` : ''))) return;
   const { error } = await sb.from('sponsors').delete().eq('id', sp.id);
   if (error){ document.getElementById('spMsg').textContent = error.message; return; }
   SPONSORS = SPONSORS.filter(x => x.id !== sp.id);
@@ -2425,7 +2522,7 @@ document.getElementById('spBoard')?.addEventListener('change', async (e) => {
   const sel = e.target.closest('.dlSt');
   if (!sel) return;
   sel.disabled = true;
-  const res = await save(sb.from('deliverables').update({ status: sel.value }).eq('id', sel.dataset.d), 'that deliverable');
+  const res = await save(sb.from('deliverables').update({ status: sel.value }).eq('id', sel.dataset.d), 'that line');
   sel.disabled = false;
   if (!res.ok){ document.getElementById('spMsg').textContent = res.msg; return; }
   const d = DELIVS.find(x => x.id === sel.dataset.d); if (d) d.status = sel.value;
@@ -2434,12 +2531,15 @@ document.getElementById('spBoard')?.addEventListener('change', async (e) => {
 
 document.getElementById('spCsv')?.addEventListener('click', () => {
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = [['sponsor','contact','deliverable','owner','due','status','notes'].map(cell).join(',')];
+  const lines = [['sponsor','deal','amount','contact','direction','what','owner','due','status','notes']
+    .map(cell).join(',')];
   for (const sp of SPONSORS){
     const mine = DELIVS.filter(d => d.sponsor_id === sp.id);
-    if (!mine.length) lines.push([sp.name, sp.contact || '', '', '', '', '', sp.notes || ''].map(cell).join(','));
+    const head = [sp.name, sp.deal || 'barter', sp.amount ?? '', sp.contact || ''];
+    if (!mine.length) lines.push([...head, '', '', '', '', '', sp.notes || ''].map(cell).join(','));
     for (const d of mine)
-      lines.push([sp.name, sp.contact || '', d.what, d.owner || '', d.due || '', d.status, d.notes || ''].map(cell).join(','));
+      lines.push([...head, d.direction === 'in' ? 'we get' : 'we owe', d.what, d.owner || '',
+                  d.due || '', d.status, d.notes || ''].map(cell).join(','));
   }
   const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
   const a = document.createElement('a');
@@ -3033,6 +3133,15 @@ function crewPanel() {
   /* One size per entry, so this counts entries still missing one. A vendor
      sending four people is one size and four shirts — the people column is what
      you multiply by when placing the order. */
+  strip('ovCrew', [
+    [CREW.length, 'entries'],
+    [CREW.reduce((n, r) => n + (Number(r.headcount) || 0), 0), 'people'],
+    [CREW.filter(r => r.kind === 'team').length, 'team'],
+    [CREW.filter(r => r.kind === 'vendor').length, 'vendors'],
+    [h.crew, 'staying over'],
+    [cars, 'cars'],
+    [CREW.filter(r => !r.tshirt).length, 'without a size', true],
+  ]);
   document.getElementById('crewCount').textContent = CREW.length
     ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} staying over` + (cars ? ` · ${cars} car${cars === 1 ? '' : 's'}` : '')
       + (() => { const n = CREW.filter(r => !r.tshirt).length;
