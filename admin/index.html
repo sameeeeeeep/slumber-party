@@ -219,6 +219,8 @@
   /* ---- sponsors ---- */
   /* The strip at the top of a section: what is actually happening here, in
      numbers, before you read a single row. */
+  /* the saved handle, as the link it should be */
+  .igGo{ font-size:.76rem; white-space:nowrap; margin-left:5px; }
   .ovs{ display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 14px; }
   .ovs > div{ border:1px solid var(--line); border-radius:10px; padding:.42rem .7rem;
     min-width:5.4rem; background:var(--card-2, transparent); }
@@ -477,18 +479,22 @@
   <!-- ------------------------------------------------------------ check-in -->
   <section id="sec-checkin" class="panel" style="margin-top:18px">
     <div class="tablebar">
-      <h2 style="flex:1">check-in</h2>
+      <h2 style="flex:1">the guests</h2>
       <span class="pill" id="ciCount">—</span>
+      <button class="btn ghost" id="bxCsv" type="button">packing list csv</button>
       <button class="btn ghost" id="ciCsv" type="button">download csv</button>
     </div>
     <div class="ovs" id="ovGuests"></div>
-    <p class="sub">who has filled in <code>/checkin</code>, against the guest list. paste the
-      roster below and the two line up by name.</p>
+    <p class="sub">one row per guest: their link, their handle, their sizes, the box
+      going to them, and whatever they filled in at <code>/checkin</code>. Sizes and
+      addresses can be set here before anyone checks in — the boxes ship first.
+      Everything saves as you leave the field.</p>
 
     <div class="scroll" style="margin-top:12px">
       <table id="ciTbl">
         <thead><tr>
           <th>guest</th><th>tier</th><th>invite link</th><th>instagram</th><th>address</th>
+          <th>t-shirt</th><th>waist</th><th>box</th><th>courier</th><th>tracking</th>
           <th>status</th><th>when</th>
           <th>phone</th><th>email</th><th>pyjamas</th><th>meal</th><th>id</th><th></th><th></th>
         </tr></thead>
@@ -496,6 +502,7 @@
       </table>
     </div>
     <p class="empty" id="ciEmpty" hidden>no guests on the list yet — paste them below.</p>
+    <p class="sub" id="ciMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
 
     <details style="margin-top:16px">
       <summary style="cursor:pointer;color:var(--muted)">the guest list</summary>
@@ -751,29 +758,6 @@
       </table>
     </div>
     <p class="empty" id="wlEmpty" hidden>no one yet — it fills once applications close.</p>
-  </section>
-
-  <!-- ----------------------------------------------------------- pr boxes -->
-  <section id="sec-boxes" class="panel" style="margin-top:18px">
-    <div class="tablebar">
-      <h2 style="flex:1">BFF &amp; PR boxes</h2>
-      <span class="pill" id="bxCount">—</span>
-      <button class="btn ghost" id="bxCsv" type="button">packing list csv</button>
-    </div>
-    <div class="ovs" id="ovBoxes"></div>
-    <p class="sub">one box per guest. Sizes come from their check-in and can be
-      overridden here — a box gets packed before anyone arrives, so a blank size is
-      the thing to chase.</p>
-    <div class="scroll">
-      <table id="bxTbl">
-        <thead><tr>
-          <th>guest</th><th>tier</th><th>pyjamas</th><th>t-shirt</th><th>waist</th>
-          <th>address</th><th>status</th><th>courier</th><th>tracking</th><th>notes</th>
-        </tr></thead>
-        <tbody id="bxBody"></tbody>
-      </table>
-    </div>
-    <p class="sub" id="bxMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
   </section>
 
   <!-- ---------------------------------------------------------- sponsors -->
@@ -1148,7 +1132,7 @@ const VIEWS = [
 const VIEW_MAP = {
   overview:     ['@tiles', '@grid0', '@grid1'],
   applications: ['sec-applied', 'sec-drafts', 'failPanel'],
-  guests:       ['sec-checkin', 'sec-boxes'],
+  guests:       ['sec-checkin'],
   crew:         ['sec-crew'],
   games:        ['sec-games'],
   sponsors:     ['sec-sponsors'],
@@ -1288,7 +1272,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); boxesPanel(); sponsorsPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -1335,17 +1319,30 @@ function checkinPanel() {
 
   const onList = GUESTS.filter(g => g.code);
   const done = rows.filter(r => r.c).length;
+  /* `done` counts every check-in, including anyone who filled the form in without
+     being on the roster. The strip is about the roster, so it counts only those —
+     otherwise a stranger's check-in makes "still to check in" read zero. */
+  const doneOnList = rows.filter(r => r.onList && r.c).length;
+  const noSize = onList.filter(g => !sizeOf(g, 'tshirt').v || !sizeOf(g, 'waist').v).length;
   strip('ovGuests', [
     [onList.length, 'on the list'],
     [onList.filter(g => g.tier === 'bestie').length, 'besties'],
     [onList.filter(g => g.tier === 'creator').length, 'creators'],
-    [done, 'checked in'],
-    [onList.length - done, 'still to check in', true],
-    [onList.filter(g => !g.address).length, 'no address yet', true],
+    [doneOnList, 'checked in'],
+    [Math.max(0, onList.length - doneOnList), 'still to check in', true],
     [onList.filter(g => g.instagram).length, 'with a handle'],
+    [onList.filter(g => !g.address).length, 'no address', true],
+    [noSize, 'missing a size', true],
+    [onList.filter(g => (g.box_status || 'todo') === 'todo').length, 'boxes to pack'],
+    [onList.filter(g => g.box_status === 'sent').length, 'in transit'],
+    [onList.filter(g => g.box_status === 'delivered').length, 'delivered'],
   ]);
-  document.getElementById('ciCount').textContent =
-    GUESTS.length ? `${done} of ${GUESTS.length} checked in` : `${CHECKINS.length} checked in`;
+  /* the roster's own number, matching the strip above it — the pill used to count
+     off-list check-ins too and so could read "3 of 3" with someone still missing */
+  document.getElementById('ciCount').textContent = onList.length
+    ? `${doneOnList} of ${onList.length} checked in` +
+      (done > doneOnList ? ` · ${done - doneOnList} not on the list` : '')
+    : `${CHECKINS.length} checked in`;
 
   document.getElementById('ciEmpty').hidden = rows.length > 0;
   body.innerHTML = rows.map(r => {
@@ -1359,12 +1356,42 @@ function checkinPanel() {
        round-trips; here you tab down the column. Anything pasted gets trimmed to
        the handle, so a full profile URL or an @ works as well as the bare name. */
     const igCell = (r) => r.onList && r.id
-      ? `<td style="white-space:nowrap"><input class="igIn" data-gid="${esc(r.id)}"
+      ? `<td style="white-space:nowrap"><input class="gIn" data-gid="${esc(r.id)}" data-k="instagram"
            value="${esc(r.ig)}" placeholder="handle" spellcheck="false"
-           style="margin:0;width:8.5rem;height:28px;padding:.1rem .45rem;font-size:.8rem" />${
-           r.ig ? ` <a href="https://instagram.com/${encodeURIComponent(r.ig)}" target="_blank"
-                     rel="noopener noreferrer" title="open @${esc(r.ig)}">↗</a>` : ''}</td>`
+           style="margin:0;width:8rem;height:28px;padding:.1rem .45rem;font-size:.8rem" />${
+           r.ig ? ` <a class="igGo" href="https://instagram.com/${encodeURIComponent(r.ig)}"
+                     target="_blank" rel="noopener noreferrer">@${esc(r.ig)} ↗</a>` : ''}</td>`
       : '<td><span class="muted">—</span></td>';
+    /* The box lives on the guest row now rather than in a table of its own —
+       there is exactly one box per guest, and holding the same person in two
+       places only meant scrolling between them. Dropdowns rather than free text:
+       these feed a packing list, and "M" / "med" / "medium" in one column is how
+       the wrong tee gets sewn. */
+    const sizeSel = (r, key, list, unit) => {
+      if (!r.onList || !r.id) return '<td><span class="muted">—</span></td>';
+      const g = GUESTS.find(x => x.id === r.id) || {};
+      const s = sizeOf(g, key);
+      const opts = list.includes(s.v) || !s.v ? list : [s.v, ...list];
+      return `<td><select class="gIn" data-gid="${esc(r.id)}" data-k="${key}"
+        title="${s.v && !s.own ? 'from their check-in — pick here to override' : ''}"
+        style="margin:0;width:4.8rem;height:28px;padding:.1rem .3rem;font-size:.8rem${
+          s.v ? (s.own ? '' : ';border-style:dashed') : ';border-color:var(--critical)'}">
+        <option value=""${s.v ? '' : ' selected'}>—</option>
+        ${opts.map(v => `<option value="${esc(v)}"${s.v === v ? ' selected' : ''}>${esc(v)}${
+          unit && !v.includes(unit) ? unit : ''}</option>`).join('')}
+      </select></td>`;
+    };
+    const boxCells = (r) => {
+      if (!r.onList || !r.id) return '<td><span class="muted">—</span></td><td></td><td></td>';
+      const g = GUESTS.find(x => x.id === r.id) || {};
+      const txt = (key, ph, w) => `<td><input class="gIn" data-gid="${esc(r.id)}" data-k="${key}"
+        value="${esc(g[key] || '')}" placeholder="${ph}" spellcheck="false"
+        style="margin:0;width:${w};height:28px;padding:.1rem .45rem;font-size:.8rem" /></td>`;
+      return `<td><select class="gIn" data-gid="${esc(r.id)}" data-k="box_status"
+          style="margin:0;width:6.4rem;height:28px;padding:.1rem .3rem;font-size:.8rem">
+          ${BOX_STATES.map(v => `<option value="${v}"${(g.box_status || 'todo') === v ? ' selected' : ''}>${v}</option>`).join('')}
+        </select></td>${txt('box_courier', 'courier', '6rem')}${txt('box_tracking', 'tracking', '7rem')}`;
+    };
     const TIER_LABEL = { bestie:'bestie', creator:'creator', super:'super guest' };
     const tierCell = (t) => t
       ? `<td><span class="tier ${esc(t)}">${esc(TIER_LABEL[t] || t)}</span></td>`
@@ -1396,6 +1423,7 @@ function checkinPanel() {
       // 7 = when, phone, email, pyjamas, meal, id, check-in remove. Keep in step
       // with <thead>: a short row silently skews every column to its right.
       return `<tr><td>${esc(r.name)}</td>${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r.address)}
+        ${sizeSel(r,'tshirt',TEE_SIZES,'')}${sizeSel(r,'waist',WAIST_SIZES,'"')}${boxCells(r)}
         <td><span class="muted">waiting</span></td>
         <td colspan="7" class="muted">—</td>${guestActions(r)}</tr>`;
     }
@@ -1410,6 +1438,7 @@ function checkinPanel() {
     return `<tr>
       <td>${esc(r.name)}${r.onList ? '' : ' <span class="muted">(not on list)</span>'}</td>
       ${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r.address)}
+      ${sizeSel(r,'tshirt',TEE_SIZES,'')}${sizeSel(r,'waist',WAIST_SIZES,'"')}${boxCells(r)}
       <td>✓ done</td><td>${esc(when)}</td>
       <td>${esc(c.phone)}</td><td>${esc(c.email)}</td>
       <td>${esc(c.pyjama_size)}</td><td>${esc(meal)}${notes}</td><td>${idCell}</td>
@@ -1420,20 +1449,6 @@ function checkinPanel() {
     </tr>`;
   }).join('');
 
-  body.querySelectorAll('.igIn').forEach(i => {
-    i.addEventListener('change', async () => {
-      const handle = i.value.trim().replace(/^@+/, '')
-        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null;
-      i.disabled = true;
-      const res = await save(sb.from('guests').update({ instagram: handle })
-        .eq('id', i.dataset.gid), 'that handle');
-      i.disabled = false;
-      const g = GUESTS.find(x => x.id === i.dataset.gid);
-      if (!res.ok) { i.style.borderColor = 'var(--critical)'; alert(res.msg); return; }
-      if (g) g.instagram = handle;
-      renderAll();
-    });
-  });
   body.querySelectorAll('.ciDoc').forEach(b => {
     b.addEventListener('click', () => openDoc(b.dataset.path, b));
   });
@@ -1441,6 +1456,41 @@ function checkinPanel() {
     b.addEventListener('click', () => removeCheckin(b));
   });
 }
+
+/* Every editable cell on a guest row saves through here — sizes, box state,
+   courier, tracking and the handle. Delegated and bound once, because the table
+   is rebuilt on every render and per-row listeners would be re-attached (or
+   quietly lost) each time. Matching on data-k rather than on which kind of
+   control was touched means a select and a text box take the same path. */
+document.getElementById('ciBody').addEventListener('change', async (e) => {
+  const el = e.target.closest('.gIn');
+  if (!el) return;
+  const id = el.dataset.gid, key = el.dataset.k;
+  const msg = document.getElementById('ciMsg');
+  let value = el.value.trim() || null;
+  // a pasted profile URL or an @handle both mean the handle
+  if (key === 'instagram' && value) {
+    value = value.replace(/^@+/, '')
+      .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null;
+  }
+  const patch = { [key]: value };
+  if (key === 'box_status') {
+    patch.box_status = el.value || 'todo';
+    // stamp when it goes out, so "sent" has a date without anyone typing one
+    if (['sent', 'delivered'].includes(el.value)) {
+      const g = GUESTS.find(x => x.id === id);
+      if (g && !g.box_sent_at) patch.box_sent_at = new Date().toISOString();
+    }
+  }
+  el.disabled = true;
+  const res = await save(sb.from('guests').update(patch).eq('id', id), 'that change');
+  el.disabled = false;
+  if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  msg.textContent = 'saved'; msg.className = 'sub';
+  Object.assign(GUESTS.find(x => x.id === id) || {}, patch);
+  renderAll();
+  setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
+});
 
 /* Delete a check-in and its ID document.
    THE DOCUMENT GOES FIRST, deliberately. If the row went first and the storage
@@ -2249,103 +2299,12 @@ const sizeOf = (g, key) => {
   return c && c[key] ? { v: c[key], own: false } : { v: '', own: false };
 };
 
-function boxesPanel(){
-  const body = document.getElementById('bxBody');
-  if (!body) return;
-  const people = GUESTS.filter(g => g.code);
-  const sent = people.filter(g => ['sent','delivered'].includes(g.box_status || 'todo')).length;
-  const missing = people.filter(g => !sizeOf(g,'tshirt').v || !sizeOf(g,'waist').v).length;
-  strip('ovBoxes', [
-    [people.length, 'boxes'],
-    [people.filter(g => (g.box_status || 'todo') === 'todo').length, 'to pack'],
-    [people.filter(g => g.box_status === 'packed').length, 'packed'],
-    [people.filter(g => g.box_status === 'sent').length, 'in transit'],
-    [people.filter(g => g.box_status === 'delivered').length, 'delivered'],
-    [missing, 'missing a size', true],
-    [people.filter(g => !g.address).length, 'no address', true],
-  ]);
-  document.getElementById('bxCount').textContent =
-    `${sent}/${people.length} out` +
-    (missing ? ` · ${missing} without size${missing === 1 ? '' : 's'}` : ' · all sizes in');
-
-  const opts = (sel) => BOX_STATES.map(v =>
-    `<option value="${v}"${(sel || 'todo') === v ? ' selected' : ''}>${v}</option>`).join('');
-  /* anyone missing a size floats up, because that's the list you chase */
-  const sorted = [...people].sort((a, b) => {
-    const am = (!sizeOf(a,'tshirt').v || !sizeOf(a,'waist').v) ? 0 : 1;
-    const bm = (!sizeOf(b,'tshirt').v || !sizeOf(b,'waist').v) ? 0 : 1;
-    return am - bm || a.name.localeCompare(b.name);
-  });
-
-  /* A dropdown rather than a free-typed box: these two feed a packing list, and
-     "M" / "med" / "medium" in the same column is how the wrong tee gets sewn.
-     The selected value is the size we would actually pack — their check-in
-     answer when they gave one — and picking here overrides it. A size that came
-     from check-in rather than from this table is marked, so you can tell whose
-     answer you are looking at. */
-  const cell = (g, key, list, unit) => {
-    const s = sizeOf(g, key);
-    const opts = list.includes(s.v) || !s.v ? list : [s.v, ...list];
-    return `<td><select class="bxIn" data-g="${esc(g.id)}" data-k="${key}"
-      title="${s.v && !s.own ? 'from their check-in — pick here to override' : ''}"
-      style="margin:0;width:${unit ? '5.2' : '4.9'}rem;height:30px;padding:.1rem .3rem;font-size:.8rem${
-        s.v ? (s.own ? '' : ';border-style:dashed') : ';border-color:var(--critical)'}">
-      <option value=""${s.v ? '' : ' selected'}>—</option>
-      ${opts.map(v => `<option value="${esc(v)}"${s.v === v ? ' selected' : ''}>${esc(v)}${
-        unit && !v.includes(unit) ? unit : ''}</option>`).join('')}
-    </select></td>`;
-  };
-
-  body.innerHTML = sorted.map(g => `<tr>
-    <td>${esc(String(g.name).replace(/\(.*?\)/g,'').trim())}</td>
-    <td><span class="tier ${g.tier === 'bestie' ? '' : esc(g.tier || '')}">${esc(g.tier || '—')}</span></td>
-    <td>${esc(sizeOf(g,'pyjama_size').v || '—')}</td>
-    ${cell(g,'tshirt',TEE_SIZES,'')}
-    ${cell(g,'waist',WAIST_SIZES,'"')}
-    <td class="addr">${g.address ? esc(g.address) : '<span class="muted">no address</span>'}</td>
-    <td><select class="bxSt" data-g="${esc(g.id)}" data-k="box_status"
-          style="margin:0;height:30px;padding:.1rem .4rem;font-size:.8rem">${opts(g.box_status)}</select></td>
-    <td><input class="bxIn" data-g="${esc(g.id)}" data-k="box_courier" value="${esc(g.box_courier || '')}"
-          placeholder="courier" style="margin:0;width:6rem;height:30px;padding:.1rem .4rem;font-size:.8rem" /></td>
-    <td><input class="bxIn" data-g="${esc(g.id)}" data-k="box_tracking" value="${esc(g.box_tracking || '')}"
-          placeholder="tracking" style="margin:0;width:7.5rem;height:30px;padding:.1rem .4rem;font-size:.8rem" /></td>
-    <td><input class="bxIn" data-g="${esc(g.id)}" data-k="box_notes" value="${esc(g.box_notes || '')}"
-          placeholder="notes" style="margin:0;width:9rem;height:30px;padding:.1rem .4rem;font-size:.8rem" /></td>
-  </tr>`).join('');
-}
-
-/* every field saves on blur — a packing table is filled in by tabbing across it,
-   not by hunting for a save button on each row */
-document.getElementById('bxBody')?.addEventListener('change', async (e) => {
-  const msg = document.getElementById('bxMsg');
-  const el = e.target.closest('[data-k]');
-  if (!el) return;
-  const id = el.dataset.g, key = el.dataset.k;
-  const patch = { [key]: el.value.trim() || null };
-  // stamp when it goes out, so "sent" has a date without asking for one
-  if (key === 'box_status'){
-    patch.box_status = el.value || 'todo';
-    if (['sent','delivered'].includes(el.value)){
-      const g = GUESTS.find(x => x.id === id);
-      if (g && !g.box_sent_at) patch.box_sent_at = new Date().toISOString();
-    }
-  }
-  el.disabled = true;
-  const res = await save(sb.from('guests').update(patch).eq('id', id), 'that box');
-  el.disabled = false;
-  if (!res.ok){ msg.textContent = res.msg; msg.className = 'sub err'; return; }
-  msg.textContent = 'saved'; msg.className = 'sub';
-  Object.assign(GUESTS.find(x => x.id === id) || {}, patch);
-  renderAll();
-  setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
-});
-
 document.getElementById('bxCsv')?.addEventListener('click', () => {
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const head = ['name','tier','pyjamas','t-shirt','waist','address','status','courier','tracking','notes'];
+  const head = ['name','tier','instagram','pyjamas','t-shirt','waist','address','status','courier','tracking','notes'];
   const lines = [head.map(cell).join(',')];
   for (const g of GUESTS.filter(x => x.code)){
-    lines.push([String(g.name).replace(/\(.*?\)/g,'').trim(), g.tier || '',
+    lines.push([String(g.name).replace(/\(.*?\)/g,'').trim(), g.tier || '', g.instagram || '',
       sizeOf(g,'pyjama_size').v, sizeOf(g,'tshirt').v, sizeOf(g,'waist').v,
       g.address || '', g.box_status || 'todo', g.box_courier || '',
       g.box_tracking || '', g.box_notes || ''].map(cell).join(','));
@@ -2549,7 +2508,7 @@ document.getElementById('spCsv')?.addEventListener('click', () => {
 
 /* same reason as window.__shell: these two panels are the newest and the ones
    most likely to be checked without a login in hand */
-window.__logistics = { boxesPanel, sponsorsPanel,
+window.__logistics = { sponsorsPanel,
   fake(g, sp, dl, ci, cw){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
     if (cw) CREW = cw;
     renderAll(); } };
