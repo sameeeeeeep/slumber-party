@@ -572,3 +572,8 @@ alter table public.deliverables enable row level security;
 -- admin-only on all four verbs for both: nothing here is ever guest-facing, and
 -- an UPDATE policy that is missing fails by matching zero rows, not by erroring
 -- (which is how room assignments silently saved nothing for a day).
+
+-- Crew get the same t-shirt. One size per entry, not per person: a vendor
+-- sending four people is one row, one size, four shirts — multiply by headcount
+-- when placing the order.
+alter table public.crew add column if not exists tshirt text;

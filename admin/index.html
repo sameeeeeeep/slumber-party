@@ -877,7 +877,7 @@
     <div class="scroll">
       <table id="crewTbl">
         <thead><tr>
-          <th>name</th><th>kind</th><th>doing what</th><th>people</th><th>cars</th>
+          <th>name</th><th>kind</th><th>doing what</th><th>people</th><th>t-shirt</th><th>cars</th>
           <th>staying</th><th>where</th><th></th>
         </tr></thead>
         <tbody id="crewBody"></tbody>
@@ -2425,8 +2425,9 @@ document.getElementById('spCsv')?.addEventListener('click', () => {
 /* same reason as window.__shell: these two panels are the newest and the ones
    most likely to be checked without a login in hand */
 window.__logistics = { boxesPanel, sponsorsPanel,
-  fake(g, sp, dl, ci){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
-    boxesPanel(); sponsorsPanel(); } };
+  fake(g, sp, dl, ci, cw){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
+    if (cw) CREW = cw;
+    boxesPanel(); sponsorsPanel(); if (cw) crewPanel(); } };
 
 /* ============================================================================
    SLUMBER GAMES
@@ -3004,8 +3005,13 @@ function crewPanel() {
 
   const h = headcount();
   const cars = CREW.reduce((n, r) => n + (Number(r.cars) || 0), 0);
+  /* One size per entry, so this counts entries still missing one. A vendor
+     sending four people is one size and four shirts — the people column is what
+     you multiply by when placing the order. */
   document.getElementById('crewCount').textContent = CREW.length
     ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} staying over` + (cars ? ` · ${cars} car${cars === 1 ? '' : 's'}` : '')
+      + (() => { const n = CREW.filter(r => !r.tshirt).length;
+                 return n ? ` · ${n} without a size` : ' · all sizes in'; })()
     : '—';
   document.getElementById('crewEmpty').hidden = CREW.length > 0;
 
@@ -3020,6 +3026,12 @@ function crewPanel() {
     <td><span class="tier ${r.kind === 'team' ? '' : esc(r.kind)}">${esc(r.kind)}</span></td>
     <td>${esc(r.role || '—')}</td>
     <td>${Number(r.headcount) || 0}</td>
+    <td><select class="crewTee" data-crew="${esc(r.id)}"
+          style="margin:0;width:4.9rem;height:28px;padding:.1rem .3rem;font-size:.8rem${
+            r.tshirt ? '' : ';border-color:var(--critical)'}">
+        <option value=""${r.tshirt ? '' : ' selected'}>—</option>
+        ${TEE_SIZES.map(v => `<option value="${v}"${r.tshirt === v ? ' selected' : ''}>${v}</option>`).join('')}
+      </select></td>
     <td>${Number(r.cars) ? '\u{1F697} ' + Number(r.cars) : '<span class="muted">—</span>'}</td>
     <td>${r.staying ? '<span class="yes">yes</span>' : '<span class="muted">no</span>'}</td>
     ${venueCell(r)}
@@ -3030,6 +3042,21 @@ function crewPanel() {
         style="padding:4px 9px;font-size:12px">remove</button></td>
   </tr>`).join('');
 }
+
+/* The size is the one field you fill in for twenty people in a row, so it saves
+   where it sits rather than through the edit form. */
+document.getElementById('crewBody').addEventListener('change', async (e) => {
+  const sel = e.target.closest('.crewTee');
+  if (!sel) return;
+  const id = sel.dataset.crew;
+  sel.disabled = true;
+  const res = await save(sb.from('crew').update({ tshirt: sel.value || null }).eq('id', id), 'that size');
+  sel.disabled = false;
+  const msg = document.getElementById('crewMsg');
+  if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  const row = CREW.find(r => r.id === id); if (row) row.tshirt = sel.value || null;
+  renderAll();
+});
 
 let crewEditing = null;   // row id being edited, or null = the form adds
 
@@ -3109,10 +3136,11 @@ document.getElementById('crewForm').addEventListener('submit', async (e) => {
 });
 
 document.getElementById('crewCsv').addEventListener('click', () => {
-  const head = ['name', 'kind', 'doing what', 'people', 'cars', 'staying over', 'where', 'notes'];
+  const head = ['name', 'kind', 'doing what', 'people', 't-shirt', 'cars', 'staying over',
+                'where', 'notes'];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const body = CREW.map(r => [r.name, r.kind, r.role || '', Number(r.headcount) || 0,
-                              Number(r.cars) || 0, r.staying ? 'yes' : 'no',
+                              r.tshirt || '', Number(r.cars) || 0, r.staying ? 'yes' : 'no',
                               venueName(r.venue_id), r.notes || ''].map(cell).join(','));
   const url = URL.createObjectURL(new Blob([[head.map(cell).join(','), ...body].join('\n')],
     { type: 'text/csv' }));
