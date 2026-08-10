@@ -124,6 +124,27 @@ async function cmdUnseal(argv) {
   console.log('unsealed  besties/sealed.js → besties/content.json');
 }
 
+/* Revocation has to be instant, and a plain <script src="guests.js"> is not.
+   GitHub Pages serves the sealed index with max-age=14400, so after a guest is
+   removed her link keeps working for up to four hours in any browser that had
+   already loaded the old file — which is exactly the browser you are trying to
+   shut out. Stamping a content hash into the two places that load it makes the
+   URL change whenever the roster does, so the stale copy is never asked for. */
+async function stampVersion(body) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body));
+  const v = [...new Uint8Array(digest)].slice(0, 4)
+    .map((b) => b.toString(16).padStart(2, '0')).join('');
+  for (const [file, re] of [
+    ['404.html', /(['"])(\/besties\/guests\.js)(\?v=[0-9a-f]+)?\1/],
+    ['besties/index.html', /(["'])(guests\.js)(\?v=[0-9a-f]+)?\1/],
+  ]) {
+    const src = await readFile(P(file), 'utf8');
+    if (!re.test(src)) { console.warn(`  ! could not stamp ${file} — check by hand`); continue; }
+    await writeFile(P(file), src.replace(re, (_m, q, path) => `${q}${path}?v=${v}${q}`));
+  }
+  console.log(`  ↳ stamped the roster version (?v=${v}) into 404.html and besties/index.html`);
+}
+
 /* Each guest gets their OWN sealed blob, encrypted under their own invite code,
    so the guest list as a whole stays shut. The blob holds a name and a copy
    voice and NOTHING ELSE — deliberately not the party password. A personalised
@@ -144,7 +165,9 @@ async function cmdGuests(argv) {
                      voice: g.voice || null };
     out[await guestIndex(g.code)] = await seal(record, g.code.toLowerCase(), GUEST_ROUNDS);
   }
-  await writeFile(P('besties/guests.js'), banner() + `window.BESTIES_GUESTS=${JSON.stringify(out)};\n`);
+  const body = banner() + `window.BESTIES_GUESTS=${JSON.stringify(out)};\n`;
+  await writeFile(P('besties/guests.js'), body);
+  await stampVersion(body);
   console.log(`sealed ${list.length} guest${list.length === 1 ? '' : 's'} → besties/guests.js`);
   const tier = (g) => g.voice === 'creator' ? 'creator'
                     : g.voice === 'super'   ? 'SUPER'
