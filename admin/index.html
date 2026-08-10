@@ -299,6 +299,20 @@
   .yes{ color:var(--series); }
   /* every control on one baseline. margin:0 on ALL of them, not just the inputs —
      the base rule's margin-bottom is what pushed the select above the line. */
+  /* the add-a-guest line above the table: one row, ending in the button */
+  .addRow{ display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;
+    background:var(--surface-2); border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; margin-top:14px; }
+  .addRow label{ margin:0; flex:2 1 160px; font-size:.78rem; color:var(--ink-2);
+    letter-spacing:.02em; }
+  .addRow .sub{ margin:0; display:inline; }
+  .addRow input, .addRow select, .addRow textarea{ margin:0; height:36px; }
+  .addRow textarea{ height:auto; }
+  .addRow .btn{ height:36px; padding:0 1rem; }
+  .addMore{ margin-top:8px; }
+  .addMore > summary{ cursor:pointer; }
+  .addMore .addRow{ margin-top:8px; background:transparent; }
+
   .crewForm{ display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:14px; }
   .crewForm label{ margin:0; }
   .crewForm input, .crewForm select{ margin:0; height:38px; }
@@ -511,6 +525,59 @@
       addresses can be set here before anyone checks in — the boxes ship first.
       Everything saves as you leave the field.</p>
 
+    <!-- adding a guest is the thing you do most in here, so it sits on top of the
+         table as a single line. The rest of a profile is optional and folds away;
+         nothing in there is needed to mint a link. -->
+    <form id="gAddForm" class="addRow">
+      <label>name
+        <input id="gAddName" type="text" placeholder="Arya Kotari" required /></label>
+      <label style="flex:0 1 130px">tier
+        <select id="gAddTier">
+          <option value="bestie">bestie</option>
+          <option value="creator">creator</option>
+          <option value="super">super guest</option>
+        </select></label>
+      <label style="flex:2 1 200px">address <span class="sub">(optional)</span>
+        <input id="gAddAddr" type="text" placeholder="flat, street, city, pin" /></label>
+      <label style="flex:0 1 150px">instagram <span class="sub">(optional)</span>
+        <input id="gAddIg" type="text" placeholder="khushikapoor" /></label>
+      <button class="btn" type="submit" style="width:auto">add &amp; mint link</button>
+      <button class="btn ghost" id="gAddCancel" type="button" hidden>cancel</button>
+    </form>
+
+    <details id="gAddMore" class="addMore">
+      <summary class="sub">their card, their introduction, their character</summary>
+      <div class="addRow" style="margin-top:10px">
+        <label style="flex:0 1 130px">room in the house
+          <select id="gAddRoom">
+            <option value="">— auto —</option>
+            <option value="fort">pillow fort</option>
+            <option value="nails">nail bar</option>
+            <option value="terrace">terrace</option>
+            <option value="arcade">arcade room</option>
+          </select></label>
+        <label style="flex:3 1 260px">one line about them <span class="sub">(shown on their card at /house)</span>
+          <input id="gAddBlurb" type="text" maxlength="240"
+            placeholder="DJ for the night — she picks what we dance to." /></label>
+      </div>
+      <div class="addRow" style="margin-top:8px">
+        <label style="flex:4 1 320px">how you'll introduce them
+          <span class="sub">(read aloud at the table — /housemates)</span>
+          <textarea id="gAddIntro" rows="2" maxlength="600"
+            placeholder="Ria runs the decks. She's played every rooftop in Bombay and she's picking tonight's music."></textarea></label>
+        <label style="flex:0 1 92px">order
+          <input id="gAddPos" type="number" min="1" max="99" placeholder="—" /></label>
+        <div style="flex:0 1 150px">
+          <span class="flab">their character</span>
+          <label class="pick" for="gAddArt" id="gAddArtLabel">upload art</label>
+          <input id="gAddArt" type="file" accept="image/*" hidden />
+        </div>
+        <img id="gAddArtPrev" alt="" style="width:54px;height:54px;object-fit:cover;border-radius:9px;
+          border:1px solid var(--line);display:none" />
+      </div>
+    </details>
+    <p class="sub" id="gAddMsg" style="min-height:1.1rem;margin:6px 0 0"></p>
+
     <div class="scroll" style="margin-top:12px">
       <table id="ciTbl">
         <thead><tr>
@@ -525,57 +592,7 @@
     <p class="empty" id="ciEmpty" hidden>no guests on the list yet — paste them below.</p>
     <p class="sub" id="ciMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
 
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line)">
-      <h2 style="margin:0 0 2px">add a guest</h2>
-      <p class="sub" style="margin-top:4px">name and tier are enough — the link is minted
-        for you. Everything else can be filled in on their row afterwards, and adding
-        someone never removes anyone.</p>
-      <form id="gAddForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:10px 0 4px">
-        <label style="flex:2 1 170px;margin:0">name
-          <input id="gAddName" type="text" placeholder="Arya Kotari" required style="margin:0" /></label>
-        <label style="flex:0 1 140px;margin:0">tier
-          <select id="gAddTier" style="margin:0">
-            <option value="bestie">bestie</option>
-            <option value="creator">creator</option>
-            <option value="super">super guest</option>
-          </select></label>
-        <label style="flex:2 1 200px;margin:0">address <span class="sub" style="margin:0">(optional)</span>
-          <input id="gAddAddr" type="text" placeholder="flat, street, city, pin" style="margin:0" /></label>
-        <button class="btn" type="submit" style="width:auto">add &amp; mint link</button>
-        <button class="btn ghost" id="gAddCancel" type="button" hidden>cancel</button>
-      </form>
-      <!-- what guests see about each other in the house at /house -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0 0">
-        <label style="flex:0 1 150px;margin:0">instagram <span class="sub" style="margin:0">(no @)</span>
-          <input id="gAddIg" type="text" placeholder="khushikapoor" style="margin:0" /></label>
-        <label style="flex:0 1 130px;margin:0">room in the house
-          <select id="gAddRoom" style="margin:0">
-            <option value="">— auto —</option>
-            <option value="fort">pillow fort</option>
-            <option value="nails">nail bar</option>
-            <option value="terrace">terrace</option>
-            <option value="arcade">arcade room</option>
-          </select></label>
-        <label style="flex:3 1 260px;margin:0">one line about them <span class="sub" style="margin:0">(shown on their card)</span>
-          <input id="gAddBlurb" type="text" maxlength="240" placeholder="DJ for the night — she picks what we dance to." style="margin:0" /></label>
-      </div>
-      <!-- the introduction round at /housemates -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:8px 0 0">
-        <label style="flex:4 1 320px;margin:0">how you'll introduce them
-          <span class="sub" style="margin:0">(read aloud at the table — /housemates)</span>
-          <textarea id="gAddIntro" rows="2" maxlength="600"
-            placeholder="Ria runs the decks. She's played every rooftop in Bombay and she's picking tonight's music."></textarea></label>
-        <label style="flex:0 1 92px;margin:0">order
-          <input id="gAddPos" type="number" min="1" max="99" placeholder="—" style="margin:0" /></label>
-        <div style="flex:0 1 150px">
-          <span class="flab">their character</span>
-          <label class="pick" for="gAddArt" id="gAddArtLabel">upload art</label>
-          <input id="gAddArt" type="file" accept="image/*" hidden />
-        </div>
-        <img id="gAddArtPrev" alt="" style="width:54px;height:54px;object-fit:cover;border-radius:9px;
-          border:1px solid var(--line);display:none" />
-      </div>
-      <p class="sub" id="gAddMsg" style="min-height:1.1rem;margin:0 0 10px"></p>
+
 
       <details style="margin-bottom:10px"><summary class="sub" style="cursor:pointer">or paste several names at once</summary>
       <textarea id="ciRoster" rows="6" placeholder="Pearl Mallik&#10;Adhiraj Singh&#10;Orry"
@@ -607,11 +624,13 @@
         color:#e9e9ee;border:1px solid #262735;border-radius:8px;padding:8px 10px;
         font:12px ui-monospace,monospace"></textarea>
       <button class="btn ghost" id="sealCopy" type="button" style="margin-top:6px">copy command</button>
-    </div>
+    
 
-    <p class="note"><b>ID documents.</b> These are held in a private bucket and are never served
-      publicly — “view” mints a link that expires in 60 seconds. Delete them once the door list
-      is done: the reason to hold someone's Aadhaar for a party is gone the moment the party is.</p>
+    <p class="note"><b>ID documents.</b> Held in a private bucket, never served publicly. “view” hands you
+      two signed links — one to open it in a tab, one to save it under the guest's own name so
+      you can forward it to whoever runs the door. Both expire after five minutes, so a copied
+      link is useless later. Delete the documents once the door list is done: the reason to hold
+      someone's Aadhaar for a party is gone the moment the party is.</p>
   </section>
 
   <!-- ------------------------------------------------- sharing & search -->
@@ -1453,7 +1472,7 @@ function checkinPanel() {
       // with <thead>: a short row silently skews every column to its right.
       return `<tr>${nameCell(r)}${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r)}
         ${sizeSel(r,'tshirt',TEE_SIZES,'')}${sizeSel(r,'waist',WAIST_SIZES,'"')}${boxCells(r)}
-        <td><span class="muted">waiting</span></td>
+        <td><span class="muted">not yet</span></td>
         <td colspan="7" class="muted">—</td>${guestActions(r)}</tr>`;
     }
     const c = r.c;
@@ -1462,13 +1481,14 @@ function checkinPanel() {
     const notes = c.meal_notes ? ` (${esc(c.meal_notes)})` : '';
     const idCell = c.id_doc_path
       ? `<button class="btn ghost ciDoc" data-path="${esc(c.id_doc_path)}"
+           data-who="${esc(c.name)}" data-kind="${esc(c.id_doc_type || 'id')}"
            style="padding:4px 10px;font-size:12px">view ${esc(c.id_doc_type || '')}</button>`
       : '<span class="muted">none</span>';
     return `<tr>
       ${nameCell(r)}
       ${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r)}
       ${sizeSel(r,'tshirt',TEE_SIZES,'')}${sizeSel(r,'waist',WAIST_SIZES,'"')}${boxCells(r)}
-      <td>✓ done</td><td>${esc(when)}</td>
+      <td><span class="yes" style="white-space:nowrap">✓ yes</span></td><td>${esc(when)}</td>
       <td>${esc(c.phone)}</td><td>${esc(c.email)}</td>
       <td>${esc(c.pyjama_size)}</td><td>${esc(meal)}${notes}</td><td>${idCell}</td>
       <td><button class="btn ghost ciDel" data-id="${esc(c.id)}"
@@ -1555,37 +1575,58 @@ async function removeCheckin(btn) {
 
 /* A signed URL, not a public one, and short-lived on purpose: the link is good
    for 60 seconds, so a copied address is useless a minute later. */
+/* Their ID, in one click. It is held in a private bucket — nothing about it is
+   ever served publicly — but it does have to be usable: the door list gets sent
+   to whoever is running security, so this hands you a tab to look at it in and a
+   download that saves it under the guest's own name. Both are signed URLs that
+   die on their own; five minutes is enough to forward a file and short enough
+   that a copied link is useless later. */
+const DOC_TTL = 300;
+
 async function openDoc(path, btn) {
   const was = btn.textContent;
+  const who = (btn.dataset.who || 'guest').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  const ext = (path.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0];
   btn.disabled = true; btn.textContent = 'opening…';
-  const { data, error } = await sb.storage.from('checkin-ids').createSignedUrl(path, 60);
+  const store = sb.storage.from('checkin-ids');
+  const [view, dl] = await Promise.all([
+    store.createSignedUrl(path, DOC_TTL),
+    store.createSignedUrl(path, DOC_TTL, { download: `${who}-${btn.dataset.kind || 'id'}${ext}` }),
+  ]);
+
   btn.disabled = false; btn.textContent = was;
-  if (error || !data?.signedUrl) {
-    // `tip` is the tooltip ELEMENT, not a function — say it where the panel can show it
+  if (view.error || !view.data?.signedUrl) {
     const m = document.getElementById('ciRosterMsg');
-    if (m) m.textContent = error?.message || "couldn't open that document";
-    console.error('signed url failed', error);
+    if (m) m.textContent = view.error?.message || "couldn't open that document";
+    console.error('signed url failed', view.error);
     return;
   }
-  /* A popup blocker eats window.open silently, and then there is no way back to
-     the document. Put the signed URL on the page as a link instead: a click on a
-     real anchor is never blocked, it opens in its own tab so this one keeps its
-     place, and it puts itself away when the URL expires. */
-  const link = document.createElement('a');
-  link.href = data.signedUrl;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.className = 'btn ghost';
-  link.style.cssText = 'padding:4px 10px;font-size:12px;text-decoration:none';
-  link.textContent = 'open ↗';
-  btn.replaceWith(link);
-  link.focus();
-  window.open(data.signedUrl, '_blank', 'noopener');   // if it works, one click saved
-  setTimeout(() => {                                   // 60 seconds and it's dead
-    if (!link.isConnected) return;
+
+  /* A popup blocker eats window.open silently and then there is no way back to
+     the document, so the URLs go on the page as real links: a click on an anchor
+     is never blocked. They put themselves away when the URLs expire. */
+  const wrap = document.createElement('span');
+  wrap.style.cssText = 'display:inline-flex;gap:6px;white-space:nowrap';
+  const filename = `${who}-${btn.dataset.kind || 'id'}${ext}`;
+  const mk = (href, text, download) => {
+    const a = document.createElement('a');
+    a.href = href; a.textContent = text; a.className = 'btn ghost';
+    a.style.cssText = 'padding:4px 9px;font-size:12px;text-decoration:none';
+    // the signed URL already carries ?download=<name>; this names the local file too
+    if (download) a.setAttribute('download', download);
+    else { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+    return a;
+  };
+  wrap.append(mk(view.data.signedUrl, 'open ↗'));
+  if (dl.data?.signedUrl) wrap.append(mk(dl.data.signedUrl, 'save ⤓', filename));
+  btn.replaceWith(wrap);
+  wrap.firstChild.focus();
+  window.open(view.data.signedUrl, '_blank', 'noopener');   // if it works, a click saved
+  setTimeout(() => {
+    if (!wrap.isConnected) return;
     btn.textContent = was;
-    link.replaceWith(btn);
-  }, 60000);
+    wrap.replaceWith(btn);
+  }, DOC_TTL * 1000);
 }
 
 /* the roster: paste names, one per line */
