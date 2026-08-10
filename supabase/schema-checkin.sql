@@ -650,3 +650,9 @@ alter table public.hampers enable row level security;
 -- admin-only on all four verbs for both, same as every other ops table. A
 -- missing UPDATE policy fails by matching zero rows rather than erroring, which
 -- is how room assignments once saved nothing for a day — hence save() in the UI.
+
+-- Cars are crew rows with kind='car'. They are NOT a headcount: headcount()
+-- excludes them, and whoever rides in one is already counted as team or vendor.
+-- The dashboard writes headcount 0 and staying false on every car it creates, so
+-- a vehicle can never quietly add itself to the number you order beds against.
+-- sleepers() has always excluded them — a car doesn't need a bed.

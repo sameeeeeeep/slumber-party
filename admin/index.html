@@ -226,18 +226,18 @@
      hover, and focus makes it obvious which one you're in. A missing value gets
      a hairline down its left edge rather than a red box, because the count in
      the strip above is what actually chases it. */
-  .gIn, .crIn, .bfIn, .hmIn{
+  .gIn, .crIn, .bfIn, .hmIn, .carIn{
     background:transparent; border:1px solid transparent; border-radius:7px;
     margin:0; padding:.1rem .4rem; height:28px; font-size:.8rem; color:var(--ink);
     transition:background .12s, border-color .12s; }
-  tr:hover .gIn, tr:hover .crIn, tr:hover .bfIn, tr:hover .hmIn{ border-color:var(--line); }
-  .gIn:hover, .crIn:hover, .bfIn:hover, .hmIn:hover{ border-color:var(--line); background:var(--surface-2); }
-  .gIn:focus, .crIn:focus, .bfIn:focus, .hmIn:focus{ border-color:var(--series); background:var(--surface-1);
+  tr:hover .gIn, tr:hover .crIn, tr:hover .bfIn, tr:hover .hmIn, tr:hover .carIn{ border-color:var(--line); }
+  .gIn:hover, .crIn:hover, .bfIn:hover, .hmIn:hover, .carIn:hover{ border-color:var(--line); background:var(--surface-2); }
+  .gIn:focus, .crIn:focus, .bfIn:focus, .hmIn:focus, .carIn:focus{ border-color:var(--series); background:var(--surface-1);
     outline:none; box-shadow:0 0 0 2px var(--series-soft); }
-  select.gIn, select.crIn, select.bfIn, select.hmIn{ cursor:pointer; }
-  .gIn:disabled, .crIn:disabled, .bfIn:disabled, .hmIn:disabled{ opacity:.5; }
-  .gIn.miss, .crIn.miss, .bfIn.miss, .hmIn.miss{ box-shadow:inset 2px 0 0 var(--critical); }
-  .gIn.miss:focus, .crIn.miss:focus, .bfIn.miss:focus, .hmIn.miss:focus{ box-shadow:0 0 0 2px var(--series-soft); }
+  select.gIn, select.crIn, select.bfIn, select.hmIn, select.carIn{ cursor:pointer; }
+  .gIn:disabled, .crIn:disabled, .bfIn:disabled, .hmIn:disabled, .carIn:disabled{ opacity:.5; }
+  .gIn.miss, .crIn.miss, .bfIn.miss, .hmIn.miss, .carIn.miss{ box-shadow:inset 2px 0 0 var(--critical); }
+  .gIn.miss:focus, .crIn.miss:focus, .bfIn.miss:focus, .hmIn.miss:focus, .carIn.miss:focus{ box-shadow:0 0 0 2px var(--series-soft); }
   .gIn.nm{ font-size:.85rem; font-weight:500; }
 
   /* the saved handle, as the link it should be */
@@ -838,6 +838,42 @@
   </section>
 
 
+
+  <!-- ----------------------------------------------------------------- cars -->
+  <section id="sec-cars" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">cars</h2>
+      <span class="pill" id="carCount">—</span>
+      <button class="btn ghost" id="carCsv" type="button">download csv</button>
+    </div>
+    <div class="ovs" id="ovCars"></div>
+    <p class="sub">what is arriving on wheels, kept apart from the people because a car
+      is not a headcount — the number here is vehicles needing somewhere to park, not
+      bodies needing a bed. Whoever is riding in them is already counted above.</p>
+
+    <form id="carForm" class="addRow">
+      <label>whose car
+        <input id="carName" type="text" placeholder="Ravi's Fortuner / catering tempo" required /></label>
+      <label style="flex:0 1 100px">how many
+        <input id="carQty" type="number" min="1" max="99" value="1" /></label>
+      <label style="flex:0 1 150px">who's driving
+        <input id="carDriver" type="text" placeholder="a name / phone" /></label>
+      <button class="btn" id="carSubmit" type="submit" style="width:auto">add car</button>
+    </form>
+
+    <div class="scroll" style="margin-top:12px">
+      <table id="carTbl">
+        <thead><tr>
+          <th>whose car</th><th>how many</th><th>who's driving</th><th>bringing what</th>
+          <th>notes</th><th></th>
+        </tr></thead>
+        <tbody id="carBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="carEmpty" hidden>no cars yet — add the first above.</p>
+    <p class="sub" id="carMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
+  </section>
+
   <!-- --------------------------------------------------------------- BFFs -->
   <section id="sec-bffs" class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -1002,7 +1038,7 @@
       <table id="crewTbl">
         <thead><tr>
           <th>name</th><th>kind</th><th>doing what</th><th>people</th><th>t-shirt</th>
-          <th>cars</th><th>how to reach them</th><th>notes</th><th>where</th><th></th>
+          <th>how to reach them</th><th>notes</th><th>where</th><th></th>
         </tr></thead>
         <tbody id="crewBody"></tbody>
       </table>
@@ -1019,14 +1055,11 @@
         <select id="crewKind">
           <option value="team">team</option>
           <option value="vendor">vendor</option>
-          <option value="car">car</option>
         </select></label>
       <label style="flex:2 1 150px">doing what
         <input id="crewRole" type="text" placeholder="photographer, catering…" /></label>
       <label style="flex:0 0 82px">people
         <input id="crewHead" type="number" min="0" max="99" value="1" /></label>
-      <label style="flex:0 0 74px">cars
-        <input id="crewCars" type="number" min="0" max="99" value="0" /></label>
       <label style="flex:2 1 150px">how to reach them
         <input id="crewContact" type="text" placeholder="phone / whatsapp" /></label>
       <button class="btn" id="crewSubmit" type="submit" style="width:auto">add</button>
@@ -1236,7 +1269,7 @@ const VIEWS = [
   { id:'overview',     title:'overview',            blurb:'the funnel, end to end' },
   { id:'applications', title:'applications',        blurb:'everyone who applied, and everyone who nearly did' },
   { id:'guests',       title:'guests',              blurb:'the list, their links, their sizes, and every box going out' },
-  { id:'crew',         title:'team & vendors',      blurb:'everyone working the party, and what they need' },
+  { id:'crew',         title:'team & vendors',      blurb:'everyone working the party, what they need, and what arrives on wheels' },
   { id:'games',        title:'slumber games',       blurb:'houses, who is in them, and the score' },
   { id:'sponsors',     title:'sponsors',            blurb:'what we get from each brand, and what we owe back' },
   { id:'bffs',         title:'BFFs & hampers',      blurb:'brands giving product, and every hamper going out' },
@@ -1252,7 +1285,7 @@ const VIEW_MAP = {
   overview:     ['@tiles', '@grid0', '@grid1'],
   applications: ['sec-applied', 'sec-drafts', 'failPanel'],
   guests:       ['sec-checkin'],
-  crew:         ['sec-crew'],
+  crew:         ['sec-crew', 'sec-cars'],
   games:        ['sec-games'],
   sponsors:     ['sec-sponsors'],
   bffs:         ['sec-bffs', 'sec-hampers'],
@@ -1393,7 +1426,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -1449,6 +1482,10 @@ function checkinPanel() {
     [onList.length, 'on the list'],
     [onList.filter(g => g.tier === 'bestie').length, 'besties'],
     [onList.filter(g => g.tier === 'creator').length, 'creators'],
+    /* only when the tier is in use — an always-zero tile is just noise, but a
+       missing one makes the tiers not add up to the total beside them */
+    ...(onList.some(g => g.tier === 'super')
+      ? [[onList.filter(g => g.tier === 'super').length, 'super guests']] : []),
     [doneOnList, 'checked in'],
     [Math.max(0, onList.length - doneOnList), 'still to check in', true],
     [onList.filter(g => g.instagram).length, 'with a handle'],
@@ -2013,7 +2050,10 @@ function tiles() {
   const h = headcount();
   document.getElementById('tiles').innerHTML =
     put('active now', live || '0', 'sessions in the last 5 min') +
-    put('headcount', h.total, `${h.besties} besties · ${h.creators} creators · ${h.crew} team/vendors`) +
+    put('headcount', h.total,
+        `${h.besties} besties · ${h.creators} creators` +
+        (h.supers ? ` · ${h.supers} super` : '') +
+        ` · ${h.crew} team/vendors`) +
     put('applications', APPS.length, `${last24} in the last 24h`) +
     put('sessions', sessions || '—', 'browser tabs that landed') +
     put('completion', rate === null ? '—' : rate + '%', 'landed → applied') +
@@ -2430,13 +2470,27 @@ document.getElementById('wlCsv').addEventListener('click', () => {
    the list was before creators existed, and silently dropping them from the
    total would be worse than filing them under the older label.
    ========================================================================== */
+/* THE ONE HEADCOUNT, used by the overview tile and the crew panel.
+   Two things it gets right that are easy to get wrong:
+
+   Only guests with a code count. A row without one is a name on the roster whose
+   link was never minted — not somebody coming — and counting those inflates the
+   number you'd order food and beds against. Everywhere else in this dashboard
+   "on the list" means g.code; this now agrees.
+
+   Tiers are counted, not inferred. This used to say `besties = GUESTS.length -
+   creators`, which quietly filed every super guest under besties. */
 function headcount() {
-  const creators = GUESTS.filter(g => norm(g.tier) === 'creator').length;
-  const besties  = GUESTS.length - creators;
+  const going    = GUESTS.filter(g => g.code);
+  const creators = going.filter(g => norm(g.tier) === 'creator').length;
+  const supers   = going.filter(g => norm(g.tier) === 'super').length;
+  const besties  = going.length - creators - supers;
   /* `|| 0`, not `|| 1`: a car row can legitimately carry nobody, and the old
      default would have invented a passenger for every vehicle on the list. */
-  const crew     = CREW.reduce((n, r) => n + (Number(r.headcount) || 0), 0);
-  return { creators, besties, crew, total: besties + creators + crew };
+  const crew     = CREW.filter(r => r.kind !== 'car')
+    .reduce((n, r) => n + (Number(r.headcount) || 0), 0);
+  return { creators, besties, supers, crew, guests: going.length,
+           total: going.length + crew };
 }
 
 /* ============================================================================
@@ -2680,6 +2734,111 @@ window.__logistics = { sponsorsPanel,
     if (cw) CREW = cw; if (bf) BFFS = bf; if (hm) HAMPERS = hm;
     renderAll(); } };
 
+
+
+/* ============================================================================
+   CARS
+   Kept out of the people table because a car is not a headcount. They were the
+   same table with kind='car', which meant a vehicle could quietly add itself to
+   the number you order beds and dinners against — headcount() now excludes them,
+   and whoever rides in a car is already counted as team or vendor.
+
+   Still the same `crew` table underneath: a car has a name, an owner and a venue
+   like everything else on the load-in list, and a second table would have been
+   the same five columns with a different name.
+   ========================================================================== */
+function carsPanel(){
+  const body = document.getElementById('carBody');
+  if (!body) return;
+  const rows = CREW.filter(r => r.kind === 'car')
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const total = rows.reduce((n, r) => n + (Number(r.cars) || 0), 0);
+
+  strip('ovCars', [
+    [total, 'cars arriving'],
+    [rows.length, 'entries'],
+    [rows.filter(r => !r.contact).length, 'no driver yet', true],
+  ]);
+  document.getElementById('carCount').textContent = rows.length
+    ? `${total} car${total === 1 ? '' : 's'}` : 'none yet';
+  document.getElementById('carEmpty').hidden = rows.length > 0;
+
+  const txt = (r, key, ph, w, miss) => `<td><input class="carIn${miss ? ' miss' : ''}"
+    data-car="${esc(r.id)}" data-k="${key}" value="${esc(r[key] ?? '')}" placeholder="${ph}"
+    spellcheck="false" style="width:${w}" /></td>`;
+
+  body.innerHTML = rows.map(r => `<tr>
+    ${txt(r, 'name', 'whose car', '11rem')}
+    <td><input class="carIn" data-car="${esc(r.id)}" data-k="cars" type="number" min="0" max="99"
+      value="${Number(r.cars) || 0}" style="width:5rem;font-variant-numeric:tabular-nums" /></td>
+    ${txt(r, 'contact', 'a name / phone', '10rem', !r.contact)}
+    ${txt(r, 'role', 'people, gear, food…', '11rem')}
+    ${txt(r, 'notes', 'notes', '10rem')}
+    <td style="text-align:right"><button class="btn ghost carDel" data-car="${esc(r.id)}" type="button"
+      style="padding:4px 9px;font-size:12px">remove</button></td>
+  </tr>`).join('');
+}
+
+document.getElementById('carForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('carMsg');
+  const row = { name: carName.value.trim(), kind: 'car',
+                cars: Math.min(99, Math.max(1, parseInt(carQty.value, 10) || 1)),
+                contact: carDriver.value.trim() || null,
+                headcount: 0,        // never a headcount: the riders are counted as crew
+                staying: false };
+  if (!row.name) return;
+  const { data, error } = await sb.from('crew').insert(row).select().single();
+  if (error){ msg.textContent = error.message; msg.className = 'sub err'; return; }
+  CREW.push(data);
+  carForm.reset(); carQty.value = 1; carName.focus();
+  msg.textContent = `added ${data.name}`; msg.className = 'sub';
+  renderAll();
+  setTimeout(() => { if (msg.textContent.startsWith('added')) msg.textContent = ''; }, 3000);
+});
+
+document.getElementById('carBody')?.addEventListener('change', async (e) => {
+  const el = e.target.closest('.carIn');
+  if (!el) return;
+  const msg = document.getElementById('carMsg'), key = el.dataset.k;
+  const value = el.type === 'number'
+    ? Math.min(99, Math.max(0, parseInt(el.value, 10) || 0))
+    : (el.value.trim() || null);
+  if (key === 'name' && !value){ renderAll(); return; }
+  el.disabled = true;
+  const res = await save(sb.from('crew').update({ [key]: value }).eq('id', el.dataset.car), 'that car');
+  el.disabled = false;
+  if (!res.ok){ msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  Object.assign(CREW.find(x => x.id === el.dataset.car) || {}, { [key]: value });
+  msg.textContent = 'saved'; msg.className = 'sub';
+  renderAll();
+  setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
+});
+
+document.getElementById('carBody')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.carDel');
+  if (!btn) return;
+  const r = CREW.find(x => x.id === btn.dataset.car);
+  if (!r) return;
+  if (!confirm(`Remove ${r.name}?`)) return;
+  const { error } = await sb.from('crew').delete().eq('id', r.id);
+  if (error){ document.getElementById('carMsg').textContent = error.message; return; }
+  CREW = CREW.filter(x => x.id !== r.id);
+  renderAll();
+});
+
+document.getElementById('carCsv')?.addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = CREW.filter(r => r.kind === 'car');
+  const lines = [['whose car','how many','who is driving','bringing what','notes'].map(cell).join(',')];
+  for (const r of rows)
+    lines.push([r.name, Number(r.cars) || 0, r.contact || '', r.role || '', r.notes || ''].map(cell).join(','));
+  lines.push(['TOTAL', rows.reduce((n, r) => n + (Number(r.cars) || 0), 0), '', '', ''].map(cell).join(','));
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'cars.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
 
 /* ============================================================================
    BFFs AND HAMPERS
@@ -3480,31 +3639,30 @@ function crewPanel() {
   if (!body) return;
 
   const h = headcount();
-  const cars = CREW.reduce((n, r) => n + (Number(r.cars) || 0), 0);
+  // team, then vendors — alphabetical inside each, the order you'd read it.
+  // Cars have their own section now; this table is people.
+  const ORDER = { team: 0, vendor: 1 };
+  const rows = CREW.filter(r => r.kind !== 'car').sort((a, b) =>
+    (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9) ||
+    String(a.name).localeCompare(String(b.name)));
+
   /* One size per entry, so this counts entries still missing one. A vendor
      sending four people is one size and four shirts — the people column is what
      you multiply by when placing the order. */
   strip('ovCrew', [
-    [CREW.length, 'entries'],
-    [CREW.reduce((n, r) => n + (Number(r.headcount) || 0), 0), 'people'],
-    [CREW.filter(r => r.kind === 'team').length, 'team'],
-    [CREW.filter(r => r.kind === 'vendor').length, 'vendors'],
-    [cars, 'cars'],
-    [CREW.filter(r => !r.tshirt).length, 'without a size', true],
-    [CREW.filter(r => !r.contact).length, 'no phone number', true],
+    [rows.length, 'entries'],
+    [h.crew, 'people'],
+    [rows.filter(r => r.kind === 'team').length, 'team'],
+    [rows.filter(r => r.kind === 'vendor').length, 'vendors'],
+    [rows.filter(r => !r.tshirt).length, 'without a size', true],
+    [rows.filter(r => !r.contact).length, 'no phone number', true],
   ]);
-  document.getElementById('crewCount').textContent = CREW.length
-    ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} staying over` + (cars ? ` · ${cars} car${cars === 1 ? '' : 's'}` : '')
-      + (() => { const n = CREW.filter(r => !r.tshirt).length;
+  document.getElementById('crewCount').textContent = rows.length
+    ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} staying over`
+      + (() => { const n = rows.filter(r => !r.tshirt).length;
                  return n ? ` · ${n} without a size` : ' · all sizes in'; })()
     : '—';
-  document.getElementById('crewEmpty').hidden = CREW.length > 0;
-
-  // team, then vendors, then cars — alphabetical inside each, the order you'd read it
-  const ORDER = { team: 0, vendor: 1, car: 2 };
-  const rows = [...CREW].sort((a, b) =>
-    (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9) ||
-    String(a.name).localeCompare(String(b.name)));
+  document.getElementById('crewEmpty').hidden = rows.length > 0;
 
   /* Same shape as the guest sheet: every field saves where it sits. A crew list
      is worked on a row at a time — a size here, a phone number there — and a
@@ -3518,7 +3676,7 @@ function crewPanel() {
   body.innerHTML = rows.map(r => `<tr>
     ${txt(r, 'name', 'name', '9rem', ' nm')}
     <td><select class="crIn" data-crew="${esc(r.id)}" data-k="kind" style="width:5.6rem">
-        ${['team','vendor','car'].map(v => `<option value="${v}"${r.kind === v ? ' selected' : ''}>${v}</option>`).join('')}
+        ${['team','vendor'].map(v => `<option value="${v}"${r.kind === v ? ' selected' : ''}>${v}</option>`).join('')}
       </select></td>
     ${txt(r, 'role', 'photographer…', '9rem')}
     ${num(r, 'headcount')}
@@ -3527,7 +3685,6 @@ function crewPanel() {
         <option value=""${r.tshirt ? '' : ' selected'}>—</option>
         ${TEE_SIZES.map(v => `<option value="${v}"${r.tshirt === v ? ' selected' : ''}>${v}</option>`).join('')}
       </select></td>
-    ${num(r, 'cars')}
     ${txt(r, 'contact', 'phone / whatsapp', '9.5rem', r.contact ? '' : ' miss')}
     ${txt(r, 'notes', 'notes', '9rem')}
     ${venueCell(r)}
@@ -3589,7 +3746,6 @@ document.getElementById('crewForm').addEventListener('submit', async (e) => {
     kind: crewKind.value,
     role: crewRole.value.trim() || null,
     headcount: clamp(crewHead.value),
-    cars: clamp(crewCars.value),
     contact: crewContact.value.trim() || null,
     staying: true,          // everyone in this table is staying over
   };
@@ -3599,18 +3755,19 @@ document.getElementById('crewForm').addEventListener('submit', async (e) => {
   if (error) { msg.textContent = error.message; msg.className = 'sub err'; return; }
   CREW.push(data);
   msg.textContent = `added ${data.name}`;
-  crewForm.reset(); crewHead.value = 1; crewCars.value = 0; crewName.focus();
+  crewForm.reset(); crewHead.value = 1; crewName.focus();
   renderAll();
   setTimeout(() => { if (msg.textContent.startsWith('added')) msg.textContent = ''; }, 4000);
 });
 
 document.getElementById('crewCsv').addEventListener('click', () => {
-  const head = ['name', 'kind', 'doing what', 'people', 't-shirt', 'cars', 'contact',
+  const head = ['name', 'kind', 'doing what', 'people', 't-shirt', 'contact',
                 'where', 'notes'];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const body = CREW.map(r => [r.name, r.kind, r.role || '', Number(r.headcount) || 0,
-                              r.tshirt || '', Number(r.cars) || 0, r.contact || '',
-                              venueName(r.venue_id), r.notes || ''].map(cell).join(','));
+  const body = CREW.filter(r => r.kind !== 'car')
+    .map(r => [r.name, r.kind, r.role || '', Number(r.headcount) || 0,
+               r.tshirt || '', r.contact || '',
+               venueName(r.venue_id), r.notes || ''].map(cell).join(','));
   const url = URL.createObjectURL(new Blob([[head.map(cell).join(','), ...body].join('\n')],
     { type: 'text/csv' }));
   const a = document.createElement('a');
