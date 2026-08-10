@@ -226,18 +226,18 @@
      hover, and focus makes it obvious which one you're in. A missing value gets
      a hairline down its left edge rather than a red box, because the count in
      the strip above is what actually chases it. */
-  .gIn, .crIn, .bfIn, .hmIn, .carIn{
+  .gIn, .crIn, .bfIn, .hmIn, .carIn, .acIn{
     background:transparent; border:1px solid transparent; border-radius:7px;
     margin:0; padding:.1rem .4rem; height:28px; font-size:.8rem; color:var(--ink);
     transition:background .12s, border-color .12s; }
-  tr:hover .gIn, tr:hover .crIn, tr:hover .bfIn, tr:hover .hmIn, tr:hover .carIn{ border-color:var(--line); }
-  .gIn:hover, .crIn:hover, .bfIn:hover, .hmIn:hover, .carIn:hover{ border-color:var(--line); background:var(--surface-2); }
-  .gIn:focus, .crIn:focus, .bfIn:focus, .hmIn:focus, .carIn:focus{ border-color:var(--series); background:var(--surface-1);
+  tr:hover .gIn, tr:hover .crIn, tr:hover .bfIn, tr:hover .hmIn, tr:hover .carIn, tr:hover .acIn{ border-color:var(--line); }
+  .gIn:hover, .crIn:hover, .bfIn:hover, .hmIn:hover, .carIn:hover, .acIn:hover{ border-color:var(--line); background:var(--surface-2); }
+  .gIn:focus, .crIn:focus, .bfIn:focus, .hmIn:focus, .carIn:focus, .acIn:focus{ border-color:var(--series); background:var(--surface-1);
     outline:none; box-shadow:0 0 0 2px var(--series-soft); }
-  select.gIn, select.crIn, select.bfIn, select.hmIn, select.carIn{ cursor:pointer; }
-  .gIn:disabled, .crIn:disabled, .bfIn:disabled, .hmIn:disabled, .carIn:disabled{ opacity:.5; }
-  .gIn.miss, .crIn.miss, .bfIn.miss, .hmIn.miss, .carIn.miss{ box-shadow:inset 2px 0 0 var(--critical); }
-  .gIn.miss:focus, .crIn.miss:focus, .bfIn.miss:focus, .hmIn.miss:focus, .carIn.miss:focus{ box-shadow:0 0 0 2px var(--series-soft); }
+  select.gIn, select.crIn, select.bfIn, select.hmIn, select.carIn, select.acIn{ cursor:pointer; }
+  .gIn:disabled, .crIn:disabled, .bfIn:disabled, .hmIn:disabled, .carIn:disabled, .acIn:disabled{ opacity:.5; }
+  .gIn.miss, .crIn.miss, .bfIn.miss, .hmIn.miss, .carIn.miss, .acIn.miss{ box-shadow:inset 2px 0 0 var(--critical); }
+  .gIn.miss:focus, .crIn.miss:focus, .bfIn.miss:focus, .hmIn.miss:focus, .carIn.miss:focus, .acIn.miss:focus{ box-shadow:0 0 0 2px var(--series-soft); }
   .gIn.nm{ font-size:.85rem; font-weight:500; }
 
   /* the saved handle, as the link it should be */
@@ -410,6 +410,7 @@
     <a href="#/sponsors"     data-view="sponsors"><span class="nvl">sponsors</span><span class="nvc" id="nv-sponsors"></span></a>
     <a href="#/bffs"         data-view="bffs"><span class="nvl">BFFs &amp; hampers</span><span class="nvc" id="nv-bffs"></span></a>
     <a href="#/stay"         data-view="stay"><span class="nvl">rooms</span><span class="nvc" id="nv-stay"></span></a>
+    <a href="#/activity"     data-view="activity"><span class="nvl">activities</span><span class="nvc" id="nv-activity"></span></a>
     <a href="#/day"          data-view="day"><span class="nvl">programming</span><span class="nvc" id="nv-day"></span></a>
     <a href="#/reach"        data-view="reach"><span class="nvl">reach</span><span class="nvc" id="nv-reach"></span></a>
   </div>
@@ -839,6 +840,41 @@
 
 
 
+
+  <!-- ----------------------------------------------------------- activities -->
+  <section id="sec-activities" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">activities</h2>
+      <span class="pill" id="acCount">—</span>
+      <button class="btn ghost" id="acCsv" type="button">download csv</button>
+    </div>
+    <div class="ovs" id="ovActivities"></div>
+    <p class="sub">everything actually happening at the party, what it is, and whose job it
+      is to make it happen. This is the list of things; <code>/itinerary</code> is when they
+      happen — an activity can live here for weeks before it has a time.</p>
+
+    <form id="acForm" class="addRow">
+      <label>activity
+        <input id="acName" type="text" placeholder="the nail bar" required /></label>
+      <label style="flex:3 1 240px">what happens
+        <input id="acWhat" type="text" placeholder="two artists, everyone gets a set done, runs all afternoon" /></label>
+      <label style="flex:0 1 140px">whose job
+        <input id="acOwner" type="text" placeholder="a name" /></label>
+      <button class="btn" id="acSubmit" type="submit" style="width:auto">add activity</button>
+    </form>
+
+    <div class="scroll" style="margin-top:12px">
+      <table id="acTbl">
+        <thead><tr>
+          <th>activity</th><th>what happens</th><th>whose job</th><th>status</th><th></th>
+        </tr></thead>
+        <tbody id="acBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="acEmpty" hidden>nothing yet — add the first above.</p>
+    <p class="sub" id="acMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
+  </section>
+
   <!-- ----------------------------------------------------------------- cars -->
   <section id="sec-cars" class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -1133,7 +1169,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [], ACTS = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -1153,7 +1189,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm, ac] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -1176,11 +1212,12 @@ async function boot() {
     sb.from('deliverables').select('*').order('due'),
     sb.from('bffs').select('*').order('position'),
     sb.from('hampers').select('*').order('position'),
+    sb.from('activities').select('*').order('position'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || []; ACTS = ac.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -1274,6 +1311,7 @@ const VIEWS = [
   { id:'sponsors',     title:'sponsors',            blurb:'what we get from each brand, and what we owe back' },
   { id:'bffs',         title:'BFFs & hampers',      blurb:'brands giving product, and every hamper going out' },
   { id:'stay',         title:'rooms',               blurb:'the venue, and who sleeps where' },
+  { id:'activity',     title:'activities',          blurb:'what is happening, what it is, and whose job it is' },
   { id:'day',          title:'programming',         blurb:'the programme guests see at /itinerary' },
   { id:'reach',        title:'reach',               blurb:'the late list, and how the link looks when shared' },
 ];
@@ -1290,6 +1328,7 @@ const VIEW_MAP = {
   sponsors:     ['sec-sponsors'],
   bffs:         ['sec-bffs', 'sec-hampers'],
   stay:         ['sec-stay'],
+  activity:     ['sec-activities'],
   day:          ['sec-itin'],
   reach:        ['sec-late', 'sec-seo'],
 };
@@ -1387,6 +1426,7 @@ function navCounts() {
   set('crew', CREW.length);
   set('sponsors', DELIVS.filter(d => d.status !== 'done').length);
   set('bffs', HAMPERS.reduce((n, h) => n + (Number(h.qty) || 0), 0));
+  set('activity', ACTS.filter(a => a.status !== 'cut').length);
   set('day', ITIN.length);
   set('reach', WAITLIST.length);
   const live = new Set(VISITS.filter(v => Date.now() - +new Date(v.created_at) < 5 * 60 * 1000)
@@ -1426,7 +1466,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); activitiesPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -2730,11 +2770,112 @@ document.getElementById('spCsv')?.addEventListener('click', () => {
 /* same reason as window.__shell: these two panels are the newest and the ones
    most likely to be checked without a login in hand */
 window.__logistics = { sponsorsPanel,
-  fake(g, sp, dl, ci, cw, bf, hm){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
-    if (cw) CREW = cw; if (bf) BFFS = bf; if (hm) HAMPERS = hm;
+  fake(g, sp, dl, ci, cw, bf, hm, ac){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
+    if (cw) CREW = cw; if (bf) BFFS = bf; if (hm) HAMPERS = hm; if (ac) ACTS = ac;
     renderAll(); } };
 
 
+
+
+/* ============================================================================
+   ACTIVITIES
+   The list of things happening, kept apart from /itinerary on purpose: the
+   itinerary answers "when", and an activity exists long before it has a time.
+   Every one carries an owner, because an activity nobody owns is the one that
+   doesn't happen — that's the count this panel puts in red.
+   ========================================================================== */
+const ACT_STATES = ['planned', 'ready', 'done', 'cut'];
+
+function activitiesPanel(){
+  const body = document.getElementById('acBody');
+  if (!body) return;
+  const live = ACTS.filter(a => a.status !== 'cut');
+
+  strip('ovActivities', [
+    [live.length, 'activities'],
+    [live.filter(a => a.status === 'ready').length, 'ready'],
+    [live.filter(a => a.status === 'planned').length, 'still planning'],
+    [live.filter(a => a.status === 'done').length, 'done'],
+    [live.filter(a => !a.owner).length, 'nobody owns it', true],
+    [live.filter(a => !a.what).length, 'no description', true],
+  ]);
+  document.getElementById('acCount').textContent = live.length
+    ? `${live.length} happening` + (ACTS.length - live.length ? ` · ${ACTS.length - live.length} cut` : '')
+    : 'none yet';
+  document.getElementById('acEmpty').hidden = ACTS.length > 0;
+
+  const txt = (a, key, ph, w, miss) => `<td><input class="acIn${miss ? ' miss' : ''}"
+    data-act="${esc(a.id)}" data-k="${key}" value="${esc(a[key] ?? '')}" placeholder="${ph}"
+    title="${esc(a[key] ?? '')}" spellcheck="false" style="width:${w}" /></td>`;
+
+  body.innerHTML = ACTS.map(a => `<tr${a.status === 'cut' ? ' style="opacity:.5"' : ''}>
+    ${txt(a, 'name', 'activity', '11rem')}
+    ${txt(a, 'what', 'what happens', '22rem', !a.what)}
+    ${txt(a, 'owner', 'a name', '8.5rem', !a.owner)}
+    <td><select class="acIn" data-act="${esc(a.id)}" data-k="status" style="width:6.6rem">
+      ${ACT_STATES.map(v => `<option value="${v}"${a.status === v ? ' selected' : ''}>${v}</option>`).join('')}
+    </select></td>
+    <td style="text-align:right"><button class="btn ghost acDel" data-act="${esc(a.id)}" type="button"
+      style="padding:4px 9px;font-size:12px">remove</button></td>
+  </tr>`).join('');
+}
+
+document.getElementById('acForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('acMsg');
+  const row = { name: acName.value.trim(), what: acWhat.value.trim() || null,
+                owner: acOwner.value.trim() || null };
+  if (!row.name) return;
+  row.position = ACTS.length ? Math.max(...ACTS.map(x => x.position)) + 1 : 1;
+  const { data, error } = await sb.from('activities').insert(row).select().single();
+  if (error){ msg.textContent = error.message; msg.className = 'sub err'; return; }
+  ACTS.push(data);
+  acForm.reset(); acName.focus();
+  msg.textContent = `added ${data.name}`; msg.className = 'sub';
+  renderAll();
+  setTimeout(() => { if (msg.textContent.startsWith('added')) msg.textContent = ''; }, 3000);
+});
+
+document.getElementById('acBody')?.addEventListener('change', async (e) => {
+  const el = e.target.closest('.acIn');
+  if (!el) return;
+  const msg = document.getElementById('acMsg'), key = el.dataset.k;
+  const value = el.value.trim() || (key === 'status' ? 'planned' : null);
+  if (key === 'name' && !value){ renderAll(); return; }
+  el.disabled = true;
+  const res = await save(sb.from('activities').update({ [key]: value })
+    .eq('id', el.dataset.act), 'that activity');
+  el.disabled = false;
+  if (!res.ok){ msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  Object.assign(ACTS.find(x => x.id === el.dataset.act) || {}, { [key]: value });
+  msg.textContent = 'saved'; msg.className = 'sub';
+  renderAll();
+  setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
+});
+
+document.getElementById('acBody')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.acDel');
+  if (!btn) return;
+  const a = ACTS.find(x => x.id === btn.dataset.act);
+  if (!a) return;
+  /* "cut" exists so a dropped idea leaves a trace; remove is for a mistyped row */
+  if (!confirm(`Remove "${a.name}" for good? Set it to "cut" instead if it might come back.`)) return;
+  const { error } = await sb.from('activities').delete().eq('id', a.id);
+  if (error){ document.getElementById('acMsg').textContent = error.message; return; }
+  ACTS = ACTS.filter(x => x.id !== a.id);
+  renderAll();
+});
+
+document.getElementById('acCsv')?.addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['activity','what happens','whose job','status'].map(cell).join(',')];
+  for (const a of ACTS)
+    lines.push([a.name, a.what || '', a.owner || '', a.status].map(cell).join(','));
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'activities.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
 
 /* ============================================================================
    CARS

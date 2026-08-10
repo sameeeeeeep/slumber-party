@@ -656,3 +656,28 @@ alter table public.hampers enable row level security;
 -- The dashboard writes headcount 0 and staying false on every car it creates, so
 -- a vehicle can never quietly add itself to the number you order beds against.
 -- sleepers() has always excluded them — a car doesn't need a bed.
+
+-- ============================================================================
+--  ACTIVITIES  (10 Aug 2026)
+--
+--  The list of things happening, deliberately separate from `itinerary`. The
+--  itinerary answers "when"; an activity exists long before it has a time, and
+--  forcing one into a timed slot to write it down is how ideas get lost.
+--
+--  'cut' rather than deleting: a dropped idea should leave a trace, because it
+--  comes back. Cut rows are excluded from every count and greyed in the table.
+-- ============================================================================
+create table if not exists public.activities (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null,
+  what       text,          -- what actually happens
+  owner      text,          -- an activity nobody owns is the one that doesn't happen
+  status     text not null default 'planned',
+  position   integer not null default 0
+);
+alter table public.activities drop constraint if exists activities_status_check;
+alter table public.activities add constraint activities_status_check
+  check (status in ('planned', 'ready', 'done', 'cut'));
+alter table public.activities enable row level security;
+-- admin-only on all four verbs, same as every other ops table.
