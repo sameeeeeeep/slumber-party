@@ -757,3 +757,9 @@ alter table public.board_votes enable row level security;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('board', 'board', true, 3145728, array['image/jpeg','image/png','image/webp'])
 on conflict (id) do nothing;
+
+-- Whether an activity is one of the Slumber Games — i.e. whether it scores. The
+-- dashboard defaults a game's programme emoji to 🏆 and counts them separately,
+-- because "how many of these actually score" is a different question from "how
+-- many things are happening".
+alter table public.activities add column if not exists is_game boolean not null default false;

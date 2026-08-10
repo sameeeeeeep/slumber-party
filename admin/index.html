@@ -757,6 +757,20 @@
       Changes land on their phones within a minute. Hidden items are drafts —
       only you see them. "now" pins the glowing <i>happening now</i> marker.</p>
 
+    <!-- the other door: pull an activity straight in, or invent one on the spot
+         and have it join the activities list at the same time -->
+    <div class="addRow" style="margin:0 0 10px">
+      <label style="flex:2 1 200px">from the activities list
+        <select id="itFrom"><option value="">— pick one —</option></select></label>
+      <label style="flex:2 1 180px">or a new activity
+        <input id="itNewAct" type="text" placeholder="the nail bar" /></label>
+      <label style="flex:0 1 100px">how long
+        <input id="itNewMins" type="number" min="0" max="1440" step="5" placeholder="mins" /></label>
+      <label style="flex:0 1 110px">slumber game?
+        <select id="itNewGame"><option value="">no</option><option value="1">yes</option></select></label>
+      <button class="btn ghost" id="itMake" type="button" style="width:auto">create &amp; use it</button>
+    </div>
+
     <form id="itForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">
       <label style="flex:1 1 130px;margin:0">day
         <input id="itDay" type="text" placeholder="day one · 18 aug" required style="margin:0" /></label>
@@ -878,6 +892,8 @@
         <input id="acWhat" type="text" placeholder="two artists, everyone gets a set done, runs all afternoon" /></label>
       <label style="flex:0 1 110px">how long
         <input id="acMins" type="number" min="0" max="1440" step="5" placeholder="mins" /></label>
+      <label style="flex:0 1 120px">slumber game?
+        <select id="acGame"><option value="">no</option><option value="1">yes — it scores</option></select></label>
       <label style="flex:0 1 140px">whose job
         <input id="acOwner" type="text" placeholder="a name" /></label>
       <button class="btn" id="acSubmit" type="submit" style="width:auto">add activity</button>
@@ -887,7 +903,7 @@
       <table id="acTbl">
         <thead><tr>
           <th>activity</th><th>what happens</th><th>how long</th><th>whose job</th>
-          <th>status</th><th>in the programme</th><th></th>
+          <th>slumber game</th><th>status</th><th>in the programme</th><th></th>
         </tr></thead>
         <tbody id="acBody"></tbody>
       </table>
@@ -2396,6 +2412,18 @@ document.getElementById('seoFav').addEventListener('change', async (e) => {
 let itEditing = null;   // row id being edited, or null = the form adds
 
 function itineraryPanel() {
+  /* the picker is refilled from ACTS every render, so an activity created in the
+     other tab is pickable here without a reload */
+  const from = document.getElementById('itFrom');
+  if (from) {
+    const keep = from.value;
+    from.innerHTML = '<option value="">— pick one —</option>' +
+      ACTS.filter(a => a.status !== 'cut').map(a =>
+        `<option value="${esc(a.id)}">${a.is_game ? '🏆 ' : ''}${esc(a.name)}${
+          a.mins ? ` · ${esc(hhmm(a.mins))}` : ''}</option>`).join('');
+    from.value = keep;
+  }
+
   const body = document.getElementById('itBody');
   if (!body) return;
   const vis = ITIN.filter(r => r.visible).length;
@@ -2488,6 +2516,65 @@ document.getElementById('itCancel').addEventListener('click', () => {
   document.getElementById('itCancel').hidden = true;
 });
 
+/* Adding a slot to the programme, from either door: this form, or an activity
+   scheduling itself. Both need the same two things right — a new item joins the
+   END OF ITS OWN DAY rather than the end of the board (adding "midnight snack" to
+   day one shouldn't file it under day two), and everything past that point gets
+   nudged up first so there's a gap to take. Duplicating that was how the two
+   doors would eventually disagree about the order of the day. */
+async function itInsert(patch, activityId) {
+  const sameDay = ITIN.filter(r => r.day === patch.day);
+  const after = sameDay.length ? Math.max(...sameDay.map(r => r.position))
+                               : (ITIN.length ? Math.max(...ITIN.map(r => r.position)) : 0);
+  for (const r of ITIN.filter(x => x.position > after).sort((x, y) => y.position - x.position)) {
+    await itSave({ position: r.position + 1 }, r.id); r.position += 1;
+  }
+  const row = { ...patch, position: after + 1, visible: true, is_now: false,
+                activity_id: activityId || null };
+  const { data, error } = await sb.from('itinerary').insert(row).select().single();
+  if (error) return { error: error.message };
+  ITIN.push(data); ITIN.sort((x, y) => x.position - y.position);
+  return { data };
+}
+
+/* Picking an existing activity fills the form and keeps the link, so the slot
+   still reports back to the activities list afterwards. */
+function itFromFill(){
+  const sel = document.getElementById('itFrom');
+  const a = ACTS.find(x => x.id === sel.value);
+  const msg = document.getElementById('itMsg');
+  if (!a) { itFromActivity = null; return; }
+  itFromActivity = a.id;
+  itTitle.value = a.name;
+  itDetail.value = a.what || '';
+  if (!itEmoji.value && a.is_game) itEmoji.value = '🏆';
+  msg.textContent = `${a.name}${a.mins ? ` · runs ${hhmm(a.mins)}` : ''} — pick a day and a time`;
+  msg.className = 'sub';
+  itTime.focus();
+}
+document.getElementById('itFrom')?.addEventListener('change', itFromFill);
+
+/* Inventing one here creates the activity as well as the slot. Otherwise the
+   programme would fill up with things the activities list has never heard of,
+   which is how the two lists stop describing the same party. */
+document.getElementById('itMake')?.addEventListener('click', async () => {
+  const msg = document.getElementById('itMsg');
+  const name = itNewAct.value.trim();
+  if (!name) { msg.textContent = 'name it first'; msg.className = 'sub err'; itNewAct.focus(); return; }
+  const row = { name, is_game: itNewGame.value === '1',
+                mins: itNewMins.value === '' ? null : Math.min(1440, Math.max(0, parseInt(itNewMins.value, 10) || 0)),
+                position: ACTS.length ? Math.max(...ACTS.map(x => x.position)) + 1 : 1 };
+  const { data, error } = await sb.from('activities').insert(row).select().single();
+  if (error) { msg.textContent = error.message; msg.className = 'sub err'; return; }
+  ACTS.push(data);
+  itNewAct.value = ''; itNewMins.value = ''; itNewGame.value = '';
+  renderAll();
+  document.getElementById('itFrom').value = data.id;
+  itFromFill();
+  msg.textContent = `${data.name} is on the activities list — now pick a day and a time`;
+  msg.className = 'sub';
+});
+
 document.getElementById('itForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const msg = document.getElementById('itMsg');
@@ -2504,20 +2591,8 @@ document.getElementById('itForm').addEventListener('submit', async (e) => {
       document.getElementById('itCancel').click();
     }
   } else {
-    /* new items join the END of their own day, not the end of the whole board —
-       adding "midnight snack" to day one shouldn't file it under day two */
-    const sameDay = ITIN.filter(r => r.day === patch.day);
-    const after = sameDay.length ? Math.max(...sameDay.map(r => r.position))
-                                 : (ITIN.length ? Math.max(...ITIN.map(r => r.position)) : 0);
-    /* nudge everything past the insertion point up, then take the gap */
-    for (const r of ITIN.filter(x => x.position > after).sort((x,y) => y.position - x.position)) {
-      await itSave({ position: r.position + 1 }, r.id); r.position += 1;
-    }
-    const row = { ...patch, position: after + 1, visible: true, is_now: false,
-                  activity_id: itFromActivity || null };
-    const { data, error } = await sb.from('itinerary').insert(row).select().single();
-    if (error) { msg.textContent = error.message; return; }
-    ITIN.push(data); ITIN.sort((x, y) => x.position - y.position);
+    const res = await itInsert(patch, itFromActivity);
+    if (res.error) { msg.textContent = res.error; return; }
     itFromActivity = null;   // the link is spent — the next add is its own thing
     msg.textContent = `added to ${patch.day}`;
     itForm.reset(); itDetail.value = ''; itTitle.focus();
@@ -2905,6 +2980,7 @@ function activitiesPanel(){
     [live.length, 'activities'],
     /* the number that answers "does this even fit in two days" */
     [hhmm(mins) || '—', 'of activity'],
+    [live.filter(a => a.is_game).length, '🏆 slumber games'],
     [live.filter(a => a.status === 'ready').length, 'ready'],
     [live.filter(a => a.status === 'planned').length, 'still planning'],
     [live.filter(a => !slotsFor(a.id).length && a.status !== 'done').length, 'not in the programme', true],
@@ -2930,6 +3006,10 @@ function activitiesPanel(){
         placeholder="mins" style="width:4.6rem;font-variant-numeric:tabular-nums" />${
         a.mins ? ` <span class="muted" style="font-size:.76rem">${esc(hhmm(a.mins))}</span>` : ''}</td>
     ${txt(a, 'owner', 'a name', '8.5rem', !a.owner)}
+    <td><select class="acIn" data-act="${esc(a.id)}" data-k="is_game" style="width:5.4rem">
+      <option value=""${a.is_game ? '' : ' selected'}>—</option>
+      <option value="1"${a.is_game ? ' selected' : ''}>🏆 game</option>
+    </select></td>
     <td><select class="acIn" data-act="${esc(a.id)}" data-k="status" style="width:6.6rem">
       ${ACT_STATES.map(v => `<option value="${v}"${a.status === v ? ' selected' : ''}>${v}</option>`).join('')}
     </select></td>
@@ -2939,10 +3019,10 @@ function activitiesPanel(){
       : '<span class="muted">not scheduled</span>'}</td>
     <td style="text-align:right;white-space:nowrap">
       ${a.status === 'cut' ? '' : `<button class="btn ghost acSend" data-act="${esc(a.id)}" type="button"
-        style="padding:4px 9px;font-size:12px">&rarr; programme</button>`}
+        style="padding:4px 9px;font-size:12px">${slots.length ? '+ again' : '&rarr; programme'}</button>`}
       <button class="btn ghost acDel" data-act="${esc(a.id)}" type="button"
         style="padding:4px 9px;font-size:12px">remove</button></td>
-  </tr>`;}).join('');
+  </tr>${schedRow(a)}`;}).join('');
 }
 
 document.getElementById('acForm')?.addEventListener('submit', async (e) => {
@@ -2950,6 +3030,7 @@ document.getElementById('acForm')?.addEventListener('submit', async (e) => {
   const msg = document.getElementById('acMsg');
   const row = { name: acName.value.trim(), what: acWhat.value.trim() || null,
                 mins: acMins.value === '' ? null : Math.min(1440, Math.max(0, parseInt(acMins.value, 10) || 0)),
+                is_game: acGame.value === '1',
                 owner: acOwner.value.trim() || null };
   if (!row.name) return;
   row.position = ACTS.length ? Math.max(...ACTS.map(x => x.position)) + 1 : 1;
@@ -2966,9 +3047,10 @@ document.getElementById('acBody')?.addEventListener('change', async (e) => {
   const el = e.target.closest('.acIn');
   if (!el) return;
   const msg = document.getElementById('acMsg'), key = el.dataset.k;
-  const value = el.type === 'number'
-    ? (el.value === '' ? null : Math.min(1440, Math.max(0, parseInt(el.value, 10) || 0)))
-    : (el.value.trim() || (key === 'status' ? 'planned' : null));
+  const value = key === 'is_game' ? el.value === '1'
+    : el.type === 'number'
+      ? (el.value === '' ? null : Math.min(1440, Math.max(0, parseInt(el.value, 10) || 0)))
+      : (el.value.trim() || (key === 'status' ? 'planned' : null));
   if (key === 'name' && !value){ renderAll(); return; }
   el.disabled = true;
   const res = await save(sb.from('activities').update({ [key]: value })
@@ -2981,36 +3063,88 @@ document.getElementById('acBody')?.addEventListener('change', async (e) => {
   setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
 });
 
-/* An activity becomes a slot in the programme. It fills the itinerary's own form
-   and moves you to that tab rather than inserting a row from here — the day and
-   the hour are the two things only you know, and the itinerary's insert already
-   handles shuffling positions inside a day. The activity's id rides along so the
-   two stay linked afterwards and the activities table can show where it landed. */
-let itFromActivity = null;
+/* An activity schedules itself without leaving the tab. It used to prefill the
+   itinerary's form and jump you to the other screen, which meant losing your place
+   in a list of thirty to type one time. The row opens instead, asks the only two
+   things it can't know — which day, and what hour — and writes the slot through
+   the same itInsert() the programming form uses, so the order of the day comes out
+   identical whichever door it came through. */let itFromActivity = null;      // still used when the programming form prefills
+const acOpen = new Set();       // which activity rows have their scheduler open
+
+/* the days already in the programme, so a slot can't land on a day invented by a
+   typo — with an escape hatch for the first one, or a third day nobody planned */
+const itDays = () => [...new Set(ITIN.map(r => r.day))];
+
+function schedRow(a){
+  if (!acOpen.has(a.id)) return '';
+  const days = itDays();
+  return `<tr class="acSched"><td colspan="8" style="padding:.55rem .7rem .8rem">
+    <div class="addRow" style="margin:0;background:transparent">
+      <label style="flex:1 1 170px">which day
+        ${days.length ? `<select class="acDay" data-act="${esc(a.id)}">
+            ${days.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+            <option value="__new">— a new day —</option>
+          </select>` : ''}
+        <input class="acDayNew" data-act="${esc(a.id)}" type="text" placeholder="day one · 18 aug"
+          ${days.length ? 'hidden' : ''} /></label>
+      <label style="flex:0 1 110px">time
+        <input class="acTime" data-act="${esc(a.id)}" type="text" placeholder="8:30 pm" /></label>
+      <label style="flex:0 1 80px">emoji
+        <input class="acEmoji" data-act="${esc(a.id)}" type="text" maxlength="8"
+          placeholder="${a.is_game ? '🏆' : '💅'}" /></label>
+      <button class="btn acPut" data-act="${esc(a.id)}" type="button" style="width:auto">
+        add to the programme</button>
+      <button class="btn ghost acShut" data-act="${esc(a.id)}" type="button" style="width:auto">cancel</button>
+    </div>
+    <p class="sub" style="margin:.4rem 0 0">${esc(a.name)}${a.mins ? ` · runs ${esc(hhmm(a.mins))}` : ''}${
+      a.is_game ? ' · counts for the slumber games' : ''}${
+      a.what ? ` — “${esc(a.what)}” goes in as the detail` : ''}</p>
+  </td></tr>`;
+}
 
 document.getElementById('acBody')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.acSend');
+  const open = e.target.closest('.acSend'), shut = e.target.closest('.acShut');
+  if (!open && !shut) return;
+  const id = (open || shut).dataset.act;
+  shut ? acOpen.delete(id) : acOpen.add(id);
+  activitiesPanel();
+  if (open) document.querySelector(`.acTime[data-act="${id}"]`)?.focus();
+});
+
+/* "— a new day —" swaps the select for a text box, so the common case stays a
+   single tap and the rare one is still possible */
+document.getElementById('acBody')?.addEventListener('change', (e) => {
+  const sel = e.target.closest('.acDay');
+  if (!sel) return;
+  const box = document.querySelector(`.acDayNew[data-act="${sel.dataset.act}"]`);
+  if (!box) return;
+  box.hidden = sel.value !== '__new';
+  if (!box.hidden) box.focus();
+});
+
+document.getElementById('acBody')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.acPut');
   if (!btn) return;
-  const a = ACTS.find(x => x.id === btn.dataset.act);
+  const id = btn.dataset.act;
+  const a = ACTS.find(x => x.id === id);
   if (!a) return;
-  /* clear any half-finished edit FIRST — cancel resets the form, so prefilling
-     before it would just be wiped */
-  const cancel = document.getElementById('itCancel');
-  if (cancel && !cancel.hidden) cancel.click();
-  itFromActivity = a.id;
-  itTitle.value = a.name;
-  itDetail.value = a.what || '';
-  itTime.value = '';
-  /* default to a day already in use, so a slot can't land on a new day invented
-     by a typo */
-  itDay.value = [...new Set(ITIN.map(r => r.day))][0] || '';
-  /* the hash IS the router here — showView() reads it and takes no argument, so
-     setting the hash is what actually moves the screen */
-  location.hash = '#/day';
-  const msg = document.getElementById('itMsg');
-  if (msg) msg.textContent = `from activities: ${a.name}` +
-    (a.mins ? ` · runs ${hhmm(a.mins)} — pick the day and the start time` : ' — pick the day and the time');
-  itTime.focus();
+  const msg = document.getElementById('acMsg');
+  const sel = document.querySelector(`.acDay[data-act="${id}"]`);
+  const box = document.querySelector(`.acDayNew[data-act="${id}"]`);
+  const day = (!sel || sel.value === '__new') ? (box?.value || '').trim() : sel.value;
+  if (!day) { msg.textContent = 'which day?'; msg.className = 'sub err'; box?.focus(); return; }
+  const t = (document.querySelector(`.acTime[data-act="${id}"]`)?.value || '').trim();
+  const emoji = (document.querySelector(`.acEmoji[data-act="${id}"]`)?.value || '').trim()
+    || (a.is_game ? '🏆' : null);
+  btn.disabled = true;
+  msg.textContent = 'adding…'; msg.className = 'sub';
+  const res = await itInsert({ day, t: t || null, emoji, title: a.name, detail: a.what || null }, a.id);
+  btn.disabled = false;
+  if (res.error) { msg.textContent = res.error; msg.className = 'sub err'; return; }
+  acOpen.delete(id);
+  msg.textContent = `${a.name} → ${day}${t ? ` at ${t}` : ''}`; msg.className = 'sub';
+  renderAll();
+  setTimeout(() => { if (msg.textContent.includes('→')) msg.textContent = ''; }, 4000);
 });
 
 document.getElementById('acBody')?.addEventListener('click', async (e) => {
