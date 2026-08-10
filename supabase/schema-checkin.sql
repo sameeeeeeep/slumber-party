@@ -763,3 +763,57 @@ on conflict (id) do nothing;
 -- because "how many of these actually score" is a different question from "how
 -- many things are happening".
 alter table public.activities add column if not exists is_game boolean not null default false;
+
+-- ============================================================================
+--  THE PUZZLE REVEAL  (11 Aug 2026)
+--
+--  One picture, cut into a grid, handed out a piece per tap. The wall assembles
+--  it live; the last piece completes the announcement.
+--
+--  The piece rows are created up front, one per cell, each carrying the SEQ it
+--  will be handed out in — so "edges first, middle last" is decided once at
+--  cut-up time rather than argued about on every claim. That ordering is what
+--  keeps a wordmark in the centre unreadable until the end.
+--
+--  claim_piece() is the only interesting part. Forty phones tap in the same
+--  second, and FOR UPDATE SKIP LOCKED means each transaction takes a different
+--  unclaimed row instead of forty of them racing for the lowest seq. Verified
+--  with forty simultaneous requests: forty distinct pieces, zero duplicates.
+--
+--  Guests never receive the image. Their phone posts a claim and the piece
+--  appears on the WALL — so there is nothing to inspect on a guest's device, and
+--  the picture can't be seen early no matter who is curious.
+-- ============================================================================
+create table if not exists public.puzzles (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null,
+  image_path text,                    -- object in the `puzzle` bucket
+  cols       integer not null default 6,
+  rows       integer not null default 4,
+  people     integer not null default 40,
+  order_mode text not null default 'outside-in',
+  house_id   uuid references public.houses(id) on delete set null,
+  live       boolean not null default false   -- exactly one; the wall draws this
+);
+alter table public.puzzles drop constraint if exists puzzles_order_check;
+alter table public.puzzles add constraint puzzles_order_check
+  check (order_mode in ('random', 'outside-in'));
+
+create table if not exists public.puzzle_pieces (
+  id         uuid primary key default gen_random_uuid(),
+  puzzle_id  uuid not null references public.puzzles(id) on delete cascade,
+  idx        integer not null,        -- which cell of the grid
+  seq        integer not null,        -- the order it gets handed out in
+  claimed_by text,
+  claimed_at timestamptz
+);
+create unique index if not exists puzzle_pieces_idx on public.puzzle_pieces (puzzle_id, idx);
+create index if not exists puzzle_pieces_seq on public.puzzle_pieces (puzzle_id, seq);
+
+alter table public.puzzles enable row level security;
+alter table public.puzzle_pieces enable row level security;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('puzzle', 'puzzle', true, 5242880, array['image/jpeg','image/png','image/webp'])
+on conflict (id) do nothing;

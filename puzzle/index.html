@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="referrer" content="no-referrer" />
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+<title>your piece 🧩 · khushi's slumber party</title>
+<meta name="description" content="Take your piece." />
+<link rel="icon" type="image/png" href="/assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Playfair+Display:ital,wght@0,500&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* ONE TAP. That's the whole page.
+     Everything else is a distraction from the fact that the interesting thing is
+     happening on the wall, not in their hand — so this is deliberately almost
+     empty, and the button is the size of a thumb reaching without looking. */
+  :root{
+    --wine:#2a1520; --wine-2:#1c1017; --cream:#fff6f8;
+    --pink:#eb648c; --rose:#c2456b; --soft:#c9a0ae; --yellow:#ffe9a8;
+    --mono:'VT323',monospace; --pixel:'Press Start 2P',monospace;
+    --serif:'Playfair Display',serif;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  p,h1,h2{ margin:0; }
+  html,body{ margin:0; min-height:100%; }
+  body{ background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%);
+    color:var(--cream); font-family:var(--mono); font-size:18px; }
+
+  .wrap{ min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:1.4rem; }
+  .box{ width:min(23rem,100%); text-align:center; }
+  .box img.logo{ display:block; width:min(64%,13rem); margin:0 auto .9rem; }
+
+  #gform{ display:flex; gap:.5rem; }
+  #gform input{ flex:1; min-width:0; background:rgba(255,255,255,.06);
+    border:1px solid rgba(245,195,207,.28); border-radius:100px; padding:.6rem 1rem;
+    color:var(--cream); font-family:var(--mono); font-size:1.3rem; outline:none; text-align:center; }
+  #gform button{ flex:none; border:0; cursor:pointer; border-radius:100px; padding:.55rem 1.05rem;
+    font-family:var(--pixel); font-size:.6rem; color:#fff;
+    background:linear-gradient(120deg,var(--pink),#e2703f); }
+  .err{ min-height:1.5rem; margin-top:.7rem; font-size:1.1rem; color:#ffb3c6; }
+
+  h1{ font-family:var(--serif); font-style:italic; font-size:1.7rem; color:#fff; margin:0 0 1rem; }
+  select{ width:100%; background:rgba(255,255,255,.07); color:var(--cream);
+    border:1px solid rgba(245,195,207,.3); border-radius:100px; padding:.65rem 1rem;
+    font-family:var(--mono); font-size:1.2rem; text-align:center; }
+  .me{ font-family:var(--serif); font-style:italic; font-size:1.35rem; color:#fff; }
+  .swap{ background:none; border:0; color:var(--soft); font-family:var(--mono);
+    font-size:1rem; text-decoration:underline; cursor:pointer; }
+
+  /* the button */
+  #tap{ width:min(16rem,80vw); aspect-ratio:1; margin:1.2rem auto 0; display:grid; place-items:center;
+    border:0; border-radius:50%; cursor:pointer; color:#fff; font-family:var(--pixel);
+    font-size:.9rem; line-height:1.7; letter-spacing:.06em;
+    background:radial-gradient(circle at 30% 25%, #ff86a8, var(--rose) 60%, #8d2b48);
+    box-shadow:0 1rem 2.6rem rgba(235,100,140,.45), inset 0 -.4rem 1rem rgba(0,0,0,.25);
+    transition:transform .12s; }
+  #tap:active{ transform:scale(.96); }
+  #tap:disabled{ opacity:.5; box-shadow:none; }
+  .count{ font-family:var(--pixel); font-size:.7rem; color:var(--yellow); margin-top:1.1rem; }
+  .note{ color:var(--soft); font-size:1.05rem; margin-top:.5rem; line-height:1.45; }
+  .mine{ display:flex; gap:.3rem; justify-content:center; flex-wrap:wrap; margin-top:.8rem; }
+  .mine i{ font-style:normal; font-family:var(--pixel); font-size:.55rem; color:#fff;
+    background:rgba(255,255,255,.12); border-radius:100px; padding:.35rem .6rem; }
+  .hide{ display:none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- the word -->
+  <div class="box" id="gate">
+    <img class="logo" src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <h1>your piece</h1>
+    <form id="gform">
+      <input id="gpw" type="password" autocomplete="off" autocapitalize="none" placeholder="•••••" />
+      <button type="submit">OPEN ▸</button>
+    </form>
+    <p class="err" id="gerr"></p>
+  </div>
+
+  <!-- who -->
+  <div class="box hide" id="whoBox">
+    <img class="logo" src="/assets/logo2.png" alt="" />
+    <h1>who are you?</h1>
+    <select id="mePick"><option value="">pick your name</option></select>
+  </div>
+
+  <!-- the tap -->
+  <div class="box hide" id="app">
+    <p class="me" id="hi"></p>
+    <button id="tap" type="button">TAKE<br />A PIECE</button>
+    <p class="count" id="count"></p>
+    <p class="note" id="note">look up 👀 it lands on the big screen</p>
+    <div class="mine" id="mine"></div>
+    <p style="margin-top:1.4rem"><button class="swap" id="swap" type="button">not you?</button></p>
+  </div>
+</div>
+
+<script src="/assets/config.js"></script>
+<script>
+/* ============================================================================
+   /puzzle — the guest side. One tap takes one piece.
+
+   The phone never draws the picture and never receives the image. A guest taps,
+   the piece lands on the WALL with their name on it, and they look up. That is
+   both leak-proof and the better moment: forty people watching one screen
+   together beats forty people looking down at their own.
+   ========================================================================== */
+const CFG = window.SLUMBER_CONFIG || {};
+const FN = CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/puzzle';
+let PW = null, ME = null, MINE = [];
+try { PW = sessionStorage.getItem('ssp-itin'); ME = localStorage.getItem('ssp-board-me'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const show = (id) => { for (const b of ['gate', 'whoBox', 'app']) $(b).classList.toggle('hide', b !== id); };
+
+async function call(body) {
+  const r = await fetch(FN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: PW, ...body }),
+  });
+  if (r.status === 401) return { wrong: true };
+  if (r.status === 429) return { rate: true, ...(await r.json().catch(() => ({}))) };
+  return await r.json().catch(() => ({}));
+}
+
+async function open_(pw, quiet) {
+  const r = await fetch(FN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: pw, action: 'open' }),
+  });
+  if (!r.ok) {
+    if (!quiet) $('gerr').textContent = r.status === 429 ? 'too many tries — give it a while 🙏'
+      : r.status === 401 ? "that's not it 👀" : 'hmm, try again';
+    return false;
+  }
+  const j = await r.json();
+  PW = pw;
+  try { sessionStorage.setItem('ssp-itin', pw); } catch (e) {}
+  $('mePick').innerHTML = '<option value="">pick your name</option>' +
+    (j.roster || []).map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if (ME) { start(); } else { show('whoBox'); }
+  return true;
+}
+
+$('gform').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('gpw').value.trim();
+  if (v) open_(v, false);
+});
+$('mePick').addEventListener('change', (e) => {
+  if (!e.target.value) return;
+  ME = e.target.value;
+  try { localStorage.setItem('ssp-board-me', ME); } catch (err) {}
+  start();
+});
+$('swap').addEventListener('click', () => {
+  ME = null;
+  try { localStorage.removeItem('ssp-board-me'); } catch (e) {}
+  show('whoBox');
+});
+
+function start() {
+  show('app');
+  $('hi').textContent = `hi ${String(ME).split(/\s+/)[0]} 👋`;
+  refresh();
+  setInterval(() => { if (!document.hidden) refresh(); }, 5000);
+}
+
+async function refresh() {
+  const res = await call({ action: 'board', name: ME });
+  if (!res.ok) return;
+  if (!res.puzzle) {
+    $('tap').disabled = true;
+    $('count').textContent = '';
+    $('note').textContent = 'nothing to build yet — hold on 🤫';
+    return;
+  }
+  MINE = res.mine || [];
+  const left = (res.total || 0) - (res.placed || 0);
+  $('tap').disabled = left <= 0;
+  $('count').textContent = `${res.placed} of ${res.total} placed`;
+  $('note').textContent = left <= 0 ? 'that\'s all of it — look up 👀'
+    : MINE.length ? 'look up 👀 take another if you like' : 'look up 👀 it lands on the big screen';
+  paintMine();
+}
+function paintMine() {
+  $('mine').innerHTML = MINE.map((i) => `<i>piece ${i + 1}</i>`).join('');
+}
+
+$('tap').addEventListener('click', async () => {
+  const btn = $('tap');
+  btn.disabled = true;
+  const was = btn.innerHTML;
+  btn.innerHTML = 'TAKING…';
+  const res = await call({ action: 'claim', name: ME });
+  btn.innerHTML = was;
+  if (res.ok && typeof res.idx === 'number') {
+    MINE.push(res.idx);
+    paintMine();
+    $('count').textContent = `${res.placed} of ${res.total} placed`;
+    $('note').textContent = 'yours is on the wall ✨ look up';
+    if (navigator.vibrate) try { navigator.vibrate(30); } catch (e) {}
+  } else if (res.error === 'done' || res.error === 'enough') {
+    $('note').textContent = res.error === 'enough'
+      ? 'you\'ve taken plenty 😄 let the others in' : 'the picture is finished — look up 👀';
+  } else if (res.rate) {
+    $('note').textContent = 'slow down a second 🙏';
+  } else {
+    $('note').textContent = 'that didn\'t land — tap again';
+  }
+  setTimeout(refresh, 400);
+});
+
+if (PW) open_(PW, true);
+</script>
+</body>
+</html>

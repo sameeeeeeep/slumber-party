@@ -303,6 +303,18 @@
   /* every control on one baseline. margin:0 on ALL of them, not just the inputs —
      the base rule's margin-bottom is what pushed the select above the line. */
   /* the add-a-guest line above the table: one row, ending in the button */
+  /* the puzzle */
+  .pzCard{ border:1px solid var(--line); border-radius:11px; padding:.7rem .85rem; margin-bottom:9px;
+    background:var(--surface-2); }
+  .pzCard.live{ border-color:var(--series); box-shadow:0 0 0 2px var(--series-soft); }
+  .pzHead{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .pzHead b{ font-size:.95rem; }
+  .pzThumb{ width:74px; height:48px; object-fit:cover; border-radius:7px; border:1px solid var(--line); }
+  .pzBar{ height:.4rem; border-radius:100px; background:var(--grid); margin-top:8px; }
+  .pzBar i{ display:block; height:100%; border-radius:100px; background:var(--series); transition:width .4s; }
+  .pzGrid{ display:grid; gap:2px; width:min(24rem,100%); margin-top:8px; }
+  .pzGrid span{ background:var(--series-soft); border-radius:2px; aspect-ratio:1; }
+
   /* who is inside a headcount */
   .crNames{ padding:2px 7px; font-size:11px; margin-left:5px; font-variant-numeric:tabular-nums; }
   .crNames.miss{ border-color:var(--critical); color:var(--critical); }
@@ -959,6 +971,44 @@
   </section>
 
 
+
+  <!-- ------------------------------------------------------------- the puzzle -->
+  <section id="sec-puzzle" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">the puzzle</h2>
+      <span class="pill" id="pzCount">—</span>
+    </div>
+    <div class="ovs" id="ovPuzzle"></div>
+    <p class="sub">an image cut into pieces, handed out one tap at a time. Guests open
+      <code>/puzzle</code> and tap; the picture assembles on <code>/puzzle/wall</code> with
+      their names on the pieces as they land. Nobody's phone ever holds the image, so it
+      can't be seen early. Only one puzzle is live at a time — that's the one the wall draws.</p>
+
+    <form id="pzForm" class="addRow">
+      <label style="flex:2 1 170px">what is it
+        <input id="pzName" type="text" placeholder="the reveal" required /></label>
+      <label style="flex:0 1 120px">how many people
+        <input id="pzPeople" type="number" min="1" max="200" value="40" /></label>
+      <label style="flex:0 1 150px">order
+        <select id="pzOrder">
+          <option value="outside-in">edges first, middle last</option>
+          <option value="random">random</option>
+        </select></label>
+      <label style="flex:0 1 160px">for one house <span class="sub">(optional)</span>
+        <select id="pzHouse"><option value="">— everyone —</option></select></label>
+      <div style="flex:0 1 150px">
+        <span class="flab">the image</span>
+        <label class="pick" for="pzFile" id="pzFileLabel">choose a picture</label>
+        <input id="pzFile" type="file" accept="image/*" hidden />
+      </div>
+      <button class="btn" id="pzMake" type="submit" style="width:auto">cut it up</button>
+    </form>
+    <div id="pzPreview" style="margin-top:10px"></div>
+    <p class="sub" id="pzMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
+
+    <div id="pzList" style="margin-top:14px"></div>
+  </section>
+
   <!-- ------------------------------------------------------------ nail board -->
   <section id="sec-board" class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -1240,7 +1290,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [], ACTS = [], BOARD = [], BVOTES = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [], ACTS = [], BOARD = [], BVOTES = [], PUZZLES = [], PIECES = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -1260,7 +1310,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm, ac, bp, bv] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm, ac, bp, bv, pz, pc] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -1286,11 +1336,13 @@ async function boot() {
     sb.from('activities').select('*').order('position'),
     sb.from('board_posts').select('*').order('created_at', { ascending: false }),
     sb.from('board_votes').select('post_id,voter'),
+    sb.from('puzzles').select('*').order('created_at', { ascending: false }),
+    sb.from('puzzle_pieces').select('puzzle_id,idx,claimed_by'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || []; ACTS = ac.data || []; BOARD = bp.data || []; BVOTES = bv.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || []; ACTS = ac.data || []; BOARD = bp.data || []; BVOTES = bv.data || []; PUZZLES = pz.data || []; PIECES = pc.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -1397,7 +1449,7 @@ const VIEW_MAP = {
   applications: ['sec-applied', 'sec-drafts', 'failPanel'],
   guests:       ['sec-checkin'],
   crew:         ['sec-crew', 'sec-cars'],
-  games:        ['sec-games', 'sec-board'],
+  games:        ['sec-games', 'sec-board', 'sec-puzzle'],
   sponsors:     ['sec-sponsors'],
   bffs:         ['sec-bffs', 'sec-hampers'],
   stay:         ['sec-stay'],
@@ -1432,6 +1484,8 @@ const LIVE_PAGES = [
   ['guests', '/games/',        'scoreboard',    'nailinit'],
   ['guests', '/board/',        'nail board',    'nailinit'],
   ['guests', '/board/wall/',   'the wall',      'nailinit'],
+  ['guests', '/puzzle/',       'the puzzle',    'nailinit'],
+  ['guests', '/puzzle/wall/',  'puzzle wall',   'nailinit'],
   ['ops',    '/checkin/',      'check-in',      null],
 ];
 const PAGE_GROUPS = [['public', 'anyone'], ['guests', 'guests only'], ['ops', 'ours']];
@@ -1588,7 +1642,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); activitiesPanel(); boardPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); activitiesPanel(); boardPanel(); puzzlePanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -3288,6 +3342,252 @@ document.getElementById('carCsv')?.addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
+
+
+/* ============================================================================
+   THE PUZZLE
+   An image, a number of people, and a grid worked out from the two. Cutting it up
+   creates one row per piece with the order they'll be handed out in; guests claim
+   them one tap at a time and the wall assembles the picture.
+
+   The grid is NOT chosen by hand. A wide campaign asset in a naive 5x8 gives you
+   letterbox slivers, so the columns and rows are picked to make the pieces as
+   square as the image allows while still producing at least as many as there are
+   people.
+   ========================================================================== */
+const puzzleUrl = (path) =>
+  `${CFG.supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/puzzle/${path}`;
+let pzFileData = null, pzAspect = 1;
+
+function gridFor(people, aspect) {
+  let best = null;
+  for (let cols = 1; cols <= people * 2; cols++) {
+    const rows = Math.ceil(people / cols);
+    if (cols * rows < people) continue;
+    /* a piece is (w/cols) by (h/rows); we want that square, so aspect*rows/cols ≈ 1 */
+    const off = Math.abs(Math.log((aspect * rows) / cols));
+    const waste = cols * rows - people;          // prefer not to overshoot much
+    const score = off + waste * 0.02;
+    if (!best || score < best.score) best = { cols, rows, score };
+  }
+  return best || { cols: people, rows: 1 };
+}
+
+async function puzzleCall(body) {
+  const { data } = await sb.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) return { ok: false, error: 'signed out — reload and sign in again' };
+  const r = await fetch(CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/puzzle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey, 'x-admin-token': token },
+    body: JSON.stringify(body),
+  });
+  return await r.json().catch(() => ({ ok: false, error: 'no answer' }));
+}
+
+function puzzlePanel(){
+  const list = document.getElementById('pzList');
+  if (!list) return;
+  const mine = (id) => PIECES.filter(p => p.puzzle_id === id);
+  const live = PUZZLES.find(p => p.live);
+
+  strip('ovPuzzle', [
+    [PUZZLES.length, 'puzzles'],
+    [live ? live.name : '—', 'live now'],
+    ...(live ? [
+      [mine(live.id).filter(p => p.claimed_by).length + '/' + mine(live.id).length, 'pieces placed'],
+      [new Set(mine(live.id).filter(p => p.claimed_by).map(p => p.claimed_by)).size, 'people in'],
+    ] : []),
+  ]);
+  document.getElementById('pzCount').textContent = PUZZLES.length
+    ? (live ? `${live.name} is live` : 'none live') : 'none yet';
+
+  /* the house dropdown, filled from the houses that exist */
+  const hs = document.getElementById('pzHouse');
+  if (hs) {
+    const keep = hs.value;
+    hs.innerHTML = '<option value="">— everyone —</option>' +
+      HOUSES.map(h => `<option value="${esc(h.id)}">${esc(h.name)}</option>`).join('');
+    hs.value = keep;
+  }
+
+  list.innerHTML = PUZZLES.map(p => {
+    const ps = mine(p.id), done = ps.filter(x => x.claimed_by).length;
+    const pct = ps.length ? Math.round(done / ps.length * 100) : 0;
+    return `<div class="pzCard${p.live ? ' live' : ''}">
+      <div class="pzHead">
+        ${p.image_path ? `<img class="pzThumb" src="${esc(puzzleUrl(p.image_path))}" alt="" />` : ''}
+        <b>${esc(p.name)}</b>
+        <span class="pill">${p.cols}×${p.rows} · ${ps.length} pieces</span>
+        ${p.house_id ? `<span class="tier creator">${esc((HOUSES.find(h => h.id === p.house_id) || {}).name || 'a house')}</span>` : ''}
+        <span class="sub">${p.order_mode === 'random' ? 'random order' : 'edges first'}</span>
+        <span style="flex:1"></span>
+        <span class="pill">${done}/${ps.length} placed</span>
+        <button class="btn ghost pzAct" data-act="${p.live ? 'off' : 'on'}" data-p="${esc(p.id)}"
+          type="button" style="padding:3px 9px;font-size:11px">${p.live ? 'take it off the wall' : 'put it live'}</button>
+        <button class="btn ghost pzAct" data-act="reset" data-p="${esc(p.id)}" type="button"
+          style="padding:3px 9px;font-size:11px">reset</button>
+        <button class="btn ghost pzAct" data-act="all" data-p="${esc(p.id)}" type="button"
+          style="padding:3px 9px;font-size:11px">reveal now</button>
+        <button class="btn ghost pzAct" data-act="del" data-p="${esc(p.id)}" type="button"
+          style="padding:3px 9px;font-size:11px">delete</button>
+      </div>
+      <div class="pzBar"><i style="width:${pct}%"></i></div>
+    </div>`;
+  }).join('') || '<p class="empty">nothing cut up yet.</p>';
+}
+
+/* ---- picking the image, and showing the grid before committing to it ------ */
+document.getElementById('pzFile')?.addEventListener('change', async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const msg = document.getElementById('pzMsg');
+  try {
+    /* resized on the way in: a print-resolution campaign asset is pointless on a
+       projector, and every piece is a crop of this one file */
+    const bmp = await createImageBitmap(f);
+    const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    pzAspect = c.width / c.height;
+    pzFileData = c.toDataURL('image/webp', 0.9);
+    if (!pzFileData.startsWith('data:image/webp')) pzFileData = c.toDataURL('image/jpeg', 0.9);
+    document.getElementById('pzFileLabel').textContent = `${c.width}×${c.height} ✓`;
+    msg.textContent = ''; msg.className = 'sub';
+    pzPreviewDraw();
+  } catch (err) {
+    pzFileData = null;
+    msg.textContent = "couldn't read that image"; msg.className = 'sub err';
+  }
+});
+document.getElementById('pzPeople')?.addEventListener('input', pzPreviewDraw);
+
+function pzPreviewDraw(){
+  const box = document.getElementById('pzPreview');
+  if (!box) return;
+  if (!pzFileData) { box.innerHTML = ''; return; }
+  const people = Math.max(1, parseInt(document.getElementById('pzPeople').value, 10) || 1);
+  const g = gridFor(people, pzAspect);
+  box.innerHTML = `<p class="sub" style="margin:0 0 6px">${g.cols}×${g.rows} =
+    <b>${g.cols * g.rows} pieces</b> for ${people} ${people === 1 ? 'person' : 'people'}${
+      g.cols * g.rows > people ? ` · ${g.cols * g.rows - people} spare, so nobody is left waiting` : ''}</p>
+    <div style="position:relative;width:min(30rem,100%)">
+      <img src="${pzFileData}" alt="" style="display:block;width:100%;border-radius:9px" />
+      <div style="position:absolute;inset:0;display:grid;gap:2px;
+        grid-template-columns:repeat(${g.cols},1fr);grid-template-rows:repeat(${g.rows},1fr)">
+        ${Array.from({ length: g.cols * g.rows }, () =>
+          '<span style="box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)"></span>').join('')}
+      </div>
+    </div>`;
+}
+
+/* ---- cutting it up ------------------------------------------------------- */
+document.getElementById('pzForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('pzMsg');
+  const name = pzName.value.trim();
+  if (!name) return;
+  if (!pzFileData) { msg.textContent = 'choose a picture first'; msg.className = 'sub err'; return; }
+  const people = Math.max(1, parseInt(pzPeople.value, 10) || 1);
+  const g = gridFor(people, pzAspect);
+  const btn = document.getElementById('pzMake');
+  btn.disabled = true; msg.textContent = 'uploading…'; msg.className = 'sub';
+
+  const ext = pzFileData.startsWith('data:image/webp') ? 'webp' : 'jpg';
+  const bytes = Uint8Array.from(atob(pzFileData.split(',')[1]), (ch) => ch.charCodeAt(0));
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const up = await sb.storage.from('puzzle').upload(path, bytes,
+    { contentType: ext === 'webp' ? 'image/webp' : 'image/jpeg', upsert: false });
+  if (up.error) { btn.disabled = false; msg.textContent = up.error.message; msg.className = 'sub err'; return; }
+
+  const { data: puz, error } = await sb.from('puzzles').insert({
+    name, image_path: path, cols: g.cols, rows: g.rows, people,
+    order_mode: pzOrder.value, house_id: pzHouse.value || null, live: false,
+  }).select().single();
+  if (error) { btn.disabled = false; msg.textContent = error.message; msg.className = 'sub err'; return; }
+
+  /* One row per piece, with the ORDER they get handed out in. Edges-first leaves
+     the middle — where a wordmark usually sits — until last, so the picture stays
+     unreadable for longer and finishes on the line that matters. */
+  const n = g.cols * g.rows;
+  const cx = (g.cols - 1) / 2, cy = (g.rows - 1) / 2;
+  const idxs = Array.from({ length: n }, (_, i) => i);
+  if (pzOrder.value === 'random') {
+    for (let i = idxs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1)); [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+    }
+  } else {
+    idxs.sort((a, b) => {
+      const d = (i) => Math.hypot((i % g.cols) - cx, Math.floor(i / g.cols) - cy);
+      return d(b) - d(a);           // furthest from the middle goes first
+    });
+  }
+  const rows = idxs.map((idx, seq) => ({ puzzle_id: puz.id, idx, seq }));
+  const ins = await sb.from('puzzle_pieces').insert(rows);
+  if (ins.error) { btn.disabled = false; msg.textContent = ins.error.message; msg.className = 'sub err'; return; }
+
+  PUZZLES.unshift(puz);
+  PIECES.push(...rows.map(r => ({ ...r, claimed_by: null })));
+  btn.disabled = false;
+  pzFileData = null;
+  document.getElementById('pzFileLabel').textContent = 'choose a picture';
+  document.getElementById('pzPreview').innerHTML = '';
+  pzForm.reset(); pzPeople.value = 40;
+  msg.textContent = `${name} is cut into ${n} pieces — put it live when you're ready`;
+  msg.className = 'sub';
+  renderAll();
+});
+
+/* ---- live / reset / reveal / delete -------------------------------------- */
+document.getElementById('pzList')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.pzAct');
+  if (!btn) return;
+  const id = btn.dataset.p, act = btn.dataset.act, msg = document.getElementById('pzMsg');
+  const p = PUZZLES.find(x => x.id === id);
+  if (!p) return;
+  btn.disabled = true;
+
+  if (act === 'on' || act === 'off') {
+    /* only one can be live: the wall draws "the live one", so two would be a race */
+    if (act === 'on') {
+      const res = await save(sb.from('puzzles').update({ live: false }).eq('live', true).neq('id', id), 'the others');
+      if (!res.ok && !String(res.msg).includes('nothing was changed')) {
+        btn.disabled = false; msg.textContent = res.msg; msg.className = 'sub err'; return;
+      }
+      PUZZLES.forEach(x => { x.live = false; });
+    }
+    const res = await save(sb.from('puzzles').update({ live: act === 'on' }).eq('id', id), 'that puzzle');
+    btn.disabled = false;
+    if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
+    p.live = act === 'on';
+    msg.textContent = p.live ? `${p.name} is on the wall` : 'off the wall'; msg.className = 'sub';
+    renderAll(); return;
+  }
+
+  if (act === 'reset' || act === 'all') {
+    if (act === 'reset' && !confirm(`Clear every piece of "${p.name}" and start again?`)) {
+      btn.disabled = false; return;
+    }
+    const res = await puzzleCall({ action: act === 'reset' ? 'reset' : 'revealAll', puzzle: id });
+    btn.disabled = false;
+    if (!res.ok) { msg.textContent = res.error || "that didn't work"; msg.className = 'sub err'; return; }
+    for (const pc of PIECES) if (pc.puzzle_id === id) pc.claimed_by = act === 'reset' ? null : 'the room';
+    msg.textContent = act === 'reset' ? 'back to an empty grid' : 'all of it is on the wall';
+    msg.className = 'sub';
+    renderAll(); return;
+  }
+
+  if (!confirm(`Delete "${p.name}" and its pieces?`)) { btn.disabled = false; return; }
+  const { error } = await sb.from('puzzles').delete().eq('id', id);
+  btn.disabled = false;
+  if (error) { msg.textContent = error.message; msg.className = 'sub err'; return; }
+  if (p.image_path) await sb.storage.from('puzzle').remove([p.image_path]);
+  PUZZLES = PUZZLES.filter(x => x.id !== id);
+  PIECES = PIECES.filter(x => x.puzzle_id !== id);
+  renderAll();
+});
 
 /* ============================================================================
    THE NAIL BOARD
