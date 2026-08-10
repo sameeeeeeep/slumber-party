@@ -43,43 +43,70 @@
     background:linear-gradient(120deg,var(--pink),#e2703f); }
   .gbox .err{ min-height:1.5rem; margin-top:.7rem; font-size:1.1rem; color:#ffb3c6; }
 
-  #wall{ display:none; height:100%; grid-template-columns:1fr 15rem; }
+  /* THE LAYOUT
+     Every image the same size meant nothing announced itself — you couldn't tell
+     from across the room which one had just landed, which is the entire reason
+     people look up. So: the newest upload IS the wall, big, and everything before
+     it stacks beside it. The stack shrinks as it grows so two hundred designs
+     still fit on one screen without a scrollbar nobody can reach. */
+  #wall{ display:none; height:100%; grid-template-rows:1fr auto; }
   #wall.on{ display:grid; }
-  @media (max-width:900px){ #wall.on{ grid-template-columns:1fr; grid-template-rows:1fr auto; } }
 
-  /* the images */
-  #grid{ overflow:hidden; padding:1rem; column-gap:.7rem; column-fill:balance; }
-  #grid figure{ margin:0 0 .7rem; break-inside:avoid; position:relative;
-    border-radius:.8rem; overflow:hidden; border:1px solid rgba(245,195,207,.18);
-    background:rgba(255,255,255,.04); animation:pop .55s cubic-bezier(.2,.9,.3,1.2); }
-  #grid img{ display:block; width:100%; height:auto; }
-  #grid figcaption{ position:absolute; left:0; right:0; bottom:0; padding:.5rem .6rem .4rem;
-    font-size:1.15rem; line-height:1.15;
-    background:linear-gradient(transparent, rgba(15,8,12,.82)); }
-  #grid .who{ color:#fff; }
-  #grid .tg{ color:var(--yellow); }
-  #grid figure.fresh{ box-shadow:0 0 0 2px var(--pink), 0 .6rem 2rem rgba(235,100,140,.45); }
-  @keyframes pop{ from{ opacity:0; transform:scale(.92) translateY(10px); } }
+  .stage{ display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
+    gap:.8rem; padding:.9rem .9rem 0; min-height:0; }
+  @media (max-aspect-ratio:1/1){ .stage{ grid-template-columns:1fr; grid-template-rows:1.4fr 1fr; } }
 
-  .empty{ grid-column:1/-1; align-self:center; text-align:center; color:var(--soft);
-    font-size:1.8rem; line-height:1.5; }
+  /* the newest one */
+  #hero{ position:relative; min-height:0; border-radius:1.1rem; overflow:hidden;
+    border:1px solid rgba(245,195,207,.22); background:rgba(255,255,255,.04);
+    display:grid; place-items:center; }
+  #hero img{ width:100%; height:100%; object-fit:contain; display:block; }
+  #hero.pop{ animation:heroIn .6s cubic-bezier(.2,.9,.3,1.15); }
+  @keyframes heroIn{ from{ opacity:0; transform:scale(.96); } }
+  #hero .cap{ position:absolute; left:0; right:0; bottom:0; padding:1.1rem 1.2rem .9rem;
+    background:linear-gradient(transparent, rgba(15,8,12,.88)); display:flex;
+    align-items:baseline; gap:.7rem; flex-wrap:wrap; }
+  #hero .tg{ font-family:var(--pixel); font-size:1.15rem; color:var(--yellow);
+    text-shadow:0 0 18px rgba(255,233,168,.45); }
+  #hero .who{ font-family:var(--serif); font-style:italic; font-size:1.9rem; color:#fff; }
+  #hero .new{ margin-left:auto; font-family:var(--pixel); font-size:.6rem; letter-spacing:.14em;
+    color:#fff; background:var(--rose); border-radius:100px; padding:.4rem .7rem; }
+  #hero .col{ color:var(--soft); font-size:1.2rem; }
 
-  /* the side: the number, then the tally. This is the actual output of the round */
-  aside{ border-left:1px solid rgba(245,195,207,.14); padding:1.4rem 1.1rem;
-    display:flex; flex-direction:column; gap:1rem; min-height:0; }
-  @media (max-width:900px){ aside{ border-left:0; border-top:1px solid rgba(245,195,207,.14);
-    flex-direction:row; align-items:center; overflow-x:auto; padding:.8rem 1rem; } }
-  aside img.logo{ width:min(100%,9rem); }
-  .big{ font-family:var(--pixel); font-size:2.6rem; color:var(--yellow); line-height:1;
-    text-shadow:0 0 20px rgba(255,233,168,.4); }
-  .lbl{ font-family:var(--pixel); font-size:.52rem; letter-spacing:.14em; color:var(--soft); }
-  .tally{ display:flex; flex-direction:column; gap:.42rem; min-width:12rem; }
-  .row{ display:grid; grid-template-columns:1fr auto; align-items:center; gap:.5rem;
-    font-size:1.25rem; }
-  .bar{ grid-column:1/-1; height:.42rem; border-radius:100px; background:rgba(255,255,255,.09); }
-  .bar i{ display:block; height:100%; border-radius:100px;
+  /* everything before it */
+  #stack{ min-height:0; overflow:hidden; align-content:start;
+    display:grid; gap:.5rem; grid-template-columns:repeat(var(--cols,3),minmax(0,1fr)); }
+  #stack figure{ margin:0; position:relative; border-radius:.6rem; overflow:hidden;
+    border:1px solid rgba(245,195,207,.16); background:rgba(255,255,255,.04);
+    animation:pop .5s cubic-bezier(.2,.9,.3,1.2); }
+  #stack img{ display:block; width:100%; aspect-ratio:1; object-fit:cover; }
+  #stack figcaption{ position:absolute; left:0; right:0; bottom:0; padding:.35rem .4rem .3rem;
+    font-size:.92rem; line-height:1.1;
+    background:linear-gradient(transparent, rgba(15,8,12,.85)); }
+  #stack .tg{ color:var(--yellow); }
+  #stack .who{ color:#fff; }
+  @keyframes pop{ from{ opacity:0; transform:scale(.9); } }
+
+  .empty{ align-self:center; justify-self:center; text-align:center; color:var(--soft);
+    font-size:1.8rem; line-height:1.5; grid-column:1/-1; }
+
+  /* the strip along the bottom: the count, the people, the tally */
+  footer{ display:flex; align-items:center; gap:1.4rem; padding:.7rem 1.1rem;
+    border-top:1px solid rgba(245,195,207,.14); }
+  footer img.logo{ height:2.6rem; }
+  .stat{ text-align:center; }
+  .big{ font-family:var(--pixel); font-size:1.7rem; color:var(--yellow); line-height:1;
+    text-shadow:0 0 18px rgba(255,233,168,.4); }
+  .lbl{ font-family:var(--pixel); font-size:.48rem; letter-spacing:.13em; color:var(--soft);
+    margin-top:.25rem; }
+  .tally{ flex:1; display:flex; gap:.7rem; overflow:hidden; }
+  .tally .row{ flex:1 1 0; min-width:0; }
+  .tally .top{ display:flex; justify-content:space-between; font-size:1.05rem; gap:.3rem; }
+  .tally .top span:first-child{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tally .n{ color:var(--yellow); font-variant-numeric:tabular-nums; }
+  .tally .bar{ height:.36rem; border-radius:100px; background:rgba(255,255,255,.09); margin-top:.25rem; }
+  .tally .bar i{ display:block; height:100%; border-radius:100px;
     background:linear-gradient(90deg,var(--pink),var(--yellow)); transition:width .6s; }
-  .n{ font-variant-numeric:tabular-nums; color:var(--yellow); }
 </style>
 </head>
 <body>
@@ -97,19 +124,16 @@
 </div>
 
 <div id="wall">
-  <div id="grid"></div>
-  <aside>
+  <div class="stage">
+    <div id="hero"></div>
+    <div id="stack"></div>
+  </div>
+  <footer>
     <img class="logo" src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
-    <div>
-      <p class="big" id="total">0</p>
-      <p class="lbl">DESIGNS ON THE WALL</p>
-    </div>
-    <div>
-      <p class="big" id="people" style="font-size:1.6rem">0</p>
-      <p class="lbl">PEOPLE ADDING</p>
-    </div>
+    <div class="stat"><p class="big" id="total">0</p><p class="lbl">DESIGNS</p></div>
+    <div class="stat"><p class="big" id="people">0</p><p class="lbl">PEOPLE</p></div>
     <div class="tally" id="tally"></div>
-  </aside>
+  </footer>
 </div>
 
 <script src="/assets/config.js"></script>
@@ -131,8 +155,7 @@
 const CFG = window.SLUMBER_CONFIG || {};
 const FN = CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/board';
 const POLL = 3000;
-const FRESH_MS = 25000;          // how long an arrival keeps its glow
-let PW = null, seen = new Set();
+let PW = null;
 try { PW = sessionStorage.getItem('ssp-itin'); } catch (e) {}
 
 const $ = (id) => document.getElementById(id);
@@ -150,60 +173,73 @@ async function fetchBoard(pw) {
   return await r.json().catch(() => ({}));
 }
 
-/* how many columns the wall should use — few images want few columns, or three
-   screenshots end up as three hairlines down the left of a projector */
-function columns(n) {
-  const wide = innerWidth > 900;
-  if (n <= 2) return 1;
-  if (n <= 6) return 2;
-  if (n <= 14) return 3;
-  if (n <= 30) return wide ? 4 : 3;
-  if (n <= 60) return wide ? 5 : 3;
-  return wide ? 6 : 4;
+/* How tight the stack packs. Two designs shouldn't be thumbnails and two hundred
+   can't be big, so the column count climbs with the pile and everything stays on
+   one screen — a projector has no scrollbar anyone can reach. */
+function stackCols(n) {
+  const tall = innerHeight > innerWidth;      // portrait screen: the stack is a band, not a column
+  if (n <= 2) return tall ? 2 : 1;
+  if (n <= 6) return tall ? 3 : 2;
+  if (n <= 12) return tall ? 4 : 3;
+  if (n <= 24) return tall ? 6 : 4;
+  if (n <= 48) return tall ? 8 : 6;
+  return tall ? 10 : 8;
 }
+
+let heroId = null;
 
 function render(d) {
   const posts = d.posts || [];
-  $('total').textContent = d.total || 0;
-  $('people').textContent = d.people || 0;
+  document.getElementById('total').textContent = d.total || 0;
+  document.getElementById('people').textContent = d.people || 0;
 
-  const grid = $('grid');
-  grid.style.columnCount = columns(posts.length);
+  const hero = document.getElementById('hero'), stack = document.getElementById('stack');
 
   if (!posts.length) {
-    grid.innerHTML = '<p class="empty">nothing on the wall yet 💅<br />' +
+    heroId = null;
+    hero.innerHTML = '<p class="empty">nothing on the wall yet 💅<br />' +
       '<span style="font-size:1.2rem">open the board on your phone and add the first</span></p>';
-    grid.style.columnCount = 1;
+    stack.innerHTML = '';
     return;
   }
-  if (grid.querySelector('.empty')) grid.innerHTML = '';
 
-  /* only touch what's new: a full redraw would restart forty animations and
-     flicker the whole wall every three seconds */
-  const have = new Set([...grid.children].map((el) => el.dataset.id));
-  const now = Date.now();
-  for (const p of [...posts].reverse()) {            // oldest first, so newest ends up on top
-    if (have.has(p.id)) continue;
-    const fresh = now - +new Date(p.at) < FRESH_MS;
-    const fig = document.createElement('figure');
-    fig.dataset.id = p.id;
-    if (fresh && seen.size) fig.classList.add('fresh');
-    fig.innerHTML = `<img src="${esc(p.url)}" alt="" />
-      <figcaption><span class="tg">${esc(p.tag)}</span> <span class="who">${esc(p.name)}</span></figcaption>`;
-    grid.prepend(fig);
-    seen.add(p.id);
-    if (fresh) setTimeout(() => fig.classList.remove('fresh'), FRESH_MS);
+  /* the newest one IS the wall. Only rebuilt when it actually changes, or every
+     poll would restart the animation and flicker the biggest thing on screen. */
+  const top = posts[0];
+  if (top.id !== heroId) {
+    const first = heroId === null;
+    heroId = top.id;
+    hero.innerHTML = `<img src="${esc(top.url)}" alt="" />
+      <div class="cap">
+        <span class="tg">${esc(top.tag)}</span>
+        ${top.colour ? `<span class="col">${esc(top.colour)}</span>` : ''}
+        <span class="who">${esc(top.name)}</span>
+        ${first ? '' : '<span class="new">JUST ADDED</span>'}
+      </div>`;
+    hero.classList.remove('pop'); void hero.offsetWidth; hero.classList.add('pop');
+    /* the badge is about the last thirty seconds, not about being first in the
+       list — a hero still shouting JUST ADDED ten minutes later is a lie */
+    const badge = hero.querySelector('.new');
+    if (badge) setTimeout(() => badge.remove(), 30000);
   }
-  // anything hidden in the dashboard disappears from the wall within a poll
-  const live = new Set(posts.map((p) => p.id));
-  for (const el of [...grid.children]) if (!live.has(el.dataset.id)) el.remove();
-  if (!seen.size) posts.forEach((p) => seen.add(p.id));
 
-  const top = (d.tally || [])[0];
-  const max = top ? top.n : 1;
-  $('tally').innerHTML = (d.tally || []).slice(0, 8).map((t) =>
-    `<div class="row"><span>${esc(t.tag)}</span><span class="n">${t.n}</span>
-       <span class="bar"><i style="width:${Math.round(t.n / max * 100)}%"></i></span></div>`).join('');
+  /* everything before it, newest first. Rebuilt wholesale: they're small, the
+     hero is what the eye is on, and keeping a diff in step with a shifting first
+     element costs more than it saves. */
+  const rest = posts.slice(1);
+  stack.style.setProperty('--cols', stackCols(rest.length));
+  stack.innerHTML = rest.map((p) => `<figure>
+      <img src="${esc(p.url)}" alt="" />
+      <figcaption><span class="tg">${esc(p.tag)}</span> <span class="who">${esc(p.name)}</span></figcaption>
+    </figure>`).join('');
+
+  const tally = d.tally || [];
+  const max = tally[0] ? tally[0].n : 1;
+  document.getElementById('tally').innerHTML = tally.slice(0, 6).map((t) =>
+    `<div class="row">
+       <div class="top"><span>${esc(t.tag)}</span><span class="n">${t.n}</span></div>
+       <div class="bar"><i style="width:${Math.round(t.n / max * 100)}%"></i></div>
+     </div>`).join('');
 }
 
 async function open_(pw, quiet) {
@@ -232,7 +268,10 @@ $('gform').addEventListener('submit', (e) => {
 /* it lives on a wall — it has to keep itself current with nobody touching it */
 setInterval(() => { if (PW && !document.hidden) open_(PW, true); }, POLL);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && PW) open_(PW, true); });
-addEventListener('resize', () => { const n = $('grid').children.length; $('grid').style.columnCount = columns(n); });
+addEventListener('resize', () => {
+  const n = $('stack').children.length;
+  $('stack').style.setProperty('--cols', stackCols(n));
+});
 if (PW) open_(PW, true);
 </script>
 </body>
