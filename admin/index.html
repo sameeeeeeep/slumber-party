@@ -477,7 +477,8 @@
     <div class="scroll" style="margin-top:12px">
       <table id="ciTbl">
         <thead><tr>
-          <th>guest</th><th>tier</th><th>invite link</th><th>address</th><th>status</th><th>when</th>
+          <th>guest</th><th>tier</th><th>invite link</th><th>instagram</th><th>address</th>
+          <th>status</th><th>when</th>
           <th>phone</th><th>email</th><th>pyjamas</th><th>meal</th><th>id</th><th></th><th></th>
         </tr></thead>
         <tbody id="ciBody"></tbody>
@@ -1298,11 +1299,11 @@ function checkinPanel() {
            || byName.get(String(g.name).trim().toLowerCase()) || null;
     if (c) usedIds.add(c.id);
     return { id: g.id, name: g.name, c, onList: true, address: g.address || '',
-             code: g.code || '', tier: g.tier || '' };
+             code: g.code || '', tier: g.tier || '', ig: g.instagram || '' };
   });
   // checked in but not on the roster (or spelled differently)
   for (const c of CHECKINS) {
-    if (!usedIds.has(c.id)) rows.push({ name: c.name, c, onList: false, address: '', code: '', tier: '' });
+    if (!usedIds.has(c.id)) rows.push({ name: c.name, c, onList: false, address: '', code: '', tier: '', ig: '' });
   }
 
   const done = rows.filter(r => r.c).length;
@@ -1317,6 +1318,16 @@ function checkinPanel() {
     const addrCell = (addr) => addr
       ? `<td class="addr">${esc(addr)}</td>`
       : `<td class="addr"><span class="muted">—</span></td>`;
+    /* Editable in place. Thirty-six handles through a modal is thirty-six
+       round-trips; here you tab down the column. Anything pasted gets trimmed to
+       the handle, so a full profile URL or an @ works as well as the bare name. */
+    const igCell = (r) => r.onList && r.id
+      ? `<td style="white-space:nowrap"><input class="igIn" data-gid="${esc(r.id)}"
+           value="${esc(r.ig)}" placeholder="handle" spellcheck="false"
+           style="margin:0;width:8.5rem;height:28px;padding:.1rem .45rem;font-size:.8rem" />${
+           r.ig ? ` <a href="https://instagram.com/${encodeURIComponent(r.ig)}" target="_blank"
+                     rel="noopener noreferrer" title="open @${esc(r.ig)}">↗</a>` : ''}</td>`
+      : '<td><span class="muted">—</span></td>';
     const TIER_LABEL = { bestie:'bestie', creator:'creator', super:'super guest' };
     const tierCell = (t) => t
       ? `<td><span class="tier ${esc(t)}">${esc(TIER_LABEL[t] || t)}</span></td>`
@@ -1347,7 +1358,7 @@ function checkinPanel() {
     if (!r.c) {
       // 7 = when, phone, email, pyjamas, meal, id, check-in remove. Keep in step
       // with <thead>: a short row silently skews every column to its right.
-      return `<tr><td>${esc(r.name)}</td>${tierCell(r.tier)}${linkCell(r.code)}${addrCell(r.address)}
+      return `<tr><td>${esc(r.name)}</td>${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r.address)}
         <td><span class="muted">waiting</span></td>
         <td colspan="7" class="muted">—</td>${guestActions(r)}</tr>`;
     }
@@ -1361,7 +1372,7 @@ function checkinPanel() {
       : '<span class="muted">none</span>';
     return `<tr>
       <td>${esc(r.name)}${r.onList ? '' : ' <span class="muted">(not on list)</span>'}</td>
-      ${tierCell(r.tier)}${linkCell(r.code)}${addrCell(r.address)}
+      ${tierCell(r.tier)}${linkCell(r.code)}${igCell(r)}${addrCell(r.address)}
       <td>✓ done</td><td>${esc(when)}</td>
       <td>${esc(c.phone)}</td><td>${esc(c.email)}</td>
       <td>${esc(c.pyjama_size)}</td><td>${esc(meal)}${notes}</td><td>${idCell}</td>
@@ -1372,6 +1383,20 @@ function checkinPanel() {
     </tr>`;
   }).join('');
 
+  body.querySelectorAll('.igIn').forEach(i => {
+    i.addEventListener('change', async () => {
+      const handle = i.value.trim().replace(/^@+/, '')
+        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null;
+      i.disabled = true;
+      const res = await save(sb.from('guests').update({ instagram: handle })
+        .eq('id', i.dataset.gid), 'that handle');
+      i.disabled = false;
+      const g = GUESTS.find(x => x.id === i.dataset.gid);
+      if (!res.ok) { i.style.borderColor = 'var(--critical)'; alert(res.msg); return; }
+      if (g) g.instagram = handle;
+      renderAll();
+    });
+  });
   body.querySelectorAll('.ciDoc').forEach(b => {
     b.addEventListener('click', () => openDoc(b.dataset.path, b));
   });
@@ -2427,7 +2452,7 @@ document.getElementById('spCsv')?.addEventListener('click', () => {
 window.__logistics = { boxesPanel, sponsorsPanel,
   fake(g, sp, dl, ci, cw){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
     if (cw) CREW = cw;
-    boxesPanel(); sponsorsPanel(); if (cw) crewPanel(); } };
+    renderAll(); } };
 
 /* ============================================================================
    SLUMBER GAMES
