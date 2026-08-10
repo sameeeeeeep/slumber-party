@@ -681,3 +681,21 @@ alter table public.activities add constraint activities_status_check
   check (status in ('planned', 'ready', 'done', 'cut'));
 alter table public.activities enable row level security;
 -- admin-only on all four verbs, same as every other ops table.
+
+-- How long an activity runs, and the seam between the list and the programme.
+-- Minutes, not a text field: "1h 35m" reads well to a human and means nothing to
+-- a sum, and the useful question is whether the total fits in two days.
+alter table public.activities add column if not exists mins integer;
+alter table public.activities drop constraint if exists activities_mins_check;
+alter table public.activities add constraint activities_mins_check
+  check (mins is null or (mins >= 0 and mins <= 1440));
+
+-- An itinerary slot can point back at the activity it came from, so the
+-- activities table can show where each one landed. Nullable: most of the
+-- programme predates the activities list, and ON DELETE SET NULL means removing
+-- an activity leaves its slot in the programme rather than tearing a hole in the
+-- day. An activity can hold several slots — two nail-bar sessions is one row here
+-- and two there.
+alter table public.itinerary add column if not exists activity_id uuid
+  references public.activities(id) on delete set null;
+create index if not exists itinerary_activity_idx on public.itinerary (activity_id);
