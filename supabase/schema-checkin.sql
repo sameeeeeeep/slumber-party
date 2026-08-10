@@ -706,3 +706,54 @@ create index if not exists itinerary_activity_idx on public.itinerary (activity_
 -- Not a name per column either — that caps the list at whatever number seemed
 -- like enough on the day it was written.
 alter table public.crew add column if not exists members text;
+
+-- ============================================================================
+--  THE NAIL BOARD  (11 Aug 2026)
+--
+--  A 20-minute round: guests screenshot nail designs and add them at /board, a
+--  projected wall at /board/wall fills up as they land. The TAG is the point —
+--  a pile of screenshots can't be counted, a tally can, and what leaves the
+--  party is the ranked list.
+--
+--  Note what is missing: an INSERT policy on either table. Guests are not
+--  authenticated and never touch these; every write goes through the `board`
+--  Edge Function under the service role, which checks the guest word, validates
+--  the tag against a fixed list, decodes the image itself rather than trusting a
+--  Content-Type, and caps one person at 12 posts so a single phone can't bury the
+--  wall. Admins get SELECT/UPDATE/DELETE for moderation and the export.
+--
+--  The `board` bucket is public-read on purpose. The wall shows forty images for
+--  twenty minutes and signed URLs expiring mid-round would blank it; paths are
+--  random UUIDs, nothing links to them, and the dashboard's "clear the board"
+--  empties the bucket by listing it — so orphans from any cause go too. These are
+--  other people's pictures: clear it once the tally exists.
+-- ============================================================================
+create table if not exists public.board_posts (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  guest_id   uuid references public.guests(id) on delete set null,
+  name       text not null,      -- picked from the roster, so the tally counts one Pearl
+  tag        text not null,      -- validated against the function's TAGS list
+  colour     text,
+  path       text not null,      -- object name in the `board` bucket
+  hidden     boolean not null default false   -- moderation; off the wall within one poll
+);
+create index if not exists board_posts_new_idx on public.board_posts (created_at desc);
+
+create table if not exists public.board_votes (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  post_id    uuid not null references public.board_posts(id) on delete cascade,
+  voter      text not null
+);
+-- one vote per person per post: this is what makes re-tapping a favourite a
+-- no-op instead of spending one of their three
+create unique index if not exists board_votes_once_idx on public.board_votes (post_id, voter);
+create index if not exists board_votes_voter_idx on public.board_votes (voter);
+
+alter table public.board_posts enable row level security;
+alter table public.board_votes enable row level security;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('board', 'board', true, 3145728, array['image/jpeg','image/png','image/webp'])
+on conflict (id) do nothing;

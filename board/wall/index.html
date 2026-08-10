@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="referrer" content="no-referrer" />
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+<title>the nail board · the wall</title>
+<meta name="description" content="The wall." />
+<link rel="icon" type="image/png" href="/assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Playfair+Display:ital,wght@0,500&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* THE WALL — projected in a room, read from across it, touched by nobody.
+     That decides everything: no controls, enormous type, and it has to look
+     right at three images and at two hundred. The grid is masonry-by-columns so
+     screenshots of any shape sit together without being cropped square, and new
+     ones arrive with a little animation because the whole point is watching your
+     own appear. */
+  :root{
+    --wine:#2a1520; --wine-2:#1c1017; --cream:#fff6f8;
+    --pink:#eb648c; --rose:#c2456b; --soft:#c9a0ae; --yellow:#ffe9a8;
+    --mono:'VT323',monospace; --pixel:'Press Start 2P',monospace;
+    --serif:'Playfair Display',serif;
+  }
+  *{ box-sizing:border-box; }
+  p,h1,h2{ margin:0; }
+  html,body{ margin:0; height:100%; overflow:hidden; }
+  body{ background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%);
+    color:var(--cream); font-family:var(--mono); }
+
+  #gate{ height:100%; display:grid; place-items:center; padding:1.4rem; }
+  .gbox{ text-align:center; width:min(22rem,100%); }
+  .gbox img{ display:block; width:min(74%,15rem); margin:0 auto .8rem; }
+  .gbox h1{ font-family:var(--serif); font-style:italic; font-size:1.7rem; margin:0 0 1.1rem; color:#fff; }
+  .gbox form{ display:flex; gap:.5rem; }
+  .gbox input{ flex:1; min-width:0; background:rgba(255,255,255,.06);
+    border:1px solid rgba(245,195,207,.28); border-radius:100px; padding:.6rem 1rem;
+    color:var(--cream); font-family:var(--mono); font-size:1.3rem; outline:none; text-align:center; }
+  .gbox button{ flex:none; border:0; cursor:pointer; border-radius:100px; padding:.55rem 1.05rem;
+    font-family:var(--pixel); font-size:.6rem; color:#fff;
+    background:linear-gradient(120deg,var(--pink),#e2703f); }
+  .gbox .err{ min-height:1.5rem; margin-top:.7rem; font-size:1.1rem; color:#ffb3c6; }
+
+  #wall{ display:none; height:100%; grid-template-columns:1fr 15rem; }
+  #wall.on{ display:grid; }
+  @media (max-width:900px){ #wall.on{ grid-template-columns:1fr; grid-template-rows:1fr auto; } }
+
+  /* the images */
+  #grid{ overflow:hidden; padding:1rem; column-gap:.7rem; column-fill:balance; }
+  #grid figure{ margin:0 0 .7rem; break-inside:avoid; position:relative;
+    border-radius:.8rem; overflow:hidden; border:1px solid rgba(245,195,207,.18);
+    background:rgba(255,255,255,.04); animation:pop .55s cubic-bezier(.2,.9,.3,1.2); }
+  #grid img{ display:block; width:100%; height:auto; }
+  #grid figcaption{ position:absolute; left:0; right:0; bottom:0; padding:.5rem .6rem .4rem;
+    font-size:1.15rem; line-height:1.15;
+    background:linear-gradient(transparent, rgba(15,8,12,.82)); }
+  #grid .who{ color:#fff; }
+  #grid .tg{ color:var(--yellow); }
+  #grid figure.fresh{ box-shadow:0 0 0 2px var(--pink), 0 .6rem 2rem rgba(235,100,140,.45); }
+  @keyframes pop{ from{ opacity:0; transform:scale(.92) translateY(10px); } }
+
+  .empty{ grid-column:1/-1; align-self:center; text-align:center; color:var(--soft);
+    font-size:1.8rem; line-height:1.5; }
+
+  /* the side: the number, then the tally. This is the actual output of the round */
+  aside{ border-left:1px solid rgba(245,195,207,.14); padding:1.4rem 1.1rem;
+    display:flex; flex-direction:column; gap:1rem; min-height:0; }
+  @media (max-width:900px){ aside{ border-left:0; border-top:1px solid rgba(245,195,207,.14);
+    flex-direction:row; align-items:center; overflow-x:auto; padding:.8rem 1rem; } }
+  aside img.logo{ width:min(100%,9rem); }
+  .big{ font-family:var(--pixel); font-size:2.6rem; color:var(--yellow); line-height:1;
+    text-shadow:0 0 20px rgba(255,233,168,.4); }
+  .lbl{ font-family:var(--pixel); font-size:.52rem; letter-spacing:.14em; color:var(--soft); }
+  .tally{ display:flex; flex-direction:column; gap:.42rem; min-width:12rem; }
+  .row{ display:grid; grid-template-columns:1fr auto; align-items:center; gap:.5rem;
+    font-size:1.25rem; }
+  .bar{ grid-column:1/-1; height:.42rem; border-radius:100px; background:rgba(255,255,255,.09); }
+  .bar i{ display:block; height:100%; border-radius:100px;
+    background:linear-gradient(90deg,var(--pink),var(--yellow)); transition:width .6s; }
+  .n{ font-variant-numeric:tabular-nums; color:var(--yellow); }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gbox" id="gbox">
+    <img src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <h1>the wall</h1>
+    <form id="gform">
+      <input id="gpw" type="password" autocomplete="off" autocapitalize="none" placeholder="•••••" />
+      <button type="submit">OPEN ▸</button>
+    </form>
+    <p class="err" id="gerr"></p>
+  </div>
+</div>
+
+<div id="wall">
+  <div id="grid"></div>
+  <aside>
+    <img class="logo" src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <div>
+      <p class="big" id="total">0</p>
+      <p class="lbl">DESIGNS ON THE WALL</p>
+    </div>
+    <div>
+      <p class="big" id="people" style="font-size:1.6rem">0</p>
+      <p class="lbl">PEOPLE ADDING</p>
+    </div>
+    <div class="tally" id="tally"></div>
+  </aside>
+</div>
+
+<script src="/assets/config.js"></script>
+<script>
+/* ============================================================================
+   /board/wall — the projected side of the nail board.
+
+   Polls rather than subscribes, on purpose. Guests can't read the tables (there
+   is no SELECT policy for them), so a realtime subscription would need auth this
+   screen doesn't have — and at roughly one upload every five seconds a three
+   second poll is indistinguishable from live, with nothing to reconnect when the
+   room's wifi hiccups. One screen polling is a rounding error of load.
+
+   Two rules the projector imposes:
+     - only redraw what changed. Replacing the grid every three seconds would
+       restart every animation and flicker a wall of forty images.
+     - newest first, and the newest few glow. People need to spot their own.
+   ========================================================================== */
+const CFG = window.SLUMBER_CONFIG || {};
+const FN = CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/board';
+const POLL = 3000;
+const FRESH_MS = 25000;          // how long an arrival keeps its glow
+let PW = null, seen = new Set();
+try { PW = sessionStorage.getItem('ssp-itin'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+async function fetchBoard(pw) {
+  const r = await fetch(FN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: pw, action: 'board' }),
+  });
+  if (r.status === 401) return { wrong: true };
+  if (r.status === 429) return { rate: true };
+  return await r.json().catch(() => ({}));
+}
+
+/* how many columns the wall should use — few images want few columns, or three
+   screenshots end up as three hairlines down the left of a projector */
+function columns(n) {
+  const wide = innerWidth > 900;
+  if (n <= 2) return 1;
+  if (n <= 6) return 2;
+  if (n <= 14) return 3;
+  if (n <= 30) return wide ? 4 : 3;
+  if (n <= 60) return wide ? 5 : 3;
+  return wide ? 6 : 4;
+}
+
+function render(d) {
+  const posts = d.posts || [];
+  $('total').textContent = d.total || 0;
+  $('people').textContent = d.people || 0;
+
+  const grid = $('grid');
+  grid.style.columnCount = columns(posts.length);
+
+  if (!posts.length) {
+    grid.innerHTML = '<p class="empty">nothing on the wall yet 💅<br />' +
+      '<span style="font-size:1.2rem">open the board on your phone and add the first</span></p>';
+    grid.style.columnCount = 1;
+    return;
+  }
+  if (grid.querySelector('.empty')) grid.innerHTML = '';
+
+  /* only touch what's new: a full redraw would restart forty animations and
+     flicker the whole wall every three seconds */
+  const have = new Set([...grid.children].map((el) => el.dataset.id));
+  const now = Date.now();
+  for (const p of [...posts].reverse()) {            // oldest first, so newest ends up on top
+    if (have.has(p.id)) continue;
+    const fresh = now - +new Date(p.at) < FRESH_MS;
+    const fig = document.createElement('figure');
+    fig.dataset.id = p.id;
+    if (fresh && seen.size) fig.classList.add('fresh');
+    fig.innerHTML = `<img src="${esc(p.url)}" alt="" />
+      <figcaption><span class="tg">${esc(p.tag)}</span> <span class="who">${esc(p.name)}</span></figcaption>`;
+    grid.prepend(fig);
+    seen.add(p.id);
+    if (fresh) setTimeout(() => fig.classList.remove('fresh'), FRESH_MS);
+  }
+  // anything hidden in the dashboard disappears from the wall within a poll
+  const live = new Set(posts.map((p) => p.id));
+  for (const el of [...grid.children]) if (!live.has(el.dataset.id)) el.remove();
+  if (!seen.size) posts.forEach((p) => seen.add(p.id));
+
+  const top = (d.tally || [])[0];
+  const max = top ? top.n : 1;
+  $('tally').innerHTML = (d.tally || []).slice(0, 8).map((t) =>
+    `<div class="row"><span>${esc(t.tag)}</span><span class="n">${t.n}</span>
+       <span class="bar"><i style="width:${Math.round(t.n / max * 100)}%"></i></span></div>`).join('');
+}
+
+async function open_(pw, quiet) {
+  const res = await fetchBoard(pw);
+  if (res.posts || res.ok) {
+    PW = pw;
+    try { sessionStorage.setItem('ssp-itin', pw); } catch (e) {}
+    $('gate').style.display = 'none';
+    $('wall').classList.add('on');
+    render(res);
+    return true;
+  }
+  if (!quiet) {
+    $('gerr').textContent = res.rate ? 'too many tries — give it a while 🙏'
+      : res.wrong ? "that's not it 👀" : 'hmm, try again';
+  }
+  return false;
+}
+
+$('gform').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('gpw').value.trim();
+  if (v) open_(v, false);
+});
+
+/* it lives on a wall — it has to keep itself current with nobody touching it */
+setInterval(() => { if (PW && !document.hidden) open_(PW, true); }, POLL);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && PW) open_(PW, true); });
+addEventListener('resize', () => { const n = $('grid').children.length; $('grid').style.columnCount = columns(n); });
+if (PW) open_(PW, true);
+</script>
+</body>
+</html>

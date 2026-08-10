@@ -303,6 +303,20 @@
   /* every control on one baseline. margin:0 on ALL of them, not just the inputs —
      the base rule's margin-bottom is what pushed the select above the line. */
   /* the add-a-guest line above the table: one row, ending in the button */
+  /* the nail board's thumbnails */
+  .nbGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr)); gap:9px;
+    margin-top:12px; }
+  .nbGrid figure{ margin:0; border:1px solid var(--line); border-radius:11px; overflow:hidden;
+    background:var(--surface-2); position:relative; }
+  .nbGrid img{ display:block; width:100%; aspect-ratio:1; object-fit:cover; }
+  .nbGrid figure.off img{ opacity:.28; filter:grayscale(1); }
+  .nbGrid figcaption{ padding:5px 7px; font-size:.72rem; line-height:1.25; }
+  .nbGrid .who{ color:var(--ink-3); }
+  .nbGrid .acts{ display:flex; gap:4px; padding:0 6px 6px; }
+  .nbGrid .acts button{ flex:1; padding:2px 4px; font-size:10.5px; }
+  .nbGrid .vt{ position:absolute; top:5px; right:6px; background:rgba(0,0,0,.6); color:#fff;
+    border-radius:100px; font-size:.7rem; padding:0 6px; }
+
   .addRow{ display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;
     background:var(--surface-2); border:1px solid var(--line); border-radius:12px;
     padding:10px 12px; margin-top:14px; }
@@ -917,6 +931,25 @@
     <p class="sub" id="carMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
   </section>
 
+
+  <!-- ------------------------------------------------------------ nail board -->
+  <section id="sec-board" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">the nail board</h2>
+      <span class="pill" id="nbCount">—</span>
+      <button class="btn ghost" id="nbCsv" type="button">download csv</button>
+      <button class="btn ghost" id="nbClear" type="button">clear the board</button>
+    </div>
+    <div class="ovs" id="ovBoard"></div>
+    <p class="sub">the 20-minute round: guests add nail designs at <code>/board</code> and the
+      wall at <code>/board/wall</code> fills up as they land. The tally is the point — what
+      leaves the party is the ranked list, not the screenshots. Hide anything that shouldn't
+      be on a projector; it drops off the wall within three seconds.</p>
+    <div class="nbGrid" id="nbGrid"></div>
+    <p class="empty" id="nbEmpty" hidden>nothing added yet.</p>
+    <p class="sub" id="nbMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
+  </section>
+
   <!-- --------------------------------------------------------------- BFFs -->
   <section id="sec-bffs" class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -1176,7 +1209,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [], ACTS = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [], ACTS = [], BOARD = [], BVOTES = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -1196,7 +1229,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm, ac] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm, ac, bp, bv] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -1220,11 +1253,13 @@ async function boot() {
     sb.from('bffs').select('*').order('position'),
     sb.from('hampers').select('*').order('position'),
     sb.from('activities').select('*').order('position'),
+    sb.from('board_posts').select('*').order('created_at', { ascending: false }),
+    sb.from('board_votes').select('post_id,voter'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || []; ACTS = ac.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || []; ACTS = ac.data || []; BOARD = bp.data || []; BVOTES = bv.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -1314,7 +1349,7 @@ const VIEWS = [
   { id:'applications', title:'applications',        blurb:'everyone who applied, and everyone who nearly did' },
   { id:'guests',       title:'guests',              blurb:'the list, their links, their sizes, and every box going out' },
   { id:'crew',         title:'team & vendors',      blurb:'everyone working the party, what they need, and what arrives on wheels' },
-  { id:'games',        title:'slumber games',       blurb:'houses, who is in them, and the score' },
+  { id:'games',        title:'slumber games',       blurb:'houses, the score, and the nail board round' },
   { id:'sponsors',     title:'sponsors',            blurb:'what we get from each brand, and what we owe back' },
   { id:'bffs',         title:'BFFs & hampers',      blurb:'brands giving product, and every hamper going out' },
   { id:'stay',         title:'rooms',               blurb:'the venue, and who sleeps where' },
@@ -1331,7 +1366,7 @@ const VIEW_MAP = {
   applications: ['sec-applied', 'sec-drafts', 'failPanel'],
   guests:       ['sec-checkin'],
   crew:         ['sec-crew', 'sec-cars'],
-  games:        ['sec-games'],
+  games:        ['sec-games', 'sec-board'],
   sponsors:     ['sec-sponsors'],
   bffs:         ['sec-bffs', 'sec-hampers'],
   stay:         ['sec-stay'],
@@ -1364,6 +1399,8 @@ const LIVE_PAGES = [
   ['guests', '/house/',        'the house',     'nailinit'],
   ['guests', '/housemates/',   'intro round',   'housemates'],
   ['guests', '/games/',        'scoreboard',    'nailinit'],
+  ['guests', '/board/',        'nail board',    'nailinit'],
+  ['guests', '/board/wall/',   'the wall',      'nailinit'],
   ['ops',    '/checkin/',      'check-in',      null],
 ];
 const PAGE_GROUPS = [['public', 'anyone'], ['guests', 'guests only'], ['ops', 'ours']];
@@ -1520,7 +1557,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); activitiesPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); activitiesPanel(); boardPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -2826,8 +2863,10 @@ document.getElementById('spCsv')?.addEventListener('click', () => {
 /* same reason as window.__shell: these two panels are the newest and the ones
    most likely to be checked without a login in hand */
 window.__logistics = { sponsorsPanel,
-  fake(g, sp, dl, ci, cw, bf, hm, ac, it){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
+  fake(g, sp, dl, ci, cw, bf, hm, ac, it, bp, bv){ GUESTS = g; SPONSORS = sp; DELIVS = dl;
+    CHECKINS = ci || [];
     if (cw) CREW = cw; if (bf) BFFS = bf; if (hm) HAMPERS = hm; if (ac) ACTS = ac; if (it) ITIN = it;
+    if (bp) BOARD = bp; if (bv) BVOTES = bv;
     renderAll(); } };
 
 
@@ -3097,6 +3136,125 @@ document.getElementById('carCsv')?.addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
   const a = document.createElement('a');
   a.href = url; a.download = 'cars.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+
+/* ============================================================================
+   THE NAIL BOARD
+   The dashboard's side of the /board round. Reads the tables directly (admins
+   have SELECT), but every WRITE goes through the board Edge Function with the
+   session token — hiding and clearing are service-role work, and the guest word
+   deliberately doesn't open them: forty people know that word.
+   ========================================================================== */
+const BOARD_TAGS = ['chrome', 'french', 'cat-eye', 'glitter', 'bows', 'chocolate',
+                    'aura', 'polka', 'minimal', 'almond', 'short', 'other'];
+const boardUrl = (path) => `${CFG.supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/board/${path}`;
+
+async function boardCall(body) {
+  const { data } = await sb.auth.getSession();
+  const token = data?.session?.access_token;
+  if (!token) return { ok: false, error: 'signed out — reload and sign in again' };
+  const r = await fetch(CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/board', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey, 'x-admin-token': token },
+    body: JSON.stringify(body),
+  });
+  return await r.json().catch(() => ({ ok: false, error: 'no answer' }));
+}
+
+function boardPanel(){
+  const grid = document.getElementById('nbGrid');
+  if (!grid) return;
+  const shown = BOARD.filter(p => !p.hidden);
+  const votes = (id) => BVOTES.filter(v => v.post_id === id).length;
+
+  const tally = {};
+  for (const p of shown) tally[p.tag] = (tally[p.tag] || 0) + 1;
+  const ranked = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+
+  strip('ovBoard', [
+    [shown.length, 'on the wall'],
+    [new Set(shown.map(p => p.name)).size, 'people added'],
+    [ranked[0] ? `${ranked[0][0]} ${Math.round(ranked[0][1] / shown.length * 100)}%` : '—', 'winning style'],
+    [BVOTES.length, 'votes cast'],
+    [new Set(BVOTES.map(v => v.voter)).size, 'people voted'],
+    [BOARD.filter(p => p.hidden).length, 'hidden', true],
+  ]);
+  document.getElementById('nbCount').textContent = BOARD.length
+    ? `${shown.length} design${shown.length === 1 ? '' : 's'}` +
+      (ranked.length ? ` · ${ranked.slice(0, 3).map(([t, n]) => `${t} ${n}`).join(' · ')}` : '')
+    : 'nothing yet';
+  document.getElementById('nbEmpty').hidden = BOARD.length > 0;
+
+  /* most-voted first once voting starts, newest first before that — the order
+     should answer whichever question the room is currently asking */
+  const order = BVOTES.length
+    ? [...BOARD].sort((a, b) => votes(b.id) - votes(a.id) || String(b.created_at).localeCompare(String(a.created_at)))
+    : [...BOARD].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+
+  grid.innerHTML = order.map(p => `<figure${p.hidden ? ' class="off"' : ''}>
+    <img src="${esc(boardUrl(p.path))}" alt="" loading="lazy" />
+    ${votes(p.id) ? `<span class="vt">💖 ${votes(p.id)}</span>` : ''}
+    <figcaption><b>${esc(p.tag)}</b>${p.colour ? ` · ${esc(p.colour)}` : ''}<br />
+      <span class="who">${esc(String(p.name).split(/\s+/)[0])}</span></figcaption>
+    <div class="acts">
+      <button class="btn ghost nbAct" data-act="${p.hidden ? 'show' : 'hide'}" data-post="${esc(p.id)}"
+        type="button">${p.hidden ? 'show' : 'hide'}</button>
+      <button class="btn ghost nbAct" data-act="drop" data-post="${esc(p.id)}" type="button">delete</button>
+    </div>
+  </figure>`).join('');
+}
+
+document.getElementById('nbGrid')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.nbAct');
+  if (!btn) return;
+  const msg = document.getElementById('nbMsg');
+  const act = btn.dataset.act, id = btn.dataset.post;
+  if (act === 'drop' && !confirm('Delete this one for good, picture and all?')) return;
+  btn.disabled = true;
+  const res = await boardCall({ action: act, post: id });
+  btn.disabled = false;
+  if (!res.ok) { msg.textContent = res.error || "that didn't work"; msg.className = 'sub err'; return; }
+  if (act === 'drop') BOARD = BOARD.filter(p => p.id !== id);
+  else { const p = BOARD.find(x => x.id === id); if (p) p.hidden = act === 'hide'; }
+  msg.textContent = act === 'drop' ? 'deleted' : act === 'hide' ? 'hidden from the wall' : 'back on the wall';
+  msg.className = 'sub';
+  renderAll();
+});
+
+document.getElementById('nbClear')?.addEventListener('click', async () => {
+  const msg = document.getElementById('nbMsg');
+  if (!confirm(`Clear the whole board — ${BOARD.length} design(s), every vote, and every picture ` +
+               `in the bucket? This is the after-the-party button and it cannot be undone.`)) return;
+  if (!confirm('Really? The screenshots are gone for good. Download the CSV first if you want the tally.')) return;
+  msg.textContent = 'clearing…'; msg.className = 'sub';
+  const res = await boardCall({ action: 'clear' });
+  if (!res.ok) { msg.textContent = res.error || "that didn't work"; msg.className = 'sub err'; return; }
+  BOARD = []; BVOTES = [];
+  msg.textContent = `cleared · ${res.removed} picture${res.removed === 1 ? '' : 's'} removed`;
+  renderAll();
+});
+
+document.getElementById('nbCsv')?.addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const shown = BOARD.filter(p => !p.hidden);
+  const votes = (id) => BVOTES.filter(v => v.post_id === id).length;
+  const lines = [['who', 'style', 'colour', 'votes', 'added', 'picture'].map(cell).join(',')];
+  for (const p of shown)
+    lines.push([p.name, p.tag, p.colour || '', votes(p.id), istStamp(p.created_at),
+                boardUrl(p.path)].map(cell).join(','));
+  /* the ranked tally goes in the same file: it's the actual result of the round,
+     and a second download is a second thing to lose */
+  const tally = {};
+  for (const p of shown) tally[p.tag] = (tally[p.tag] || 0) + 1;
+  lines.push('', ['STYLE', 'PICKED', 'SHARE'].map(cell).join(','));
+  for (const [t, n] of Object.entries(tally).sort((a, b) => b[1] - a[1]))
+    lines.push([t, n, shown.length ? Math.round(n / shown.length * 100) + '%' : ''].map(cell).join(','));
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'nail-board.csv'; a.click();
   URL.revokeObjectURL(url);
 });
 

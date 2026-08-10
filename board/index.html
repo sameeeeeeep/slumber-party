@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="referrer" content="no-referrer" />
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+<title>the nail board 💅 · khushi's slumber party</title>
+<meta name="description" content="Add what you love." />
+<link rel="icon" type="image/png" href="/assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Playfair+Display:ital,wght@0,500&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* THE NAIL BOARD — a phone, held in one hand, for twenty minutes.
+     Everything is thumb-sized and nothing needs two taps that could be one. The
+     tag is the only thing this page really wants: the screenshot is what people
+     came to add, the tag is what makes forty screenshots countable. So the tag
+     chips are the biggest thing on the screen after the picture itself. */
+  :root{
+    --wine:#2a1520; --wine-2:#1c1017; --cream:#fff6f8; --ink:#2b1a22;
+    --pink:#eb648c; --rose:#c2456b; --soft:#c9a0ae; --yellow:#ffe9a8;
+    --mono:'VT323',monospace; --pixel:'Press Start 2P',monospace;
+    --hand:'Caveat',cursive; --serif:'Playfair Display',serif;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  p,h1,h2{ margin:0; }
+  html,body{ margin:0; min-height:100%; }
+  body{ background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%);
+    color:var(--cream); font-family:var(--mono); font-size:18px; }
+
+  /* ---- the gate ---- */
+  #gate{ min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:1.4rem; }
+  .gbox{ text-align:center; width:min(22rem,100%); }
+  .gbox img{ display:block; width:min(74%,15rem); margin:0 auto .8rem; }
+  .gbox h1{ font-family:var(--serif); font-style:italic; font-size:1.7rem; margin:0 0 1.1rem; color:#fff; }
+  .gbox form{ display:flex; gap:.5rem; }
+  .gbox input{ flex:1; min-width:0; background:rgba(255,255,255,.06);
+    border:1px solid rgba(245,195,207,.28); border-radius:100px; padding:.6rem 1rem;
+    color:var(--cream); font-family:var(--mono); font-size:1.3rem; outline:none; text-align:center; }
+  .gbox input:focus{ border-color:var(--pink); }
+  .gbox button{ flex:none; border:0; cursor:pointer; border-radius:100px; padding:.55rem 1.05rem;
+    font-family:var(--pixel); font-size:.6rem; color:#fff;
+    background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .25rem .9rem rgba(235,100,140,.4); }
+  .gbox .err{ min-height:1.5rem; margin-top:.7rem; font-size:1.1rem; color:#ffb3c6; }
+  .gbox.no input{ animation:no .35s; }
+  @keyframes no{ 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+
+  /* ---- the app ---- */
+  #app{ display:none; max-width:34rem; margin:0 auto; padding:1.2rem 1rem 6rem; }
+  #app.on{ display:block; }
+  .top{ text-align:center; margin-bottom:1rem; }
+  .top img{ display:block; width:min(52%,11rem); margin:0 auto .4rem; }
+  .top h1{ font-family:var(--pixel); font-size:.72rem; letter-spacing:.18em; color:var(--yellow); }
+  .top p{ color:var(--soft); font-size:1.05rem; margin-top:.35rem; }
+
+  .who{ display:flex; gap:.5rem; align-items:center; justify-content:center; margin:0 0 1.1rem; }
+  .who select{ background:rgba(255,255,255,.07); color:var(--cream); border:1px solid rgba(245,195,207,.3);
+    border-radius:100px; padding:.5rem .9rem; font-family:var(--mono); font-size:1.15rem; }
+  .who .me{ font-family:var(--serif); font-style:italic; font-size:1.3rem; color:#fff; }
+  .who button{ background:none; border:0; color:var(--soft); font-family:var(--mono);
+    font-size:1rem; text-decoration:underline; cursor:pointer; }
+
+  .card{ background:rgba(255,255,255,.045); border:1px solid rgba(245,195,207,.16);
+    border-radius:1.1rem; padding:1rem; margin-bottom:1rem; }
+  .card h2{ font-family:var(--pixel); font-size:.6rem; letter-spacing:.14em; color:var(--soft);
+    margin-bottom:.7rem; }
+
+  /* the picker is a label so the whole slab is the tap target */
+  .pick{ display:grid; place-items:center; gap:.3rem; min-height:9rem; cursor:pointer;
+    border:2px dashed rgba(245,195,207,.35); border-radius:.9rem; color:var(--soft);
+    background:rgba(255,255,255,.03); text-align:center; padding:1rem; }
+  .pick b{ display:block; color:var(--cream); font-size:1.25rem; font-weight:400; }
+  .pick.has{ border-style:solid; border-color:var(--pink); padding:0; overflow:hidden; }
+  .pick img{ display:block; width:100%; max-height:19rem; object-fit:contain; }
+
+  .tags{ display:flex; flex-wrap:wrap; gap:.45rem; }
+  .tags button{ border:1px solid rgba(245,195,207,.28); background:rgba(255,255,255,.05);
+    color:var(--cream); border-radius:100px; padding:.44rem .85rem; font-family:var(--mono);
+    font-size:1.1rem; cursor:pointer; }
+  .tags button[aria-pressed=true]{ background:var(--rose); border-color:var(--rose); color:#fff; }
+
+  .colour{ width:100%; margin-top:.7rem; background:rgba(255,255,255,.05);
+    border:1px solid rgba(245,195,207,.22); border-radius:.7rem; padding:.5rem .8rem;
+    color:var(--cream); font-family:var(--mono); font-size:1.1rem; outline:none; }
+  .colour:focus{ border-color:var(--pink); }
+
+  .go{ width:100%; margin-top:.9rem; border:0; border-radius:100px; padding:.85rem 1rem;
+    font-family:var(--pixel); font-size:.68rem; color:#fff; cursor:pointer;
+    background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .3rem 1rem rgba(235,100,140,.35); }
+  .go:disabled{ opacity:.45; box-shadow:none; }
+  .msg{ min-height:1.4rem; margin-top:.6rem; font-size:1.05rem; color:var(--soft); text-align:center; }
+  .msg.bad{ color:#ffb3c6; }
+
+  /* mine, so you can see your own land */
+  .mine{ display:grid; grid-template-columns:repeat(auto-fill,minmax(4.6rem,1fr)); gap:.4rem; }
+  .mine figure{ margin:0; position:relative; }
+  .mine img{ width:100%; aspect-ratio:1; object-fit:cover; border-radius:.55rem;
+    border:1px solid rgba(245,195,207,.2); }
+  .mine figcaption{ position:absolute; left:.2rem; bottom:.2rem; font-size:.85rem;
+    background:rgba(0,0,0,.55); border-radius:100px; padding:0 .4rem; }
+
+  /* the vote round */
+  .votes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(6.4rem,1fr)); gap:.5rem; }
+  .votes figure{ margin:0; cursor:pointer; position:relative; }
+  .votes img{ width:100%; aspect-ratio:1; object-fit:cover; border-radius:.6rem;
+    border:2px solid transparent; }
+  .votes figure[aria-pressed=true] img{ border-color:var(--pink); }
+  .votes .h{ position:absolute; top:.25rem; right:.35rem; font-size:1.15rem;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+  .votes figcaption{ font-size:.9rem; color:var(--soft); text-align:center; margin-top:.15rem; }
+  .tabs{ display:flex; gap:.4rem; justify-content:center; margin:0 0 1rem; }
+  .tabs button{ flex:1; border:1px solid rgba(245,195,207,.25); background:rgba(255,255,255,.04);
+    color:var(--soft); border-radius:100px; padding:.5rem; font-family:var(--mono);
+    font-size:1.05rem; cursor:pointer; }
+  .tabs button[aria-selected=true]{ background:rgba(235,100,140,.22); color:#fff; border-color:var(--pink); }
+  .empty{ text-align:center; color:var(--soft); padding:1.6rem 1rem; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gbox" id="gbox">
+    <img src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <h1>the nail board</h1>
+    <form id="gform">
+      <input id="gpw" type="password" autocomplete="off" autocapitalize="none" placeholder="•••••" />
+      <button type="submit">OPEN ▸</button>
+    </form>
+    <p class="err" id="gerr"></p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="top">
+    <img src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <h1>THE NAIL BOARD</h1>
+    <p>find a set you love, screenshot it, add it here 💅</p>
+  </div>
+
+  <div class="who" id="who"></div>
+
+  <div class="tabs" id="tabs">
+    <button type="button" data-tab="add" aria-selected="true">add yours</button>
+    <button type="button" data-tab="vote" aria-selected="false">pick favourites</button>
+  </div>
+
+  <section class="card" id="addCard">
+    <h2>YOUR SCREENSHOT</h2>
+    <label class="pick" id="pick" for="file">
+      <b>tap to add a screenshot</b>
+      <span>from your camera roll</span>
+    </label>
+    <input id="file" type="file" accept="image/*" hidden />
+
+    <h2 style="margin-top:1rem">WHAT KIND IS IT?</h2>
+    <div class="tags" id="tags"></div>
+    <input id="colour" class="colour" placeholder="colour, if it's the point (optional)" maxlength="40" />
+
+    <button class="go" id="go" disabled type="button">ADD TO THE BOARD</button>
+    <p class="msg" id="msg"></p>
+  </section>
+
+  <section class="card" id="mineCard" hidden>
+    <h2>YOURS SO FAR · <span id="mineN">0</span></h2>
+    <div class="mine" id="mine"></div>
+  </section>
+
+  <section class="card" id="voteCard" hidden>
+    <h2>YOUR <span id="votesLeft">3</span> FAVOURITES</h2>
+    <p class="msg" id="vmsg" style="margin:0 0 .7rem">tap the three you'd actually get done.</p>
+    <div class="votes" id="votes"></div>
+  </section>
+</div>
+
+<script src="/assets/config.js"></script>
+<script>
+/* ============================================================================
+   /board — the guest side of the nail board.
+
+   The whole thing is one POST endpoint behind the guest word. Two jobs:
+
+   1. RESIZE BEFORE UPLOAD. A phone screenshot is 2–5 MB, and forty of those on
+      hotel wifi is a round that doesn't finish. Every image goes through a
+      canvas first — long edge 1200px, JPEG at 0.82 — which lands around 200KB
+      and makes the projected wall snap instead of crawl.
+
+   2. NAME ONCE. Who you are is picked from the real guest list, not typed, so
+      the tally counts one Pearl rather than "Pearl", "pearl" and "Pearl M".
+      It's remembered on the device, because being asked who you are every time
+      you add a screenshot is the fastest way to stop adding screenshots.
+   ========================================================================== */
+const CFG = window.SLUMBER_CONFIG || {};
+const FN = CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/board';
+const LONG_EDGE = 1200, QUALITY = 0.82;
+
+let PW = null, ME = null, TAGS = [], VOTES_EACH = 3, MY_VOTES = [], PENDING = null, TAG = null;
+try { PW = sessionStorage.getItem('ssp-itin'); ME = localStorage.getItem('ssp-board-me'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+async function call(body) {
+  const r = await fetch(FN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: PW, ...body }),
+  });
+  if (r.status === 401) return { wrong: true };
+  if (r.status === 429) return { rate: true, ...(await r.json().catch(() => ({}))) };
+  return await r.json().catch(() => ({}));
+}
+
+/* ---- the gate ---- */
+async function open_(pw, quiet) {
+  const res = await fetch(FN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: pw, action: 'open' }),
+  });
+  if (!res.ok) {
+    if (!quiet) {
+      const box = $('gbox');
+      $('gerr').textContent = res.status === 429 ? 'too many tries — give it a while 🙏'
+        : res.status === 401 ? "that's not it 👀" : 'hmm, try again';
+      box.classList.remove('no'); void box.offsetWidth; box.classList.add('no');
+    }
+    return false;
+  }
+  const j = await res.json();
+  PW = pw;
+  try { sessionStorage.setItem('ssp-itin', pw); } catch (e) {}
+  TAGS = j.tags || []; VOTES_EACH = j.votesEach || 3;
+  $('gate').style.display = 'none';
+  $('app').classList.add('on');
+  paintWho(j.roster || []);
+  paintTags();
+  refresh();
+  setInterval(() => { if (!document.hidden) refresh(); }, 8000);
+  return true;
+}
+
+$('gform').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('gpw').value.trim();
+  if (v) open_(v, false);
+});
+
+/* ---- who you are ---- */
+function paintWho(roster) {
+  const el = $('who');
+  if (ME) {
+    el.innerHTML = `<span class="me">hi ${esc(ME.split(/\s+/)[0])} 👋</span>
+      <button type="button" id="notMe">not you?</button>`;
+    $('notMe').addEventListener('click', () => {
+      ME = null;
+      try { localStorage.removeItem('ssp-board-me'); } catch (e) {}
+      paintWho(roster); gate();
+    });
+  } else {
+    el.innerHTML = `<select id="mePick"><option value="">who are you?</option>` +
+      roster.map((g) => `<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('') +
+      `</select>`;
+    $('mePick').addEventListener('change', (e) => {
+      if (!e.target.value) return;
+      ME = e.target.value;
+      try { localStorage.setItem('ssp-board-me', ME); } catch (e) {}
+      paintWho(roster); gate(); refresh();
+    });
+  }
+  gate();
+}
+/* nothing works until we know who is adding — otherwise the tally is a guess */
+function gate() {
+  const ready = !!ME;
+  $('addCard').style.opacity = ready ? '1' : '.5';
+  $('addCard').style.pointerEvents = ready ? '' : 'none';
+  $('voteCard').style.opacity = ready ? '1' : '.5';
+  $('voteCard').style.pointerEvents = ready ? '' : 'none';
+  ready ? null : ($('msg').textContent = '');
+  syncGo();
+}
+
+function paintTags() {
+  $('tags').innerHTML = TAGS.map((t) =>
+    `<button type="button" data-tag="${esc(t)}" aria-pressed="false">${esc(t)}</button>`).join('');
+}
+$('tags').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tag]');
+  if (!b) return;
+  TAG = b.dataset.tag === TAG ? null : b.dataset.tag;
+  for (const x of $('tags').querySelectorAll('button'))
+    x.setAttribute('aria-pressed', String(x.dataset.tag === TAG));
+  syncGo();
+});
+
+/* ---- the screenshot ---- */
+$('file').addEventListener('change', async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  $('msg').textContent = 'getting it ready…'; $('msg').className = 'msg';
+  try {
+    PENDING = await shrink(f);
+  } catch (err) {
+    PENDING = null;
+    $('msg').textContent = "couldn't read that picture — try another";
+    $('msg').className = 'msg bad';
+    syncGo(); return;
+  }
+  const p = $('pick');
+  p.classList.add('has');
+  p.innerHTML = `<img src="${PENDING}" alt="" />`;
+  $('msg').textContent = '';
+  syncGo();
+});
+
+/* Canvas, not the raw file: a screenshot is 2–5 MB and nothing about a nail
+   design needs that. createImageBitmap where it exists (it decodes off the main
+   thread, so the phone doesn't freeze on a big screenshot), an <img> otherwise. */
+async function shrink(file) {
+  let bmp = null, url = null;
+  try {
+    bmp = await createImageBitmap(file);
+  } catch (e) {
+    url = URL.createObjectURL(file);
+    bmp = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i); i.onerror = rej; i.src = url;
+    });
+  }
+  const w = bmp.width || bmp.naturalWidth, h = bmp.height || bmp.naturalHeight;
+  if (!w || !h) throw new Error('no dimensions');
+  const k = Math.min(1, LONG_EDGE / Math.max(w, h));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  if (url) URL.revokeObjectURL(url);
+  if (bmp.close) bmp.close();
+  return c.toDataURL('image/jpeg', QUALITY);
+}
+
+function syncGo() { $('go').disabled = !(ME && PENDING && TAG); }
+
+$('go').addEventListener('click', async () => {
+  if ($('go').disabled) return;
+  $('go').disabled = true;
+  $('msg').textContent = 'adding…'; $('msg').className = 'msg';
+  const res = await call({ action: 'add', name: ME, tag: TAG,
+                           colour: $('colour').value.trim() || null, image: PENDING });
+  if (!res.ok) {
+    $('msg').className = 'msg bad';
+    $('msg').textContent = res.error === 'enough' ? "that's plenty from you 😄 let others in"
+      : res.rate ? 'slow down a second 🙏'
+      : res.error === 'image' ? "that picture didn't go through — try another"
+      : 'that didn\'t save — try again';
+    $('go').disabled = false;
+    return;
+  }
+  /* reset for the next one: people add three or four in a row, and clearing the
+     picture but keeping the tag is what that rhythm wants */
+  PENDING = null;
+  const p = $('pick');
+  p.classList.remove('has');
+  p.innerHTML = '<b>tap to add another</b><span>from your camera roll</span>';
+  $('file').value = '';
+  $('colour').value = '';
+  $('msg').textContent = 'on the wall ✨';
+  refresh();
+});
+
+/* ---- tabs ---- */
+$('tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b) return;
+  for (const x of $('tabs').querySelectorAll('button'))
+    x.setAttribute('aria-selected', String(x === b));
+  const vote = b.dataset.tab === 'vote';
+  $('addCard').hidden = vote;
+  $('mineCard').hidden = vote || !$('mine').children.length;
+  $('voteCard').hidden = !vote;
+  if (vote) refresh();
+});
+
+/* ---- what's on the board ---- */
+async function refresh() {
+  const res = await call({ action: 'board', name: ME || '' });
+  if (!res.ok) return;
+  MY_VOTES = res.myVotes || [];
+  VOTES_EACH = res.votesEach || VOTES_EACH;
+  $('votesLeft').textContent = Math.max(0, VOTES_EACH - MY_VOTES.length);
+
+  const mine = (res.posts || []).filter((p) => ME && p.name === ME.split(/\s+/)[0]);
+  $('mineN').textContent = mine.length;
+  $('mine').innerHTML = mine.map((p) =>
+    `<figure><img src="${esc(p.url)}" alt="" loading="lazy" /><figcaption>${esc(p.tag)}</figcaption></figure>`).join('');
+  $('mineCard').hidden = !mine.length || !$('voteCard').hidden;
+
+  $('votes').innerHTML = (res.posts || []).length
+    ? res.posts.map((p) => `<figure data-post="${esc(p.id)}" aria-pressed="${MY_VOTES.includes(p.id)}">
+        <img src="${esc(p.url)}" alt="" loading="lazy" />
+        ${MY_VOTES.includes(p.id) ? '<span class="h">💖</span>' : ''}
+        <figcaption>${esc(p.tag)} · ${esc(p.name)}</figcaption></figure>`).join('')
+    : '<p class="empty">nothing on the board yet 💅<br />be the first.</p>';
+}
+
+$('votes').addEventListener('click', async (e) => {
+  const f = e.target.closest('figure[data-post]');
+  if (!f || !ME) return;
+  const res = await call({ action: 'vote', name: ME, post: f.dataset.post });
+  if (!res.ok) {
+    $('vmsg').textContent = res.error === 'spent'
+      ? `that's all ${VOTES_EACH} used — they're locked in 💖` : "that didn't count, try again";
+    return;
+  }
+  $('vmsg').textContent = res.left ? `${res.left} left` : 'all three in 💖';
+  refresh();
+});
+
+if (PW) open_(PW, true);
+</script>
+</body>
+</html>
