@@ -303,6 +303,17 @@
   /* every control on one baseline. margin:0 on ALL of them, not just the inputs —
      the base rule's margin-bottom is what pushed the select above the line. */
   /* the add-a-guest line above the table: one row, ending in the button */
+  /* who is inside a headcount */
+  .crNames{ padding:2px 7px; font-size:11px; margin-left:5px; font-variant-numeric:tabular-nums; }
+  .crNames.miss{ border-color:var(--critical); color:var(--critical); }
+  .crNamesRow > td{ padding:0 !important; background:var(--surface-2); }
+  .crNames-in{ padding:.6rem .8rem .7rem; }
+  .crNames-in .lb{ display:block; font-size:.68rem; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--ink-3); margin-bottom:6px; }
+  .crNames-in .boxes{ display:flex; flex-wrap:wrap; gap:6px; }
+  .crNames-in input{ width:8.5rem; margin:0; height:30px; padding:.1rem .5rem; font-size:.82rem; }
+  .crNames-in .sub{ display:block; margin:6px 0 0; }
+
   /* the nail board's thumbnails */
   .nbGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr)); gap:9px;
     margin-top:12px; }
@@ -4302,7 +4313,10 @@ document.getElementById('vnCsv').addEventListener('click', () => {
    a child table would be a join for something only ever read as a list, and a
    name per column would cap it at whatever number seemed enough today. */
 const nameList = (r) => String(r.members || '').split('\n').map(x => x.trim()).filter(Boolean);
-const namedGap = (r) => Math.max(0, (Number(r.headcount) || 0) - nameList(r).length);
+/* A row of one is already named — the row IS the person. Only a group needs the
+   list, so a one-person entry has nothing missing and shows no button at all. */
+const needsNames = (r) => (Number(r.headcount) || 0) > 1;
+const namedGap = (r) => needsNames(r) ? Math.max(0, Number(r.headcount) - nameList(r).length) : 0;
 const crewOpen = new Set();     // which rows are expanded; survives the re-render
 
 function crewPanel() {
@@ -4345,20 +4359,25 @@ function crewPanel() {
 
   /* the panel that opens under a row: as wide as the table, so a long list of
      names doesn't squeeze the columns it sits inside */
-  const namesRow = (r) => !crewOpen.has(r.id) ? '' : `<tr class="crNamesRow">
-    <td colspan="9" style="padding:.5rem .7rem .8rem">
-      <label style="display:block;margin:0;font-size:.76rem;color:var(--ink-2)">
-        everyone in ${esc(r.name)} — one name per line
-        <textarea class="crIn" data-crew="${esc(r.id)}" data-k="members" rows="${
-          Math.max(2, Math.min(10, (Number(r.headcount) || 1) + 1))}"
-          placeholder="Ravi&#10;Neha&#10;Imran"
-          style="width:min(34rem,100%);height:auto;margin-top:4px">${esc(r.members || '')}</textarea></label>
-      <span class="sub" style="margin:0">${
-        nameList(r).length
-          ? `${nameList(r).length} named of ${Number(r.headcount) || 0}` +
-            (namedGap(r) ? ` · ${namedGap(r)} still to name` : ' · all named')
-          : 'nobody named yet'}</span>
-    </td></tr>`;
+  /* One box per person rather than a free-text block: with four boxes you can see
+     at a glance that you have named two of them, which a textarea can't show. The
+     boxes follow the headcount — change it to five and a fifth appears. Anything
+     typed beyond the count is kept and shown, rather than silently dropped. */
+  const namesRow = (r) => !crewOpen.has(r.id) ? '' : (() => {
+    const names = nameList(r), n = Math.max(Number(r.headcount) || 0, names.length);
+    const boxes = Array.from({ length: n }, (_, i) => `<input class="crName"
+      data-crew="${esc(r.id)}" data-i="${i}" value="${esc(names[i] || '')}"
+      placeholder="${i + 1}${i >= (Number(r.headcount) || 0) ? ' (extra)' : ''}"
+      spellcheck="false" />`).join('');
+    return `<tr class="crNamesRow"><td colspan="9">
+      <div class="crNames-in">
+        <span class="lb">who the ${n} of them are</span>
+        <div class="boxes">${boxes}</div>
+        <span class="sub">${namedGap(r)
+          ? `${namedGap(r)} still to name`
+          : 'all named ✓'} · leave a box empty if you don't know yet</span>
+      </div></td></tr>`;
+  })();
 
   body.innerHTML = rows.map(r => `<tr>
     ${txt(r, 'name', 'name', '9rem', ' nm')}
@@ -4369,10 +4388,10 @@ function crewPanel() {
     <td style="white-space:nowrap"><input class="crIn" data-crew="${esc(r.id)}" data-k="headcount"
         type="number" min="0" max="99" value="${Number(r.headcount) || 0}"
         style="width:3.6rem;font-variant-numeric:tabular-nums" />
-      <button class="btn ghost crNames" data-crew="${esc(r.id)}" type="button"
-        title="who they are" style="padding:2px 7px;font-size:11px;margin-left:4px${
-          namedGap(r) ? ';border-color:var(--critical)' : ''}">${
-          nameList(r).length ? `${nameList(r).length}/${Number(r.headcount) || 0} ▾` : 'name them ▾'}</button></td>
+      ${needsNames(r) ? `<button class="btn ghost crNames${namedGap(r) ? ' miss' : ''}"
+        data-crew="${esc(r.id)}" type="button" aria-expanded="${crewOpen.has(r.id)}"
+        title="who the ${Number(r.headcount)} of them are">${
+          namedGap(r) ? `${nameList(r).length}/${Number(r.headcount)}` : '✓ all'} ▾</button>` : ''}</td>
     <td><select class="crIn${r.tshirt ? '' : ' miss'}" data-crew="${esc(r.id)}" data-k="tshirt"
           style="width:4.9rem">
         <option value=""${r.tshirt ? '' : ' selected'}>—</option>
@@ -4416,6 +4435,32 @@ document.getElementById('crewBody').addEventListener('change', async (e) => {
   setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
 });
 
+/* Each box owns one slot in the list. Saving rejoins the whole thing, and trailing
+   blanks are dropped so an unfilled box doesn't become an empty name. */
+document.getElementById('crewBody').addEventListener('change', async (e) => {
+  const el = e.target.closest('.crName');
+  if (!el) return;
+  const id = el.dataset.crew, i = Number(el.dataset.i);
+  const row = CREW.find(x => x.id === id);
+  if (!row) return;
+  const names = nameList(row);
+  while (names.length <= i) names.push('');
+  names[i] = el.value.trim();
+  while (names.length && !names[names.length - 1]) names.pop();
+  const members = names.join('\n') || null;
+  const msg = document.getElementById('crewMsg');
+  el.disabled = true;
+  const res = await save(sb.from('crew').update({ members }).eq('id', id), 'that name');
+  el.disabled = false;
+  if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  row.members = members;
+  msg.textContent = 'saved'; msg.className = 'sub';
+  /* the panel is left alone on purpose: re-rendering mid-list would move the
+     caret out of the box you're tabbing through */
+  crewPanel();
+  setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
+});
+
 /* open the list of who is inside a headcount */
 document.getElementById('crewBody').addEventListener('click', (e) => {
   const btn = e.target.closest('.crNames');
@@ -4423,7 +4468,8 @@ document.getElementById('crewBody').addEventListener('click', (e) => {
   const id = btn.dataset.crew;
   crewOpen.has(id) ? crewOpen.delete(id) : crewOpen.add(id);
   crewPanel();
-  document.querySelector(`.crNamesRow textarea[data-crew="${id}"]`)?.focus();
+  const boxes = [...document.querySelectorAll(`.crName[data-crew="${id}"]`)];
+  (boxes.find((b) => !b.value) || boxes[0])?.focus();
 });
 
 document.getElementById('crewBody').addEventListener('click', async (e) => {
