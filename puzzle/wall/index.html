@@ -76,8 +76,15 @@
   #done img{ width:min(88vw,1400px); max-height:76vh; object-fit:contain;
     animation:pop 1.1s cubic-bezier(.2,.9,.3,1.15); }
   @keyframes pop{ from{ opacity:0; transform:scale(.94); } }
-  #done p{ margin-top:1.6rem; font-family:var(--pixel); font-size:.8rem; letter-spacing:.2em;
-    color:var(--yellow); text-align:center; animation:fadeIn 1.2s .7s both; }
+  /* the line under the finished picture. Two parts, because a name and a job
+     title want different voices — the name in the site's serif, the role in the
+     pixel font that every other heading uses. */
+  #done .cap{ margin-top:1.5rem; text-align:center; }
+  #done .who{ display:block; font-family:var(--serif); font-style:italic;
+    font-size:clamp(1.6rem,3.4vw,3rem); color:#fff; animation:fadeIn 1.1s .6s both; }
+  #done .role{ display:block; margin-top:.7rem; font-family:var(--pixel);
+    font-size:clamp(.6rem,1.1vw,.95rem); letter-spacing:.22em; color:var(--yellow);
+    text-shadow:0 0 22px rgba(255,233,168,.5); animation:fadeIn 1.2s 1.5s both; }
 
   footer{ display:flex; align-items:center; gap:1.4rem; padding:.7rem 1.2rem;
     border-top:1px solid rgba(245,195,207,.14); }
@@ -117,7 +124,8 @@
   </footer>
 </div>
 
-<div id="done"><div><img id="doneImg" alt="" /><p id="doneLine"></p></div></div>
+<div id="done"><div><img id="doneImg" alt="" />
+  <p class="cap" id="doneLine"></p></div></div>
 
 <script src="/assets/config.js"></script>
 <script>
@@ -135,7 +143,7 @@
 const CFG = window.SLUMBER_CONFIG || {};
 const FN = CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/puzzle';
 const POLL = 1200;
-let PW = null, grid = null, on = new Set(), finished = false;
+let PW = null, grid = null, on = new Set(), finished = false, capText = null;
 try { PW = sessionStorage.getItem('ssp-itin'); } catch (e) {}
 
 const $ = (id) => document.getElementById(id);
@@ -192,6 +200,19 @@ function render(d) {
   if (!grid || grid.url !== d.puzzle.url || grid.cols !== d.puzzle.cols || grid.rows !== d.puzzle.rows) {
     build(d.puzzle);
   }
+  /* the caption comes from the puzzle row, so each one can have its own — the
+     race puzzles don't want a co-founder line under them. A comma is where it
+     breaks: "Khushi Kapoor, Co-Founder @ nailinit" sets the name in the serif and
+     the role underneath in the pixel font. */
+  const cap = d.puzzle.caption || '';
+  if (cap !== capText) {
+    capText = cap;
+    const cut = cap.indexOf(',');
+    $('doneLine').innerHTML = !cap ? ''
+      : cut === -1 ? `<span class="who">${esc(cap)}</span>`
+      : `<span class="who">${esc(cap.slice(0, cut).trim())}</span>` +
+        `<span class="role">${esc(cap.slice(cut + 1).trim())}</span>`;
+  }
   $('placed').textContent = d.placed || 0;
   $('people').textContent = d.people || 0;
   $('bar').style.width = d.total ? Math.round((d.placed / d.total) * 100) + '%' : '0%';
@@ -218,7 +239,7 @@ function render(d) {
     /* let the last piece land and its name fade before taking the room */
     setTimeout(() => {
       $('wall').classList.add('done');
-      setTimeout(() => { $('done').classList.add('on'); $('doneLine').textContent = ''; }, 900);
+      setTimeout(() => $('done').classList.add('on'), 900);
     }, 1400);
   }
 }

@@ -817,3 +817,18 @@ alter table public.puzzle_pieces enable row level security;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('puzzle', 'puzzle', true, 5242880, array['image/jpeg','image/png','image/webp'])
 on conflict (id) do nothing;
+
+-- The puzzle image is uploaded straight from the dashboard, not through the Edge
+-- Function, so storage.objects needs its own policies for that bucket. Without
+-- them the upload fails with "new row violates row-level security policy", which
+-- reads like the file is wrong when the truth is the bucket had no rule at all.
+drop policy if exists "admins write puzzle art"  on storage.objects;
+drop policy if exists "admins delete puzzle art" on storage.objects;
+drop policy if exists "anyone reads puzzle art"  on storage.objects;
+create policy "admins write puzzle art"  on storage.objects for insert
+  with check (bucket_id = 'puzzle' and is_admin());
+create policy "admins delete puzzle art" on storage.objects for delete
+  using (bucket_id = 'puzzle' and is_admin());
+-- public read: the wall loads the picture with no session of its own
+create policy "anyone reads puzzle art"  on storage.objects for select
+  using (bucket_id = 'puzzle');

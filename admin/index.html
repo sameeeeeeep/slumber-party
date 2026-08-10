@@ -996,6 +996,10 @@
         </select></label>
       <label style="flex:0 1 160px">for one house <span class="sub">(optional)</span>
         <select id="pzHouse"><option value="">— everyone —</option></select></label>
+      <label style="flex:3 1 260px">the line when it completes
+        <span class="sub">(the comma is where it breaks)</span>
+        <input id="pzCaption" type="text"
+          placeholder="Khushi Kapoor, Co-Founder @ nailinit" /></label>
       <div style="flex:0 1 150px">
         <span class="flab">the image</span>
         <label class="pick" for="pzFile" id="pzFileLabel">choose a picture</label>
@@ -3423,6 +3427,9 @@ function puzzlePanel(){
         ${p.house_id ? `<span class="tier creator">${esc((HOUSES.find(h => h.id === p.house_id) || {}).name || 'a house')}</span>` : ''}
         <span class="sub">${p.order_mode === 'random' ? 'random order' : 'edges first'}</span>
         <span style="flex:1"></span>
+        <input class="pzCap" data-p="${esc(p.id)}" value="${esc(p.caption || '')}"
+          placeholder="the line when it completes" title="the comma is where it breaks"
+          style="flex:0 1 15rem;margin:0;height:28px;padding:.1rem .5rem;font-size:.78rem" />
         <span class="pill">${done}/${ps.length} placed</span>
         <button class="btn ghost pzAct" data-act="${p.live ? 'off' : 'on'}" data-p="${esc(p.id)}"
           type="button" style="padding:3px 9px;font-size:11px">${p.live ? 'take it off the wall' : 'put it live'}</button>
@@ -3500,11 +3507,22 @@ document.getElementById('pzForm')?.addEventListener('submit', async (e) => {
   const path = `${crypto.randomUUID()}.${ext}`;
   const up = await sb.storage.from('puzzle').upload(path, bytes,
     { contentType: ext === 'webp' ? 'image/webp' : 'image/jpeg', upsert: false });
-  if (up.error) { btn.disabled = false; msg.textContent = up.error.message; msg.className = 'sub err'; return; }
+  if (up.error) {
+    btn.disabled = false; msg.className = 'sub err';
+    /* storage says "new row violates row-level security policy", which means the
+       bucket has no rule letting you write to it — not that the picture is wrong */
+    msg.textContent = /row-level security/i.test(up.error.message)
+      ? "storage refused the upload — the puzzle bucket is missing its write policy. Nothing wrong with your picture."
+      : up.error.message;
+    return;
+  }
 
   const { data: puz, error } = await sb.from('puzzles').insert({
     name, image_path: path, cols: g.cols, rows: g.rows, people,
     order_mode: pzOrder.value, house_id: pzHouse.value || null, live: false,
+    /* empty means the placeholder: it's the line she asked for, and typing it
+       out again to get it would be silly */
+    caption: pzCaption.value.trim() || pzCaption.placeholder,
   }).select().single();
   if (error) { btn.disabled = false; msg.textContent = error.message; msg.className = 'sub err'; return; }
 
@@ -3541,6 +3559,20 @@ document.getElementById('pzForm')?.addEventListener('submit', async (e) => {
 });
 
 /* ---- live / reset / reveal / delete -------------------------------------- */
+document.getElementById('pzList')?.addEventListener('change', async (e) => {
+  const el = e.target.closest('.pzCap');
+  if (!el) return;
+  const msg = document.getElementById('pzMsg');
+  el.disabled = true;
+  const res = await save(sb.from('puzzles').update({ caption: el.value.trim() || null })
+    .eq('id', el.dataset.p), 'that line');
+  el.disabled = false;
+  if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  const p = PUZZLES.find(x => x.id === el.dataset.p);
+  if (p) p.caption = el.value.trim() || null;
+  msg.textContent = 'saved — the wall picks it up within a second'; msg.className = 'sub';
+});
+
 document.getElementById('pzList')?.addEventListener('click', async (e) => {
   const btn = e.target.closest('.pzAct');
   if (!btn) return;

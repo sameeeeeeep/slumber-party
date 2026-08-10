@@ -170,6 +170,7 @@ Deno.serve(async (req) => {
     ok: true,
     puzzle: {
       id: live.id, name: live.name, cols: live.cols, rows: live.rows,
+      caption: live.caption || null,
       /* the wall needs the image; a guest's phone never asks for this because it
          never draws the picture */
       url: live.image_path ? PUBLIC_BASE + live.image_path : null,
