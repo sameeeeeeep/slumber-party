@@ -2167,6 +2167,9 @@ function headcount() {
    missing", not "who filled the form in".
    ========================================================================== */
 const BOX_STATES = ['todo', 'packed', 'sent', 'delivered'];
+const TEE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];        // same six /checkin offers
+/* inches, the way a tailor in Mumbai asks for it */
+const WAIST_SIZES = Array.from({ length: 19 }, (_, i) => String(24 + i));
 const sizeOf = (g, key) => {
   if (g[key]) return { v: g[key], own: true };
   const c = CHECKINS.find(x => x.guest_id === g.id)
@@ -2193,21 +2196,33 @@ function boxesPanel(){
     return am - bm || a.name.localeCompare(b.name);
   });
 
-  const cell = (g, key, ph) => {
+  /* A dropdown rather than a free-typed box: these two feed a packing list, and
+     "M" / "med" / "medium" in the same column is how the wrong tee gets sewn.
+     The selected value is the size we would actually pack — their check-in
+     answer when they gave one — and picking here overrides it. A size that came
+     from check-in rather than from this table is marked, so you can tell whose
+     answer you are looking at. */
+  const cell = (g, key, list, unit) => {
     const s = sizeOf(g, key);
-    return `<td><input class="bxIn" data-g="${esc(g.id)}" data-k="${key}" value="${esc(g[key] || '')}"
-      placeholder="${s.v && !s.own ? esc(s.v) : ph}" title="${s.v && !s.own ? 'from their check-in' : ''}"
-      style="margin:0;width:4.4rem;height:30px;padding:.1rem .4rem;font-size:.8rem${s.v ? '' : ';border-color:var(--critical)'}" /></td>`;
+    const opts = list.includes(s.v) || !s.v ? list : [s.v, ...list];
+    return `<td><select class="bxIn" data-g="${esc(g.id)}" data-k="${key}"
+      title="${s.v && !s.own ? 'from their check-in — pick here to override' : ''}"
+      style="margin:0;width:${unit ? '5.2' : '4.9'}rem;height:30px;padding:.1rem .3rem;font-size:.8rem${
+        s.v ? (s.own ? '' : ';border-style:dashed') : ';border-color:var(--critical)'}">
+      <option value=""${s.v ? '' : ' selected'}>—</option>
+      ${opts.map(v => `<option value="${esc(v)}"${s.v === v ? ' selected' : ''}>${esc(v)}${
+        unit && !v.includes(unit) ? unit : ''}</option>`).join('')}
+    </select></td>`;
   };
 
   body.innerHTML = sorted.map(g => `<tr>
     <td>${esc(String(g.name).replace(/\(.*?\)/g,'').trim())}</td>
     <td><span class="tier ${g.tier === 'bestie' ? '' : esc(g.tier || '')}">${esc(g.tier || '—')}</span></td>
     <td>${esc(sizeOf(g,'pyjama_size').v || '—')}</td>
-    ${cell(g,'tshirt','size')}
-    ${cell(g,'waist','in')}
+    ${cell(g,'tshirt',TEE_SIZES,'')}
+    ${cell(g,'waist',WAIST_SIZES,'"')}
     <td class="addr">${g.address ? esc(g.address) : '<span class="muted">no address</span>'}</td>
-    <td><select class="bxSt" data-g="${esc(g.id)}"
+    <td><select class="bxSt" data-g="${esc(g.id)}" data-k="box_status"
           style="margin:0;height:30px;padding:.1rem .4rem;font-size:.8rem">${opts(g.box_status)}</select></td>
     <td><input class="bxIn" data-g="${esc(g.id)}" data-k="box_courier" value="${esc(g.box_courier || '')}"
           placeholder="courier" style="margin:0;width:6rem;height:30px;padding:.1rem .4rem;font-size:.8rem" /></td>
@@ -2222,15 +2237,17 @@ function boxesPanel(){
    not by hunting for a save button on each row */
 document.getElementById('bxBody')?.addEventListener('change', async (e) => {
   const msg = document.getElementById('bxMsg');
-  const inp = e.target.closest('.bxIn'), sel = e.target.closest('.bxSt');
-  const el = inp || sel;
+  const el = e.target.closest('[data-k]');
   if (!el) return;
-  const id = el.dataset.g;
-  const patch = sel ? { box_status: sel.value } : { [inp.dataset.k]: inp.value.trim() || null };
+  const id = el.dataset.g, key = el.dataset.k;
+  const patch = { [key]: el.value.trim() || null };
   // stamp when it goes out, so "sent" has a date without asking for one
-  if (sel && ['sent','delivered'].includes(sel.value)){
-    const g = GUESTS.find(x => x.id === id);
-    if (g && !g.box_sent_at) patch.box_sent_at = new Date().toISOString();
+  if (key === 'box_status'){
+    patch.box_status = el.value || 'todo';
+    if (['sent','delivered'].includes(el.value)){
+      const g = GUESTS.find(x => x.id === id);
+      if (g && !g.box_sent_at) patch.box_sent_at = new Date().toISOString();
+    }
   }
   el.disabled = true;
   const res = await save(sb.from('guests').update(patch).eq('id', id), 'that box');
@@ -2408,7 +2425,8 @@ document.getElementById('spCsv')?.addEventListener('click', () => {
 /* same reason as window.__shell: these two panels are the newest and the ones
    most likely to be checked without a login in hand */
 window.__logistics = { boxesPanel, sponsorsPanel,
-  fake(g, sp, dl){ GUESTS = g; SPONSORS = sp; DELIVS = dl; boxesPanel(); sponsorsPanel(); } };
+  fake(g, sp, dl, ci){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
+    boxesPanel(); sponsorsPanel(); } };
 
 /* ============================================================================
    SLUMBER GAMES
