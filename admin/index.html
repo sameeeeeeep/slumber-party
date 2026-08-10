@@ -226,18 +226,18 @@
      hover, and focus makes it obvious which one you're in. A missing value gets
      a hairline down its left edge rather than a red box, because the count in
      the strip above is what actually chases it. */
-  .gIn, .crIn{
+  .gIn, .crIn, .bfIn, .hmIn{
     background:transparent; border:1px solid transparent; border-radius:7px;
     margin:0; padding:.1rem .4rem; height:28px; font-size:.8rem; color:var(--ink);
     transition:background .12s, border-color .12s; }
-  tr:hover .gIn, tr:hover .crIn{ border-color:var(--line); }
-  .gIn:hover, .crIn:hover{ border-color:var(--line); background:var(--surface-2); }
-  .gIn:focus, .crIn:focus{ border-color:var(--series); background:var(--surface-1);
+  tr:hover .gIn, tr:hover .crIn, tr:hover .bfIn, tr:hover .hmIn{ border-color:var(--line); }
+  .gIn:hover, .crIn:hover, .bfIn:hover, .hmIn:hover{ border-color:var(--line); background:var(--surface-2); }
+  .gIn:focus, .crIn:focus, .bfIn:focus, .hmIn:focus{ border-color:var(--series); background:var(--surface-1);
     outline:none; box-shadow:0 0 0 2px var(--series-soft); }
-  select.gIn, select.crIn{ cursor:pointer; }
-  .gIn:disabled, .crIn:disabled{ opacity:.5; }
-  .gIn.miss, .crIn.miss{ box-shadow:inset 2px 0 0 var(--critical); }
-  .gIn.miss:focus, .crIn.miss:focus{ box-shadow:0 0 0 2px var(--series-soft); }
+  select.gIn, select.crIn, select.bfIn, select.hmIn{ cursor:pointer; }
+  .gIn:disabled, .crIn:disabled, .bfIn:disabled, .hmIn:disabled{ opacity:.5; }
+  .gIn.miss, .crIn.miss, .bfIn.miss, .hmIn.miss{ box-shadow:inset 2px 0 0 var(--critical); }
+  .gIn.miss:focus, .crIn.miss:focus, .bfIn.miss:focus, .hmIn.miss:focus{ box-shadow:0 0 0 2px var(--series-soft); }
   .gIn.nm{ font-size:.85rem; font-weight:500; }
 
   /* the saved handle, as the link it should be */
@@ -408,6 +408,7 @@
     <a href="#/crew"         data-view="crew"><span class="nvl">team &amp; vendors</span><span class="nvc" id="nv-crew"></span></a>
     <a href="#/games"        data-view="games"><span class="nvl">slumber games</span><span class="nvc" id="nv-games"></span></a>
     <a href="#/sponsors"     data-view="sponsors"><span class="nvl">sponsors</span><span class="nvc" id="nv-sponsors"></span></a>
+    <a href="#/bffs"         data-view="bffs"><span class="nvl">BFFs &amp; hampers</span><span class="nvc" id="nv-bffs"></span></a>
     <a href="#/stay"         data-view="stay"><span class="nvl">rooms</span><span class="nvc" id="nv-stay"></span></a>
     <a href="#/day"          data-view="day"><span class="nvl">programming</span><span class="nvc" id="nv-day"></span></a>
     <a href="#/reach"        data-view="reach"><span class="nvl">reach</span><span class="nvc" id="nv-reach"></span></a>
@@ -836,6 +837,79 @@
     <div id="spBoard"></div>
   </section>
 
+
+  <!-- --------------------------------------------------------------- BFFs -->
+  <section id="sec-bffs" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">BFFs</h2>
+      <span class="pill" id="bfCount">—</span>
+      <button class="btn ghost" id="bfCsv" type="button">download csv</button>
+    </div>
+    <div class="ovs" id="ovBffs"></div>
+    <p class="sub">brands giving us product — hampers, gifting, things we keep. No money
+      changes hands and nothing is owed back, which is what makes them different from a
+      sponsor. Whatever they send goes into a hamper below.</p>
+
+    <form id="bfForm" class="addRow">
+      <label>brand
+        <input id="bfName" type="text" placeholder="brand name" required /></label>
+      <label style="flex:2 1 170px">what they're giving
+        <input id="bfGiving" type="text" placeholder="40 nail kits, 20 candles…" /></label>
+      <label style="flex:2 1 150px">contact
+        <input id="bfContact" type="text" placeholder="who, and how" /></label>
+      <button class="btn" id="bfSubmit" type="submit" style="width:auto">add BFF</button>
+    </form>
+
+    <div class="scroll" style="margin-top:12px">
+      <table id="bfTbl">
+        <thead><tr>
+          <th>brand</th><th>what they're giving</th><th>contact</th><th>notes</th>
+          <th>hampers</th><th></th>
+        </tr></thead>
+        <tbody id="bfBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="bfEmpty" hidden>none yet — add the first above.</p>
+    <p class="sub" id="bfMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
+  </section>
+
+  <!-- ------------------------------------------------------------ hampers -->
+  <section id="sec-hampers" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">hampers</h2>
+      <span class="pill" id="hmCount">—</span>
+      <button class="btn ghost" id="hmCsv" type="button">download csv</button>
+    </div>
+    <div class="ovs" id="ovHampers"></div>
+    <p class="sub">every hamper we're putting together, how many of each, and who is
+      actually doing it. The number that matters is the total at the top — that's how
+      many hampers walk out of the room.</p>
+
+    <form id="hmForm" class="addRow">
+      <label>hamper
+        <input id="hmName" type="text" placeholder="the nail bar hamper" required /></label>
+      <label style="flex:0 1 100px">how many
+        <input id="hmQty" type="number" min="0" max="9999" value="1" /></label>
+      <label style="flex:0 1 160px">from which BFF
+        <select id="hmBff"><option value="">— ours / mixed —</option></select></label>
+      <label style="flex:0 1 140px">who's doing it
+        <input id="hmOwner" type="text" placeholder="a name" /></label>
+      <button class="btn" id="hmSubmit" type="submit" style="width:auto">add hamper</button>
+    </form>
+
+    <div class="scroll" style="margin-top:12px">
+      <table id="hmTbl">
+        <thead><tr>
+          <th>hamper</th><th>how many</th><th>from</th><th>who's doing it</th>
+          <th>status</th><th>what's in it</th><th></th>
+        </tr></thead>
+        <tbody id="hmBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="hmEmpty" hidden>no hampers yet — add the first above.</p>
+    <p class="sub" id="hmMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
+  </section>
+
   <!-- ------------------------------------------------------- slumber games -->
   <section id="sec-games" class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -1026,7 +1100,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -1046,7 +1120,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -1067,11 +1141,13 @@ async function boot() {
     sb.from('points').select('*').order('created_at', { ascending: false }),
     sb.from('sponsors').select('*').order('position'),
     sb.from('deliverables').select('*').order('due'),
+    sb.from('bffs').select('*').order('position'),
+    sb.from('hampers').select('*').order('position'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -1163,6 +1239,7 @@ const VIEWS = [
   { id:'crew',         title:'team & vendors',      blurb:'everyone working the party, and what they need' },
   { id:'games',        title:'slumber games',       blurb:'houses, who is in them, and the score' },
   { id:'sponsors',     title:'sponsors',            blurb:'what we get from each brand, and what we owe back' },
+  { id:'bffs',         title:'BFFs & hampers',      blurb:'brands giving product, and every hamper going out' },
   { id:'stay',         title:'rooms',               blurb:'the venue, and who sleeps where' },
   { id:'day',          title:'programming',         blurb:'the programme guests see at /itinerary' },
   { id:'reach',        title:'reach',               blurb:'the late list, and how the link looks when shared' },
@@ -1178,6 +1255,7 @@ const VIEW_MAP = {
   crew:         ['sec-crew'],
   games:        ['sec-games'],
   sponsors:     ['sec-sponsors'],
+  bffs:         ['sec-bffs', 'sec-hampers'],
   stay:         ['sec-stay'],
   day:          ['sec-itin'],
   reach:        ['sec-late', 'sec-seo'],
@@ -1275,6 +1353,7 @@ function navCounts() {
   set('games', HOUSES.length);
   set('crew', CREW.length);
   set('sponsors', DELIVS.filter(d => d.status !== 'done').length);
+  set('bffs', HAMPERS.reduce((n, h) => n + (Number(h.qty) || 0), 0));
   set('day', ITIN.length);
   set('reach', WAITLIST.length);
   const live = new Set(VISITS.filter(v => Date.now() - +new Date(v.created_at) < 5 * 60 * 1000)
@@ -1314,7 +1393,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -2597,9 +2676,234 @@ document.getElementById('spCsv')?.addEventListener('click', () => {
 /* same reason as window.__shell: these two panels are the newest and the ones
    most likely to be checked without a login in hand */
 window.__logistics = { sponsorsPanel,
-  fake(g, sp, dl, ci, cw){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
-    if (cw) CREW = cw;
+  fake(g, sp, dl, ci, cw, bf, hm){ GUESTS = g; SPONSORS = sp; DELIVS = dl; CHECKINS = ci || [];
+    if (cw) CREW = cw; if (bf) BFFS = bf; if (hm) HAMPERS = hm;
     renderAll(); } };
+
+
+/* ============================================================================
+   BFFs AND HAMPERS
+   A BFF is a brand that sends product and wants nothing back — no money, no
+   deliverables. That absence is the whole reason they aren't sponsors: putting
+   them in the same table would mean every one of them showing "0/0 delivered"
+   forever.
+
+   A hamper is a thing we assemble, so it carries a count and an owner. The
+   number that matters is the total across every hamper, because that is how many
+   physically have to exist on the day — a list of hamper names doesn't tell you
+   whether you need forty bags or four hundred.
+   ========================================================================== */
+const HAMPER_STATES = ['todo', 'packed', 'done'];
+const bffName = (id) => (BFFS.find(b => b.id === id) || {}).name || '';
+
+function bffsPanel(){
+  const body = document.getElementById('bfBody');
+  if (!body) return;
+  const hampersOf = (id) => HAMPERS.filter(h => h.bff_id === id);
+  const qtyOf = (id) => hampersOf(id).reduce((n, h) => n + (Number(h.qty) || 0), 0);
+
+  strip('ovBffs', [
+    [BFFS.length, 'BFFs'],
+    [BFFS.filter(b => hampersOf(b.id).length).length, 'in a hamper'],
+    [BFFS.filter(b => !hampersOf(b.id).length).length, 'not placed yet', true],
+    [BFFS.filter(b => !b.giving).length, "don't know what yet", true],
+  ]);
+  document.getElementById('bfCount').textContent = BFFS.length
+    ? `${BFFS.length} brand${BFFS.length === 1 ? '' : 's'}` : 'none yet';
+  document.getElementById('bfEmpty').hidden = BFFS.length > 0;
+
+  const cell = (b, key, ph, w) => `<td><input class="bfIn" data-bff="${esc(b.id)}" data-k="${key}"
+    value="${esc(b[key] || '')}" placeholder="${ph}" spellcheck="false" style="width:${w}" /></td>`;
+
+  body.innerHTML = BFFS.map(b => {
+    const n = hampersOf(b.id).length, q = qtyOf(b.id);
+    return `<tr>
+      ${cell(b, 'name', 'brand', '9rem')}
+      ${cell(b, 'giving', '40 nail kits…', '13rem')}
+      ${cell(b, 'contact', 'who, and how', '10rem')}
+      ${cell(b, 'notes', 'notes', '10rem')}
+      <td style="white-space:nowrap">${n
+        ? `${n} hamper${n === 1 ? '' : 's'} <span class="muted">· ${q} total</span>`
+        : '<span class="muted">not placed</span>'}</td>
+      <td style="text-align:right"><button class="btn ghost bfDel" data-bff="${esc(b.id)}" type="button"
+        style="padding:4px 9px;font-size:12px">remove</button></td>
+    </tr>`;
+  }).join('');
+
+  /* the hamper form picks from these, so it is refilled here rather than in two places */
+  const sel = document.getElementById('hmBff');
+  if (sel){
+    const keep = sel.value;
+    sel.innerHTML = '<option value="">— ours / mixed —</option>' +
+      BFFS.map(b => `<option value="${esc(b.id)}">${esc(b.name)}</option>`).join('');
+    sel.value = keep;
+  }
+}
+
+document.getElementById('bfForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('bfMsg');
+  const row = { name: bfName.value.trim(), giving: bfGiving.value.trim() || null,
+                contact: bfContact.value.trim() || null };
+  if (!row.name) return;
+  row.position = BFFS.length ? Math.max(...BFFS.map(x => x.position)) + 1 : 1;
+  const { data, error } = await sb.from('bffs').insert(row).select().single();
+  if (error){ msg.textContent = error.message; msg.className = 'sub err'; return; }
+  BFFS.push(data);
+  bfForm.reset(); bfName.focus();
+  msg.textContent = `added ${data.name}`; msg.className = 'sub';
+  renderAll();
+  setTimeout(() => { if (msg.textContent.startsWith('added')) msg.textContent = ''; }, 3000);
+});
+
+document.getElementById('bfBody')?.addEventListener('change', async (e) => {
+  const el = e.target.closest('.bfIn');
+  if (!el) return;
+  const msg = document.getElementById('bfMsg');
+  const value = el.value.trim() || null;
+  if (el.dataset.k === 'name' && !value){ renderAll(); return; }
+  el.disabled = true;
+  const res = await save(sb.from('bffs').update({ [el.dataset.k]: value })
+    .eq('id', el.dataset.bff), 'that brand');
+  el.disabled = false;
+  if (!res.ok){ msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  Object.assign(BFFS.find(x => x.id === el.dataset.bff) || {}, { [el.dataset.k]: value });
+  msg.textContent = 'saved'; msg.className = 'sub';
+  renderAll();
+  setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
+});
+
+document.getElementById('bfBody')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.bfDel');
+  if (!btn) return;
+  const b = BFFS.find(x => x.id === btn.dataset.bff);
+  if (!b) return;
+  const n = HAMPERS.filter(h => h.bff_id === b.id).length;
+  if (!confirm(`Remove ${b.name}?` + (n ? ` Its ${n} hamper(s) stay, but stop pointing at a brand.` : ''))) return;
+  const { error } = await sb.from('bffs').delete().eq('id', b.id);
+  if (error){ document.getElementById('bfMsg').textContent = error.message; return; }
+  BFFS = BFFS.filter(x => x.id !== b.id);
+  HAMPERS.forEach(h => { if (h.bff_id === b.id) h.bff_id = null; });
+  renderAll();
+});
+
+document.getElementById('bfCsv')?.addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['brand','what they are giving','contact','notes','hampers','total units'].map(cell).join(',')];
+  for (const b of BFFS){
+    const mine = HAMPERS.filter(h => h.bff_id === b.id);
+    lines.push([b.name, b.giving || '', b.contact || '', b.notes || '', mine.length,
+                mine.reduce((n, h) => n + (Number(h.qty) || 0), 0)].map(cell).join(','));
+  }
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'bffs.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ---------------------------------------------------------------- hampers */
+function hampersPanel(){
+  const body = document.getElementById('hmBody');
+  if (!body) return;
+  const total = HAMPERS.reduce((n, h) => n + (Number(h.qty) || 0), 0);
+  const done = HAMPERS.filter(h => h.status === 'done')
+    .reduce((n, h) => n + (Number(h.qty) || 0), 0);
+
+  strip('ovHampers', [
+    [total, 'hampers in total'],
+    [HAMPERS.length, 'kinds'],
+    [HAMPERS.filter(h => h.status === 'todo').reduce((n, h) => n + (Number(h.qty) || 0), 0), 'to pack'],
+    [HAMPERS.filter(h => h.status === 'packed').reduce((n, h) => n + (Number(h.qty) || 0), 0), 'packed'],
+    [done, 'out the door'],
+    [HAMPERS.filter(h => !h.owner).length, 'nobody assigned', true],
+  ]);
+  document.getElementById('hmCount').textContent = HAMPERS.length
+    ? `${total} across ${HAMPERS.length} kind${HAMPERS.length === 1 ? '' : 's'}` : 'none yet';
+  document.getElementById('hmEmpty').hidden = HAMPERS.length > 0;
+
+  const txt = (h, key, ph, w, miss) => `<td><input class="hmIn${miss ? ' miss' : ''}"
+    data-hm="${esc(h.id)}" data-k="${key}" value="${esc(h[key] || '')}" placeholder="${ph}"
+    spellcheck="false" style="width:${w}" /></td>`;
+
+  body.innerHTML = HAMPERS.map(h => `<tr>
+    ${txt(h, 'name', 'hamper', '11rem')}
+    <td><input class="hmIn" data-hm="${esc(h.id)}" data-k="qty" type="number" min="0" max="9999"
+      value="${Number(h.qty) || 0}" style="width:5rem;font-variant-numeric:tabular-nums" /></td>
+    <td><select class="hmIn" data-hm="${esc(h.id)}" data-k="bff_id" style="width:9rem">
+      <option value=""${h.bff_id ? '' : ' selected'}>— ours / mixed —</option>
+      ${BFFS.map(b => `<option value="${esc(b.id)}"${h.bff_id === b.id ? ' selected' : ''}>${esc(b.name)}</option>`).join('')}
+    </select></td>
+    ${txt(h, 'owner', 'a name', '8.5rem', !h.owner)}
+    <td><select class="hmIn" data-hm="${esc(h.id)}" data-k="status" style="width:6.4rem">
+      ${HAMPER_STATES.map(v => `<option value="${v}"${h.status === v ? ' selected' : ''}>${v}</option>`).join('')}
+    </select></td>
+    ${txt(h, 'notes', "what's in it", '13rem')}
+    <td style="text-align:right"><button class="btn ghost hmDel" data-hm="${esc(h.id)}" type="button"
+      style="padding:4px 9px;font-size:12px">remove</button></td>
+  </tr>`).join('');
+}
+
+document.getElementById('hmForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('hmMsg');
+  const row = { name: hmName.value.trim(),
+                qty: Math.min(9999, Math.max(0, parseInt(hmQty.value, 10) || 0)),
+                bff_id: hmBff.value || null,
+                owner: hmOwner.value.trim() || null };
+  if (!row.name) return;
+  row.position = HAMPERS.length ? Math.max(...HAMPERS.map(x => x.position)) + 1 : 1;
+  const { data, error } = await sb.from('hampers').insert(row).select().single();
+  if (error){ msg.textContent = error.message; msg.className = 'sub err'; return; }
+  HAMPERS.push(data);
+  hmForm.reset(); hmQty.value = 1; hmName.focus();
+  msg.textContent = `added ${data.name} × ${data.qty}`; msg.className = 'sub';
+  renderAll();
+  setTimeout(() => { if (msg.textContent.startsWith('added')) msg.textContent = ''; }, 3000);
+});
+
+document.getElementById('hmBody')?.addEventListener('change', async (e) => {
+  const el = e.target.closest('.hmIn');
+  if (!el) return;
+  const msg = document.getElementById('hmMsg'), key = el.dataset.k;
+  let value = el.type === 'number'
+    ? Math.min(9999, Math.max(0, parseInt(el.value, 10) || 0))
+    : (el.value.trim() || null);
+  if (key === 'name' && !value){ renderAll(); return; }   // a nameless hamper is nothing
+  if (key === 'status' && !value) value = 'todo';
+  el.disabled = true;
+  const res = await save(sb.from('hampers').update({ [key]: value }).eq('id', el.dataset.hm), 'that hamper');
+  el.disabled = false;
+  if (!res.ok){ msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  Object.assign(HAMPERS.find(x => x.id === el.dataset.hm) || {}, { [key]: value });
+  msg.textContent = 'saved'; msg.className = 'sub';
+  renderAll();
+  setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
+});
+
+document.getElementById('hmBody')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.hmDel');
+  if (!btn) return;
+  const h = HAMPERS.find(x => x.id === btn.dataset.hm);
+  if (!h) return;
+  if (!confirm(`Remove "${h.name}" (${h.qty})?`)) return;
+  const { error } = await sb.from('hampers').delete().eq('id', h.id);
+  if (error){ document.getElementById('hmMsg').textContent = error.message; return; }
+  HAMPERS = HAMPERS.filter(x => x.id !== h.id);
+  renderAll();
+});
+
+document.getElementById('hmCsv')?.addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['hamper','how many','from','who is doing it','status',"what's in it"].map(cell).join(',')];
+  for (const h of HAMPERS)
+    lines.push([h.name, Number(h.qty) || 0, bffName(h.bff_id) || 'ours / mixed',
+                h.owner || '', h.status, h.notes || ''].map(cell).join(','));
+  lines.push(['TOTAL', HAMPERS.reduce((n, h) => n + (Number(h.qty) || 0), 0), '', '', '', ''].map(cell).join(','));
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'hampers.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
 
 /* ============================================================================
    SLUMBER GAMES

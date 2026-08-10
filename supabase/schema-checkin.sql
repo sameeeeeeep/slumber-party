@@ -602,3 +602,51 @@ alter table public.deliverables add constraint deliverables_direction_check
 
 -- A vendor list without a phone number is half a list.
 alter table public.crew add column if not exists contact text;
+
+-- ============================================================================
+--  BFFs AND HAMPERS  (10 Aug 2026)
+--
+--  A BFF is a brand that sends product and wants nothing back — no money, no
+--  deliverables. That absence is exactly why they aren't rows in `sponsors`:
+--  every one of them would sit there reading "0/0 delivered" forever.
+--
+--  A hamper is a thing we assemble, so it carries a count. The number that
+--  matters is the SUM of qty across every hamper, because that is how many
+--  physically have to exist on the day — a list of hamper names doesn't tell you
+--  whether you need forty bags or four hundred. bff_id is nullable and ON DELETE
+--  SET NULL: plenty of hampers are ours or mixed, and losing a brand must not
+--  take the hamper with it.
+-- ============================================================================
+create table if not exists public.bffs (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null,
+  contact    text,
+  giving     text,          -- what they're sending, in their words
+  notes      text,
+  position   integer not null default 0
+);
+
+create table if not exists public.hampers (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null,
+  qty        integer not null default 1,
+  bff_id     uuid references public.bffs(id) on delete set null,
+  owner      text,          -- who is actually doing it
+  status     text not null default 'todo',
+  notes      text,          -- what goes in it
+  position   integer not null default 0
+);
+alter table public.hampers drop constraint if exists hampers_status_check;
+alter table public.hampers add constraint hampers_status_check
+  check (status in ('todo', 'packed', 'done'));
+alter table public.hampers drop constraint if exists hampers_qty_check;
+alter table public.hampers add constraint hampers_qty_check check (qty >= 0 and qty <= 9999);
+create index if not exists hampers_bff_idx on public.hampers (bff_id);
+
+alter table public.bffs    enable row level security;
+alter table public.hampers enable row level security;
+-- admin-only on all four verbs for both, same as every other ops table. A
+-- missing UPDATE policy fails by matching zero rows rather than erroring, which
+-- is how room assignments once saved nothing for a day — hence save() in the UI.
