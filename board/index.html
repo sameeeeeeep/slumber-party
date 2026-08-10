@@ -211,7 +211,22 @@
    ========================================================================== */
 const CFG = window.SLUMBER_CONFIG || {};
 const FN = CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/board';
-const LONG_EDGE = 1200, QUALITY = 0.82;
+/* Measured on a real photograph at iPhone-screenshot dimensions: WebP at q0.86
+   came out 12KB where JPEG at q0.82 was 26KB — less than half the bytes at higher
+   quality. So the long edge goes UP to 1400 (the hero fills most of a projector
+   and deserves the pixels) and the file still ends up smaller than it was.
+
+   The ladder exists for the pathological screenshot — a busy collage of twenty
+   nail sets doesn't compress like a photo. Each step down is tried only if the one
+   above blew the budget, so a normal picture is always encoded at the top quality
+   and only a monster gets squeezed. JPEG is the tail of the ladder for any browser
+   that can't write WebP. */
+const LONG_EDGE = 1400;
+const TARGET_BYTES = 260_000;
+const LADDER = [
+  ['image/webp', 0.86], ['image/webp', 0.78], ['image/webp', 0.70],
+  ['image/jpeg', 0.82], ['image/jpeg', 0.72],
+];
 
 let PW = null, ME = null, TAGS = [], VOTES_EACH = 3, MY_VOTES = [], TAG = null;
 let QUEUE = [];                  // picked, resized, not yet sent
@@ -394,7 +409,21 @@ async function shrink(file) {
   ctx.drawImage(bmp, 0, 0, c.width, c.height);
   if (url) URL.revokeObjectURL(url);
   if (bmp.close) bmp.close();
-  return c.toDataURL('image/jpeg', QUALITY);
+  return encode(c);
+}
+
+/* the first rung that fits, or the smallest we managed */
+function encode(c) {
+  let best = null;
+  for (const [type, q] of LADDER) {
+    const d = c.toDataURL(type, q);
+    if (!d.startsWith('data:' + type)) continue;      // browser can't write it
+    const bytes = d.length * 3 / 4;
+    if (bytes <= TARGET_BYTES) return d;
+    if (!best || bytes < best.bytes) best = { d, bytes };
+  }
+  if (!best) throw new Error('nothing could encode this');
+  return best.d;
 }
 
 function syncGo() { $('go').disabled = !(ME && QUEUE.length && TAG); }
