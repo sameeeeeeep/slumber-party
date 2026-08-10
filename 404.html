@@ -90,7 +90,7 @@
   if (!(window.crypto && crypto.subtle)) { reveal(); return; }   // can't verify, so don't hijack
 
   var s = document.createElement('script');
-  s.src = '/besties/guests.js?v=7ed25821';
+  s.src = '/besties/guests.js?v=646ce679';
   s.onerror = reveal;                                 // couldn't even load the roster
   s.onload = function () {
     if (!window.BESTIES_GUESTS) return reveal();
