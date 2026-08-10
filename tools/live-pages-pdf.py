@@ -131,8 +131,8 @@ h1("Khushi's Secret Slumber Party - live pages",
 
 h2('For everyone (public)')
 url_row(SITE, 'the main site: gate, DM from khushi, application form, arcade. The only '
-              'page meant to be found on Google. Applications closed 15 Aug 11:59pm IST '
-              '- it now shows the closed state and sends people to /late.')
+              'page meant to be found on Google. Applications close 17 Aug 12 noon IST; '
+              'after that it shows the closed state and sends people to /late.')
 url_row(f'{SITE}/late', 'where a late arrival lands: a DM that explains what they missed, takes '
                         'their email, and promises a surprise. No password.')
 url_row(f'{SITE}/terms.html', 'T&C + privacy policy (linked from the gate; hidden from search)')

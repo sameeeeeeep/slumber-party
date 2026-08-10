@@ -2180,7 +2180,7 @@ addEventListener('load', maybeHideVeil); setTimeout(hideVeil, MAX_VEIL);   // ha
    in the VIEWER's timezone, so the same countdown closed at midnight London and
    midnight New York — hours after it closed in Mumbai. The party is IST, so the
    deadline is IST for everyone, wherever they're reading from. */
-const FORM_CLOSES = new Date('2026-08-16T00:00:00+05:30');   // 15 Aug 2026, 11:59pm IST — midnight into the 16th
+const FORM_CLOSES = new Date('2026-08-17T12:00:00+05:30');   // 17 Aug 2026, 12 noon IST
 /* ?closed previews the closed state early — it reveals nothing someone couldn't
    see by waiting, and it's how the closed experience gets tested before it's real */
 const FORM_IS_CLOSED = () => new Date() >= FORM_CLOSES || new URLSearchParams(location.search).has('closed');
