@@ -937,14 +937,18 @@
     <div class="tablebar">
       <h2 style="flex:1">the nail board</h2>
       <span class="pill" id="nbCount">—</span>
-      <button class="btn ghost" id="nbCsv" type="button">download csv</button>
+      <button class="btn ghost" id="nbZip" type="button">save everything</button>
+      <button class="btn ghost" id="nbCsv" type="button">csv only</button>
       <button class="btn ghost" id="nbClear" type="button">clear the board</button>
     </div>
     <div class="ovs" id="ovBoard"></div>
     <p class="sub">the 20-minute round: guests add nail designs at <code>/board</code> and the
-      wall at <code>/board/wall</code> fills up as they land. The tally is the point — what
-      leaves the party is the ranked list, not the screenshots. Hide anything that shouldn't
-      be on a projector; it drops off the wall within three seconds.</p>
+      wall at <code>/board/wall</code> fills up as they land. Everything added is kept —
+      nothing here expires or tidies itself away. <b>save everything</b> pulls the whole
+      round down as a zip: every picture, named for its style and whose it is, plus the csv
+      and the ranked tally. Hide anything that shouldn't be on a projector; it drops off the
+      wall within three seconds. <b>clear the board</b> is only for when you want the bucket
+      empty — take the zip first.</p>
     <div class="nbGrid" id="nbGrid"></div>
     <p class="empty" id="nbEmpty" hidden>nothing added yet.</p>
     <p class="sub" id="nbMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
@@ -3237,22 +3241,129 @@ document.getElementById('nbClear')?.addEventListener('click', async () => {
   renderAll();
 });
 
-document.getElementById('nbCsv')?.addEventListener('click', () => {
+/* ---------------------------------------------------------------- saving it
+   A zip, built here in the browser. No library: the entries are STORED rather
+   than deflated, because a JPEG is already compressed and re-compressing it buys
+   nothing but seconds — which makes the whole format three small headers and a
+   CRC. Everything comes down in one file so there is one thing to keep, not
+   forty-one.
+
+   The images are fetched from the public bucket, which answers
+   access-control-allow-origin: * — verified, or this would fail silently on the
+   first byte. */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function zip(files) {
+  const enc = new TextEncoder();
+  const parts = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name);
+    const data = f.bytes;
+    const sum = crc32(data);
+    const local = new Uint8Array(30 + name.length);
+    const lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true);      // local file header
+    lv.setUint16(4, 20, true);              // version needed
+    lv.setUint16(6, 0x0800, true);          // UTF-8 names
+    lv.setUint16(8, 0, true);               // stored, no compression
+    lv.setUint32(14, sum, true);
+    lv.setUint32(18, data.length, true);
+    lv.setUint32(22, data.length, true);
+    lv.setUint16(26, name.length, true);
+    local.set(name, 30);
+    parts.push(local, data);
+
+    const cen = new Uint8Array(46 + name.length);
+    const cv = new DataView(cen.buffer);
+    cv.setUint32(0, 0x02014b50, true);      // central directory entry
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint32(16, sum, true);
+    cv.setUint32(20, data.length, true);
+    cv.setUint32(24, data.length, true);
+    cv.setUint16(28, name.length, true);
+    cv.setUint32(42, offset, true);
+    cen.set(name, 46);
+    central.push(cen);
+    offset += local.length + data.length;
+  }
+  const cenSize = central.reduce((n, c) => n + c.length, 0);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);        // end of central directory
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, cenSize, true);
+  ev.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, end], { type: 'application/zip' });
+}
+
+function boardCsvText(){
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const shown = BOARD.filter(p => !p.hidden);
   const votes = (id) => BVOTES.filter(v => v.post_id === id).length;
-  const lines = [['who', 'style', 'colour', 'votes', 'added', 'picture'].map(cell).join(',')];
-  for (const p of shown)
-    lines.push([p.name, p.tag, p.colour || '', votes(p.id), istStamp(p.created_at),
-                boardUrl(p.path)].map(cell).join(','));
-  /* the ranked tally goes in the same file: it's the actual result of the round,
-     and a second download is a second thing to lose */
+  const lines = [['file', 'who', 'style', 'colour', 'votes', 'added'].map(cell).join(',')];
+  shown.forEach((p, i) => lines.push([zipName(p, i), p.name, p.tag, p.colour || '',
+    votes(p.id), istStamp(p.created_at)].map(cell).join(',')));
   const tally = {};
   for (const p of shown) tally[p.tag] = (tally[p.tag] || 0) + 1;
   lines.push('', ['STYLE', 'PICKED', 'SHARE'].map(cell).join(','));
   for (const [t, n] of Object.entries(tally).sort((a, b) => b[1] - a[1]))
     lines.push([t, n, shown.length ? Math.round(n / shown.length * 100) + '%' : ''].map(cell).join(','));
-  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+  return lines.join('\n');
+}
+/* named so a folder of them sorts into the result: style first, then who */
+const zipName = (p, i) => `images/${String(i + 1).padStart(2, '0')}-${p.tag}-` +
+  `${String(p.name).split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, '')}` +
+  `${(p.path.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0]}`;
+
+document.getElementById('nbZip')?.addEventListener('click', async (e) => {
+  const btn = e.currentTarget, msg = document.getElementById('nbMsg');
+  const shown = BOARD.filter(p => !p.hidden);
+  if (!shown.length) { msg.textContent = 'nothing to save yet'; msg.className = 'sub'; return; }
+  btn.disabled = true;
+  const files = [{ name: 'nail-board.csv', bytes: new TextEncoder().encode(boardCsvText()) }];
+  let missed = 0;
+  for (let i = 0; i < shown.length; i++) {
+    msg.textContent = `saving ${i + 1} of ${shown.length}…`; msg.className = 'sub';
+    try {
+      const r = await fetch(boardUrl(shown[i].path), { cache: 'no-store' });
+      if (!r.ok) throw new Error(String(r.status));
+      files.push({ name: zipName(shown[i], i), bytes: new Uint8Array(await r.arrayBuffer()) });
+    } catch (err) { missed++; }
+  }
+  const blob = zip(files);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `nail-board-${new Date().toLocaleDateString('en-CA', { timeZone: IST })}.zip`;
+  a.click();
+  URL.revokeObjectURL(url);
+  btn.disabled = false;
+  const mb = (blob.size / 1048576).toFixed(1);
+  msg.className = missed ? 'sub err' : 'sub';
+  msg.textContent = `saved ${files.length - 1} picture${files.length === 2 ? '' : 's'} + the csv · ${mb} MB` +
+    (missed ? ` · ${missed} couldn't be fetched` : '');
+});
+
+document.getElementById('nbCsv')?.addEventListener('click', () => {
+  const url = URL.createObjectURL(new Blob([boardCsvText()], { type: 'text/csv' }));
   const a = document.createElement('a');
   a.href = url; a.download = 'nail-board.csv'; a.click();
   URL.revokeObjectURL(url);
