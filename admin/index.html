@@ -219,8 +219,29 @@
   /* ---- sponsors ---- */
   /* The strip at the top of a section: what is actually happening here, in
      numbers, before you read a single row. */
+  /* ---- cells you can type in -------------------------------------------
+     Making every editable cell a bordered input turned the guest table into a
+     wall of boxes — thirty-six rows of form, impossible to read across. These
+     look like table cells until you go near them: the border and fill arrive on
+     hover, and focus makes it obvious which one you're in. A missing value gets
+     a hairline down its left edge rather than a red box, because the count in
+     the strip above is what actually chases it. */
+  .gIn, .crIn{
+    background:transparent; border:1px solid transparent; border-radius:7px;
+    margin:0; padding:.1rem .4rem; height:28px; font-size:.8rem; color:var(--ink);
+    transition:background .12s, border-color .12s; }
+  tr:hover .gIn, tr:hover .crIn{ border-color:var(--line); }
+  .gIn:hover, .crIn:hover{ border-color:var(--line); background:var(--surface-2); }
+  .gIn:focus, .crIn:focus{ border-color:var(--series); background:var(--surface-1);
+    outline:none; box-shadow:0 0 0 2px var(--series-soft); }
+  select.gIn, select.crIn{ cursor:pointer; }
+  .gIn:disabled, .crIn:disabled{ opacity:.5; }
+  .gIn.miss, .crIn.miss{ box-shadow:inset 2px 0 0 var(--critical); }
+  .gIn.miss:focus, .crIn.miss:focus{ box-shadow:0 0 0 2px var(--series-soft); }
+  .gIn.nm{ font-size:.85rem; font-weight:500; }
+
   /* the saved handle, as the link it should be */
-  .igGo{ font-size:.76rem; white-space:nowrap; margin-left:5px; }
+  .igGo{ font-size:.8rem; white-space:nowrap; margin-left:4px; text-decoration:none; }
   .ovs{ display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 14px; }
   .ovs > div{ border:1px solid var(--line); border-radius:10px; padding:.42rem .7rem;
     min-width:5.4rem; background:var(--card-2, transparent); }
@@ -1355,15 +1376,13 @@ function checkinPanel() {
        at midnight and gets corrected twice, and the name is how a guest is matched
        to their check-in — neither should need a modal. */
     const nameCell = (r) => r.onList && r.id
-      ? `<td><input class="gIn" data-gid="${esc(r.id)}" data-k="name" value="${esc(r.name)}"
-           style="margin:0;width:9.5rem;height:28px;padding:.1rem .45rem;font-size:.82rem" /></td>`
+      ? `<td><input class="gIn nm" data-gid="${esc(r.id)}" data-k="name" value="${esc(r.name)}"
+           style="width:9.5rem" /></td>`
       : `<td>${esc(r.name)} <span class="muted">(not on list)</span></td>`;
     const addrCell = (r) => r.onList && r.id
-      ? `<td><input class="gIn" data-gid="${esc(r.id)}" data-k="address" value="${esc(r.address)}"
-           placeholder="flat, street, city, pin" spellcheck="false"
-           title="${esc(r.address)}"
-           style="margin:0;width:14rem;height:28px;padding:.1rem .45rem;font-size:.8rem${
-             r.address ? '' : ';border-color:var(--critical)'}" /></td>`
+      ? `<td><input class="gIn${r.address ? '' : ' miss'}" data-gid="${esc(r.id)}" data-k="address"
+           value="${esc(r.address)}" placeholder="flat, street, city, pin" spellcheck="false"
+           title="${esc(r.address)}" style="width:15rem" /></td>`
       : '<td><span class="muted">—</span></td>';
     /* Editable in place. Thirty-six handles through a modal is thirty-six
        round-trips; here you tab down the column. Anything pasted gets trimmed to
@@ -1371,7 +1390,7 @@ function checkinPanel() {
     const igCell = (r) => r.onList && r.id
       ? `<td style="white-space:nowrap"><input class="gIn" data-gid="${esc(r.id)}" data-k="instagram"
            value="${esc(r.ig)}" placeholder="handle" spellcheck="false"
-           style="margin:0;width:8.5rem;height:28px;padding:.1rem .45rem;font-size:.8rem" />${
+           style="width:8.5rem" />${
            r.ig ? `<a class="igGo" href="https://instagram.com/${encodeURIComponent(r.ig)}"
                      target="_blank" rel="noopener noreferrer"
                      title="open @${esc(r.ig)} on instagram">↗</a>` : ''}</td>`
@@ -1386,10 +1405,9 @@ function checkinPanel() {
       const g = GUESTS.find(x => x.id === r.id) || {};
       const s = sizeOf(g, key);
       const opts = list.includes(s.v) || !s.v ? list : [s.v, ...list];
-      return `<td><select class="gIn" data-gid="${esc(r.id)}" data-k="${key}"
+      return `<td><select class="gIn${s.v ? '' : ' miss'}" data-gid="${esc(r.id)}" data-k="${key}"
         title="${s.v && !s.own ? 'from their check-in — pick here to override' : ''}"
-        style="margin:0;width:4.8rem;height:28px;padding:.1rem .3rem;font-size:.8rem${
-          s.v ? (s.own ? '' : ';border-style:dashed') : ';border-color:var(--critical)'}">
+        style="width:4.9rem${s.v && !s.own ? ';font-style:italic' : ''}">
         <option value=""${s.v ? '' : ' selected'}>—</option>
         ${opts.map(v => `<option value="${esc(v)}"${s.v === v ? ' selected' : ''}>${esc(v)}${
           unit && !v.includes(unit) ? unit : ''}</option>`).join('')}
@@ -1399,7 +1417,7 @@ function checkinPanel() {
       if (!r.onList || !r.id) return '<td><span class="muted">—</span></td>';
       const g = GUESTS.find(x => x.id === r.id) || {};
       return `<td><select class="gIn" data-gid="${esc(r.id)}" data-k="box_status"
-          style="margin:0;width:6.4rem;height:28px;padding:.1rem .3rem;font-size:.8rem">
+          style="width:6.4rem">
           ${BOX_STATES.map(v => `<option value="${v}"${(g.box_status || 'todo') === v ? ' selected' : ''}>${v}</option>`).join('')}
         </select></td>`;
     };
@@ -2331,13 +2349,12 @@ const sizeOf = (g, key) => {
 
 document.getElementById('bxCsv')?.addEventListener('click', () => {
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const head = ['name','tier','instagram','pyjamas','t-shirt','waist','address','status','courier','tracking','notes'];
+  const head = ['name','tier','instagram','pyjamas','t-shirt','waist','address','status'];
   const lines = [head.map(cell).join(',')];
   for (const g of GUESTS.filter(x => x.code)){
     lines.push([String(g.name).replace(/\(.*?\)/g,'').trim(), g.tier || '', g.instagram || '',
       sizeOf(g,'pyjama_size').v, sizeOf(g,'tshirt').v, sizeOf(g,'waist').v,
-      g.address || '', g.box_status || 'todo', g.box_courier || '',
-      g.box_tracking || '', g.box_notes || ''].map(cell).join(','));
+      g.address || '', g.box_status || 'todo'].map(cell).join(','));
   }
   const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
   const a = document.createElement('a');
@@ -3147,29 +3164,26 @@ function crewPanel() {
   /* Same shape as the guest sheet: every field saves where it sits. A crew list
      is worked on a row at a time — a size here, a phone number there — and a
      modal for each of those was the slowest possible way to do it. */
-  const txt = (r, key, ph, w) => `<td><input class="crIn" data-crew="${esc(r.id)}" data-k="${key}"
-    value="${esc(r[key] ?? '')}" placeholder="${ph}" spellcheck="false"
-    style="margin:0;width:${w};height:28px;padding:.1rem .45rem;font-size:.8rem" /></td>`;
+  const txt = (r, key, ph, w, cls) => `<td><input class="crIn${cls || ''}" data-crew="${esc(r.id)}"
+    data-k="${key}" value="${esc(r[key] ?? '')}" placeholder="${ph}" spellcheck="false"
+    style="width:${w}" /></td>`;
   const num = (r, key) => `<td><input class="crIn" data-crew="${esc(r.id)}" data-k="${key}"
-    type="number" min="0" max="99" value="${Number(r[key]) || 0}"
-    style="margin:0;width:4.2rem;height:28px;padding:.1rem .45rem;font-size:.8rem" /></td>`;
+    type="number" min="0" max="99" value="${Number(r[key]) || 0}" style="width:4.2rem" /></td>`;
 
   body.innerHTML = rows.map(r => `<tr>
-    ${txt(r, 'name', 'name', '9rem')}
-    <td><select class="crIn" data-crew="${esc(r.id)}" data-k="kind"
-          style="margin:0;width:5.6rem;height:28px;padding:.1rem .3rem;font-size:.8rem">
+    ${txt(r, 'name', 'name', '9rem', ' nm')}
+    <td><select class="crIn" data-crew="${esc(r.id)}" data-k="kind" style="width:5.6rem">
         ${['team','vendor','car'].map(v => `<option value="${v}"${r.kind === v ? ' selected' : ''}>${v}</option>`).join('')}
       </select></td>
     ${txt(r, 'role', 'photographer…', '9rem')}
     ${num(r, 'headcount')}
-    <td><select class="crIn" data-crew="${esc(r.id)}" data-k="tshirt"
-          style="margin:0;width:4.9rem;height:28px;padding:.1rem .3rem;font-size:.8rem${
-            r.tshirt ? '' : ';border-color:var(--critical)'}">
+    <td><select class="crIn${r.tshirt ? '' : ' miss'}" data-crew="${esc(r.id)}" data-k="tshirt"
+          style="width:4.9rem">
         <option value=""${r.tshirt ? '' : ' selected'}>—</option>
         ${TEE_SIZES.map(v => `<option value="${v}"${r.tshirt === v ? ' selected' : ''}>${v}</option>`).join('')}
       </select></td>
     ${num(r, 'cars')}
-    ${txt(r, 'contact', 'phone / whatsapp', '9.5rem')}
+    ${txt(r, 'contact', 'phone / whatsapp', '9.5rem', r.contact ? '' : ' miss')}
     ${txt(r, 'notes', 'notes', '9rem')}
     ${venueCell(r)}
     <td style="text-align:right;white-space:nowrap">
