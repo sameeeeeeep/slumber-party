@@ -77,8 +77,8 @@
   #stack{ min-height:0; overflow:hidden; align-content:start;
     display:grid; gap:.5rem; grid-template-columns:repeat(var(--cols,3),minmax(0,1fr)); }
   #stack figure{ margin:0; position:relative; border-radius:.6rem; overflow:hidden;
-    border:1px solid rgba(245,195,207,.16); background:rgba(255,255,255,.04);
-    animation:pop .5s cubic-bezier(.2,.9,.3,1.2); }
+    border:1px solid rgba(245,195,207,.16); background:rgba(255,255,255,.04); }
+  #stack figure.fresh{ animation:pop .5s cubic-bezier(.2,.9,.3,1.2); }
   #stack img{ display:block; width:100%; aspect-ratio:1; object-fit:cover; }
   #stack figcaption{ position:absolute; left:0; right:0; bottom:0; padding:.35rem .4rem .3rem;
     font-size:.92rem; line-height:1.1;
@@ -187,6 +187,37 @@ function stackCols(n) {
 }
 
 let heroId = null;
+let heroImg = null, heroCap = null;
+
+/* Preload, then swap. Setting .src on a visible <img> shows a blank frame while
+   the new file decodes — on a projector that's a black flash across 60% of the
+   screen every time somebody uploads. So the next image is fully loaded off-screen
+   first and only then put on the wall. */
+function setHero(p, announce) {
+  const hero = document.getElementById('hero');
+  if (!heroImg || !hero.contains(heroImg)) {
+    hero.innerHTML = '<img alt="" /><div class="cap"></div>';
+    heroImg = hero.querySelector('img');
+    heroCap = hero.querySelector('.cap');
+  }
+  const cap = () => {
+    heroCap.innerHTML = `<span class="tg">${esc(p.tag)}</span>` +
+      (p.colour ? ` <span class="col">${esc(p.colour)}</span>` : '') +
+      ` <span class="who">${esc(p.name)}</span>` +
+      (announce ? '<span class="new">JUST ADDED</span>' : '');
+    /* the badge is about the last thirty seconds, not about being first in the
+       list — a hero still shouting JUST ADDED ten minutes later is a lie */
+    const badge = heroCap.querySelector('.new');
+    if (badge) setTimeout(() => badge.remove(), 30000);
+  };
+  const pre = new Image();
+  pre.onload = pre.onerror = () => {
+    heroImg.src = p.url;
+    cap();
+    if (announce) { hero.classList.remove('pop'); void hero.offsetWidth; hero.classList.add('pop'); }
+  };
+  pre.src = p.url;
+}
 
 function render(d) {
   const posts = d.posts || [];
@@ -196,42 +227,51 @@ function render(d) {
   const hero = document.getElementById('hero'), stack = document.getElementById('stack');
 
   if (!posts.length) {
-    heroId = null;
+    heroId = null; heroImg = null; heroCap = null;
     hero.innerHTML = '<p class="empty">nothing on the wall yet 💅<br />' +
       '<span style="font-size:1.2rem">open the board on your phone and add the first</span></p>';
     stack.innerHTML = '';
     return;
   }
 
-  /* the newest one IS the wall. Only rebuilt when it actually changes, or every
-     poll would restart the animation and flicker the biggest thing on screen. */
+  /* the newest one IS the wall — only touched when it actually changes */
   const top = posts[0];
   if (top.id !== heroId) {
     const first = heroId === null;
     heroId = top.id;
-    hero.innerHTML = `<img src="${esc(top.url)}" alt="" />
-      <div class="cap">
-        <span class="tg">${esc(top.tag)}</span>
-        ${top.colour ? `<span class="col">${esc(top.colour)}</span>` : ''}
-        <span class="who">${esc(top.name)}</span>
-        ${first ? '' : '<span class="new">JUST ADDED</span>'}
-      </div>`;
-    hero.classList.remove('pop'); void hero.offsetWidth; hero.classList.add('pop');
-    /* the badge is about the last thirty seconds, not about being first in the
-       list — a hero still shouting JUST ADDED ten minutes later is a lie */
-    const badge = hero.querySelector('.new');
-    if (badge) setTimeout(() => badge.remove(), 30000);
+    setHero(top, !first);
   }
 
-  /* everything before it, newest first. Rebuilt wholesale: they're small, the
-     hero is what the eye is on, and keeping a diff in step with a shifting first
-     element costs more than it saves. */
+  /* THE STACK IS DIFFED, not rebuilt. Replacing innerHTML every three seconds
+     re-created forty <img> elements, and a re-created img repaints from scratch
+     and re-runs its animation — which is the flicker. Now existing tiles are left
+     alone, new ones are inserted where they belong, and only they animate. */
   const rest = posts.slice(1);
   stack.style.setProperty('--cols', stackCols(rest.length));
-  stack.innerHTML = rest.map((p) => `<figure>
-      <img src="${esc(p.url)}" alt="" />
-      <figcaption><span class="tg">${esc(p.tag)}</span> <span class="who">${esc(p.name)}</span></figcaption>
-    </figure>`).join('');
+
+  const have = new Map([...stack.children].map((el) => [el.dataset.id, el]));
+  let prev = null;                        // walk in order so inserts land in place
+  for (const p of rest) {
+    let el = have.get(p.id);
+    if (el) {
+      have.delete(p.id);
+    } else {
+      el = document.createElement('figure');
+      el.dataset.id = p.id;
+      el.className = 'fresh';
+      el.innerHTML = `<img src="${esc(p.url)}" alt="" />
+        <figcaption><span class="tg">${esc(p.tag)}</span> <span class="who">${esc(p.name)}</span></figcaption>`;
+      /* drop the class once it has played: a tile that keeps it would animate
+         again the next time the grid shifts it, which is a flicker of its own */
+      el.addEventListener('animationend', () => el.classList.remove('fresh'), { once: true });
+    }
+    // move only if it isn't already in the right place — a needless insertBefore
+    // on an existing node is another repaint
+    const want = prev ? prev.nextSibling : stack.firstChild;
+    if (el !== want) stack.insertBefore(el, want);
+    prev = el;
+  }
+  for (const el of have.values()) el.remove();   // hidden or deleted in the dashboard
 
   const tally = d.tally || [];
   const max = tally[0] ? tally[0].n : 1;

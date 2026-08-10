@@ -67,12 +67,26 @@
     margin-bottom:.7rem; }
 
   /* the picker is a label so the whole slab is the tap target */
-  .pick{ display:grid; place-items:center; gap:.3rem; min-height:9rem; cursor:pointer;
+  .pick{ display:grid; place-items:center; gap:.3rem; min-height:9rem; width:100%; cursor:pointer;
     border:2px dashed rgba(245,195,207,.35); border-radius:.9rem; color:var(--soft);
-    background:rgba(255,255,255,.03); text-align:center; padding:1rem; }
+    background:rgba(255,255,255,.03); text-align:center; padding:1rem;
+    font-family:var(--mono); font-size:1.05rem; -webkit-appearance:none; }
   .pick b{ display:block; color:var(--cream); font-size:1.25rem; font-weight:400; }
   .pick.has{ border-style:solid; border-color:var(--pink); padding:0; overflow:hidden; }
   .pick img{ display:block; width:100%; max-height:19rem; object-fit:contain; }
+
+  /* what you've picked but not yet sent */
+  .queue{ display:grid; grid-template-columns:repeat(auto-fill,minmax(4.4rem,1fr));
+    gap:.4rem; margin-top:.6rem; }
+  .queue figure{ margin:0; position:relative; }
+  .queue img{ width:100%; aspect-ratio:1; object-fit:cover; border-radius:.5rem;
+    border:1px solid rgba(245,195,207,.25); }
+  .queue button{ position:absolute; top:-.3rem; right:-.3rem; width:1.5rem; height:1.5rem;
+    border-radius:100px; border:0; background:var(--rose); color:#fff; font-size:.9rem;
+    line-height:1.5rem; padding:0; cursor:pointer; }
+  .queue figure.done img{ opacity:.35; }
+  .queue figure.done::after{ content:'✓'; position:absolute; inset:0; display:grid;
+    place-items:center; font-size:1.6rem; color:var(--yellow); }
 
   .tags{ display:flex; flex-wrap:wrap; gap:.45rem; }
   .tags button{ border:1px solid rgba(245,195,207,.28); background:rgba(255,255,255,.05);
@@ -147,11 +161,16 @@
 
   <section class="card" id="addCard">
     <h2>YOUR SCREENSHOT</h2>
-    <label class="pick" id="pick" for="file">
-      <b>tap to add a screenshot</b>
-      <span>from your camera roll</span>
-    </label>
-    <input id="file" type="file" accept="image/*" hidden />
+    <button class="pick" id="pick" type="button">
+      <b>tap to add screenshots</b>
+      <span>pick as many as you like</span>
+    </button>
+    <!-- NOT hidden and NOT display:none. iOS refuses to open the picker for an
+         input it considers unrendered, which is why the button below calls
+         .click() on it instead of relying on a <label for>. -->
+    <input id="file" type="file" accept="image/*" multiple
+      style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px" />
+    <div class="queue" id="queue"></div>
 
     <h2 style="margin-top:1rem">WHAT KIND IS IT?</h2>
     <div class="tags" id="tags"></div>
@@ -194,7 +213,9 @@ const CFG = window.SLUMBER_CONFIG || {};
 const FN = CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/board';
 const LONG_EDGE = 1200, QUALITY = 0.82;
 
-let PW = null, ME = null, TAGS = [], VOTES_EACH = 3, MY_VOTES = [], PENDING = null, TAG = null;
+let PW = null, ME = null, TAGS = [], VOTES_EACH = 3, MY_VOTES = [], TAG = null;
+let QUEUE = [];                  // picked, resized, not yet sent
+const MAX_QUEUE = 12;            // the same cap the function enforces per person
 try { PW = sessionStorage.getItem('ssp-itin'); ME = localStorage.getItem('ssp-board-me'); } catch (e) {}
 
 const $ = (id) => document.getElementById(id);
@@ -272,15 +293,21 @@ function paintWho(roster) {
   }
   gate();
 }
-/* nothing works until we know who is adding — otherwise the tally is a guess */
+/* Locking the card behind "who are you" made the picker do nothing at all when
+   tapped, which is indistinguishable from broken. It stays tappable now and says
+   what's missing instead. */
 function gate() {
   const ready = !!ME;
-  $('addCard').style.opacity = ready ? '1' : '.5';
-  $('addCard').style.pointerEvents = ready ? '' : 'none';
-  $('voteCard').style.opacity = ready ? '1' : '.5';
-  $('voteCard').style.pointerEvents = ready ? '' : 'none';
-  ready ? null : ($('msg').textContent = '');
+  $('addCard').style.opacity = ready ? '1' : '.75';
+  $('voteCard').style.opacity = ready ? '1' : '.75';
   syncGo();
+}
+function needName() {
+  $('msg').textContent = 'tell me who you are first ☝️';
+  $('msg').className = 'msg bad';
+  $('who').scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const sel = $('mePick');
+  if (sel) { sel.focus(); try { sel.click(); } catch (e) {} }
 }
 
 function paintTags() {
@@ -296,24 +323,51 @@ $('tags').addEventListener('click', (e) => {
   syncGo();
 });
 
-/* ---- the screenshot ---- */
+/* ---- picking screenshots ---------------------------------------------------
+   The input is opened in JS rather than by a <label for>. iOS will not open the
+   picker for an input it treats as unrendered, and `hidden` counts — so the input
+   is offscreen-but-rendered and this click forwards to it. One path, not two, so
+   the picker can never open twice on a single tap. */
+$('pick').addEventListener('click', () => {
+  if (!ME) return needName();
+  $('file').click();
+});
+
 $('file').addEventListener('change', async (e) => {
-  const f = e.target.files && e.target.files[0];
-  if (!f) return;
-  $('msg').textContent = 'getting it ready…'; $('msg').className = 'msg';
-  try {
-    PENDING = await shrink(f);
-  } catch (err) {
-    PENDING = null;
-    $('msg').textContent = "couldn't read that picture — try another";
-    $('msg').className = 'msg bad';
-    syncGo(); return;
+  const files = [...(e.target.files || [])];
+  $('file').value = '';                       // so picking the same photo twice still fires
+  if (!files.length) return;
+  $('msg').textContent = `getting ${files.length === 1 ? 'it' : 'them'} ready…`;
+  $('msg').className = 'msg';
+  let bad = 0;
+  for (const f of files) {
+    if (QUEUE.length >= MAX_QUEUE) break;
+    try { QUEUE.push({ data: await shrink(f), done: false }); } catch (err) { bad++; }
   }
-  const p = $('pick');
-  p.classList.add('has');
-  p.innerHTML = `<img src="${PENDING}" alt="" />`;
-  $('msg').textContent = '';
+  paintQueue();
+  $('msg').textContent = bad ? `${bad} of those wouldn't open — the rest are ready` : '';
+  $('msg').className = bad ? 'msg bad' : 'msg';
   syncGo();
+});
+
+function paintQueue() {
+  const q = $('queue');
+  q.innerHTML = QUEUE.map((it, i) => `<figure${it.done ? ' class="done"' : ''}>
+      <img src="${it.data}" alt="" />
+      ${it.done ? '' : `<button type="button" data-i="${i}" aria-label="remove">×</button>`}
+    </figure>`).join('');
+  const p = $('pick');
+  p.innerHTML = QUEUE.length
+    ? `<b>${QUEUE.length} ready</b><span>tap to add more</span>`
+    : '<b>tap to add screenshots</b><span>pick as many as you like</span>';
+  $('go').textContent = QUEUE.length > 1
+    ? `ADD ALL ${QUEUE.length} TO THE BOARD` : 'ADD TO THE BOARD';
+}
+$('queue').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-i]');
+  if (!b) return;
+  QUEUE.splice(Number(b.dataset.i), 1);
+  paintQueue(); syncGo();
 });
 
 /* Canvas, not the raw file: a screenshot is 2–5 MB and nothing about a nail
@@ -343,32 +397,48 @@ async function shrink(file) {
   return c.toDataURL('image/jpeg', QUALITY);
 }
 
-function syncGo() { $('go').disabled = !(ME && PENDING && TAG); }
+function syncGo() { $('go').disabled = !(ME && QUEUE.length && TAG); }
 
+/* Uploaded one at a time on purpose. Forty phones firing five parallel requests
+   each is a thundering herd at exactly the moment the round is busiest; in
+   sequence each phone holds one connection and the whole room still finishes in
+   seconds, because the images are 200KB. Each one is marked done as it lands, so
+   a phone that dies halfway hasn't lost the ones that made it. */
 $('go').addEventListener('click', async () => {
   if ($('go').disabled) return;
+  if (!ME) return needName();
   $('go').disabled = true;
-  $('msg').textContent = 'adding…'; $('msg').className = 'msg';
-  const res = await call({ action: 'add', name: ME, tag: TAG,
-                           colour: $('colour').value.trim() || null, image: PENDING });
-  if (!res.ok) {
-    $('msg').className = 'msg bad';
-    $('msg').textContent = res.error === 'enough' ? "that's plenty from you 😄 let others in"
-      : res.rate ? 'slow down a second 🙏'
-      : res.error === 'image' ? "that picture didn't go through — try another"
-      : 'that didn\'t save — try again';
-    $('go').disabled = false;
-    return;
+  const total = QUEUE.filter((it) => !it.done).length;
+  let n = 0, failed = 0;
+  for (const it of QUEUE) {
+    if (it.done) continue;
+    $('msg').className = 'msg';
+    $('msg').textContent = total > 1 ? `adding ${n + 1} of ${total}…` : 'adding…';
+    const res = await call({ action: 'add', name: ME, tag: TAG,
+                             colour: $('colour').value.trim() || null, image: it.data });
+    if (res.ok) { it.done = true; n++; paintQueue(); continue; }
+    failed++;
+    if (res.error === 'enough') {
+      $('msg').className = 'msg bad';
+      $('msg').textContent = "that's plenty from you 😄 let others in";
+      break;
+    }
+    if (res.rate) {
+      $('msg').className = 'msg bad';
+      $('msg').textContent = 'slow down a second 🙏 the rest are still here';
+      break;
+    }
   }
-  /* reset for the next one: people add three or four in a row, and clearing the
-     picture but keeping the tag is what that rhythm wants */
-  PENDING = null;
-  const p = $('pick');
-  p.classList.remove('has');
-  p.innerHTML = '<b>tap to add another</b><span>from your camera roll</span>';
-  $('file').value = '';
+  QUEUE = QUEUE.filter((it) => !it.done);
+  paintQueue();
   $('colour').value = '';
-  $('msg').textContent = 'on the wall ✨';
+  if (n && !failed) { $('msg').className = 'msg'; $('msg').textContent =
+    n > 1 ? `${n} on the wall ✨` : 'on the wall ✨'; }
+  else if (n && failed) { $('msg').className = 'msg bad';
+    $('msg').textContent = `${n} went up, ${failed} didn't — try those again`; }
+  else if (!n && !$('msg').textContent) { $('msg').className = 'msg bad';
+    $('msg').textContent = "that didn't save — try again"; }
+  syncGo();
   refresh();
 });
 
