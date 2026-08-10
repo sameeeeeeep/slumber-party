@@ -240,6 +240,9 @@
   .gIn.miss:focus, .crIn.miss:focus, .bfIn.miss:focus, .hmIn.miss:focus, .carIn.miss:focus, .acIn.miss:focus{ box-shadow:0 0 0 2px var(--series-soft); }
   .gIn.nm{ font-size:.85rem; font-weight:500; }
 
+  .pages .pgL{ font-size:.66rem; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-3); align-self:center; margin-right:2px; }
+
   /* the saved handle, as the link it should be */
   .igGo{ font-size:.8rem; white-space:nowrap; margin-left:4px; text-decoration:none; }
   .ovs{ display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 14px; }
@@ -1337,6 +1340,63 @@ const VIEW_MAP = {
   reach:        ['sec-late', 'sec-seo'],
 };
 
+/* ============================================================================
+   EVERY PAGE THAT EXISTS  —  ADD NEW ONES HERE.
+
+   This is the only list of the site's surfaces, and the overview strip is built
+   from it, so a page that isn't in here has no door from the dashboard and gets
+   forgotten. When a new page ships — another guest room, another gate, whatever
+   it is — add one line and it appears on the overview with its password.
+
+   The word lives beside the page on purpose. It used to be a separate map keyed
+   by href, which is two lists to keep in step and one of them silently wrong the
+   first time a path changed.
+   ========================================================================== */
+const LIVE_PAGES = [
+  // group, href, label, the word that opens it
+  ['public', '/',              'the site',      null],
+  ['public', '/?arcade',       'the arcade',    null],
+  ['public', '/late/',         'after close',   null],
+  ['public', '/terms.html',    'T&Cs',          null],
+  ['public', '/privacy.html',  'privacy',       null],
+  ['guests', '/besties/',      'besties gate',  'PINKYPROMISE'],
+  ['guests', '/itinerary/',    'programme',     'nailinit'],
+  ['guests', '/house/',        'the house',     'nailinit'],
+  ['guests', '/housemates/',   'intro round',   'housemates'],
+  ['guests', '/games/',        'scoreboard',    'nailinit'],
+  ['ops',    '/checkin/',      'check-in',      null],
+];
+const PAGE_GROUPS = [['public', 'anyone'], ['guests', 'guests only'], ['ops', 'ours']];
+
+function pagesStrip(){
+  return PAGE_GROUPS.map(([g, label]) => {
+    const mine = LIVE_PAGES.filter(p => p[0] === g);
+    if (!mine.length) return '';
+    return `<div class="pages" data-group="${g}"><span class="pgL">${label}</span>` +
+      /* no escaping: every value in LIVE_PAGES is a literal in this file, and esc()
+         is declared further down — calling it from here runs before its
+         initialisation and takes the whole module out */
+      mine.map(([, href, text, word]) =>
+        `<a href="${href}" target="_blank" rel="noopener" data-page="${href}"${
+          word ? ` title="word: ${word}"` : ''}>${text} ↗</a>`).join('') + '</div>';
+  }).join('');
+}
+
+/* A listed page that has stopped answering is worse than one that was never
+   listed — it looks live from here. Checked once, quietly, on load. */
+async function checkPages(){
+  for (const [, href] of LIVE_PAGES) {
+    const url = href.split('?')[0] || '/';
+    let ok = false;
+    try { ok = (await fetch(url, { method: 'GET', cache: 'no-store' })).ok; } catch (e) {}
+    if (ok) continue;
+    for (const a of document.querySelectorAll(`a[data-page="${CSS.escape(href)}"]`)) {
+      a.style.borderColor = 'var(--critical)';
+      a.title = "this page isn't answering — check it's deployed";
+    }
+  }
+}
+
 function buildShell() {
   const app = document.getElementById('app');
   if (!app || document.querySelector('.view')) return;      // already built
@@ -1358,18 +1418,7 @@ function buildShell() {
        route from here at all, which meant knowing the URLs by heart to check what
        a guest actually sees. */
     if (v.id === 'overview'){
-      const words = { '/itinerary/':'nailinit', '/house/':'nailinit', '/housemates/':'housemates',
-                      '/games/':'nailinit' };
-      const LIVE_PAGES = [
-        ['/', 'the site'], ['/besties/', 'besties gate'], ['/house/', 'the house'],
-        ['/housemates/', 'intro round'], ['/itinerary/', 'programme'], ['/games/', 'scoreboard'],
-        ['/checkin/', 'check-in'], ['/late/', 'after close'],
-        ['/terms.html', 'T&Cs'],
-      ];
-      sec.querySelector('.viewHead').insertAdjacentHTML('beforeend',
-        '<div class="pages">' + LIVE_PAGES.map(([href, label]) =>
-          `<a href="${href}" target="_blank" rel="noopener"${words[href] ? ` title="word: ${words[href]}"` : ''}>${label} ↗</a>`
-        ).join('') + '</div>');
+      sec.querySelector('.viewHead').insertAdjacentHTML('beforeend', pagesStrip());
     }
     for (const key of (VIEW_MAP[v.id] || [])) {
       const el = pick(key);
@@ -1417,6 +1466,7 @@ function showView() {
 /* Structure, not data: build it now. Waiting for login would show the old
    stacked layout for as long as the session check takes. */
 buildShell();
+checkPages();
 window.__shell = { VIEWS, showView };   // for smoke-testing the shell without a login
 
 /* the counts on the rail — a dashboard should say how much is behind each door
@@ -3844,6 +3894,14 @@ document.getElementById('vnCsv').addEventListener('click', () => {
    six people) and whether they sleep here, which is the whole reason the party
    needs to know about them at all.
    ========================================================================== */
+/* A vendor row saying "4" tells you nothing about who walks through the door.
+   Names live in one text field, one per line, opened from the people cell —
+   a child table would be a join for something only ever read as a list, and a
+   name per column would cap it at whatever number seemed enough today. */
+const nameList = (r) => String(r.members || '').split('\n').map(x => x.trim()).filter(Boolean);
+const namedGap = (r) => Math.max(0, (Number(r.headcount) || 0) - nameList(r).length);
+const crewOpen = new Set();     // which rows are expanded; survives the re-render
+
 function crewPanel() {
   const body = document.getElementById('crewBody');
   if (!body) return;
@@ -3866,6 +3924,7 @@ function crewPanel() {
     [rows.filter(r => r.kind === 'vendor').length, 'vendors'],
     [rows.filter(r => !r.tshirt).length, 'without a size', true],
     [rows.filter(r => !r.contact).length, 'no phone number', true],
+    [rows.reduce((n, r) => n + namedGap(r), 0), 'people unnamed', true],
   ]);
   document.getElementById('crewCount').textContent = rows.length
     ? `${h.crew} ${h.crew === 1 ? 'person' : 'people'} staying over`
@@ -3880,8 +3939,23 @@ function crewPanel() {
   const txt = (r, key, ph, w, cls) => `<td><input class="crIn${cls || ''}" data-crew="${esc(r.id)}"
     data-k="${key}" value="${esc(r[key] ?? '')}" placeholder="${ph}" spellcheck="false"
     style="width:${w}" /></td>`;
-  const num = (r, key) => `<td><input class="crIn" data-crew="${esc(r.id)}" data-k="${key}"
-    type="number" min="0" max="99" value="${Number(r[key]) || 0}" style="width:4.2rem" /></td>`;
+
+  /* the panel that opens under a row: as wide as the table, so a long list of
+     names doesn't squeeze the columns it sits inside */
+  const namesRow = (r) => !crewOpen.has(r.id) ? '' : `<tr class="crNamesRow">
+    <td colspan="9" style="padding:.5rem .7rem .8rem">
+      <label style="display:block;margin:0;font-size:.76rem;color:var(--ink-2)">
+        everyone in ${esc(r.name)} — one name per line
+        <textarea class="crIn" data-crew="${esc(r.id)}" data-k="members" rows="${
+          Math.max(2, Math.min(10, (Number(r.headcount) || 1) + 1))}"
+          placeholder="Ravi&#10;Neha&#10;Imran"
+          style="width:min(34rem,100%);height:auto;margin-top:4px">${esc(r.members || '')}</textarea></label>
+      <span class="sub" style="margin:0">${
+        nameList(r).length
+          ? `${nameList(r).length} named of ${Number(r.headcount) || 0}` +
+            (namedGap(r) ? ` · ${namedGap(r)} still to name` : ' · all named')
+          : 'nobody named yet'}</span>
+    </td></tr>`;
 
   body.innerHTML = rows.map(r => `<tr>
     ${txt(r, 'name', 'name', '9rem', ' nm')}
@@ -3889,7 +3963,13 @@ function crewPanel() {
         ${['team','vendor'].map(v => `<option value="${v}"${r.kind === v ? ' selected' : ''}>${v}</option>`).join('')}
       </select></td>
     ${txt(r, 'role', 'photographer…', '9rem')}
-    ${num(r, 'headcount')}
+    <td style="white-space:nowrap"><input class="crIn" data-crew="${esc(r.id)}" data-k="headcount"
+        type="number" min="0" max="99" value="${Number(r.headcount) || 0}"
+        style="width:3.6rem;font-variant-numeric:tabular-nums" />
+      <button class="btn ghost crNames" data-crew="${esc(r.id)}" type="button"
+        title="who they are" style="padding:2px 7px;font-size:11px;margin-left:4px${
+          namedGap(r) ? ';border-color:var(--critical)' : ''}">${
+          nameList(r).length ? `${nameList(r).length}/${Number(r.headcount) || 0} ▾` : 'name them ▾'}</button></td>
     <td><select class="crIn${r.tshirt ? '' : ' miss'}" data-crew="${esc(r.id)}" data-k="tshirt"
           style="width:4.9rem">
         <option value=""${r.tshirt ? '' : ' selected'}>—</option>
@@ -3901,7 +3981,7 @@ function crewPanel() {
     <td style="text-align:right;white-space:nowrap">
       <button class="btn ghost crewAct" data-act="del" data-crew="${esc(r.id)}" type="button"
         style="padding:4px 9px;font-size:12px">remove</button></td>
-  </tr>`).join('');
+  </tr>${namesRow(r)}`).join('');
 }
 
 /* Every editable cell on a crew row comes through here. Bound once, outside the
@@ -3914,9 +3994,14 @@ document.getElementById('crewBody').addEventListener('change', async (e) => {
   const msg = document.getElementById('crewMsg');
   /* headcount and cars are 0–99 in the database; clamp here so a stray keystroke
      reads as a sane number instead of coming back as an error */
-  const patch = { [key]: el.type === 'number'
-    ? Math.min(99, Math.max(0, parseInt(el.value, 10) || 0))
-    : (el.value.trim() || null) };
+  /* the name list is tidied on the way in: blank lines and stray indentation are
+     how a textarea gets typed, not how a list should be stored */
+  const value = key === 'members'
+    ? (el.value.split('\n').map(x => x.trim()).filter(Boolean).join('\n') || null)
+    : el.type === 'number'
+      ? Math.min(99, Math.max(0, parseInt(el.value, 10) || 0))
+      : (el.value.trim() || null);
+  const patch = { [key]: value };
   if (key === 'name' && !patch.name) { renderAll(); return; }   // a nameless row is nobody
   el.disabled = true;
   const res = await save(sb.from('crew').update(patch).eq('id', id), 'that change');
@@ -3926,6 +4011,16 @@ document.getElementById('crewBody').addEventListener('change', async (e) => {
   Object.assign(CREW.find(r => r.id === id) || {}, patch);
   renderAll();
   setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
+});
+
+/* open the list of who is inside a headcount */
+document.getElementById('crewBody').addEventListener('click', (e) => {
+  const btn = e.target.closest('.crNames');
+  if (!btn) return;
+  const id = btn.dataset.crew;
+  crewOpen.has(id) ? crewOpen.delete(id) : crewOpen.add(id);
+  crewPanel();
+  document.querySelector(`.crNamesRow textarea[data-crew="${id}"]`)?.focus();
 });
 
 document.getElementById('crewBody').addEventListener('click', async (e) => {
@@ -3971,12 +4066,12 @@ document.getElementById('crewForm').addEventListener('submit', async (e) => {
 });
 
 document.getElementById('crewCsv').addEventListener('click', () => {
-  const head = ['name', 'kind', 'doing what', 'people', 't-shirt', 'contact',
-                'where', 'notes'];
+  const head = ['name', 'kind', 'doing what', 'people', 'who exactly', 't-shirt',
+                'contact', 'where', 'notes'];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const body = CREW.filter(r => r.kind !== 'car')
     .map(r => [r.name, r.kind, r.role || '', Number(r.headcount) || 0,
-               r.tshirt || '', r.contact || '',
+               nameList(r).join(', '), r.tshirt || '', r.contact || '',
                venueName(r.venue_id), r.notes || ''].map(cell).join(','));
   const url = URL.createObjectURL(new Blob([[head.map(cell).join(','), ...body].join('\n')],
     { type: 'text/csv' }));

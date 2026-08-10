@@ -699,3 +699,10 @@ alter table public.activities add constraint activities_mins_check
 alter table public.itinerary add column if not exists activity_id uuid
   references public.activities(id) on delete set null;
 create index if not exists itinerary_activity_idx on public.itinerary (activity_id);
+
+-- Who is inside a headcount. A vendor row saying "4" tells you nothing about who
+-- walks through the door, so the names live here, one per line. Not a child table:
+-- this is only ever read as a list, and a join for that is a join for nothing.
+-- Not a name per column either — that caps the list at whatever number seemed
+-- like enough on the day it was written.
+alter table public.crew add column if not exists members text;
