@@ -475,3 +475,44 @@ alter table public.guests add column if not exists room      text;
 --  in a single call. Verified: 25 concurrent identical pings write exactly 1 row.
 -- ============================================================================
 create unique index if not exists visits_session_step_key on public.visits (session_id, reached);
+
+-- ============================================================================
+--  SLUMBER GAMES — five (or any number of) houses, and the score
+--  Houses are named and coloured entirely from admin; nothing is seeded, because
+--  the names are yours. guests.house_id places people, and admin can deal them
+--  all evenly in one click or move anyone by hand.
+--
+--  `points` is an APPEND-ONLY LEDGER, deliberately not a total on the house row.
+--  At a live event you have to be able to answer "why is that house ahead?" and
+--  to undo a mistake with a correction rather than by editing a number nobody can
+--  audit. Standings are summed from the ledger on every read, so there is exactly
+--  one truth about the score — a cached total would be a second truth waiting to
+--  disagree with it at 1am.
+--  Deleting a house CASCADES its points away and un-places its guests.
+-- ============================================================================
+create table if not exists public.houses (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null,
+  colour     text not null default '#eb648c',
+  sigil      text,
+  motto      text,
+  position   integer not null default 0
+);
+alter table public.guests add column if not exists house_id uuid references public.houses(id) on delete set null;
+
+create table if not exists public.points (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  house_id   uuid not null references public.houses(id) on delete cascade,
+  points     integer not null,
+  reason     text,
+  game       text,
+  awarded_by text
+);
+create index if not exists points_house_idx on public.points (house_id, created_at desc);
+
+alter table public.houses enable row level security;
+alter table public.points enable row level security;
+-- admin-only in all four directions on both tables; guests read the standings
+-- through the `games` Edge Function behind the guest word, never directly.

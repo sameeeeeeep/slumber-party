@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="referrer" content="no-referrer" />
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+<title>slumber games 🏆 · khushi's slumber party</title>
+<meta name="description" content="The score." />
+<link rel="icon" type="image/png" href="/assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Playfair+Display:ital,wght@0,500&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* THE SCOREBOARD — read on a phone AND projected on a screen in a room.
+     That second use decides the design: enormous numbers, high contrast, no
+     interaction required, and it refreshes itself so nobody has to touch it
+     between rounds. */
+  :root{
+    --wine:#2a1520; --wine-2:#1c1017; --cream:#fff6f8; --ink:#2b1a22;
+    --pink:#eb648c; --rose:#c2456b; --soft:#c9a0ae; --yellow:#ffe9a8;
+    --mono:'VT323',monospace; --pixel:'Press Start 2P',monospace;
+    --hand:'Caveat',cursive; --serif:'Playfair Display',serif;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  p,h1,h2{ margin:0; }
+  html,body{ margin:0; min-height:100%; }
+  body{ background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%);
+    color:var(--cream); font-family:var(--mono); }
+
+  #gate{ min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:1.4rem; }
+  .gbox{ text-align:center; width:min(22rem,100%); }
+  .gbox img{ display:block; width:min(74%,15rem); margin:0 auto .8rem; }
+  .gbox h1{ font-family:var(--serif); font-style:italic; font-size:1.7rem; margin:0 0 1.1rem; color:#fff; }
+  .gbox form{ display:flex; gap:.5rem; }
+  .gbox input{ flex:1; min-width:0; background:rgba(255,255,255,.06);
+    border:1px solid rgba(245,195,207,.28); border-radius:100px; padding:.6rem 1rem;
+    color:var(--cream); font-family:var(--mono); font-size:1.3rem; outline:none; text-align:center; }
+  .gbox input:focus{ border-color:var(--pink); }
+  .gbox button{ flex:none; border:0; cursor:pointer; border-radius:100px; padding:.55rem 1.05rem;
+    font-family:var(--pixel); font-size:.6rem; color:#fff;
+    background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .25rem .9rem rgba(235,100,140,.4); }
+  .gbox .err{ min-height:1.5rem; margin-top:.7rem; font-size:1.1rem; color:#ffb3c6; }
+  .gbox.no input{ animation:no .35s; }
+  @keyframes no{ 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+
+  #board{ display:none; max-width:60rem; margin:0 auto; padding:2rem 1rem 3rem; }
+  #board.on{ display:block; }
+  .top{ text-align:center; margin-bottom:1.6rem; }
+  .top img{ display:block; width:min(60%,14rem); margin:0 auto .5rem; }
+  .top h1{ font-family:var(--pixel); font-size:.9rem; letter-spacing:.18em; color:var(--yellow);
+    text-shadow:0 0 16px rgba(255,233,168,.45); }
+
+  .row{ display:flex; align-items:center; gap:1rem; border-left:7px solid var(--pink);
+    background:rgba(255,255,255,.045); border-radius:1rem; padding:1rem 1.1rem; margin-bottom:.65rem;
+    transition:transform .4s cubic-bezier(.2,.9,.3,1.1); }
+  .row .rank{ font-family:var(--pixel); font-size:.9rem; color:var(--soft); width:2.2rem; flex:none; }
+  .row .who{ flex:1; min-width:0; }
+  .row .nm{ font-size:2rem; line-height:1; }
+  .row .mot{ font-size:1.05rem; color:var(--soft); }
+  .row .ros{ font-size:.98rem; color:rgba(245,195,207,.55); margin-top:.25rem; line-height:1.3; }
+  .row .pts{ font-family:var(--pixel); font-size:1.6rem; flex:none; text-align:right; min-width:4.5rem; }
+  .row.lead{ background:rgba(255,216,74,.09); }
+  .row.lead .rank{ color:var(--yellow); }
+
+  .feed{ margin-top:1.8rem; }
+  .feed h2{ font-family:var(--pixel); font-size:.62rem; letter-spacing:.14em; color:var(--soft);
+    margin-bottom:.6rem; }
+  .fitem{ display:flex; gap:.6rem; align-items:baseline; font-size:1.15rem; padding:.3rem 0;
+    border-bottom:1px solid rgba(245,195,207,.1); }
+  .fitem b{ font-weight:400; }
+  .fitem .d{ color:rgba(245,195,207,.45); font-size:.95rem; margin-left:auto; white-space:nowrap; }
+  .empty{ text-align:center; color:var(--soft); font-size:1.2rem; padding:3rem 1rem; line-height:1.5; }
+
+  /* big-screen mode: everything scales up, the roster and feed step back */
+  @media (min-width:1100px){
+    .row .nm{ font-size:2.9rem; }
+    .row .pts{ font-size:2.4rem; min-width:6.5rem; }
+    .top h1{ font-size:1.1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gbox" id="gbox">
+    <img src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <h1>slumber games</h1>
+    <form id="gform">
+      <input id="gpw" type="password" autocomplete="off" autocapitalize="none" placeholder="•••••" />
+      <button type="submit">OPEN ▸</button>
+    </form>
+    <p class="err" id="gerr"></p>
+  </div>
+</div>
+
+<div id="board">
+  <div class="top">
+    <img src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <h1>SLUMBER GAMES</h1>
+  </div>
+  <div id="table"></div>
+  <div class="feed" id="feed"></div>
+</div>
+
+<script src="/assets/config.js"></script>
+<script>
+/* ============================================================================
+   /games — the standings.
+
+   Refreshes itself every fifteen seconds and whenever the tab comes back, because
+   this sits on a screen between rounds and nobody should have to walk over and
+   reload it. Totals are summed server-side from the ledger, so this page never
+   holds an opinion about the score — it just shows the one the ledger has.
+   ========================================================================== */
+const CFG = window.SLUMBER_CONFIG || {};
+let PW = null;
+try{ PW = sessionStorage.getItem('ssp-itin'); }catch(e){}
+
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const ago = (iso) => {
+  const s = Math.max(0, (Date.now() - +new Date(iso)) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  return Math.floor(s / 3600) + 'h ago';
+};
+
+async function fetchBoard(pw){
+  const r = await fetch(CFG.supabaseUrl.replace(/\/$/,'') + '/functions/v1/games', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', apikey:CFG.supabaseAnonKey,
+              Authorization:'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: pw })
+  });
+  if (r.status === 401) return { wrong:true };
+  if (r.status === 429) return { rate:true };
+  const j = await r.json().catch(() => ({}));
+  return j.ok ? j : {};
+}
+
+function render(d){
+  const tbl = document.getElementById('table');
+  if (!d.table.length){
+    tbl.innerHTML = '<p class="empty">the houses haven\'t been drawn yet 🤫<br />check back once the games begin.</p>';
+    document.getElementById('feed').innerHTML = '';
+    return;
+  }
+  const lead = d.table[0].total;
+  tbl.innerHTML = d.table.map((h, i) => `
+    <div class="row${h.total === lead && lead > 0 ? ' lead' : ''}" style="border-left-color:${esc(h.colour)}">
+      <div class="rank">${i + 1}</div>
+      <div class="who">
+        <p class="nm">${h.sigil ? esc(h.sigil) + ' ' : ''}${esc(h.name)}</p>
+        ${h.motto ? `<p class="mot">${esc(h.motto)}</p>` : ''}
+        ${h.roster.length ? `<p class="ros">${h.roster.map(esc).join(' · ')}</p>` : ''}
+      </div>
+      <div class="pts" style="color:${esc(h.colour)}">${h.total}</div>
+    </div>`).join('');
+
+  const feed = document.getElementById('feed');
+  feed.innerHTML = d.feed.length
+    ? '<h2>HOW IT HAPPENED</h2>' + d.feed.map(f => `
+        <div class="fitem">
+          <b style="color:${esc(f.colour)}">${f.points > 0 ? '+' : ''}${f.points}</b>
+          <b>${esc(f.house)}</b>
+          <span style="color:var(--soft)">${esc(f.reason)}</span>
+          <span class="d">${esc(ago(f.at))}</span>
+        </div>`).join('')
+    : '';
+}
+
+async function open_(pw, quiet){
+  const res = await fetchBoard(pw);
+  if (res.table){
+    PW = pw;
+    try{ sessionStorage.setItem('ssp-itin', pw); }catch(e){}
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('board').classList.add('on');
+    render(res);
+    return true;
+  }
+  if (!quiet){
+    const box = document.getElementById('gbox');
+    document.getElementById('gerr').textContent =
+      res.rate ? 'too many tries — give it a while 🙏' : res.wrong ? "that's not it 👀" : 'hmm, try again';
+    box.classList.remove('no'); void box.offsetWidth; box.classList.add('no');
+  }
+  return false;
+}
+
+document.getElementById('gform').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = document.getElementById('gpw').value.trim();
+  if (v) open_(v, false);
+});
+/* it lives on a wall between rounds — it has to keep itself current */
+setInterval(() => { if (PW && !document.hidden) open_(PW, true); }, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && PW) open_(PW, true); });
+if (PW) open_(PW, true);
+</script>
+</body>
+</html>

@@ -216,6 +216,17 @@
   .tier.super{ border-color:var(--good); color:var(--good); font-weight:600; }
   .tier.pending{ border-color:var(--critical); color:var(--critical); }
   .tier.car{ border-color:#c9a227; color:var(--ink-2); }
+  /* ---- slumber games ---- */
+  .hsCard{ border:1px solid var(--line); border-left-width:5px; border-radius:11px;
+    padding:.7rem .85rem; margin-bottom:8px; background:var(--surface-2); }
+  .hsHead{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .hsHead b{ font-size:1rem; }
+  .hsHead .mot{ font-size:.8rem; color:var(--ink-3); }
+  .hsPts{ font-family:var(--mono); font-size:1.15rem; font-weight:700; }
+  .hsWho{ display:flex; flex-wrap:wrap; gap:5px; margin-top:.45rem; }
+  .hsChip{ font-size:.76rem; color:var(--ink-2); border:1px solid var(--line);
+    border-radius:100px; padding:.15rem .5rem; white-space:nowrap; }
+
   /* ---- where they stay ---- */
   .vnCard{ border:1px solid var(--line); border-radius:11px; padding:.7rem .85rem; margin-bottom:8px;
     background:var(--surface-2); }
@@ -332,6 +343,7 @@
     <a href="#/overview"     data-view="overview"><span class="nvl">overview</span><span class="nvc" id="nv-overview"></span></a>
     <a href="#/applications" data-view="applications"><span class="nvl">applications</span><span class="nvc" id="nv-applications"></span></a>
     <a href="#/guests"       data-view="guests"><span class="nvl">guests</span><span class="nvc" id="nv-guests"></span></a>
+    <a href="#/games"        data-view="games"><span class="nvl">slumber games</span><span class="nvc" id="nv-games"></span></a>
     <a href="#/stay"         data-view="stay"><span class="nvl">rooms &amp; crew</span><span class="nvc" id="nv-stay"></span></a>
     <a href="#/day"          data-view="day"><span class="nvl">programming</span><span class="nvc" id="nv-day"></span></a>
     <a href="#/reach"        data-view="reach"><span class="nvl">reach</span><span class="nvc" id="nv-reach"></span></a>
@@ -712,6 +724,55 @@
     <p class="empty" id="wlEmpty" hidden>no one yet — it fills once applications close.</p>
   </section>
 
+  <!-- ------------------------------------------------------- slumber games -->
+  <section id="sec-games" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">slumber games</h2>
+      <span class="pill" id="gmCount">—</span>
+      <a class="btn ghost" href="/games/" target="_blank" rel="noopener"
+         style="text-decoration:none" title="word: nailinit">open the scoreboard</a>
+    </div>
+    <p class="sub">houses, who's in them, and the points ledger. Points are never
+      edited — every award is a row with a reason, so the standings can always be
+      explained and a mistake is undone by a correction.</p>
+
+    <form id="hsForm" class="crewForm">
+      <label style="flex:2 1 150px">house name
+        <input id="hsName" type="text" placeholder="name it whatever you like" required /></label>
+      <label style="flex:0 1 92px">colour
+        <input id="hsColour" type="color" value="#eb648c" /></label>
+      <label style="flex:0 1 84px">sigil
+        <input id="hsSigil" type="text" maxlength="4" placeholder="🧿" /></label>
+      <label style="flex:2 1 160px">motto <span class="sub" style="margin:0">(optional)</span>
+        <input id="hsMotto" type="text" maxlength="80" placeholder="the loud ones" /></label>
+      <button class="btn" id="hsSubmit" type="submit" style="width:auto">add house</button>
+      <button class="btn ghost" id="hsCancel" type="button" hidden>cancel</button>
+    </form>
+    <p class="sub" id="hsMsg" style="min-height:1.1rem;margin:6px 0 12px"></p>
+
+    <div id="hsBoard"></div>
+
+    <details style="margin-top:14px">
+      <summary class="sub" style="cursor:pointer">award points</summary>
+      <form id="ptForm" class="crewForm" style="margin-top:10px">
+        <label style="flex:0 1 150px">house
+          <select id="ptHouse"></select></label>
+        <label style="flex:0 1 90px">points
+          <input id="ptPoints" type="number" value="10" min="-999" max="999" /></label>
+        <label style="flex:3 1 240px">what for
+          <input id="ptReason" type="text" maxlength="120" placeholder="won the pillow relay" /></label>
+        <button class="btn" type="submit" style="width:auto">award</button>
+      </form>
+      <p class="sub" id="ptMsg" style="min-height:1.1rem;margin:6px 0 0"></p>
+      <div class="scroll" style="margin-top:10px">
+        <table id="ptTbl">
+          <thead><tr><th>when</th><th>house</th><th>points</th><th>what for</th><th></th></tr></thead>
+          <tbody id="ptBody"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
   <!-- --------------------------------------------------------- where they stay -->
   <section id="sec-stay" class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -850,7 +911,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -870,7 +931,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -887,11 +948,13 @@ async function boot() {
     sb.from('itinerary').select('*').order('position'),
     sb.from('venues').select('*').order('position'),
     sb.from('rooms').select('*').order('position'),
+    sb.from('houses').select('*').order('position'),
+    sb.from('points').select('*').order('created_at', { ascending: false }),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -908,6 +971,9 @@ async function boot() {
         p => { CHECKINS.unshift(p.new); renderAll(); flashLive('new check-in'); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waitlist' },
         p => { WAITLIST.unshift(p.new); renderAll(); flashLive('new late-list email'); })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'points' }, p => {
+      POINTS.unshift(p.new); renderAll(); flashLive('points awarded');
+    })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, p => {
       if (p.eventType === 'DELETE')      ROOMS = ROOMS.filter(r => r.id !== p.old.id);
       else if (p.eventType === 'UPDATE') ROOMS = ROOMS.map(r => r.id === p.new.id ? p.new : r);
@@ -977,6 +1043,7 @@ const VIEWS = [
   { id:'overview',     title:'overview',            blurb:'the funnel, end to end' },
   { id:'applications', title:'applications',        blurb:'everyone who applied, and everyone who nearly did' },
   { id:'guests',       title:'guests & check-in',   blurb:'the list, their links, and who has checked in' },
+  { id:'games',        title:'slumber games',       blurb:'houses, who is in them, and the score' },
   { id:'stay',         title:'rooms & crew',        blurb:'who sleeps where, and who is working' },
   { id:'day',          title:'programming',         blurb:'the programme guests see at /itinerary' },
   { id:'reach',        title:'reach',               blurb:'the late list, and how the link looks when shared' },
@@ -989,6 +1056,7 @@ const VIEW_MAP = {
   overview:     ['@tiles', '@grid0', '@grid1'],
   applications: ['sec-applied', 'sec-drafts', 'failPanel'],
   guests:       ['sec-checkin'],
+  games:        ['sec-games'],
   stay:         ['sec-stay', 'sec-crew'],
   day:          ['sec-itin'],
   reach:        ['sec-late', 'sec-seo'],
@@ -1015,10 +1083,11 @@ function buildShell() {
        route from here at all, which meant knowing the URLs by heart to check what
        a guest actually sees. */
     if (v.id === 'overview'){
-      const words = { '/itinerary/':'nailinit', '/house/':'nailinit', '/housemates/':'housemates' };
+      const words = { '/itinerary/':'nailinit', '/house/':'nailinit', '/housemates/':'housemates',
+                      '/games/':'nailinit' };
       const LIVE_PAGES = [
         ['/', 'the site'], ['/besties/', 'besties gate'], ['/house/', 'the house'],
-        ['/housemates/', 'intro round'], ['/itinerary/', 'programme'],
+        ['/housemates/', 'intro round'], ['/itinerary/', 'programme'], ['/games/', 'scoreboard'],
         ['/checkin/', 'check-in'], ['/late/', 'after close'],
         ['/terms.html', 'T&Cs'],
       ];
@@ -1082,6 +1151,7 @@ function navCounts() {
   set('applications', APPS.length);
   set('guests', GUESTS.filter(g => g.code).length);
   set('stay', ROOMS.length);
+  set('games', HOUSES.length);
   set('day', ITIN.length);
   set('reach', WAITLIST.length);
   const live = new Set(VISITS.filter(v => Date.now() - +new Date(v.created_at) < 5 * 60 * 1000)
@@ -1121,7 +1191,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -2019,6 +2089,251 @@ function headcount() {
   const crew     = CREW.reduce((n, r) => n + (Number(r.headcount) || 0), 0);
   return { creators, besties, crew, total: besties + creators + crew };
 }
+
+/* ============================================================================
+   SLUMBER GAMES
+   Houses you name yourself, guests assigned by hand (with a balanced draft as a
+   starting point, because dealing 37 people one at a time is nobody's evening),
+   and points as an append-only ledger.
+
+   The ledger is the important part. Standings are summed from it every render
+   rather than stored on the house, so there is exactly one truth about the score.
+   A cached total is a second truth waiting to disagree with the first at 1am when
+   somebody disputes a result — and an award you can't explain is an award you
+   can't defend.
+   ========================================================================== */
+const houseTotal = (id) => POINTS.filter(p => p.house_id === id).reduce((n, p) => n + (p.points || 0), 0);
+let hsEditing = null;
+
+function gamesPanel(){
+  const board = document.getElementById('hsBoard');
+  if (!board) return;
+
+  const assigned = GUESTS.filter(g => g.code && g.house_id).length;
+  const total = GUESTS.filter(g => g.code).length;
+  document.getElementById('gmCount').textContent = HOUSES.length
+    ? `${HOUSES.length} houses · ${assigned}/${total} placed` : 'no houses yet';
+
+  const ranked = [...HOUSES].sort((a, b) => houseTotal(b.id) - houseTotal(a.id) || a.name.localeCompare(b.name));
+
+  const opts = (sel) => ['<option value="">— no house —</option>']
+    .concat(HOUSES.map(h => `<option value="${esc(h.id)}"${h.id === sel ? ' selected' : ''}>${esc(h.name)}</option>`))
+    .join('');
+
+  let html = '';
+  for (const h of ranked){
+    const mine = GUESTS.filter(g => g.house_id === h.id);
+    html += `<div class="hsCard" style="border-left-color:${esc(h.colour)}">
+      <div class="hsHead">
+        <b>${h.sigil ? esc(h.sigil) + ' ' : ''}${esc(h.name)}</b>
+        <span class="hsPts" style="color:${esc(h.colour)}">${houseTotal(h.id)}</span>
+        <span class="mot">${esc(h.motto || '')}</span>
+        <span style="flex:1"></span>
+        <span class="pill">${mine.length} in</span>
+        <button class="btn ghost hsAct" data-act="edit" data-h="${esc(h.id)}" type="button"
+          style="padding:3px 8px;font-size:11px">edit</button>
+        <button class="btn ghost hsAct" data-act="del" data-h="${esc(h.id)}" type="button"
+          style="padding:3px 8px;font-size:11px">remove</button>
+      </div>
+      ${mine.length ? `<div class="hsWho">${mine.map(g =>
+        `<span class="hsChip">${esc(String(g.name).replace(/\(.*?\)/g,'').trim())}</span>`).join('')}</div>`
+        : '<p class="sub" style="margin:.3rem 0 0">nobody yet</p>'}
+    </div>`;
+  }
+  if (!HOUSES.length) html = '<p class="empty">no houses yet — name the first one above.</p>';
+
+  /* the assignment list: unplaced first, because that's the list you work through */
+  const people = GUESTS.filter(g => g.code)
+    .sort((a, b) => (a.house_id ? 1 : 0) - (b.house_id ? 1 : 0) || a.name.localeCompare(b.name));
+  html += `<div style="display:flex;gap:8px;align-items:center;margin:14px 0 8px;flex-wrap:wrap">
+      <button class="btn ghost" id="hsDraft" type="button">deal everyone evenly</button>
+      <button class="btn ghost" id="hsClear" type="button">clear all houses</button>
+      <span class="sub" id="hsDraftMsg" style="margin:0"></span>
+    </div>
+    <div class="scroll"><table>
+    <thead><tr><th>guest</th><th>tier</th><th>house</th></tr></thead>
+    <tbody>${people.map(g => `<tr>
+      <td>${esc(String(g.name).replace(/\(.*?\)/g,'').trim())}</td>
+      <td><span class="tier ${g.tier === 'bestie' ? '' : esc(g.tier || '')}">${esc(g.tier || '—')}</span></td>
+      <td><select class="hsPick" data-g="${esc(g.id)}"
+            style="margin:0;height:32px;padding:.2rem .5rem;font-size:.82rem">${opts(g.house_id)}</select></td>
+    </tr>`).join('')}</tbody></table></div>`;
+  board.innerHTML = html;
+
+  // the award form's house list, and the ledger
+  const ph = document.getElementById('ptHouse');
+  if (ph) ph.innerHTML = HOUSES.map(h => `<option value="${esc(h.id)}">${esc(h.name)}</option>`).join('');
+  const body = document.getElementById('ptBody');
+  if (body) body.innerHTML = POINTS.slice(0, 60).map(p => {
+    const h = HOUSES.find(x => x.id === p.house_id);
+    return `<tr>
+      <td class="muted" style="white-space:nowrap">${esc(istStamp(p.created_at))}</td>
+      <td>${h ? esc(h.name) : '—'}</td>
+      <td style="color:${p.points < 0 ? 'var(--critical)' : 'var(--series)'}">${p.points > 0 ? '+' : ''}${p.points}</td>
+      <td style="white-space:normal">${esc(p.reason || p.game || '')}</td>
+      <td style="text-align:right"><button class="btn ghost ptDel" data-p="${esc(p.id)}" type="button"
+            style="padding:3px 8px;font-size:11px">undo</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ---- houses ---- */
+document.getElementById('hsForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('hsMsg');
+  const row = { name: hsName.value.trim(), colour: hsColour.value,
+                sigil: hsSigil.value.trim() || null, motto: hsMotto.value.trim() || null };
+  if (!row.name) return;
+  if (hsEditing){
+    const res = await save(sb.from('houses').update(row).eq('id', hsEditing), 'that house');
+    if (!res.ok){ msg.textContent = res.msg; msg.className = 'sub err'; return; }
+    Object.assign(HOUSES.find(h => h.id === hsEditing) || {}, row);
+    document.getElementById('hsCancel').click();
+    msg.textContent = `saved ${row.name}`; msg.className = 'sub';
+  } else {
+    row.position = HOUSES.length ? Math.max(...HOUSES.map(h => h.position)) + 1 : 1;
+    const { data, error } = await sb.from('houses').insert(row).select().single();
+    if (error){ msg.textContent = error.message; msg.className = 'sub err'; return; }
+    HOUSES.push(data);
+    hsForm.reset(); hsColour.value = '#eb648c'; hsName.focus();
+    msg.textContent = `added ${data.name}`; msg.className = 'sub';
+  }
+  renderAll();
+});
+document.getElementById('hsCancel')?.addEventListener('click', () => {
+  hsEditing = null; hsForm.reset(); hsColour.value = '#eb648c';
+  document.getElementById('hsSubmit').textContent = 'add house';
+  document.getElementById('hsCancel').hidden = true;
+  document.getElementById('hsMsg').textContent = '';
+});
+
+document.getElementById('hsBoard')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.hsAct');
+  if (btn){
+    const h = HOUSES.find(x => x.id === btn.dataset.h);
+    if (!h) return;
+    if (btn.dataset.act === 'edit'){
+      hsEditing = h.id;
+      hsName.value = h.name; hsColour.value = h.colour || '#eb648c';
+      hsSigil.value = h.sigil || ''; hsMotto.value = h.motto || '';
+      document.getElementById('hsSubmit').textContent = 'save';
+      document.getElementById('hsCancel').hidden = false;
+      hsName.focus();
+      return;
+    }
+    /* removing a house un-places its guests and CASCADES its points away — say
+       both, because the score disappearing is the surprising half */
+    const n = GUESTS.filter(g => g.house_id === h.id).length;
+    const pts = POINTS.filter(p => p.house_id === h.id).length;
+    if (!confirm(`Remove ${h.name}?` + (n ? ` ${n} guest(s) become unplaced.` : '') +
+                 (pts ? ` Its ${pts} point award(s) go too.` : ''))) return;
+    const { error } = await sb.from('houses').delete().eq('id', h.id);
+    if (error){ document.getElementById('hsMsg').textContent = error.message; return; }
+    HOUSES = HOUSES.filter(x => x.id !== h.id);
+    POINTS = POINTS.filter(p => p.house_id !== h.id);
+    for (const g of GUESTS) if (g.house_id === h.id) g.house_id = null;
+    renderAll();
+    return;
+  }
+  if (e.target.id === 'hsDraft') return dealEvenly();
+  if (e.target.id === 'hsClear') return clearHouses();
+});
+
+/* one dropdown change = one guest placed */
+document.getElementById('hsBoard')?.addEventListener('change', async (e) => {
+  const sel = e.target.closest('.hsPick');
+  if (!sel) return;
+  const house_id = sel.value || null;
+  sel.disabled = true;
+  const res = await save(sb.from('guests').update({ house_id }).eq('id', sel.dataset.g), 'that placement');
+  sel.disabled = false;
+  const msg = document.getElementById('hsMsg');
+  if (!res.ok){ msg.textContent = res.msg; msg.className = 'sub err'; return; }
+  msg.textContent = ''; msg.className = 'sub';
+  const g = GUESTS.find(x => x.id === sel.dataset.g);
+  if (g) g.house_id = house_id;
+  renderAll();
+});
+
+/* Greedy balance, not a snake draft. A snake deals on one running index, so a
+   tier that doesn't divide evenly — one super, say — shifts where the next tier
+   starts, and one house ends up with 2 creators while the rest have 4. Measured
+   it: sizes came out even but creators spread 2–4.
+   Instead each person goes to the house with the fewest of THEIR tier, then the
+   fewest people overall. Every dimension lands within one. It's a starting point
+   — each placement is still editable by hand afterwards, because you know things
+   this doesn't. */
+async function dealEvenly(){
+  const msg = document.getElementById('hsDraftMsg');
+  if (!HOUSES.length){ msg.textContent = 'name some houses first'; return; }
+  const people = GUESTS.filter(g => g.code);
+  if (!confirm(`Deal all ${people.length} guests across ${HOUSES.length} houses? This replaces existing placements.`)) return;
+  msg.textContent = 'dealing…';
+  const order = ['super', 'creator', 'bestie'];
+  const byTier = order.map(t => people.filter(g => (g.tier || 'bestie') === t))
+    .concat([people.filter(g => !order.includes(g.tier || 'bestie'))]);
+  const tally = {};
+  for (const h of HOUSES) tally[h.id] = { total: 0, super: 0, creator: 0, bestie: 0 };
+  const plan = [];
+  for (const group of byTier){
+    for (const g of group){
+      const t = order.includes(g.tier || 'bestie') ? (g.tier || 'bestie') : 'bestie';
+      const best = HOUSES.slice().sort((a, b) =>
+        (tally[a.id][t] - tally[b.id][t]) || (tally[a.id].total - tally[b.id].total))[0];
+      tally[best.id][t]++; tally[best.id].total++;
+      plan.push({ id: g.id, house_id: best.id });
+    }
+  }
+  for (const p of plan){
+    const res = await save(sb.from('guests').update({ house_id: p.house_id }).eq('id', p.id), 'a placement');
+    if (!res.ok){ msg.textContent = res.msg; return; }
+    const g = GUESTS.find(x => x.id === p.id); if (g) g.house_id = p.house_id;
+  }
+  msg.textContent = `dealt ${plan.length}`;
+  renderAll();
+}
+async function clearHouses(){
+  const msg = document.getElementById('hsDraftMsg');
+  const placed = GUESTS.filter(g => g.house_id);
+  if (!placed.length) return;
+  if (!confirm(`Unplace all ${placed.length} guests? Houses and points stay.`)) return;
+  for (const g of placed){
+    await sb.from('guests').update({ house_id: null }).eq('id', g.id);
+    g.house_id = null;
+  }
+  msg.textContent = 'cleared';
+  renderAll();
+}
+
+/* ---- points ---- */
+document.getElementById('ptForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('ptMsg');
+  const house_id = ptHouse.value;
+  const points = parseInt(ptPoints.value, 10);
+  if (!house_id || !Number.isFinite(points) || points === 0){
+    msg.textContent = 'pick a house and a non-zero score'; msg.className = 'sub err'; return;
+  }
+  const row = { house_id, points, reason: ptReason.value.trim() || null,
+                awarded_by: (await sb.auth.getUser()).data.user?.email || null };
+  const { data, error } = await sb.from('points').insert(row).select().single();
+  if (error){ msg.textContent = error.message; msg.className = 'sub err'; return; }
+  if (!POINTS.some(p => p.id === data.id)) POINTS.unshift(data);
+  const h = HOUSES.find(x => x.id === house_id);
+  msg.textContent = `${points > 0 ? '+' : ''}${points} to ${h ? h.name : 'that house'}`;
+  msg.className = 'sub';
+  ptReason.value = ''; ptPoints.value = 10;
+  renderAll();
+});
+document.getElementById('ptBody')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.ptDel');
+  if (!btn) return;
+  if (!confirm('Undo this award?')) return;
+  const { error } = await sb.from('points').delete().eq('id', btn.dataset.p);
+  if (error){ document.getElementById('ptMsg').textContent = error.message; return; }
+  POINTS = POINTS.filter(p => p.id !== btn.dataset.p);
+  renderAll();
+});
 
 /* ============================================================================
    WHERE EVERYONE STAYS
