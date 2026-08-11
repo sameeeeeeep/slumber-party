@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="referrer" content="no-referrer" />
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+<title>never have I ever · the wall</title>
+<meta name="description" content="The wall." />
+<link rel="icon" type="image/png" href="/assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Playfair+Display:ital,wght@0,500&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* THE WALL. Projected, touched by nobody.
+
+     The whole screen is one sentence and two columns. A name arrives as a bubble
+     on the side it chose, and when somebody changes their mind the SAME bubble
+     crosses the middle — which is the single best moment this game has, so it
+     gets a real animation rather than a repaint. */
+  :root{
+    --wine:#2a1520; --wine-2:#1c1017; --cream:#fff6f8;
+    --pink:#eb648c; --rose:#c2456b; --soft:#c9a0ae; --yellow:#ffe9a8;
+    --mint:#7fd4c1; --mint-2:#3f9e89;
+    --mono:'VT323',monospace; --pixel:'Press Start 2P',monospace;
+    --serif:'Playfair Display',serif;
+  }
+  *{ box-sizing:border-box; }
+  p,h1,h2{ margin:0; }
+  html,body{ margin:0; height:100%; overflow:hidden; }
+  body{ background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%);
+    color:var(--cream); font-family:var(--mono); }
+
+  #gate{ height:100%; display:grid; place-items:center; padding:1.4rem; }
+  .gbox{ text-align:center; width:min(22rem,100%); }
+  .gbox img{ display:block; width:min(74%,15rem); margin:0 auto .8rem; }
+  .gbox h1{ font-family:var(--serif); font-style:italic; font-size:1.7rem; margin:0 0 1.1rem; color:#fff; }
+  .gbox form{ display:flex; gap:.5rem; }
+  .gbox input{ flex:1; min-width:0; background:rgba(255,255,255,.06);
+    border:1px solid rgba(245,195,207,.28); border-radius:100px; padding:.6rem 1rem;
+    color:var(--cream); font-family:var(--mono); font-size:1.3rem; outline:none; text-align:center; }
+  .gbox button{ flex:none; border:0; cursor:pointer; border-radius:100px; padding:.55rem 1.05rem;
+    font-family:var(--pixel); font-size:.6rem; color:#fff;
+    background:linear-gradient(120deg,var(--pink),#e2703f); }
+  .gbox .err{ min-height:1.5rem; margin-top:.7rem; font-size:1.1rem; color:#ffb3c6; }
+
+  #wall{ display:none; height:100%; grid-template-rows:auto 1fr auto; }
+  #wall.on{ display:grid; }
+
+  /* the question */
+  header{ text-align:center; padding:1.6rem 2rem .9rem; }
+  .kicker{ font-family:var(--pixel); font-size:.72rem; letter-spacing:.42em; color:var(--soft); }
+  #q{ font-family:var(--serif); font-style:italic; color:#fff; margin:.9rem auto 0;
+    font-size:clamp(1.8rem,4.4vw,3.6rem); line-height:1.15; max-width:min(46rem,90vw); }
+  /* a new question wipes in, so the room's eyes go up at the right moment */
+  #q.fresh{ animation:qIn .7s cubic-bezier(.2,.9,.3,1.05); }
+  @keyframes qIn{ from{ opacity:0; transform:translateY(.5rem) scale(.98); } }
+
+  /* the two sides */
+  .sides{ display:grid; grid-template-columns:1fr auto 1fr; min-height:0; }
+  .side{ display:flex; flex-direction:column; min-height:0; padding:.6rem 1.6rem 1rem; }
+  .side .top{ display:flex; align-items:baseline; gap:.9rem; justify-content:center; }
+  .side .n{ font-family:var(--pixel); line-height:1; font-size:clamp(2.2rem,5vw,4rem); }
+  .side .t{ font-family:var(--pixel); font-size:clamp(.8rem,1.15vw,1.25rem); letter-spacing:.2em; }
+  #haveSide .n, #haveSide .t{ color:var(--pink); text-shadow:0 0 26px rgba(235,100,140,.45); }
+  #neverSide .n, #neverSide .t{ color:var(--mint); text-shadow:0 0 26px rgba(127,212,193,.4); }
+
+  /* the divider: a hairline and the question mark of the whole game */
+  .split{ width:1px; background:linear-gradient(180deg,transparent,rgba(245,195,207,.3),transparent);
+    position:relative; }
+
+  /* the bubbles */
+  /* centred, not top-aligned: six answers in a projected column look sparse
+     hanging off the top and composed in the middle, and a room of forty fills it
+     either way */
+  .bubs{ flex:1; min-height:0; display:flex; flex-wrap:wrap; gap:.55rem; align-content:center;
+    justify-content:center; padding:1.1rem 0; overflow:hidden; }
+  /* sized to be read from the back of a room, not from a laptop: a name is the
+     only thing on this screen anybody needs to identify at distance */
+  .bub{ font-family:var(--pixel); font-size:clamp(.7rem,1.45vw,1.35rem); color:#fff;
+    border-radius:100px; padding:.8rem 1.25rem; white-space:nowrap;
+    animation:bubIn .45s cubic-bezier(.2,.9,.3,1.3); }
+  #haveSide .bub{ background:linear-gradient(140deg,#ff86a8,var(--rose)); box-shadow:0 .4rem 1.2rem rgba(235,100,140,.3); }
+  #neverSide .bub{ background:linear-gradient(140deg,#a8ecdd,var(--mint-2)); box-shadow:0 .4rem 1.2rem rgba(127,212,193,.22); color:#10312b; }
+  @keyframes bubIn{ from{ opacity:0; transform:scale(.6) translateY(.6rem); } }
+  /* changed their mind: the bubble crosses the middle instead of blinking out of
+     one column and into the other. It's the same element, moved. */
+  .bub.moved{ animation:bubMove .75s cubic-bezier(.4,.05,.25,1); }
+  @keyframes bubMove{
+    0%{ transform:translateX(var(--from)) scale(1.06); opacity:.85; }
+    60%{ transform:translateX(0) scale(1.06); }
+    100%{ transform:none; }
+  }
+
+  footer{ display:flex; align-items:center; gap:1.6rem; padding:.7rem 1.4rem;
+    border-top:1px solid rgba(245,195,207,.14); }
+  footer img.logo{ height:2.5rem; }
+  .stat{ text-align:center; }
+  .big{ font-family:var(--pixel); font-size:1.5rem; color:var(--yellow); line-height:1;
+    text-shadow:0 0 18px rgba(255,233,168,.4); }
+  .lbl{ font-family:var(--pixel); font-size:.46rem; letter-spacing:.13em; color:var(--soft);
+    margin-top:.28rem; }
+  .bar{ flex:0 1 14rem; height:.5rem; border-radius:100px; background:rgba(255,255,255,.1); }
+  .bar i{ display:block; height:100%; border-radius:100px; transition:width .5s;
+    background:linear-gradient(90deg,var(--pink),var(--yellow)); }
+  /* the running scoreboard — who has said "I have" the most, all night */
+  .lead{ flex:1; display:flex; gap:.5rem; justify-content:flex-end; align-items:center;
+    overflow:hidden; }
+  .lead span{ font-family:var(--pixel); font-size:clamp(.55rem,.72vw,.8rem); color:var(--cream);
+    background:rgba(255,255,255,.08); border:1px solid rgba(245,195,207,.16);
+    border-radius:100px; padding:.4rem .6rem; white-space:nowrap; }
+  .lead span b{ color:var(--yellow); }
+  .lead .ttl{ background:none; border:0; color:var(--soft); letter-spacing:.14em; }
+  .waiting{ text-align:center; color:var(--soft); font-size:1.9rem; line-height:1.5;
+    grid-column:1 / -1; align-self:center; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gbox">
+    <img src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <h1>the wall</h1>
+    <form id="gform">
+      <input id="gpw" type="password" autocomplete="off" autocapitalize="none" placeholder="•••••" />
+      <button type="submit">OPEN ▸</button>
+    </form>
+    <p class="err" id="gerr"></p>
+  </div>
+</div>
+
+<div id="wall">
+  <header>
+    <p class="kicker">NEVER HAVE I EVER</p>
+    <h2 id="q">…</h2>
+  </header>
+
+  <div class="sides" id="sides">
+    <div class="side" id="haveSide">
+      <div class="top"><span class="n" id="nHave">0</span><span class="t">I HAVE</span></div>
+      <div class="bubs" id="bHave"></div>
+    </div>
+    <div class="split"></div>
+    <div class="side" id="neverSide">
+      <div class="top"><span class="t">I HAVE NEVER</span><span class="n" id="nNever">0</span></div>
+      <div class="bubs" id="bNever"></div>
+    </div>
+  </div>
+
+  <footer>
+    <img class="logo" src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <div class="stat"><p class="big" id="answered">0</p><p class="lbl">ANSWERED</p></div>
+    <div class="bar"><i id="bar" style="width:0%"></i></div>
+    <div class="lead" id="lead"></div>
+  </footer>
+</div>
+
+<script src="/assets/config.js"></script>
+<script>
+/* ============================================================================
+   /never/wall — the projected side.
+
+   Polls, like the nail board's and the puzzle's walls, and for the same reason:
+   guests have no SELECT on these tables, so a realtime subscription would need
+   auth a projector doesn't have, and at this pace a two-second poll is
+   indistinguishable from live with nothing to reconnect when the wifi hiccups.
+
+   Draws only what CHANGED. Every bubble is a kept element in a Map — a full
+   repaint would restart forty animations a tick, which is exactly what made the
+   first nail-board wall flicker, and here it would also destroy the one thing
+   worth watching: a bubble crossing the middle when somebody switches sides.
+   ========================================================================== */
+const CFG = window.SLUMBER_CONFIG || {};
+const FN = CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/never';
+const POLL = 2000;
+let PW = null, QID = null;
+/* name → { el, side } — the whole diff state */
+const BUBS = new Map();
+try { PW = sessionStorage.getItem('ssp-itin'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+
+async function fetchBoard(pw) {
+  const r = await fetch(FN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: pw, action: 'board' }),
+  });
+  if (r.status === 401) return { wrong: true };
+  if (r.status === 429) return { rate: true };
+  return await r.json().catch(() => ({}));
+}
+
+function bubble(name) {
+  const el = document.createElement('span');
+  el.className = 'bub';
+  el.textContent = name;
+  return el;
+}
+
+function render(d) {
+  if (!d.question) {
+    QID = null;
+    for (const { el } of BUBS.values()) el.remove();
+    BUBS.clear();
+    $('q').textContent = 'nothing live yet 🙈';
+    $('nHave').textContent = '0'; $('nNever').textContent = '0';
+    $('answered').textContent = '0'; $('bar').style.width = '0%';
+    return;
+  }
+  /* a new question empties both sides — the previous round's bubbles are not
+     answers to this one */
+  if (d.question.id !== QID) {
+    QID = d.question.id;
+    for (const { el } of BUBS.values()) el.remove();
+    BUBS.clear();
+    $('q').textContent = d.question.text;
+    $('q').classList.remove('fresh');
+    void $('q').offsetWidth;                 // restart the animation
+    $('q').classList.add('fresh');
+  }
+
+  /* keyed on the FULL name, printed as the short one. Two Khushis are two
+     bubbles; keying on the printed label would have merged them and made the
+     survivor flicker between columns. */
+  const want = new Map(), text = new Map();
+  for (const p of d.have  || []) { want.set(p.k, 'have');  text.set(p.k, p.n); }
+  for (const p of d.never || []) { want.set(p.k, 'never'); text.set(p.k, p.n); }
+
+  /* gone (a reset in the dashboard) */
+  for (const [name, cur] of [...BUBS]) {
+    if (want.has(name)) continue;
+    cur.el.remove();
+    BUBS.delete(name);
+  }
+  for (const [name, side] of want) {
+    const cur = BUBS.get(name);
+    const box = side === 'have' ? $('bHave') : $('bNever');
+    if (!cur) {
+      const el = bubble(text.get(name) || name);
+      box.appendChild(el);
+      BUBS.set(name, { el, side });
+      continue;
+    }
+    if (cur.side === side) continue;          // nothing changed: leave it alone
+    /* SWITCHED SIDES. Measure where the bubble is now, move the element, then
+       animate it from the old place to the new one — a real crossing rather than
+       a disappearance and a reappearance. */
+    const from = cur.el.getBoundingClientRect();
+    cur.el.classList.remove('moved');
+    box.appendChild(cur.el);
+    const to = cur.el.getBoundingClientRect();
+    cur.el.style.setProperty('--from', `${Math.round(from.left - to.left)}px`);
+    void cur.el.offsetWidth;
+    cur.el.classList.add('moved');
+    cur.side = side;
+  }
+
+  $('nHave').textContent = (d.have || []).length;
+  $('nNever').textContent = (d.never || []).length;
+  $('answered').textContent = d.answered || 0;
+  $('bar').style.width = d.roster ? Math.round(((d.answered || 0) / d.roster) * 100) + '%' : '0%';
+
+  /* the running scoreboard. Only shown once somebody actually has a tally, so an
+     empty first round doesn't put a row of zeroes on the projector. */
+  const top = (d.standings || []).filter((s) => s.have > 0).slice(0, 5);
+  $('lead').innerHTML = top.length
+    ? '<span class="ttl">MOST GUILTY</span>' +
+      top.map((s) => `<span>${escHtml(s.name)} <b>${s.have}</b></span>`).join('')
+    : '';
+}
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function open_(pw, quiet) {
+  const res = await fetchBoard(pw);
+  if (res.ok) {
+    PW = pw;
+    try { sessionStorage.setItem('ssp-itin', pw); } catch (e) {}
+    $('gate').style.display = 'none';
+    $('wall').classList.add('on');
+    render(res);
+    return true;
+  }
+  if (!quiet) $('gerr').textContent = res.rate ? 'too many tries — give it a while 🙏'
+    : res.wrong ? "that's not it 👀" : 'hmm, try again';
+  return false;
+}
+
+$('gform').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('gpw').value.trim();
+  if (v) open_(v, false);
+});
+
+setInterval(() => { if (PW && !document.hidden) open_(PW, true); }, POLL);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && PW) open_(PW, true); });
+if (PW) open_(PW, true);
+</script>
+</body>
+</html>

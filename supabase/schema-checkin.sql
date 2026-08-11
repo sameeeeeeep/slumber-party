@@ -832,3 +832,71 @@ create policy "admins delete puzzle art" on storage.objects for delete
 -- public read: the wall loads the picture with no session of its own
 create policy "anyone reads puzzle art"  on storage.objects for select
   using (bucket_id = 'puzzle');
+
+-- ============================================================================
+--  NEVER HAVE I EVER  (12 Aug 2026)
+--
+--  One question at a time on a projected wall, two columns, and everyone's name
+--  in a bubble on the side they picked. The game already works in a circle with
+--  ten fingers up; what a screen adds is that forty people can answer at once
+--  and nobody has to shout over the room to be counted.
+--
+--  Two tables and a pointer. `never_qs` holds the questions in the order they'll
+--  be asked, exactly one flagged `live` — the same shape as `puzzles`, because the
+--  wall asks the same question ("what am I drawing right now?") and one pointer
+--  answers it without the wall needing to know anything about state.
+--
+--  ONE ANSWER PER PERSON PER QUESTION, and it is changeable: the unique index is
+--  on (q_id, name) and the Edge Function upserts onto it. Somebody will tap the
+--  wrong side and want to move, and a game where a misfire is permanent stops
+--  being funny. The bubble moves across on the wall, which is better theatre than
+--  getting it right first time.
+--
+--  Names, not user ids. There are no accounts here; a guest picks their name from
+--  the roster once and it lives in localStorage, the same identity the nail board
+--  and the puzzle already use. That means the roster is the authority on who can
+--  answer, and it means honesty is social rather than enforced — which is the
+--  whole point of this particular game.
+--
+--  Everything goes through the `never` Edge Function on the service role. Guests
+--  hold the anon key, which reads nothing here, so nobody can count the answers
+--  before the wall shows them.
+-- ============================================================================
+create table if not exists public.never_qs (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  text       text not null,
+  position   integer not null default 0,
+  live       boolean not null default false,   -- at most one; the wall draws this
+  asked_at   timestamptz                        -- first time it went live
+);
+create index if not exists never_qs_order on public.never_qs (position);
+-- one live question, enforced in the database rather than hoped for in the client
+create unique index if not exists never_qs_one_live on public.never_qs (live) where live;
+
+create table if not exists public.never_answers (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  q_id       uuid not null references public.never_qs(id) on delete cascade,
+  name       text not null,
+  answer     text not null check (answer in ('have', 'never'))
+);
+-- the upsert target: one answer each, changeable
+create unique index if not exists never_answers_once on public.never_answers (q_id, name);
+create index if not exists never_answers_q on public.never_answers (q_id);
+
+alter table public.never_qs      enable row level security;
+alter table public.never_answers enable row level security;
+
+drop policy if exists "admins all never_qs"      on public.never_qs;
+drop policy if exists "admins all never_answers" on public.never_answers;
+create policy "admins all never_qs" on public.never_qs
+  for all using (public.is_admin()) with check (public.is_admin());
+create policy "admins all never_answers" on public.never_answers
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- The dashboard watches the answers land, the same way it watches check-ins: a
+-- new table is not in the realtime publication by default, and a subscription to
+-- one that isn't fails by simply never firing — which looks like nobody playing.
+alter publication supabase_realtime add table public.never_qs;
+alter publication supabase_realtime add table public.never_answers;

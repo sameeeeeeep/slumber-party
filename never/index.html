@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="referrer" content="no-referrer" />
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+<title>never have I ever 🙈 · khushi's slumber party</title>
+<meta name="description" content="Two buttons. Be honest." />
+<link rel="icon" type="image/png" href="/assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Playfair+Display:ital,wght@0,500&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  /* TWO BUTTONS, and they are enormous.
+     This gets played in the dark, half-lying down, holding a drink. So: no small
+     targets, no scrolling, and the question big enough to read from the phone
+     resting on your chest. The interesting thing is on the wall. */
+  :root{
+    --wine:#2a1520; --wine-2:#1c1017; --cream:#fff6f8;
+    --pink:#eb648c; --rose:#c2456b; --soft:#c9a0ae; --yellow:#ffe9a8;
+    --mint:#7fd4c1;
+    --mono:'VT323',monospace; --pixel:'Press Start 2P',monospace;
+    --serif:'Playfair Display',serif;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  p,h1,h2{ margin:0; }
+  html,body{ margin:0; min-height:100%; }
+  body{ background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%);
+    color:var(--cream); font-family:var(--mono); font-size:18px; }
+
+  .wrap{ min-height:100vh; min-height:100dvh; display:grid; place-items:center; padding:1.2rem; }
+  .box{ width:min(24rem,100%); text-align:center; }
+  .box img.logo{ display:block; width:min(64%,13rem); margin:0 auto .9rem; }
+
+  #gform{ display:flex; gap:.5rem; }
+  #gform input{ flex:1; min-width:0; background:rgba(255,255,255,.06);
+    border:1px solid rgba(245,195,207,.28); border-radius:100px; padding:.6rem 1rem;
+    color:var(--cream); font-family:var(--mono); font-size:1.3rem; outline:none; text-align:center; }
+  #gform button{ flex:none; border:0; cursor:pointer; border-radius:100px; padding:.55rem 1.05rem;
+    font-family:var(--pixel); font-size:.6rem; color:#fff;
+    background:linear-gradient(120deg,var(--pink),#e2703f); }
+  .err{ min-height:1.5rem; margin-top:.7rem; font-size:1.1rem; color:#ffb3c6; }
+
+  h1{ font-family:var(--serif); font-style:italic; font-size:1.7rem; color:#fff; margin:0 0 1rem; }
+  select{ width:100%; background:rgba(255,255,255,.07); color:var(--cream);
+    border:1px solid rgba(245,195,207,.3); border-radius:100px; padding:.65rem 1rem;
+    font-family:var(--mono); font-size:1.2rem; text-align:center; }
+  .swap{ background:none; border:0; color:var(--soft); font-family:var(--mono);
+    font-size:1rem; text-decoration:underline; cursor:pointer; }
+
+  /* the question */
+  .kicker{ font-family:var(--pixel); font-size:.55rem; letter-spacing:.2em; color:var(--soft); }
+  #q{ font-family:var(--serif); font-style:italic; color:#fff; margin:.9rem 0 1.4rem;
+    font-size:clamp(1.5rem,7vw,2.2rem); line-height:1.25; min-height:3.2em;
+    display:grid; align-items:center; }
+
+  /* the two buttons. Stacked, full width, and tall — one thumb, no aiming. */
+  .btns{ display:grid; gap:.8rem; }
+  .big{ border:0; cursor:pointer; border-radius:1.5rem; padding:1.5rem 1rem; color:#fff;
+    font-family:var(--pixel); font-size:.95rem; letter-spacing:.04em; line-height:1.5;
+    transition:transform .12s, box-shadow .2s, opacity .2s; }
+  .big:active{ transform:scale(.97); }
+  #bHave{ background:radial-gradient(circle at 30% 20%, #ff86a8, var(--rose) 62%, #8d2b48);
+    box-shadow:0 .7rem 2rem rgba(235,100,140,.4); }
+  #bNever{ background:radial-gradient(circle at 30% 20%, #a8ecdd, #3f9e89 62%, #22685a);
+    box-shadow:0 .7rem 2rem rgba(127,212,193,.28); }
+  /* the one you picked stays lit; the other steps back but is still tappable, so
+     changing your mind is one tap and obviously allowed */
+  .btns.picked .big{ opacity:.42; box-shadow:none; }
+  .btns.picked .big.on{ opacity:1; }
+  .btns.picked .big.on::after{ content:' ✓'; }
+  .note{ color:var(--soft); font-size:1.1rem; margin-top:1rem; line-height:1.45; min-height:2.6em; }
+  .hide{ display:none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- the word -->
+  <div class="box" id="gate">
+    <img class="logo" src="/assets/logo2.png" alt="Khushi's Secret Slumber Party" />
+    <h1>never have I ever</h1>
+    <form id="gform">
+      <input id="gpw" type="password" autocomplete="off" autocapitalize="none" placeholder="•••••" />
+      <button type="submit">OPEN ▸</button>
+    </form>
+    <p class="err" id="gerr"></p>
+  </div>
+
+  <!-- who -->
+  <div class="box hide" id="whoBox">
+    <img class="logo" src="/assets/logo2.png" alt="" />
+    <h1>who are you?</h1>
+    <select id="mePick"><option value="">pick your name</option></select>
+  </div>
+
+  <!-- the game -->
+  <div class="box hide" id="app">
+    <p class="kicker" id="kick">NEVER HAVE I EVER</p>
+    <h2 id="q">waiting for the first one…</h2>
+    <div class="btns" id="btns">
+      <button class="big" id="bHave" type="button">I HAVE</button>
+      <button class="big" id="bNever" type="button">I HAVE NEVER</button>
+    </div>
+    <p class="note" id="note">look up 👀 your name lands on the big screen</p>
+    <p style="margin-top:1rem"><button class="swap" id="swap" type="button">not you?</button></p>
+  </div>
+</div>
+
+<script src="/assets/config.js"></script>
+<script>
+/* ============================================================================
+   /never — the guest side of never have I ever.
+
+   Two buttons and one poll. The phone holds no state worth protecting: it asks
+   what the live question is, sends a side, and everything visible happens on the
+   wall. That's why an answer is changeable — the cost of a misfire should be one
+   more tap, not a wrong bubble on a projector for the rest of the round.
+
+   The question id travels WITH the answer. If the host advances while someone's
+   thumb is in the air, the server says "moved" and the phone repaints instead of
+   filing the answer under a question they never saw.
+   ========================================================================== */
+const CFG = window.SLUMBER_CONFIG || {};
+const FN = CFG.supabaseUrl.replace(/\/$/, '') + '/functions/v1/never';
+const POLL = 2500;
+let PW = null, ME = null, QID = null, MINE = null;
+try { PW = sessionStorage.getItem('ssp-itin'); ME = localStorage.getItem('ssp-board-me'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const show = (id) => { for (const b of ['gate', 'whoBox', 'app']) $(b).classList.toggle('hide', b !== id); };
+
+async function call(body) {
+  const r = await fetch(FN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: PW, ...body }),
+  });
+  if (r.status === 401) return { wrong: true };
+  if (r.status === 429) return { rate: true };
+  return await r.json().catch(() => ({}));
+}
+
+async function open_(pw, quiet) {
+  const r = await fetch(FN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: CFG.supabaseAnonKey,
+               Authorization: 'Bearer ' + CFG.supabaseAnonKey },
+    body: JSON.stringify({ password: pw, action: 'open' }),
+  });
+  if (!r.ok) {
+    if (!quiet) $('gerr').textContent = r.status === 429 ? 'too many tries — give it a while 🙏'
+      : r.status === 401 ? "that's not it 👀" : 'hmm, try again';
+    return false;
+  }
+  const j = await r.json();
+  PW = pw;
+  try { sessionStorage.setItem('ssp-itin', pw); } catch (e) {}
+  $('mePick').innerHTML = '<option value="">pick your name</option>' +
+    (j.roster || []).map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if (ME) { start(); } else { show('whoBox'); }
+  return true;
+}
+
+$('gform').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('gpw').value.trim();
+  if (v) open_(v, false);
+});
+$('mePick').addEventListener('change', (e) => {
+  if (!e.target.value) return;
+  ME = e.target.value;
+  try { localStorage.setItem('ssp-board-me', ME); } catch (err) {}
+  start();
+});
+$('swap').addEventListener('click', () => {
+  ME = null;
+  try { localStorage.removeItem('ssp-board-me'); } catch (e) {}
+  show('whoBox');
+});
+
+function start() {
+  show('app');
+  refresh();
+  setInterval(() => { if (!document.hidden) refresh(); }, POLL);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+}
+
+/* paint the pick. Called from both the poll and the tap, so an answer looks
+   instant locally and is still corrected by the server a moment later. */
+function paint() {
+  const on = MINE;
+  $('btns').classList.toggle('picked', !!on);
+  $('bHave').classList.toggle('on', on === 'have');
+  $('bNever').classList.toggle('on', on === 'never');
+}
+
+async function refresh() {
+  const res = await call({ action: 'board', name: ME });
+  if (!res.ok) return;
+  if (!res.question) {
+    QID = null; MINE = null; paint();
+    $('q').textContent = 'nothing live yet…';
+    $('kick').textContent = 'HOLD ON 🤫';
+    $('bHave').disabled = $('bNever').disabled = true;
+    $('note').textContent = 'the next one is coming';
+    return;
+  }
+  $('bHave').disabled = $('bNever').disabled = false;
+  $('kick').textContent = 'NEVER HAVE I EVER';
+  if (res.question.id !== QID) {
+    /* a new question: forget the old pick before the server's answer arrives, so
+       the previous round's tick can't sit under a question it doesn't belong to */
+    QID = res.question.id;
+    MINE = null;
+    $('q').textContent = res.question.text;
+    $('note').textContent = 'be honest 🤞 it goes on the wall';
+  }
+  MINE = res.mine || null;
+  paint();
+  if (MINE) {
+    $('note').textContent = `you're on the ${MINE === 'have' ? 'I HAVE' : 'NEVER'} side — tap the other one to move`;
+  }
+}
+
+async function answer(side) {
+  if (!QID) return;
+  MINE = side; paint();                          // optimistic: the tap must feel instant
+  $('note').textContent = 'landing on the wall…';
+  if (navigator.vibrate) try { navigator.vibrate(25); } catch (e) {}
+  const res = await call({ action: 'answer', name: ME, answer: side, q: QID });
+  if (res.ok) {
+    $('note').textContent = `you're on the ${side === 'have' ? 'I HAVE' : 'NEVER'} side — look up 👀`;
+  } else if (res.error === 'moved') {
+    $('note').textContent = 'too slow — new question 👀';
+    refresh();
+  } else if (res.rate) {
+    $('note').textContent = 'slow down a second 🙏';
+  } else {
+    MINE = null; paint();
+    $('note').textContent = "that didn't land — tap again";
+  }
+}
+$('bHave').addEventListener('click', () => answer('have'));
+$('bNever').addEventListener('click', () => answer('never'));
+
+if (PW) open_(PW, true);
+</script>
+</body>
+</html>

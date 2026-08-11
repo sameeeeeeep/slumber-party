@@ -977,6 +977,31 @@
 
 
 
+  <!-- ------------------------------------------------- never have I ever -->
+  <section id="sec-never" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">never have I ever</h2>
+      <span class="pill" id="nvCount">—</span>
+      <button class="btn ghost" id="nvSeed" type="button">add a starter set</button>
+      <button class="btn ghost" id="nvCsv" type="button">csv</button>
+    </div>
+    <div class="ovs" id="ovNever"></div>
+    <p class="sub">one question at a time. Guests open <code>/never</code> and get two buttons;
+      every answer lands on <code>/never/wall</code> as a name bubble on the side they picked,
+      and when someone changes their mind the bubble crosses the middle. Write the questions
+      here in the order you want to ask them, then <b>ask this</b> to put one on the wall —
+      only one is live at a time. An answer can be changed, so a misfire costs one tap.</p>
+
+    <form id="nvForm" class="addRow">
+      <label style="flex:4 1 320px">never have I ever…
+        <input id="nvText" type="text" placeholder="…been thrown out of somewhere" required /></label>
+      <button class="btn" id="nvAdd" type="submit" style="width:auto">add it</button>
+    </form>
+    <p class="sub" id="nvMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
+
+    <div id="nvList" style="margin-top:14px"></div>
+  </section>
+
   <!-- ------------------------------------------------------------- the puzzle -->
   <section id="sec-puzzle" class="panel" style="margin-top:18px">
     <div class="tablebar">
@@ -1302,7 +1327,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
-let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [], ACTS = [], BOARD = [], BVOTES = [], PUZZLES = [], PIECES = [];
+let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [], ACTS = [], BOARD = [], BVOTES = [], PUZZLES = [], PIECES = [], NEVERQS = [], NEVERANS = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
@@ -1322,7 +1347,7 @@ async function fetchAll(build) {
 async function boot() {
   // RLS decides this, not the UI: a signed-in user who isn't in `admins`
   // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm, ac, bp, bv, pz, pc] = await Promise.all([
+  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm, ac, bp, bv, pz, pc, nq, na] = await Promise.all([
     fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
     fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
     // these two 404 until schema-checkin.sql has been run; the panel just stays
@@ -1350,11 +1375,13 @@ async function boot() {
     sb.from('board_votes').select('post_id,voter'),
     sb.from('puzzles').select('*').order('created_at', { ascending: false }),
     sb.from('puzzle_pieces').select('puzzle_id,idx,claimed_by'),
+    sb.from('never_qs').select('*').order('position'),
+    sb.from('never_answers').select('id,q_id,name,answer'),
   ]);
   if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
 
   APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || []; ACTS = ac.data || []; BOARD = bp.data || []; BVOTES = bv.data || []; PUZZLES = pz.data || []; PIECES = pc.data || [];
+  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || []; ACTS = ac.data || []; BOARD = bp.data || []; BVOTES = bv.data || []; PUZZLES = pz.data || []; PIECES = pc.data || []; NEVERQS = nq.data || []; NEVERANS = na.data || [];
   seoFill(m && m.data);
   if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
   loginEl.style.display = 'none'; appEl.style.display = 'block';
@@ -1371,6 +1398,16 @@ async function boot() {
         p => { CHECKINS.unshift(p.new); renderAll(); flashLive('new check-in'); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waitlist' },
         p => { WAITLIST.unshift(p.new); renderAll(); flashLive('new late-list email'); })
+    /* answers arrive as INSERTs and, when somebody switches sides, as UPDATEs on
+       the same row — so both verbs, keyed on (q_id, name) rather than on id */
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'never_answers' }, p => {
+      if (p.eventType === 'DELETE') NEVERANS = NEVERANS.filter(a => a.id !== p.old.id);
+      else {
+        const i = NEVERANS.findIndex(a => a.q_id === p.new.q_id && a.name === p.new.name);
+        if (i === -1) NEVERANS.push(p.new); else NEVERANS[i] = p.new;
+      }
+      neverPanel();
+    })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'points' }, p => {
       POINTS.unshift(p.new); renderAll(); flashLive('points awarded');
     })
@@ -1461,7 +1498,7 @@ const VIEW_MAP = {
   applications: ['sec-applied', 'sec-drafts', 'failPanel'],
   guests:       ['sec-checkin'],
   crew:         ['sec-crew', 'sec-cars'],
-  games:        ['sec-games', 'sec-board', 'sec-puzzle'],
+  games:        ['sec-games', 'sec-board', 'sec-puzzle', 'sec-never'],
   sponsors:     ['sec-sponsors'],
   bffs:         ['sec-bffs', 'sec-hampers'],
   stay:         ['sec-stay'],
@@ -1498,6 +1535,8 @@ const LIVE_PAGES = [
   ['guests', '/board/wall/',   'the wall',      'nailinit'],
   ['guests', '/puzzle/',       'the puzzle',    'nailinit'],
   ['guests', '/puzzle/wall/',  'puzzle wall',   'nailinit'],
+  ['guests', '/never/',        'never have I',  'nailinit'],
+  ['guests', '/never/wall/',   'never wall',    'nailinit'],
   ['ops',    '/checkin/',      'check-in',      null],
 ];
 const PAGE_GROUPS = [['public', 'anyone'], ['guests', 'guests only'], ['ops', 'ours']];
@@ -1654,7 +1693,7 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); activitiesPanel(); boardPanel(); puzzlePanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); activitiesPanel(); boardPanel(); puzzlePanel(); neverPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -3084,10 +3123,10 @@ document.getElementById('spCsv')?.addEventListener('click', () => {
 /* same reason as window.__shell: these two panels are the newest and the ones
    most likely to be checked without a login in hand */
 window.__logistics = { sponsorsPanel,
-  fake(g, sp, dl, ci, cw, bf, hm, ac, it, bp, bv){ GUESTS = g; SPONSORS = sp; DELIVS = dl;
+  fake(g, sp, dl, ci, cw, bf, hm, ac, it, bp, bv, nq, na){ GUESTS = g; SPONSORS = sp; DELIVS = dl;
     CHECKINS = ci || [];
     if (cw) CREW = cw; if (bf) BFFS = bf; if (hm) HAMPERS = hm; if (ac) ACTS = ac; if (it) ITIN = it;
-    if (bp) BOARD = bp; if (bv) BVOTES = bv;
+    if (bp) BOARD = bp; if (bv) BVOTES = bv; if (nq) NEVERQS = nq; if (na) NEVERANS = na;
     renderAll(); } };
 
 
@@ -3724,6 +3763,221 @@ document.getElementById('pzList')?.addEventListener('click', async (e) => {
   PUZZLES = PUZZLES.filter(x => x.id !== id);
   PIECES = PIECES.filter(x => x.puzzle_id !== id);
   renderAll();
+});
+
+/* ============================================================================
+   NEVER HAVE I EVER
+   The question list, and the pointer that says which one the wall is showing.
+
+   Writes go straight to the tables under is_admin() — unlike the nail board and
+   the puzzle there is nothing here that needs the service role, because the
+   guest-facing Edge Function only ever reads the live question and upserts one
+   answer. Fewer code paths, and the same `save()` check on every write so a
+   refused row can't look like a success.
+   ========================================================================== */
+const NEVER_SEED = [
+  'been thrown out of somewhere',
+  'lied about my age to get in',
+  'texted the wrong person something I shouldn\'t have',
+  'pretended to know a song I\'d never heard',
+  'gone to the airport without a booking',
+  'cried at a film in the cinema',
+  'ghosted a group chat for over a month',
+  'said "let\'s do this again soon" and meant never',
+  'stalked an ex\'s new person for more than an hour',
+  'crashed a party I wasn\'t invited to',
+  'faked being ill to get out of plans',
+  'kept something a friend lent me for over a year',
+];
+
+function nvAnswers(qid) { return NEVERANS.filter(a => a.q_id === qid); }
+
+function neverPanel(){
+  const list = document.getElementById('nvList');
+  if (!list) return;
+  const live = NEVERQS.find(q => q.live);
+  const asked = NEVERQS.filter(q => q.asked_at).length;
+  /* who is expected: guests with a code, the same population the wall's progress
+     bar divides by */
+  const roster = GUESTS.filter(g => g.code).length;
+  const lv = live ? nvAnswers(live.id) : [];
+
+  strip('ovNever', [
+    [NEVERQS.length, 'questions'],
+    [asked + '/' + NEVERQS.length, 'asked'],
+    [live ? `${lv.length}/${roster}` : '—', 'answered this one'],
+    [live ? `${lv.filter(a => a.answer === 'have').length} / ${lv.filter(a => a.answer === 'never').length}`
+          : '—', 'have / never'],
+    ...(NEVERQS.length && !live ? [['none', 'live on the wall', true]] : []),
+  ]);
+  document.getElementById('nvCount').textContent = !NEVERQS.length ? 'none yet'
+    : live ? 'one is live' : `${NEVERQS.length} ready`;
+
+  list.innerHTML = NEVERQS.map((q, i) => {
+    const ans = nvAnswers(q.id);
+    const have = ans.filter(a => a.answer === 'have');
+    const never = ans.filter(a => a.answer === 'never');
+    const pct = ans.length && roster ? Math.round(ans.length / roster * 100) : 0;
+    const names = (arr) => arr.map(a => esc(a.name)).join(', ');   // full names here: this list is for her, not the wall
+    return `<div class="pzCard${q.live ? ' live' : ''}">
+      <div class="pzHead">
+        <span class="pill">${i + 1}</span>
+        <input class="nvIn" data-q="${esc(q.id)}" value="${esc(q.text)}"
+          placeholder="never have I ever…"
+          style="flex:1 1 16rem;margin:0;height:28px;padding:.1rem .5rem;font-size:.82rem" />
+        ${q.asked_at ? '<span class="sub">asked</span>' : ''}
+        <span style="flex:1"></span>
+        ${ans.length ? `<span class="pill">${have.length} have · ${never.length} never</span>` : ''}
+        <button class="btn ghost nvAct" data-act="${q.live ? 'off' : 'on'}" data-q="${esc(q.id)}"
+          type="button" style="padding:3px 9px;font-size:11px">${q.live ? 'take it down' : 'ask this'}</button>
+        <button class="btn ghost nvAct" data-act="up" data-q="${esc(q.id)}" type="button"
+          style="padding:3px 9px;font-size:11px" title="earlier in the order">↑</button>
+        <button class="btn ghost nvAct" data-act="down" data-q="${esc(q.id)}" type="button"
+          style="padding:3px 9px;font-size:11px" title="later in the order">↓</button>
+        ${ans.length ? `<button class="btn ghost nvAct" data-act="reset" data-q="${esc(q.id)}" type="button"
+          style="padding:3px 9px;font-size:11px">clear answers</button>` : ''}
+        <button class="btn ghost nvAct" data-act="del" data-q="${esc(q.id)}" type="button"
+          style="padding:3px 9px;font-size:11px">delete</button>
+      </div>
+      ${ans.length ? `<p class="sub" style="margin:6px 0 0">
+        ${have.length ? `<b>have:</b> ${names(have)}` : ''}
+        ${have.length && never.length ? ' &nbsp;·&nbsp; ' : ''}
+        ${never.length ? `<b>never:</b> ${names(never)}` : ''}</p>` : ''}
+      <div class="pzBar"><i style="width:${pct}%"></i></div>
+    </div>`;
+  }).join('') || '<p class="empty">no questions yet — add one, or start from the set below.</p>';
+}
+
+/* ---- adding, editing, ordering ------------------------------------------- */
+document.getElementById('nvForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const el = document.getElementById('nvText');
+  const msg = document.getElementById('nvMsg');
+  const text = el.value.trim();
+  if (!text) return;
+  /* the copy on both pages already says "never have I ever", so a question that
+     repeats it reads twice on the wall */
+  const clean = text.replace(/^never have i ever[\s,:-]*/i, '').trim();
+  const pos = NEVERQS.length ? Math.max(...NEVERQS.map(q => q.position)) + 1 : 1;
+  const { data, error } = await sb.from('never_qs').insert({ text: clean, position: pos }).select().single();
+  if (error) { msg.textContent = error.message; msg.className = 'sub err'; return; }
+  NEVERQS.push(data);
+  el.value = ''; el.focus();
+  msg.textContent = 'added'; msg.className = 'sub';
+  neverPanel();
+});
+
+document.getElementById('nvList')?.addEventListener('change', async (e) => {
+  const el = e.target.closest('.nvIn');
+  if (!el) return;
+  const q = NEVERQS.find(x => x.id === el.dataset.q);
+  const text = el.value.trim();
+  if (!q || !text || text === q.text) return;
+  const res = await save(sb.from('never_qs').update({ text }).eq('id', q.id).select(), 'that question');
+  const msg = document.getElementById('nvMsg');
+  if (!res.ok) { msg.textContent = res.error; msg.className = 'sub err'; el.value = q.text; return; }
+  q.text = text;
+  msg.textContent = 'saved'; msg.className = 'sub';
+});
+
+document.getElementById('nvList')?.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.nvAct');
+  if (!btn) return;
+  const id = btn.dataset.q, act = btn.dataset.act;
+  const q = NEVERQS.find(x => x.id === id);
+  const msg = document.getElementById('nvMsg');
+  if (!q) return;
+  btn.disabled = true;
+
+  if (act === 'on' || act === 'off') {
+    /* one live question is a unique index in the database, so the old one has to
+       come down before the new one goes up — not both at once */
+    if (act === 'on') {
+      const others = NEVERQS.filter(x => x.live && x.id !== id);
+      if (others.length) {
+        const res = await save(sb.from('never_qs').update({ live: false }).eq('live', true).select(), 'the others');
+        if (!res.ok) { msg.textContent = res.error; msg.className = 'sub err'; btn.disabled = false; return; }
+        for (const o of others) o.live = false;
+      }
+    }
+    const patch = act === 'on' ? { live: true, asked_at: q.asked_at || new Date().toISOString() }
+                               : { live: false };
+    const res = await save(sb.from('never_qs').update(patch).eq('id', id).select(), 'that question');
+    btn.disabled = false;
+    if (!res.ok) { msg.textContent = res.error; msg.className = 'sub err'; return; }
+    Object.assign(q, patch);
+    msg.textContent = act === 'on' ? 'on the wall — /never/wall' : 'taken down';
+    msg.className = 'sub';
+    neverPanel(); return;
+  }
+
+  if (act === 'up' || act === 'down') {
+    const i = NEVERQS.indexOf(q), j = act === 'up' ? i - 1 : i + 1;
+    btn.disabled = false;
+    if (j < 0 || j >= NEVERQS.length) return;
+    const other = NEVERQS[j];
+    /* swap the two positions, then re-sort locally so the list matches what the
+       database now holds without a reload */
+    const [a, b] = [q.position, other.position];
+    const r1 = await save(sb.from('never_qs').update({ position: b }).eq('id', q.id).select(), 'the order');
+    const r2 = await save(sb.from('never_qs').update({ position: a }).eq('id', other.id).select(), 'the order');
+    if (!r1.ok || !r2.ok) { msg.textContent = (r1.error || r2.error); msg.className = 'sub err'; return; }
+    q.position = b; other.position = a;
+    NEVERQS.sort((x, y) => x.position - y.position);
+    neverPanel(); return;
+  }
+
+  if (act === 'reset') {
+    if (!confirm(`Clear every answer to "${q.text}"? The wall empties both sides.`)) { btn.disabled = false; return; }
+    const { error } = await sb.from('never_answers').delete().eq('q_id', id);
+    btn.disabled = false;
+    if (error) { msg.textContent = error.message; msg.className = 'sub err'; return; }
+    NEVERANS = NEVERANS.filter(a => a.q_id !== id);
+    msg.textContent = 'answers cleared'; msg.className = 'sub';
+    neverPanel(); return;
+  }
+
+  if (!confirm(`Delete "${q.text}"${nvAnswers(id).length ? ' and its answers' : ''}?`)) { btn.disabled = false; return; }
+  const { error } = await sb.from('never_qs').delete().eq('id', id);
+  btn.disabled = false;
+  if (error) { msg.textContent = error.message; msg.className = 'sub err'; return; }
+  NEVERQS = NEVERQS.filter(x => x.id !== id);
+  NEVERANS = NEVERANS.filter(a => a.q_id !== id);
+  neverPanel();
+});
+
+/* ---- the starter set ----------------------------------------------------- */
+document.getElementById('nvSeed')?.addEventListener('click', async () => {
+  const msg = document.getElementById('nvMsg');
+  /* skips anything already on the list, so pressing it twice doesn't double up */
+  const has = new Set(NEVERQS.map(q => q.text.toLowerCase()));
+  const add = NEVER_SEED.filter(t => !has.has(t.toLowerCase()));
+  if (!add.length) { msg.textContent = 'they are all already here'; msg.className = 'sub'; return; }
+  let pos = NEVERQS.length ? Math.max(...NEVERQS.map(q => q.position)) + 1 : 1;
+  const rows = add.map(text => ({ text, position: pos++ }));
+  const { data, error } = await sb.from('never_qs').insert(rows).select();
+  if (error) { msg.textContent = error.message; msg.className = 'sub err'; return; }
+  NEVERQS.push(...(data || []));
+  NEVERQS.sort((a, b) => a.position - b.position);
+  msg.textContent = `${add.length} added — edit or delete any of them`;
+  msg.className = 'sub';
+  neverPanel();
+});
+
+document.getElementById('nvCsv')?.addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['#', 'question', 'name', 'answer'].map(cell).join(',')];
+  NEVERQS.forEach((q, i) => {
+    const ans = nvAnswers(q.id);
+    /* a question nobody answered still gets a row — "we asked and got nothing" is
+       a result, and a csv that silently omits it reads as if we never asked */
+    if (!ans.length) lines.push([i + 1, q.text, '', ''].map(cell).join(','));
+    for (const a of ans) lines.push([i + 1, q.text, a.name, a.answer].map(cell).join(','));
+  });
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'never-have-i-ever.csv'; a.click();
+  URL.revokeObjectURL(url);
 });
 
 /* ============================================================================
