@@ -65,17 +65,24 @@
 
   .compose{ position:sticky; bottom:0; padding:.7rem .9rem calc(.9rem + env(safe-area-inset-bottom,0px));
     background:#1a0f16; border-top:1px solid rgba(245,195,207,.14); }
-  .row{ display:flex; gap:.5rem; align-items:center; }
-  .fld{ flex:1; min-width:0; display:flex; align-items:center; gap:.4rem;
+  /* the same compose row as /checkin, and the same two fixes: one height for both
+     halves so the button can't float short of the field, and 44px because that is
+     the smallest thing a thumb reliably hits */
+  :root{ --rowH:44px; }
+  .row{ display:flex; gap:.5rem; align-items:stretch; }
+  .fld{ flex:1; min-width:0; display:flex; align-items:center; gap:.4rem; min-height:var(--rowH);
     background:rgba(255,255,255,.06); border:1px solid rgba(245,195,207,.28); border-radius:100px;
-    padding:.45rem .9rem; }
-  input[type=email]{ flex:1; min-width:0; background:none; border:0; outline:0;
+    padding:0 .95rem; }
+  .fld:focus-within{ border-color:var(--pink); background:rgba(255,255,255,.09); }
+  input[type=email]{ flex:1; min-width:0; background:none; border:0; outline:0; padding:0;
     color:var(--cream); font-family:var(--mono); font-size:1.35rem; }
   input::placeholder{ color:rgba(201,160,174,.75); }
-  .send{ flex:none; border:0; cursor:pointer; border-radius:100px; padding:.55rem 1.15rem;
-    font-family:var(--pixel); font-size:.62rem; letter-spacing:.06em; color:#fff;
+  .send{ flex:none; min-height:var(--rowH); border:0; cursor:pointer; border-radius:100px;
+    padding:0 1.05rem; font-family:var(--pixel); font-size:.68rem; letter-spacing:.06em; color:#fff;
     background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .25rem .9rem rgba(235,100,140,.4); }
-  .send:disabled{ opacity:.4; box-shadow:none; cursor:default; }
+  .send:active{ transform:scale(.97); }
+  /* waiting, not broken */
+  .send:disabled{ opacity:.62; box-shadow:none; cursor:default; }
   .err{ color:#ffb3c6; font-size:1.1rem; padding:.35rem .3rem 0; min-height:1.4rem; }
 
   .done{ text-align:center; padding:1.6rem 1rem 2.4rem; }

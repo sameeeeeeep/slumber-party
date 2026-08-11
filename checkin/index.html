@@ -70,21 +70,34 @@
      shows the bubble underneath as a smear that reads like a rendering fault. */
   .compose{ position:sticky; bottom:0; padding:.7rem .9rem calc(.9rem + env(safe-area-inset-bottom,0px));
     background:#1a0f16; border-top:1px solid rgba(245,195,207,.14); }
-  .row{ display:flex; gap:.5rem; align-items:center; }
-  .fld{ flex:1; min-width:0; display:flex; align-items:center; gap:.4rem;
+  /* THE COMPOSE ROW.
+     The field and the button are locked to the same height by a variable rather
+     than by two paddings that happened to look close: they were 40px and 30px, so
+     the button floated ten pixels short of the box beside it. 44px is also the
+     smallest thing a thumb reliably hits, and the old button was 30. */
+  :root{ --rowH:44px; }
+  .row{ display:flex; gap:.5rem; align-items:stretch; }
+  .fld{ flex:1; min-width:0; display:flex; align-items:center; gap:.4rem; min-height:var(--rowH);
     background:rgba(255,255,255,.06); border:1px solid rgba(245,195,207,.28); border-radius:100px;
-    padding:.45rem .9rem; }
+    padding:0 .95rem; }
   .fld span{ color:var(--soft); font-size:1.15rem; flex:none; }
   input[type=text],input[type=tel],input[type=email]{ flex:1; min-width:0; background:none; border:0; outline:0;
-    color:var(--cream); font-family:var(--mono); font-size:1.35rem; }
+    color:var(--cream); font-family:var(--mono); font-size:1.35rem; padding:0; }
   input::placeholder{ color:rgba(201,160,174,.75); }
-  .send{ flex:none; border:0; cursor:pointer; border-radius:100px; padding:.55rem 1.15rem;
-    font-family:var(--pixel); font-size:.62rem; letter-spacing:.06em; color:#fff;
+  /* focus has to be visible: the field is the only thing on screen doing anything */
+  .fld:focus-within{ border-color:var(--pink); background:rgba(255,255,255,.09); }
+  .send{ flex:none; min-height:var(--rowH); border:0; cursor:pointer; border-radius:100px;
+    padding:0 1.05rem; font-family:var(--pixel); font-size:.68rem; letter-spacing:.06em; color:#fff;
     background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .25rem .9rem rgba(235,100,140,.4); }
-  .send:disabled{ opacity:.4; box-shadow:none; cursor:default; }
+  .send:active{ transform:scale(.97); }
+  /* waiting, not broken: .4 read as a dead control. It keeps its colour and loses
+     its lift, so it looks like a button that isn't ready rather than a bug. */
+  .send:disabled{ opacity:.62; box-shadow:none; cursor:default; }
   .chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
   .chip{ cursor:pointer; border:1px solid rgba(245,195,207,.34); background:rgba(255,255,255,.05);
-    color:var(--cream); font-family:var(--mono); font-size:1.2rem; border-radius:100px; padding:.4rem .9rem; }
+    color:var(--cream); font-family:var(--mono); font-size:1.2rem; border-radius:100px;
+    /* a chip is a thumb target as much as the button is */
+    min-height:38px; padding:.35rem 1rem; display:inline-flex; align-items:center; }
   .chip:active{ transform:scale(.96); }
   .chip.sel{ background:linear-gradient(120deg,var(--pink),#d8447a); border-color:transparent; }
   .err{ color:#ffb3c6; font-size:1.1rem; padding:.35rem .3rem 0; min-height:1.4rem; }
@@ -92,8 +105,9 @@
   /* the document step — an attachment, the way a chat does it: a paperclip in
      the compose row, then the file as a chip, then it sends as a photo bubble */
   .attach{ flex:1; min-width:0; display:flex; align-items:center; gap:.5rem; cursor:pointer;
+    min-height:var(--rowH);   /* same row height as the field it stands in for */
     background:rgba(255,255,255,.06); border:1px solid rgba(245,195,207,.28); border-radius:100px;
-    padding:.5rem .95rem; color:var(--soft); font-size:1.25rem; }
+    padding:0 .95rem; color:var(--soft); font-size:1.25rem; }
   .attach:active{ transform:scale(.99); }
   .attach b{ color:var(--cream); font-weight:400; }
   .attach.has{ border-color:rgba(125,220,155,.45); color:#bfe9cc; }
