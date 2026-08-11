@@ -417,9 +417,23 @@ Deno.serve(async (req) => {
         }),
       });
       emailed = res.ok;
-      if (!res.ok) console.error('resend rejected', res.status, await res.text());
+      /* A rejection used to go to console.error, which is invisible without log
+         access — so "emailed: false" was a dead end. It lands in submit_log now,
+         which only admins can read, so the reason survives long enough to fix.
+         Never in the response: Resend's message names the sending domain and the
+         account state, and the person filling in a form doesn't need either. */
+      if (!res.ok) {
+        const why = (await res.text()).slice(0, 400);
+        console.error('resend rejected', res.status, why);
+        await db.from('submit_log').insert({
+          kind: 'email_failed', ip_hash: 'n/a', note: `${res.status} ${why}`,
+        });
+      }
     } catch (e) {
       console.error('resend threw', e);
+      await db.from('submit_log').insert({
+        kind: 'email_failed', ip_hash: 'n/a', note: 'threw: ' + String(e).slice(0, 300),
+      });
     }
   }
 
