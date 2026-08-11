@@ -143,13 +143,63 @@ function validate(b: Record<string, unknown>) {
      · a From address on a domain that is actually authenticated. See MAIL_FROM
        below: send from the domain Resend verified, not a cousin of it.
    -------------------------------------------------------------------------- */
+/* ============================================================================
+   THE CONFIRMATION EMAIL — Y2K, and built to reach an inbox.
+
+   Those two goals pull against each other, so every decision here is the one
+   that keeps both:
+
+   · TABLES AND INLINE CSS. Outlook still renders with Word's engine, which
+     ignores flexbox, grid, and most of a <style> block. Tables are ugly to write
+     and they are what actually arrives looking like the thing you designed.
+
+   · THE LOOK IS BUILT, NOT EXPORTED. The single most common way a beautiful
+     email lands in spam is being one big exported image with four words of text.
+     Filters read text and an image is opaque to them, so the window chrome, the
+     dividers and the button are all HTML. One 9KB logo is the only image.
+
+   · IT READS WITH IMAGES OFF. Gmail and Outlook hide images from unknown senders
+     by default, which is every recipient here. Alt text does the work, and the
+     first thing under the logo is words.
+
+   · EVERY COLOUR IS EXPLICIT, including on the outer table. Dark-mode clients
+     invert what they can't see declared, and a Y2K palette inverts badly.
+
+   · A PLAIN-TEXT TWIN, always. An HTML-only email is a spam signal by itself.
+   ========================================================================== */
 function confirmationEmail(name: string) {
-  const first = name.split(/\s+/)[0] || 'you';
+  const first = escapeHtml(name.split(/\s+/)[0] || 'you');
+  const PINK = '#eb648c', WINE = '#5a4650', SOFT = '#9b8790';
+  const MONO = "'Courier New', Courier, monospace";   // the only monospace on every client
+
+  /* the little window chrome, the bit that does most of the Y2K work */
+  const bar = `
+      <tr>
+        <td bgcolor="${PINK}" style="padding:9px 12px;font-family:${MONO};font-size:12px;
+            letter-spacing:.14em;color:#ffffff;text-transform:uppercase">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td style="font-family:${MONO};font-size:12px;color:#ffffff;letter-spacing:.14em">
+                &#9670; secret slumber party
+              </td>
+              <td align="right" style="font-family:${MONO};font-size:12px;color:#ffffff">
+                &#9633; &#9635; &#10005;
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`;
+
+  const rule = `
+      <tr><td style="padding:0 26px">
+        <div style="border-top:2px dashed #f3d3dd;font-size:0;line-height:0">&nbsp;</div>
+      </td></tr>`;
+
   return {
     // no emoji in the subject: it isn't decisive, but it's free to drop and
     // some filters still score it on a domain with no sending history
     subject: 'noted — khushi got your application',
-    text: `hi ${first},
+    text: `hi ${name.split(/\s+/)[0] || 'you'},
 
 your application landed. i'm on my way to stalk you!!! i'll reach out if you're in :)
 
@@ -160,28 +210,79 @@ back to the party: https://secretslumberparty.com
 —
 you're getting this because you applied at secretslumberparty.com.
 reply to this email if that wasn't you.`,
-    html: `<div style="font-family:Helvetica,Arial,sans-serif;background:#fdeff3;padding:32px 16px">
-  <div style="max-width:480px;margin:0 auto;background:#fffcfd;border-radius:18px;padding:28px 26px;
-              border:1px solid rgba(235,100,140,.28)">
-    <img src="https://secretslumberparty.com/assets/logo-email.png" alt="(secret;) khushi's slumber party"
-         style="display:block;width:200px;max-width:70%;height:auto;margin:0 auto 22px" />
-    <p style="font-size:17px;line-height:1.5;color:#5a4650;margin:0 0 14px">hi ${escapeHtml(first)},</p>
-    <p style="font-size:17px;line-height:1.5;color:#5a4650;margin:0 0 14px">
-      your application landed. i'm on my way to stalk you!!! i'll reach out if you're in :)
-    </p>
-    <p style="font-size:17px;line-height:1.5;color:#5a4650;margin:0 0 22px">
-      there are only a few spots left, so hold tight — till then, the arcade is open.
-    </p>
-    <a href="https://secretslumberparty.com"
-       style="display:inline-block;background:#eb648c;color:#fff;text-decoration:none;
-              padding:13px 22px;border-radius:10px;font-size:15px;letter-spacing:.02em">
-      back to the party ▸
-    </a>
-    <p style="font-size:13px;line-height:1.5;color:#9b8790;margin:24px 0 0">
-      you're getting this because you applied at secretslumberparty.com. reply to this email if that wasn't you.
-    </p>
-  </div>
-</div>`,
+    html: `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<title>noted</title>
+</head>
+<body style="margin:0;padding:0;background-color:#fdeff3">
+<!-- preview text: what shows in the inbox list next to the subject, and the one
+     place to say something other than "hi" -->
+<div style="display:none;font-size:1px;color:#fdeff3;line-height:1px;max-height:0;
+     max-width:0;opacity:0;overflow:hidden">
+  you're on the list to be looked at. the arcade is open while you wait.
+  &#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       bgcolor="#fdeff3" style="background-color:#fdeff3">
+  <tr><td align="center" style="padding:28px 14px">
+
+    <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0"
+           style="width:480px;max-width:100%;background-color:#fffcfd;border:2px solid ${PINK};
+                  border-radius:14px;overflow:hidden">
+      ${bar}
+
+      <tr><td align="center" style="padding:26px 26px 6px">
+        <img src="https://secretslumberparty.com/assets/logo-email.png"
+             alt="khushi's secret slumber party" width="200"
+             style="display:block;width:200px;max-width:70%;height:auto;border:0;outline:none" />
+      </td></tr>
+
+      <tr><td style="padding:14px 26px 0;font-family:${MONO};font-size:12px;
+          letter-spacing:.18em;color:${PINK};text-transform:uppercase">
+        &#9733; application received &#9733;
+      </td></tr>
+
+      <tr><td style="padding:10px 26px 0;font-family:Helvetica,Arial,sans-serif;
+          font-size:17px;line-height:1.55;color:${WINE}">
+        <p style="margin:0 0 14px">hi ${first},</p>
+        <p style="margin:0 0 14px">your application landed. i'm on my way to stalk you!!!
+          i'll reach out if you're in :)</p>
+        <p style="margin:0 0 20px">there are only a few spots left, so hold tight —
+          till then, the arcade is open.</p>
+      </td></tr>
+
+      <!-- a bulletproof button: a table, not a styled <a>, because Outlook drops
+           padding on inline-block links and the button collapses to text -->
+      <tr><td style="padding:0 26px 24px">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr><td bgcolor="${PINK}" style="border-radius:10px">
+            <a href="https://secretslumberparty.com"
+               style="display:inline-block;padding:13px 24px;font-family:${MONO};
+                      font-size:13px;letter-spacing:.1em;color:#ffffff;text-decoration:none;
+                      text-transform:uppercase">back to the party &#9656;</a>
+          </td></tr>
+        </table>
+      </td></tr>
+      ${rule}
+
+      <tr><td style="padding:16px 26px 26px;font-family:Helvetica,Arial,sans-serif;
+          font-size:13px;line-height:1.55;color:${SOFT}">
+        you're getting this because you applied at secretslumberparty.com.
+        reply to this email if that wasn't you.
+      </td></tr>
+    </table>
+
+    <div style="font-family:${MONO};font-size:11px;color:${SOFT};padding:14px 0 0;
+         letter-spacing:.12em">&#9671; &#9671; &#9671;</div>
+
+  </td></tr>
+</table>
+</body></html>`,
   };
 }
 
