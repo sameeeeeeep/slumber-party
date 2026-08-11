@@ -175,6 +175,35 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
 </script>
 <!-- End Microsoft Clarity -->
 
+<!-- Google Analytics 4 — page views + the same apply funnel the Meta Pixel tracks.
+     ▸ ONE thing to set: paste your GA4 Measurement ID below (GA4 → Admin → Data streams →
+       your web stream → "Measurement ID", looks like G-ABCD1234). Nothing else to touch —
+       the funnel events (slumber_entered / _opened_dm / _started_form / _submitted) are
+       already wired from track() further down. Until a real G- id is set this is a no-op:
+       gtag.js is NOT loaded and no requests fire, so it's safe to ship un-configured.
+     ▸ user_id + the ssp_vid user-property stitch GA4 to the SAME per-browser id the Pixel
+       and the Google Sheet use, so a GA4 user can be lined up with a Sheet row.
+       (To see ssp_vid in reports: GA4 → Admin → Custom definitions → create a user-scoped
+        custom dimension named "ssp_vid" with user property "ssp_vid".) -->
+<script>
+  window.GA4_ID = 'G-77H72JVYT1';   // GA4 Measurement ID (secretslumberparty.com web stream)
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  // real id required — the untouched placeholder also starts with "G-", so exclude it explicitly.
+  window.ga4Ready = function(){ return !!window.GA4_ID && window.GA4_ID.indexOf('G-')===0 && window.GA4_ID!=='G-XXXXXXXXXX'; };
+  if (window.ga4Ready()) {
+    var _ga = document.createElement('script'); _ga.async = true;
+    _ga.src = 'https://www.googletagmanager.com/gtag/js?id=' + window.GA4_ID;
+    document.head.appendChild(_ga);
+    gtag('js', new Date());
+    gtag('config', window.GA4_ID, {
+      user_id: window.SSP_VID,                       // cross-session browser id (set in <head> above)
+      user_properties: { ssp_vid: window.SSP_VID }
+    });
+  }
+</script>
+<!-- End Google Analytics 4 -->
+
 <!-- favicon: khushi's dp -->
 <link rel="icon" type="image/png" href="assets/favicon.png" />
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
@@ -1741,7 +1770,18 @@ function trafficSource(){
     return 'direct';
   }catch(e){ return 'direct'; }
 }
+
+// Fire a GA4 event, but only once a real Measurement ID is set in <head> (else a silent no-op).
+function ga(name, params){
+  try{ if(window.gtag && window.ga4Ready && window.ga4Ready()){ window.gtag('event', name, params||{}); } }catch(e){}
+}
 function track(step){
+  // GA4 mirror — fires independently of the (parked) Supabase pipe below, so it works on its own.
+  // slumber_<step> mirrors the Meta Pixel funnel; on submit we also send GA4's recommended
+  // `generate_lead`, the natural event to mark as a Key Event / conversion in GA4.
+  ga('slumber_'+step, { funnel_step:step, ssp_vid:visitorId() });
+  if(step==='submitted') ga('generate_lead', { ssp_vid:visitorId() });
+
   const cfg = window.SLUMBER_CONFIG || {};
   if(!(cfg.useSupabase && cfg.supabaseUrl && cfg.supabaseAnonKey)) return;
   try{
