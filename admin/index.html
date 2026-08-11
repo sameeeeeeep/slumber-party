@@ -1858,10 +1858,7 @@ document.getElementById('ciBody').addEventListener('change', async (e) => {
   let value = el.value.trim() || null;
   // a pasted profile URL or an @handle both mean the handle
   if (key === 'name' && !value) { renderAll(); return; }   // a nameless guest is nobody
-  if (key === 'instagram' && value) {
-    value = value.replace(/^@+/, '')
-      .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null;
-  }
+  if (key === 'instagram' && value) value = igHandle(value);
   const patch = { [key]: value };
   if (key === 'box_status') {
     patch.box_status = el.value || 'todo';
@@ -2166,8 +2163,7 @@ document.getElementById('gAddForm')?.addEventListener('submit', async (e) => {
   if (gEditing) {
     const patch = { name, tier: gAddTier.value, address: gAddAddr.value.trim() || null,
       // stored bare so the house can build the URL; a pasted profile link still works
-      instagram: gAddIg.value.trim().replace(/^@+/, '')
-        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null,
+      instagram: igHandle(gAddIg.value),
       room: gAddRoom.value || null,
       blurb: gAddBlurb.value.trim() || null,
       intro: gAddIntro.value.trim() || null,
@@ -2189,8 +2185,7 @@ document.getElementById('gAddForm')?.addEventListener('submit', async (e) => {
   msg.textContent = 'adding…';
   const row = { name, tier: gAddTier.value, code: mintCode(name),
                 address: gAddAddr.value.trim() || null,
-                instagram: gAddIg.value.trim().replace(/^@+/, '')
-                  .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '') || null,
+                instagram: igHandle(gAddIg.value),
                 room: gAddRoom.value || null,
                 blurb: gAddBlurb.value.trim() || null,
                 intro: gAddIntro.value.trim() || null,
@@ -2792,6 +2787,28 @@ function strip(id, items){
   if (!el) return;
   el.innerHTML = items.map(([v, label, warn]) =>
     `<div${warn && v ? ' class="warn"' : ''}><b>${esc(v)}</b><i>${esc(label)}</i></div>`).join('');
+}
+
+/* A HANDLE, out of whatever got pasted.
+   The old version stripped the domain and a trailing slash but left the query
+   string, so pasting Instagram's own share link stored
+   "trisha___shetty?utm_source=ig_web_button_share_sheet&igsh=..." as the handle.
+   Anywhere that value is used AS a username — the profile link, the csv, tagging
+   someone — it is wrong. Now: drop the protocol and domain, drop anything from
+   ? or # onward, keep only the first path segment (so a link to a post gives the
+   account, not "p"), and strip @ and stray slashes. */
+function igHandle(raw) {
+  const v = String(raw || '').trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/^(www\.)?instagram\.com\//i, '')
+    .split(/[?#]/)[0]
+    .replace(/^@+/, '')
+    .split('/')[0]
+    .trim();
+  /* a link to a post or a reel starts with one of these, and "p" is not an
+     account — better to store nothing than a word that looks like a handle */
+  if (/^(p|reel|reels|stories|explore|tv|s|share)$/i.test(v)) return null;
+  return v || null;
 }
 
 const BOX_STATES = ['todo', 'packed', 'sent', 'delivered'];
