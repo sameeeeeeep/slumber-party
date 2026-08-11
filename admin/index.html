@@ -797,8 +797,13 @@
     <form id="itForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:6px">
       <label style="flex:1 1 130px;margin:0">day
         <input id="itDay" type="text" placeholder="day one · 18 aug" required style="margin:0" /></label>
-      <label style="flex:0 1 110px;margin:0">time
-        <input id="itTime" type="text" placeholder="8:30 pm" style="margin:0" /></label>
+      <label style="flex:0 1 108px;margin:0">starts
+        <input id="itStart" type="time" style="margin:0" /></label>
+      <label style="flex:0 1 108px;margin:0">ends <span class="sub" style="margin:0">(optional)</span>
+        <input id="itEnd" type="time" style="margin:0" /></label>
+      <label style="flex:0 1 140px;margin:0">reads as
+        <input id="itTime" type="text" placeholder="8:30 pm" style="margin:0"
+          title="filled in by the two pickers — type over it if you want different wording" /></label>
       <label style="flex:0 1 70px;margin:0">emoji
         <input id="itEmoji" type="text" maxlength="8" placeholder="🎬" style="margin:0" /></label>
       <label style="flex:2 1 200px;margin:0">what
@@ -2569,6 +2574,9 @@ document.getElementById('itBody').addEventListener('click', async (e) => {
   } else if (act === 'edit') {
     itEditing = id;
     itDay.value = row.day; itTime.value = row.t || ''; itEmoji.value = row.emoji || '';
+    /* the pickers can't hold "after the sail", so editing a legacy row leaves them
+       empty and the text field carries whatever was there */
+    itStart.value = ''; itEnd.value = '';
     itTitle.value = row.title; itDetail.value = row.detail || '';
     document.getElementById('itAdd').textContent = 'save';
     document.getElementById('itCancel').hidden = false;
@@ -2582,6 +2590,50 @@ document.getElementById('itCancel').addEventListener('click', () => {
   document.getElementById('itAdd').textContent = 'add';
   document.getElementById('itCancel').hidden = true;
 });
+
+/* ============================================================================
+   TIMES
+   The `t` column is free text and every entry in it was typed by hand, which is
+   why the programme currently holds "6:45am", "8:00am-9:00am", "10:00pm" and
+   "8:00AM TO 11:00AM" — four formats for one idea. Two <input type="time"> boxes
+   feed one formatter, so anything added from here comes out identical, and the
+   text field stays editable for the legacy rows and for wording a picker can't
+   express ("after the sail", "whenever we wake up").
+
+   type="time" also gets the phone's own time wheel, which beats typing "8:30 pm"
+   on a keyboard while standing in a venue.
+   ========================================================================== */
+const clock = (hhmm) => {
+  if (!/^\d{2}:\d{2}$/.test(hhmm || '')) return '';
+  let [h, m] = hhmm.split(':').map(Number);
+  const ap = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2, '0')} ${ap}`;
+};
+/* "4:00 – 4:20 pm" when both sides share a meridiem, "11:30 am – 1:00 pm" when
+   they don't — the way a person would write it, not the way a machine would */
+function timeRange(startHHMM, endHHMM) {
+  const a = clock(startHHMM), b = clock(endHHMM);
+  if (!a) return '';
+  if (!b) return a;
+  const [av, ap] = a.split(' '), [bv, bp] = b.split(' ');
+  return ap === bp ? `${av} – ${bv} ${bp}` : `${a} – ${b}`;
+}
+/* the pickers drive the text, not the other way round: she can always type over it */
+function syncItTime() {
+  const t = timeRange(itStart.value, itEnd.value);
+  if (t) itTime.value = t;
+}
+document.getElementById('itStart')?.addEventListener('change', syncItTime);
+document.getElementById('itEnd')?.addEventListener('change', syncItTime);
+/* end follows start by the activity's own duration when there is one */
+function itEndFromMins(mins) {
+  if (!mins || !/^\d{2}:\d{2}$/.test(itStart.value)) return;
+  const [h, m] = itStart.value.split(':').map(Number);
+  const total = (h * 60 + m + Number(mins)) % 1440;
+  itEnd.value = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  syncItTime();
+}
 
 /* Adding a slot to the programme, from either door: this form, or an activity
    scheduling itself. Both need the same two things right — a new item joins the
@@ -2615,6 +2667,7 @@ function itFromFill(){
   itTitle.value = a.name;
   itDetail.value = a.what || '';
   if (!itEmoji.value && a.is_game) itEmoji.value = '🏆';
+  itEndFromMins(a.mins);          // if a start is already set, the end follows
   msg.textContent = `${a.name}${a.mins ? ` · runs ${hhmm(a.mins)}` : ''} — pick a day and a time`;
   msg.className = 'sub';
   itTime.focus();
@@ -2662,7 +2715,7 @@ document.getElementById('itForm').addEventListener('submit', async (e) => {
     if (res.error) { msg.textContent = res.error; return; }
     itFromActivity = null;   // the link is spent — the next add is its own thing
     msg.textContent = `added to ${patch.day}`;
-    itForm.reset(); itDetail.value = ''; itTitle.focus();
+    itForm.reset(); itDetail.value = ''; itStart.value = ''; itEnd.value = ''; itTitle.focus();
   }
   renderAll();
   setTimeout(() => { if (['saved'].includes(msg.textContent) || msg.textContent.startsWith('added')) msg.textContent = ''; }, 3500);
@@ -3176,7 +3229,11 @@ function schedRow(a){
           </select>` : ''}
         <input class="acDayNew" data-act="${esc(a.id)}" type="text" placeholder="day one · 18 aug"
           ${days.length ? 'hidden' : ''} /></label>
-      <label style="flex:0 1 110px">time
+      <label style="flex:0 1 108px">starts
+        <input class="acStart" data-act="${esc(a.id)}" type="time" /></label>
+      <label style="flex:0 1 108px">ends
+        <input class="acEnd" data-act="${esc(a.id)}" type="time" /></label>
+      <label style="flex:0 1 130px">reads as
         <input class="acTime" data-act="${esc(a.id)}" type="text" placeholder="8:30 pm" /></label>
       <label style="flex:0 1 80px">emoji
         <input class="acEmoji" data-act="${esc(a.id)}" type="text" maxlength="8"
@@ -3197,7 +3254,27 @@ document.getElementById('acBody')?.addEventListener('click', (e) => {
   const id = (open || shut).dataset.act;
   shut ? acOpen.delete(id) : acOpen.add(id);
   activitiesPanel();
-  if (open) document.querySelector(`.acTime[data-act="${id}"]`)?.focus();
+  if (open) document.querySelector(`.acStart[data-act="${id}"]`)?.focus();
+});
+
+/* Same two pickers as the programming form, same formatter, and the end time is
+   filled from the activity's own length the moment a start is chosen — the whole
+   reason a duration is stored on an activity is so nobody has to do that sum. */
+document.getElementById('acBody')?.addEventListener('change', (e) => {
+  const el = e.target.closest('.acStart, .acEnd');
+  if (!el) return;
+  const id = el.dataset.act;
+  const a = ACTS.find(x => x.id === id);
+  const start = document.querySelector(`.acStart[data-act="${id}"]`);
+  const end = document.querySelector(`.acEnd[data-act="${id}"]`);
+  const txt = document.querySelector(`.acTime[data-act="${id}"]`);
+  if (el.classList.contains('acStart') && a?.mins && /^\d{2}:\d{2}$/.test(start.value)) {
+    const [h, m] = start.value.split(':').map(Number);
+    const t = (h * 60 + m + Number(a.mins)) % 1440;
+    end.value = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+  }
+  const reads = timeRange(start.value, end.value);
+  if (reads && txt) txt.value = reads;
 });
 
 /* "— a new day —" swaps the select for a text box, so the common case stays a
