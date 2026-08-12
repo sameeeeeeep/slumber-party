@@ -2133,9 +2133,21 @@ function tick(){
 readScroll(); tick();
 
 /* ---------- loading veil ("shhh…") — let it linger a beat, it's the invite ---------- */
-const MIN_VEIL=3200, MAX_VEIL=7000;
+/* …unless they arrived on an ?arcade link, which is a request to SKIP the
+   entrance. The arcade jump can't fire until the veil has left the DOM, so the
+   3.2s hold plus a 0.9s fade was ~4s of watching an intro they'd explicitly
+   asked to bypass — indistinguishable from a broken link. The intent is in the
+   URL before anything renders, so it can be known here.
+   Everyone arriving normally still gets the full entrance, untouched. */
+const WANTS_ARCADE = (() => {
+  try { return new URLSearchParams(location.search).has('arcade'); } catch (e) { return false; }
+})();
+const MIN_VEIL = WANTS_ARCADE ? 300 : 3200, MAX_VEIL = WANTS_ARCADE ? 1200 : 7000;
 let veilGone=false;
-function hideVeil(){ if(veilGone)return; veilGone=true; const v=document.getElementById('veil'); if(v){ v.style.opacity='0'; setTimeout(()=>v.remove(),900); }
+function hideVeil(){ if(veilGone)return; veilGone=true; const v=document.getElementById('veil');
+  // the fade is only worth waiting out when there's a scene behind it to reveal;
+  // arcade-bound, the arcade is about to cover this anyway
+  if(v){ v.style.opacity='0'; setTimeout(()=>v.remove(), WANTS_ARCADE ? 100 : 900); }
   showGateway(); }   // a tap-to-enter gate first: unlocks audio (so the DM ping sounds) + eases them into tapping
 
 /* ---------- the "enter" gate — revealed as the veil lifts; its tap unlocks audio + reveals the scene ---------- */
@@ -2149,7 +2161,13 @@ function showGateway(){
   if(!g){ revealIntro(); return; }                         // no gate in the DOM → reveal straight away
   gateOpen=true; g.classList.add('on'); document.documentElement.classList.add('gate-open');   // kill the monitor static while gated
   const enter=(e,soundOn)=>{
-    if(FORM_IS_CLOSED()){ location.href='/late/'; return; }   // closed → the late-night DM
+    /* Closed → the late-night DM. But an ?arcade link is a door to the ARCADE,
+       not to the application, and jumpToArcade() enters through this same gate.
+       Without the exemption, every arcade link in every confirmation email
+       already sent quietly starts redirecting to /late/ the moment the
+       deadline passes — the link doesn't break loudly, it just stops
+       going where it says it goes. */
+    if(FORM_IS_CLOSED() && !window.__toArcade){ location.href='/late/'; return; }
     if(!gateOpen) return; gateOpen=false;
     if(e) e.stopPropagation();                              // this tap must NOT also advance the DM behind the gate
     // entering turns sound ON for good — there's no header toggle, so this tap is the only
@@ -2241,6 +2259,13 @@ function renderCountdown(){
       gb.dataset.late = '1';
       const sp = gb.querySelector('span'); if(sp) sp.textContent = 'too late?';
       gb.addEventListener('click', (ev) => {
+        /* An ?arcade link enters through this same button, and this handler
+           runs BEFORE the gate's own — so without this bail, its
+           stopImmediatePropagation() eats the arcade jump entirely and every
+           arcade link already sitting in an inbox lands on /late/ instead
+           once the deadline passes. Returning early leaves the other
+           handlers to run; stopping here would not. */
+        if (window.__toArcade) return;
         ev.preventDefault(); ev.stopImmediatePropagation();
         location.href = '/late/';
       });
