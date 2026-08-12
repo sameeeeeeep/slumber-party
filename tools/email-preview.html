@@ -1,0 +1,251 @@
+<!doctype html>
+<!-- ============================================================================
+     A LOOK AT THE CONFIRMATION EMAIL. THIS FILE IS NOT THE EMAIL.
+
+     The email that actually goes out is built by confirmationEmail() in
+       supabase/functions/submit/index.ts
+     and that function is the only source of truth. This page is a rendering of
+     it, committed so the design can be opened in a browser and sent to someone
+     without them having to read a template literal out of a TypeScript file.
+
+     EDITING THIS FILE CHANGES NOTHING. Change the function, then regenerate.
+
+     Three things differ here, and only here:
+       · the logo is hotlinked, because a cid: attachment only resolves inside a
+         real message;
+       · the name reads "hey there" instead of the applicant first name;
+       · the clock and date are frozen at render time. In a real send they are
+         the minute that person hit submit, in IST.
+
+     noindex, because this is crawlable like everything else on the domain — see
+     robots.txt for why hiding a page with Disallow backfires.
+     ========================================================================== -->
+<html lang="en"><head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<meta name="robots" content="noindex" />
+<title>confirmation email — a look</title>
+</head>
+<body style="margin:0;padding:0;background-color:#ffe9f3">
+
+<!-- preview text: the grey line beside the subject in the inbox list -->
+<div style="display:none;font-size:1px;color:#ffe9f3;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">
+  1 new message from khushi &#9829; your application's tucked in safe
+  &#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       bgcolor="#ffe9f3" style="background-color:#ffe9f3;margin:0;padding:0">
+  <tr><td align="center" style="padding:24px 8px 30px">
+
+    <img src="https://secretslumberparty.com/assets/logo-email.png" width="164" alt="(secret ;) khushi's SLUMBER PARTY"
+         style="display:block;width:164px;max-width:60%;height:auto;border:0;outline:none" />
+
+    <div style="font-family:'Courier New',Courier,monospace;font-size:12px;color:#c9789a;
+                letter-spacing:.42em;padding:12px 0 16px">&#10022; &#183; &#10023; &#183; &#10022;</div>
+
+    <!-- stub antenna -->
+    <table role="presentation" width="300" cellpadding="0" cellspacing="0" border="0"
+           style="width:300px;max-width:100%">
+      <tr><td align="right" style="padding:0 28px 0 0">
+        <div style="width:26px;height:16px;background-color:#4a3a55;
+                    border-top:2px solid #6f5c7d;border-left:2px solid #6f5c7d;
+                    border-right:2px solid #241b2b;
+                    border-radius:8px 8px 0 0;font-size:0;line-height:0">&nbsp;</div>
+      </td></tr>
+    </table>
+
+    <!-- ==================== THE HANDSET ==================== -->
+    <!-- chrome ring; the shadow separates a pink object from a pink ground.
+         Outlook drops box-shadow and falls back to the ring, so the ring stays. -->
+    <table role="presentation" width="300" cellpadding="0" cellspacing="0" border="0"
+           style="width:300px;max-width:100%;background-color:#cbb3c2;
+                  background-image:linear-gradient(160deg,#fff6fa 0%,#cbb3c2 32%,#9c7d90 72%,#eddbe6 100%);
+                  border-radius:32px;box-shadow:0 14px 30px rgba(140,55,95,.26)">
+      <tr><td style="padding:3px">
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="background-color:#e493b5;
+                    background-image:linear-gradient(158deg,#f7c8dc 0%,#e493b5 38%,#c56d94 76%,#eaa9c6 100%);
+                    border-radius:30px">
+
+        <!-- speaker slot + power LED -->
+        <tr><td align="center" style="padding:14px 0 0">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="padding-right:9px">
+                <div style="width:78px;height:8px;background-color:#6d4258;
+                            border-top:1px solid #b8768f;border-bottom:1px solid #ffd9e8;
+                            border-radius:5px;font-size:0;line-height:0">&nbsp;</div>
+              </td>
+              <td>
+                <div style="width:6px;height:6px;background-color:#7ee06a;
+                            border:1px solid #3f8c33;border-radius:5px;
+                            font-size:0;line-height:0">&nbsp;</div>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+
+        <tr><td align="center" style="padding:8px 0 11px;font-family:'Courier New',Courier,monospace;
+                   font-size:10px;font-weight:bold;color:#8a4f6c;letter-spacing:.44em">SLUMBER</td></tr>
+
+        <!-- black screen window: the fascia panel the LCD sits inside -->
+        <tr><td style="padding:0 16px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                 style="background-color:#18121e;
+                        background-image:linear-gradient(170deg,#2b2233 0%,#18121e 40%,#120d17 100%);
+                        border-top:1px solid #0c080f;border-left:1px solid #0c080f;
+                        border-right:1px solid #6a5878;border-bottom:1px solid #6a5878;
+                        border-radius:11px">
+            <tr><td style="padding:13px 12px 15px">
+
+              <!-- the LCD. Two layers: a diagonal sheen across the top-left (the
+                   glass) over the flat panel colour. Outlook takes bgcolor. -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     bgcolor="#b9c49b" style="background-color:#b9c49b;
+                     background-image:
+                       linear-gradient(114deg, rgba(255,255,255,.42) 0%, rgba(255,255,255,.16) 17%, rgba(255,255,255,0) 38%),
+                       linear-gradient(180deg,#c5cfa9 0%,#b9c49b 55%,#a9b58a 100%);
+                     border-top:1px solid #7d8a63;border-left:1px solid #7d8a63;
+                     border-right:1px solid #d3dcbc;border-bottom:1px solid #d3dcbc">
+
+                <tr><td style="padding:5px 7px 4px;border-bottom:1px solid #98a67c">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="font-family:'Courier New',Courier,monospace;font-size:9px;
+                                 color:#2a3119;letter-spacing:.04em;white-space:nowrap">
+                        &#9601;&#9603;&#9605;&#9607; SLUMBER
+                      </td>
+                      <td align="right" style="font-family:'Courier New',Courier,monospace;font-size:9px;
+                                 color:#2a3119;letter-spacing:.04em;white-space:nowrap">
+                        17:41 &#9646;&#9646;&#9646;
+                      </td>
+                    </tr>
+                  </table>
+                </td></tr>
+
+                <tr><td style="padding:7px 8px 0;font-family:'Courier New',Courier,monospace;
+                           font-size:10px;color:#4d5732;letter-spacing:.13em">&#9993; INBOX &#183; 1 NEW</td></tr>
+
+                <tr><td style="padding:5px 8px 0;font-family:'Courier New',Courier,monospace;
+                           font-size:14px;font-weight:bold;color:#222819;letter-spacing:.02em">
+                  KHUSHI <span style="color:#9c1f52">&#9829;</span>
+                  <span style="font-weight:normal;font-size:9px;color:#5a6440">&#183; 12 AUG</span>
+                </td></tr>
+
+                <tr><td style="padding:6px 8px 0">
+                  <div style="border-top:1px dashed #98a67c;font-size:0;line-height:0">&nbsp;</div>
+                </td></tr>
+
+                <tr><td style="padding:9px 8px 0;font-family:'Courier New',Courier,monospace;
+                           font-size:14px;line-height:1.55;color:#222819">
+                  hey there <span style="color:#9c1f52">&#9829;</span>
+                </td></tr>
+                <tr><td style="padding:7px 8px 0;font-family:'Courier New',Courier,monospace;
+                           font-size:13px;line-height:1.6;color:#333b22">
+                  your application's in &#8212; tucked in safe.
+                </td></tr>
+                <tr><td style="padding:6px 8px 0;font-family:'Courier New',Courier,monospace;
+                           font-size:13px;line-height:1.6;color:#333b22">
+                  i'm gathering thirty to spill the tea. if you're one of
+                  them, i'll whisper back. &#10024;
+                </td></tr>
+
+                <tr><td style="padding:12px 0 0">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                         style="border-top:1px solid #98a67c">
+                    <tr>
+                      <td style="padding:4px 7px;font-family:'Courier New',Courier,monospace;
+                                 font-size:9px;color:#4d5732;letter-spacing:.07em">SELECT</td>
+                      <td align="right" style="padding:4px 7px;font-family:'Courier New',Courier,monospace;
+                                 font-size:9px;color:#4d5732;letter-spacing:.07em">BACK</td>
+                    </tr>
+                  </table>
+                </td></tr>
+
+              </table>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- faceplate seam: Y2K covers came off, and the join always showed -->
+        <tr><td style="padding:13px 12px 0">
+          <div style="border-top:1px solid #b7708f;border-bottom:1px solid #f6c3d9;
+                      font-size:0;line-height:0">&nbsp;</div>
+        </td></tr>
+
+        <!-- nav cluster: call / action / end -->
+        <tr><td style="padding:12px 16px 0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td width="44" align="center" valign="middle">
+                <div style="background-color:#57a343;
+                            background-image:linear-gradient(180deg,#8fd97c 0%,#63b04e 47%,#4b9339 53%,#3d8130 100%);
+                            border-top:1px solid #a9e79a;border-left:1px solid #a9e79a;
+                            border-right:1px solid #2c631f;border-bottom:1px solid #2c631f;
+                            border-radius:13px 4px 8px 13px;padding:11px 0;
+                            font-family:'Courier New',Courier,monospace;font-size:14px;
+                            color:#f0ffe9;line-height:1">&#9742;</div>
+              </td>
+
+              <td align="center" valign="middle" style="padding:0 8px">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                       style="background-color:#2b2033;
+                              background-image:linear-gradient(180deg,#4a3b56 0%,#332741 47%,#241a2d 53%,#1b1322 100%);
+                              border-top:1px solid #74608a;border-left:1px solid #74608a;
+                              border-right:1px solid #130d18;border-bottom:1px solid #130d18;
+                              border-radius:19px">
+                  <tr><td align="center">
+                    <a href="https://secretslumberparty.com/?arcade"
+                       style="display:block;padding:16px 6px;font-family:'Courier New',Courier,monospace;
+                              font-size:11px;font-weight:bold;color:#ffd3e4;text-decoration:none;
+                              letter-spacing:.08em">&#9658; OPEN ARCADE</a>
+                  </td></tr>
+                </table>
+              </td>
+
+              <td width="44" align="center" valign="middle">
+                <div style="background-color:#c0392b;
+                            background-image:linear-gradient(180deg,#ec8b7e 0%,#cd5142 47%,#ad3527 53%,#932a1d 100%);
+                            border-top:1px solid #f0a99e;border-left:1px solid #f0a99e;
+                            border-right:1px solid #7d2018;border-bottom:1px solid #7d2018;
+                            border-radius:4px 13px 13px 8px;padding:11px 0;
+                            font-family:'Courier New',Courier,monospace;font-size:14px;
+                            color:#fff0ed;line-height:1">&#9743;</div>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+
+        <!-- T9 keypad -->
+        <tr><td style="padding:10px 16px 22px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">1</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">&#8734;</div></div></td><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">2</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">ABC</div></div></td><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">3</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">DEF</div></div></td></tr><tr><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">4</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">GHI</div></div></td><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">5</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">JKL</div></div></td><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">6</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">MNO</div></div></td></tr><tr><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">7</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">PQRS</div></div></td><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">8</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">TUV</div></div></td><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">9</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">WXYZ</div></div></td></tr><tr><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">&#10033;</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">&#9829;</div></div></td><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">0</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">+</div></div></td><td align="center" style="padding:2px 2px"><div style="background-color:#f3c6da;background-image:linear-gradient(180deg,#fff2f8 0%,#f8d7e6 47%,#e9b0c9 53%,#dda3bd 100%);border-top:1px solid #fffafc;border-left:1px solid #fffafc;border-right:1px solid #b8788f;border-bottom:1px solid #b8788f;border-radius:7px;padding:6px 0 5px"><div style="font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:bold;color:#4f2437;line-height:1.05">#</div><div style="font-family:'Courier New',Courier,monospace;font-size:7px;color:#9a6178;letter-spacing:.08em">&#9734;</div></div></td></tr>
+          </table>
+        </td></tr>
+
+      </table>
+      </td></tr>
+    </table>
+    <!-- ==================== /THE HANDSET ==================== -->
+
+    <div style="font-family:'Courier New',Courier,monospace;font-size:15px;color:#c9789a;
+                letter-spacing:.26em;padding:13px 0 0">&#183;&#183;&#9679;&#10022;&#9829;</div>
+
+    <table role="presentation" width="300" cellpadding="0" cellspacing="0" border="0"
+           style="width:300px;max-width:100%">
+      <tr><td align="center" style="padding:18px 8px 0;font-family:'Courier New',Courier,monospace;
+                 font-size:11px;line-height:1.7;color:#8a5670">
+        you're getting this because you applied at<br>
+        <a href="https://secretslumberparty.com" style="color:#d4568a;text-decoration:none">secretslumberparty.com</a>
+        <span style="color:#eb648c">&#9829;</span><br>
+        reply to this email if that wasn't you.
+      </td></tr>
+    </table>
+
+  </td></tr>
+</table>
+</body></html>
