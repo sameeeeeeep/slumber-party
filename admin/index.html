@@ -1344,50 +1344,95 @@ async function fetchAll(build) {
   }
 }
 
-async function boot() {
-  // RLS decides this, not the UI: a signed-in user who isn't in `admins`
-  // gets zero rows back rather than an error, so say so plainly.
-  const [a, v, c, g, f, w, m, wl, dr, it, vn, rm, hs, pt, sp, dl, bf, hm, ac, bp, bv, pz, pc, nq, na] = await Promise.all([
-    fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false })),
-    fetchAll(() => sb.from('visits').select('reached,tz,created_at,session_id,source,device').order('created_at')),
-    // these two 404 until schema-checkin.sql has been run; the panel just stays
-    // empty rather than taking the whole dashboard down with it
-    sb.from('checkins').select('*').order('created_at', { ascending: false }),
-    sb.from('guests').select('*').order('name'),
-    // submissions that never landed — the only record that they happened
-    sb.from('submit_log').select('kind,note,created_at')
-      .eq('kind', 'application_failed').order('created_at', { ascending: false }).limit(50),
-    sb.from('crew').select('*'),
-    sb.from('site_meta').select('*').eq('id', 1).maybeSingle(),
-    fetchAll(() => sb.from('waitlist').select('*').order('created_at', { ascending: false })),
-    fetchAll(() => sb.from('drafts').select('*').order('updated_at', { ascending: false })),
-    sb.from('itinerary').select('*').order('position'),
-    sb.from('venues').select('*').order('position'),
-    sb.from('rooms').select('*').order('position'),
-    sb.from('houses').select('*').order('position'),
-    sb.from('points').select('*').order('created_at', { ascending: false }),
-    sb.from('sponsors').select('*').order('position'),
-    sb.from('deliverables').select('*').order('due'),
-    sb.from('bffs').select('*').order('position'),
-    sb.from('hampers').select('*').order('position'),
-    sb.from('activities').select('*').order('position'),
-    sb.from('board_posts').select('*').order('created_at', { ascending: false }),
-    sb.from('board_votes').select('post_id,voter'),
-    sb.from('puzzles').select('*').order('created_at', { ascending: false }),
-    sb.from('puzzle_pieces').select('puzzle_id,idx,claimed_by'),
-    sb.from('never_qs').select('*').order('position'),
-    sb.from('never_answers').select('id,q_id,name,answer'),
-  ]);
-  if (a.error) { loginMsg.textContent = a.error.message; loginMsg.className = 'msg err'; return; }
+/* Repaints are coalesced. Twenty-odd queries land at twenty-odd different
+   moments, and renderAll() redraws every panel on the dashboard — running it
+   once per arrival was most of a second of layout for no visible gain. */
+let paintQueued = false;
+function paintSoon() {
+  if (paintQueued) return;
+  paintQueued = true;
+  requestAnimationFrame(() => { paintQueued = false; renderAll(); });
+}
 
-  APPS = a.data || []; VISITS = v.data || [];
-  CHECKINS = c.data || []; GUESTS = g.data || []; FAILS = f.data || []; CREW = w.data || []; WAITLIST = wl.data || []; DRAFTS = dr.data || []; ITIN = it.data || []; VENUES = vn.data || []; ROOMS = rm.data || []; HOUSES = hs.data || []; POINTS = pt.data || []; SPONSORS = sp.data || []; DELIVS = dl.data || []; BFFS = bf.data || []; HAMPERS = hm.data || []; ACTS = ac.data || []; BOARD = bp.data || []; BVOTES = bv.data || []; PUZZLES = pz.data || []; PIECES = pc.data || []; NEVERQS = nq.data || []; NEVERANS = na.data || [];
-  seoFill(m && m.data);
-  if (c.error) console.warn('checkins unavailable — run supabase/schema-checkin.sql', c.error.message);
+/* Every panel's data, each landing on its own.
+
+   This used to be one Promise.all over all of it, awaited before the login
+   screen was taken down — so signing in appeared to hang for as long as the
+   SLOWEST query took, while the thing you were staring at was the login box.
+   It read as a broken password.
+
+   Four of these paginate through whole tables 1000 rows at a time, and each
+   page waits for the one before it. `visits` is one row per page view, so that
+   cost grows with every visitor the site has ever had: the login was getting
+   measurably slower every day, which is the part that would not have fixed
+   itself.
+
+   Nothing here blocks anything else now, and nothing blocks the dashboard. */
+function loadAll() {
+  const one = (label, run, assign) => run().then(r => {
+    if (r && r.error) { console.warn(label + ' unavailable:', r.error.message); return; }
+    assign((r && r.data) || []);
+    paintSoon();
+  }).catch(e => console.warn(label + ' failed:', e));
+
+  /* applications first — it is the one query whose failure is worth showing a
+     human. Note that NOT being an admin is not a failure: RLS returns zero
+     rows rather than an error, so that case lands as an empty dashboard. */
+  fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false }))
+    .then(r => {
+      if (r.error) {
+        loginEl.style.display = ''; appEl.style.display = 'none';
+        document.body.classList.remove('in');
+        loginMsg.textContent = r.error.message; loginMsg.className = 'msg err';
+        return;
+      }
+      APPS = r.data || []; paintSoon();
+    })
+    .catch(e => console.warn('applications failed:', e));
+
+  one('checkins',    () => sb.from('checkins').select('*').order('created_at', { ascending: false }), d => CHECKINS = d);
+  one('guests',      () => sb.from('guests').select('*').order('name'), d => GUESTS = d);
+  one('submit_log',  () => sb.from('submit_log').select('kind,note,created_at')
+                             .eq('kind', 'application_failed').order('created_at', { ascending: false }).limit(50), d => FAILS = d);
+  one('crew',        () => sb.from('crew').select('*'), d => CREW = d);
+  one('itinerary',   () => sb.from('itinerary').select('*').order('position'), d => ITIN = d);
+  one('venues',      () => sb.from('venues').select('*').order('position'), d => VENUES = d);
+  one('rooms',       () => sb.from('rooms').select('*').order('position'), d => ROOMS = d);
+  one('houses',      () => sb.from('houses').select('*').order('position'), d => HOUSES = d);
+  one('points',      () => sb.from('points').select('*').order('created_at', { ascending: false }), d => POINTS = d);
+  one('sponsors',    () => sb.from('sponsors').select('*').order('position'), d => SPONSORS = d);
+  one('deliverables',() => sb.from('deliverables').select('*').order('due'), d => DELIVS = d);
+  one('bffs',        () => sb.from('bffs').select('*').order('position'), d => BFFS = d);
+  one('hampers',     () => sb.from('hampers').select('*').order('position'), d => HAMPERS = d);
+  one('activities',  () => sb.from('activities').select('*').order('position'), d => ACTS = d);
+  one('board_posts', () => sb.from('board_posts').select('*').order('created_at', { ascending: false }), d => BOARD = d);
+  one('board_votes', () => sb.from('board_votes').select('post_id,voter'), d => BVOTES = d);
+  one('puzzles',     () => sb.from('puzzles').select('*').order('created_at', { ascending: false }), d => PUZZLES = d);
+  one('puzzle_pieces', () => sb.from('puzzle_pieces').select('puzzle_id,idx,claimed_by'), d => PIECES = d);
+  one('never_qs',    () => sb.from('never_qs').select('*').order('position'), d => NEVERQS = d);
+  one('never_answers', () => sb.from('never_answers').select('id,q_id,name,answer'), d => NEVERANS = d);
+  one('waitlist',    () => fetchAll(() => sb.from('waitlist').select('*').order('created_at', { ascending: false })), d => WAITLIST = d);
+  one('drafts',      () => fetchAll(() => sb.from('drafts').select('*').order('updated_at', { ascending: false })), d => DRAFTS = d);
+
+  /* Last on purpose. It is far the biggest table and only the traffic panels
+     want it, so it is the one thing allowed to arrive late. */
+  one('visits',      () => fetchAll(() => sb.from('visits')
+                             .select('reached,tz,created_at,session_id,source,device').order('created_at')), d => VISITS = d);
+
+  // a single row rather than a list, so it doesn't fit the shape above
+  sb.from('site_meta').select('*').eq('id', 1).maybeSingle()
+    .then(m => seoFill(m && m.data)).catch(() => {});
+}
+
+async function boot() {
+  /* Reveal the dashboard the moment auth succeeds. It paints empty and fills
+     in — which is the whole fix: signing in no longer waits on the data. */
   loginEl.style.display = 'none'; appEl.style.display = 'block';
   document.body.classList.add('in');
   buildShell();
   renderAll();
+
+  loadAll();
 
   sb.channel('live')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'applications' },
