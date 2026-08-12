@@ -194,6 +194,26 @@
   td.why{ white-space:normal; min-width:240px; max-width:340px; }
   .empty{ padding:26px; text-align:center; color:var(--ink-3); font-size:.9rem; }
 
+  /* ---- skeletons ----
+     A panel that is still loading used to look exactly like a panel with nothing
+     in it — several of them printed "no cities yet" while the cities were still
+     on the wire, which reads as data loss rather than as loading. These are the
+     shape of the content they stand in for, so the layout doesn't jump when the
+     real rows land. */
+  .skel{ position:relative; overflow:hidden; border-radius:6px;
+    background:var(--surface-2); height:.72rem; }
+  .skel::after{ content:''; position:absolute; inset:0; transform:translateX(-100%);
+    background:linear-gradient(90deg, transparent, var(--series-soft), transparent);
+    animation:shimmer 1.25s infinite; }
+  @keyframes shimmer{ to{ transform:translateX(100%); } }
+  .skelRow{ display:flex; align-items:center; gap:10px; padding:.5rem 0; }
+  .skelRow .skel:first-child{ width:34%; }
+  .skelRow .skel:last-child{ flex:1; }
+  td .skel{ height:.66rem; width:100%; }
+  /* A shimmer that never stops is worse than a spinner — it promises something
+     is coming. Anyone who'd rather not have motion gets a flat placeholder. */
+  @media (prefers-reduced-motion: reduce){ .skel::after{ animation:none; } }
+
   /* ---- check-in panel ---- */
   .pill{ font-size:.72rem; color:var(--ink-2); border:1px solid var(--line); border-radius:100px;
     padding:.25rem .6rem; white-space:nowrap; }
@@ -550,6 +570,9 @@
       </table>
     </div>
     <p class="empty" id="tblEmpty" hidden>nothing yet.</p>
+    <!-- both the "showing n of m" label and the marker that loads the next
+         rows when it scrolls into view -->
+    <p class="note" id="tblMore" hidden></p>
     <p class="note">instagram follower counts aren't shown: Meta's API only reports them for accounts that authorise you, and scraping breaks constantly and violates their terms. Each handle links to the profile instead, and there's a <code>followers</code> column in the database you can fill in by hand or from a paid provider.</p>
   </section>
 
@@ -1333,20 +1356,82 @@ let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], W
    that cap quietly turns this dashboard into a liar — funnel, sources, drop-off
    and completion all counting the first thousand rows and ignoring the rest. So
    the two tables that grow with traffic are read in pages until a short page
-   says we've reached the end. */
-async function fetchAll(build) {
+   says we've reached the end.
+
+   `onPage` is what makes those pages visible. This used to accumulate silently
+   and hand back everything at the end, so six thousand applications meant seven
+   sequential round trips before a single row appeared. Now each page paints as
+   it lands: the first thousand are on screen while the rest are still coming. */
+async function fetchAll(build, onPage) {
   const PAGE = 1000, out = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await build().range(from, from + PAGE - 1);
     if (error) return { data: out, error };
     out.push(...(data || []));
+    if (onPage && data && data.length) onPage(data);
     if (!data || data.length < PAGE) return { data: out, error: null };
   }
 }
 
+/* Pages append rather than replace, because a realtime INSERT can land between
+   two pages — replacing would drop it and the row would be missing until the
+   next reload. Keyed on id so a row that arrives both ways still appears once. */
+function absorb(list, page) {
+  if (!list.length) return page.slice();
+  /* No id to key on means no way to tell a duplicate from a new row — and
+     de-duping on `undefined` would throw away every page after the first,
+     silently. Append instead: a visible duplicate beats invisible data loss. */
+  if (page.length && page[0].id === undefined) { list.push(...page); return list; }
+  const seen = new Set(list.map(r => r.id));
+  for (const r of page) if (!seen.has(r.id)) list.push(r);
+  return list;
+}
+
+/* ============================================================================
+   WHAT IS STILL IN FLIGHT
+   A panel whose table is in here paints a skeleton instead of its empty state.
+   That distinction is the whole point: "no cities yet" while the cities are
+   still downloading is not a slow dashboard, it's a wrong one.
+
+   Every key is cleared on the table's FIRST page, not its last — the panel has
+   real rows to show at that point — and also on failure, so a table that errors
+   falls back to its honest empty state rather than shimmering forever.
+   ========================================================================== */
+const LOADING = new Set(['applications','checkins','guests','submit_log','crew','itinerary',
+  'venues','rooms','houses','points','sponsors','deliverables','bffs','hampers','activities',
+  'board_posts','board_votes','puzzles','puzzle_pieces','never_qs','never_answers',
+  'waitlist','drafts','visits']);
+const loading = key => LOADING.has(key);
+function loaded(key) {
+  if (!LOADING.delete(key)) return;
+  paintSoon();
+}
+
+/* A table that FAILED is not a table that finished. Keeping these apart matters
+   because "finished, and empty" is a number the dashboard will happily do
+   arithmetic on — see the completion tile, which divided six thousand
+   applications by the five sessions it had and reported 125340%. */
+const FAILED = new Set();
+const failed = key => FAILED.has(key);
+function failedLoad(key, why) {
+  FAILED.add(key);
+  console.warn(key + ' failed to load:', why);
+  LOADING.delete(key);
+  paintSoon();
+}
+/* n placeholder rows, for a panel that draws its own rows */
+const skelRows = (n = 4) =>
+  `<div class="skelPad">${'<div class="skelRow"><span class="skel"></span><span class="skel"></span></div>'.repeat(n)}</div>`;
+/* n placeholder rows for a <tbody>, matching that table's column count */
+const skelCells = (cols, n = 4) =>
+  `<tr>${`<td><span class="skel"></span></td>`.repeat(cols)}</tr>`.repeat(n);
+
 /* Repaints are coalesced. Twenty-odd queries land at twenty-odd different
    moments, and renderAll() redraws every panel on the dashboard — running it
    once per arrival was most of a second of layout for no visible gain. */
+/* buildShell() runs at module load, before the panels' own constants exist, so
+   nothing may render until boot() says so. */
+let BOOTED = false;
 let paintQueued = false;
 function paintSoon() {
   if (paintQueued) return;
@@ -1370,25 +1455,36 @@ function paintSoon() {
    Nothing here blocks anything else now, and nothing blocks the dashboard. */
 function loadAll() {
   const one = (label, run, assign) => run().then(r => {
-    if (r && r.error) { console.warn(label + ' unavailable:', r.error.message); return; }
+    if (r && r.error) { failedLoad(label, r.error.message); return; }
     assign((r && r.data) || []);
-    paintSoon();
-  }).catch(e => console.warn(label + ' failed:', e));
+    loaded(label); paintSoon();
+  }).catch(e => failedLoad(label, e));
+
+  /* the paginated ones. Each page is absorbed and painted on arrival, so these
+     fill in visibly instead of appearing all at once several seconds later. */
+  const paged = (label, build, onPage) => fetchAll(build, page => {
+    onPage(page); loaded(label); paintSoon();
+  }).then(r => {
+    if (r && r.error) { failedLoad(label, r.error.message); return; }
+    loaded(label); paintSoon();
+  }).catch(e => failedLoad(label, e));
 
   /* applications first — it is the one query whose failure is worth showing a
      human. Note that NOT being an admin is not a failure: RLS returns zero
      rows rather than an error, so that case lands as an empty dashboard. */
-  fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false }))
+  fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false }),
+           page => { APPS = absorb(APPS, page); loaded('applications'); paintSoon(); })
     .then(r => {
+      loaded('applications');
       if (r.error) {
         loginEl.style.display = ''; appEl.style.display = 'none';
         document.body.classList.remove('in');
         loginMsg.textContent = r.error.message; loginMsg.className = 'msg err';
         return;
       }
-      APPS = r.data || []; paintSoon();
+      paintSoon();
     })
-    .catch(e => console.warn('applications failed:', e));
+    .catch(e => { console.warn('applications failed:', e); loaded('applications'); });
 
   one('checkins',    () => sb.from('checkins').select('*').order('created_at', { ascending: false }), d => CHECKINS = d);
   one('guests',      () => sb.from('guests').select('*').order('name'), d => GUESTS = d);
@@ -1411,15 +1507,99 @@ function loadAll() {
   one('puzzle_pieces', () => sb.from('puzzle_pieces').select('puzzle_id,idx,claimed_by'), d => PIECES = d);
   one('never_qs',    () => sb.from('never_qs').select('*').order('position'), d => NEVERQS = d);
   one('never_answers', () => sb.from('never_answers').select('id,q_id,name,answer'), d => NEVERANS = d);
-  one('waitlist',    () => fetchAll(() => sb.from('waitlist').select('*').order('created_at', { ascending: false })), d => WAITLIST = d);
-  one('drafts',      () => fetchAll(() => sb.from('drafts').select('*').order('updated_at', { ascending: false })), d => DRAFTS = d);
+  paged('waitlist', () => sb.from('waitlist').select('*').order('created_at', { ascending: false }),
+        p => { WAITLIST = absorb(WAITLIST, p); });
+  paged('drafts',   () => sb.from('drafts').select('*').order('updated_at', { ascending: false }),
+        p => { DRAFTS = absorb(DRAFTS, p); });
 
-  /* Last on purpose. It is far the biggest table and only the traffic panels
-     want it, so it is the one thing allowed to arrive late. */
-  one('visits',      () => fetchAll(() => sb.from('visits')
-                             .select('reached,tz,created_at,session_id,source,device').order('created_at')), d => VISITS = d);
+  loadMeta();
+  loadVisits();
+}
 
-  // a single row rather than a list, so it doesn't fit the shape above
+/* ============================================================================
+   TRAFFIC, WITHOUT DOWNLOADING THE WHOLE TABLE
+   `visits` is one row per session per funnel step, so it grows with every
+   visitor the site has ever had — and the five traffic panels only ever wanted
+   counts out of it. Downloading all of it to count it was the one cost here
+   that could never stop getting worse.
+
+   So: ask the database to do the counting. public.visit_stats() returns a few
+   hundred bytes instead of a few megabytes, and costs the same on the day of
+   the party as it does now.
+
+   Until that function exists, this falls back to the old full download — which
+   means this file is safe to deploy before the SQL is applied, and gets fast
+   the moment it is. See supabase/schema-visit-stats.sql.
+   ========================================================================== */
+let VSTATS = null;                 // pre-aggregated; null means "use raw VISITS"
+
+/* "Active now" counts distinct sessions that pinged in the last five minutes. */
+const LIVE_WINDOW = 5 * 60 * 1000;
+
+/* A page view arriving live. In fallback mode it simply joins the list. With
+   the aggregate in use there is no full list to join — the counts arrived
+   pre-computed — so VISITS holds only the live window, which is the one thing
+   that has to be measured against the moving clock rather than a snapshot.
+   Trimming is what stops it growing back into the problem this removed. */
+function noteVisit(row) {
+  VISITS.push(row);
+  if (!VSTATS) return;
+  const cut = Date.now() - LIVE_WINDOW;
+  VISITS = VISITS.filter(v => +new Date(v.created_at) >= cut);
+}
+
+async function loadVisits() {
+  try {
+    const { data, error } = await sb.rpc('visit_stats');
+    if (!error && data) {
+      VSTATS = data;
+      /* Live counts are about the last five minutes and the clock keeps moving,
+         so they can't come from a snapshot. The RPC seeds the recent rows and
+         realtime keeps them current from there. */
+      VISITS = (data.recent || []);
+      loaded('visits'); paintSoon();
+      /* The aggregate is a snapshot, and the funnel keeps moving. Re-asking for
+         a few hundred bytes once a minute keeps it current — which is what the
+         old code was paying megabytes per page load to achieve. */
+      setInterval(refreshStats, 60000);
+      return;
+    }
+    if (error) console.info('visit_stats not available, counting client-side:', error.message);
+  } catch (e) {
+    console.info('visit_stats not available, counting client-side:', e && e.message);
+  }
+
+  /* Fallback. Last on purpose: it is far the biggest table and only the traffic
+     panels want it, so it is the one thing allowed to arrive late. */
+  /* id is selected purely so pages can be de-duplicated against each other and
+     against rows realtime has already delivered. Without it every page after
+     the first was being discarded. */
+  fetchAll(() => sb.from('visits').select('id,reached,tz,created_at,session_id,source,device')
+                   .order('created_at'),
+           page => { VISITS = absorb(VISITS, page); loaded('visits'); paintSoon(); })
+    .then(r => {
+      if (r && r.error) { failedLoad('visits', r.error.message); return; }
+      loaded('visits'); paintSoon();
+    })
+    .catch(e => failedLoad('visits', e));
+}
+
+async function refreshStats() {
+  try {
+    const { data, error } = await sb.rpc('visit_stats');
+    if (error || !data) return;                 // keep the numbers we already have
+    VSTATS = data;
+    /* merge, don't replace: realtime rows newer than this snapshot are already
+       in VISITS and dropping them would make "active now" flicker downwards */
+    VISITS = absorb(VISITS, data.recent || []);
+    const cut = Date.now() - LIVE_WINDOW;
+    VISITS = VISITS.filter(v => +new Date(v.created_at) >= cut);
+    paintSoon();
+  } catch (e) { /* a missed refresh is not worth a broken panel */ }
+}
+
+// a single row rather than a list, so it doesn't fit the shape above
+function loadMeta() {
   sb.from('site_meta').select('*').eq('id', 1).maybeSingle()
     .then(m => seoFill(m && m.data)).catch(() => {});
 }
@@ -1430,19 +1610,29 @@ async function boot() {
   loginEl.style.display = 'none'; appEl.style.display = 'block';
   document.body.classList.add('in');
   buildShell();
+  BOOTED = true;
   renderAll();
 
   loadAll();
 
+  /* ==========================================================================
+     Every one of these used to call renderAll() directly — a full redraw of all
+     twenty-six panels, per row, as rows arrived. `visits` is the one that hurt:
+     one INSERT per page view means that during a launch the dashboard was
+     rebuilding a six-thousand-row applications table several times a second.
+
+     paintSoon() coalesces on the next animation frame, so a burst of twenty
+     page views is one repaint of the panels actually on screen.
+     ========================================================================= */
   sb.channel('live')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'applications' },
-        p => { APPS.unshift(p.new); renderAll(); flashLive(); })
+        p => { APPS.unshift(p.new); paintSoon(); flashLive(); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'visits' },
-        p => { VISITS.push(p.new); renderAll(); })
+        p => { noteVisit(p.new); paintSoon(); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checkins' },
-        p => { CHECKINS.unshift(p.new); renderAll(); flashLive('new check-in'); })
+        p => { CHECKINS.unshift(p.new); paintSoon(); flashLive('new check-in'); })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waitlist' },
-        p => { WAITLIST.unshift(p.new); renderAll(); flashLive('new late-list email'); })
+        p => { WAITLIST.unshift(p.new); paintSoon(); flashLive('new late-list email'); })
     /* answers arrive as INSERTs and, when somebody switches sides, as UPDATEs on
        the same row — so both verbs, keyed on (q_id, name) rather than on id */
     .on('postgres_changes', { event: '*', schema: 'public', table: 'never_answers' }, p => {
@@ -1454,33 +1644,33 @@ async function boot() {
       neverPanel();
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'points' }, p => {
-      POINTS.unshift(p.new); renderAll(); flashLive('points awarded');
+      POINTS.unshift(p.new); paintSoon(); flashLive('points awarded');
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, p => {
       if (p.eventType === 'DELETE')      ROOMS = ROOMS.filter(r => r.id !== p.old.id);
       else if (p.eventType === 'UPDATE') ROOMS = ROOMS.map(r => r.id === p.new.id ? p.new : r);
       else if (!ROOMS.some(r => r.id === p.new.id)) ROOMS.push(p.new);
       ROOMS.sort((a, b) => a.position - b.position);
-      renderAll();
+      paintSoon();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'venues' }, p => {
       if (p.eventType === 'DELETE')      VENUES = VENUES.filter(r => r.id !== p.old.id);
       else if (p.eventType === 'UPDATE') VENUES = VENUES.map(r => r.id === p.new.id ? p.new : r);
       else if (!VENUES.some(r => r.id === p.new.id)) VENUES.push(p.new);
-      renderAll();
+      paintSoon();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'itinerary' }, p => {
       if (p.eventType === 'DELETE')      ITIN = ITIN.filter(r => r.id !== p.old.id);
       else if (p.eventType === 'UPDATE') ITIN = ITIN.map(r => r.id === p.new.id ? p.new : r);
       else if (!ITIN.some(r => r.id === p.new.id)) ITIN.push(p.new);
       ITIN.sort((a, b) => a.position - b.position);
-      renderAll();
+      paintSoon();
     })
     /* drafts update in place as answers arrive, so listen for both verbs */
     .on('postgres_changes', { event: '*', schema: 'public', table: 'drafts' }, p => {
       if (p.eventType === 'UPDATE')      DRAFTS = DRAFTS.map(r => r.id === p.new.id ? p.new : r);
       else if (p.eventType === 'INSERT' && !DRAFTS.some(r => r.id === p.new.id)) DRAFTS.unshift(p.new);
-      renderAll();
+      paintSoon();
     })
     /* two people adding crew from different laptops is the normal case here, so
        this listens for all three verbs rather than just INSERT */
@@ -1488,7 +1678,7 @@ async function boot() {
       if (p.eventType === 'DELETE')      CREW = CREW.filter(r => r.id !== p.old.id);
       else if (p.eventType === 'UPDATE') CREW = CREW.map(r => r.id === p.new.id ? p.new : r);
       else if (!CREW.some(r => r.id === p.new.id)) CREW.push(p.new);
-      renderAll();
+      paintSoon();
     })
     .subscribe();
 }
@@ -1662,8 +1852,7 @@ function buildShell() {
 }
 
 function showView() {
-  const want = (location.hash.match(/^#\/(\w+)/) || [])[1];
-  const v = VIEWS.find(x => x.id === want) ? want : 'overview';
+  const v = currentView();
   for (const x of VIEWS) {
     const el = document.getElementById('view-' + x.id);
     if (el) el.classList.toggle('on', x.id === v);
@@ -1679,6 +1868,12 @@ function showView() {
   const csvBtn = document.getElementById('csv');
   if (csvBtn) csvBtn.hidden = (v !== 'applications');
   scrollTo({ top: 0 });
+
+  /* The other half of rendering only the visible view: data that arrived while
+     you were somewhere else is drawn now, on the way in. Gated on boot because
+     buildShell() calls this at module load, before the panels' own constants
+     exist. */
+  if (BOOTED && DIRTY.has(v)) renderView(v);
 }
 
 /* Structure, not data: build it now. Waiting for login would show the old
@@ -1738,7 +1933,66 @@ function tally(list, pick) {
   return [...m.entries()].sort((x, y) => y[1] - x[1]);
 }
 
-function renderAll() { verifySeals(); navCounts(); tiles(); gamesPanel(); sponsorsPanel(); bffsPanel(); hampersPanel(); carsPanel(); activitiesPanel(); boardPanel(); puzzlePanel(); neverPanel(); stayPanel(); days(); funnel(); dropoff(); sources(); cities(); roles(); zones(); table(); checkinPanel(); crewPanel(); waitlistPanel(); draftsPanel(); itineraryPanel(); failPanel(); }
+/* ============================================================================
+   RENDER WHAT YOU ARE ACTUALLY LOOKING AT
+
+   Only one .view is on screen at a time, but this used to redraw all twenty-six
+   panels on every call — twenty-five of them into hidden DOM, for nothing. With
+   a live page view landing every few seconds and six thousand applications in
+   the table, that was most of the lag, and it was worst exactly when the site
+   was busiest.
+
+   Panels belonging to other views are marked dirty and drawn when you switch to
+   them. Following the same convention as VIEW_MAP above, a panel that isn't
+   listed here is treated as always-render, so a panel added later degrades to
+   the old behaviour rather than silently never painting.
+   ========================================================================== */
+const PANEL_VIEW = {
+  overview:     [() => tiles(), () => days(), () => funnel(), () => dropoff(),
+                 () => sources(), () => cities(), () => roles(), () => zones()],
+  applications: [() => table(), () => draftsPanel(), () => failPanel()],
+  guests:       [() => checkinPanel()],
+  crew:         [() => crewPanel(), () => carsPanel()],
+  games:        [() => gamesPanel(), () => boardPanel(), () => puzzlePanel(), () => neverPanel()],
+  sponsors:     [() => sponsorsPanel()],
+  bffs:         [() => bffsPanel(), () => hampersPanel()],
+  stay:         [() => stayPanel()],
+  activity:     [() => activitiesPanel()],
+  day:          [() => itineraryPanel()],
+  reach:        [() => waitlistPanel()],
+};
+
+/* The rail counts sit outside the views, so they redraw regardless — they're a
+   handful of numbers, not a panel. */
+const ALWAYS = [() => verifySeals(), () => navCounts()];
+
+const DIRTY = new Set();
+
+/* One panel throwing used to take every panel after it in the list down with
+   it, which is how a single bad row could blank half the dashboard. */
+function run(fn) {
+  try { fn(); } catch (e) { console.warn('panel failed:', e); }
+}
+
+function currentView() {
+  const want = (location.hash.match(/^#\/(\w+)/) || [])[1];
+  return VIEWS.find(x => x.id === want) ? want : 'overview';
+}
+
+function renderView(id) {
+  statsCache = null;                 // recomputed once per pass, shared by the panels
+  DIRTY.delete(id);
+  (PANEL_VIEW[id] || []).forEach(run);
+}
+
+function renderAll() {
+  statsCache = null;
+  ALWAYS.forEach(run);
+  const cur = currentView();
+  for (const id of Object.keys(PANEL_VIEW)) {
+    if (id === cur) renderView(id); else DIRTY.add(id);
+  }
+}
 
 /* Submissions this database refused. Hidden entirely when there are none. */
 function failPanel() {
@@ -2338,19 +2592,42 @@ document.getElementById('ciCsv')?.addEventListener('click', () => {
 function tiles() {
   const now = Date.now();
   const last24 = APPS.filter(r => now - +new Date(r.created_at) < DAY).length;
-  const sessions = new Set(VISITS.map(v => v.session_id)).size;
   const cityCount = new Set(APPS.map(r => norm(r.city)).filter(Boolean)).size;
-  const rate = sessions ? Math.round(APPS.length / sessions * 100) : null;
   /* WHO'S ON THE SITE RIGHT NOW.
      The site pings /visit at each funnel step, so there is no heartbeat to count
      and no true concurrency figure to be had. This counts distinct sessions that
      pinged in the last 5 minutes, which is the honest version: someone reading
      the same screen for ten minutes without advancing drops out of it, and the
      label says "active" rather than "online" for exactly that reason. */
-  const LIVE_WINDOW = 5 * 60 * 1000;
-  const live = new Set(
-    VISITS.filter(v => now - +new Date(v.created_at) < LIVE_WINDOW).map(v => v.session_id)
-  ).size;
+  const S = trafficStats();
+  const sessions = S.sessions, live = S.live;
+
+  /* ==========================================================================
+     COMPLETION, OR AN HONEST DASH.
+
+     Everyone who applied necessarily landed first, so applications can never
+     exceed sessions. When they do, the visit data is incomplete and the ratio
+     is not a low-quality number — it is a meaningless one.
+
+     This is what 125340% was: six thousand applications divided by the five
+     sessions realtime had delivered since the page opened, because the historic
+     visits read came back empty. A ratio of two numbers that are still arriving
+     is just as bad, and so is one where the denominator failed to load.
+
+     Every one of those cases is a dash, and the caption says which.
+     ========================================================================= */
+  const visitsBad = failed('visits') || loading('visits') || loading('applications');
+  const shortfall = sessions > 0 && APPS.length > sessions;
+  const rate = (visitsBad || shortfall || !sessions)
+             ? null : Math.round(APPS.length / sessions * 100);
+  const rateNote = failed('visits')     ? "visit data didn't load"
+                 : visitsBad            ? 'still counting'
+                 : shortfall            ? 'visit data is incomplete'
+                 : !sessions            ? 'no sessions recorded'
+                 : 'landed → applied';
+  const sessionNote = failed('visits')  ? "visit data didn't load"
+                 : shortfall            ? 'fewer than applications — some pings missing'
+                 : 'browser tabs that landed';
 
   const put = (k, v, n, cls) =>
     `<div class="tile"><div class="k">${k}</div><div class="v"${cls ? ` class="${cls}"` : ''}>${v}</div><div class="n">${n}</div></div>`;
@@ -2362,8 +2639,8 @@ function tiles() {
         (h.supers ? ` · ${h.supers} super` : '') +
         ` · ${h.crew} team/vendors`) +
     put('applications', APPS.length, `${last24} in the last 24h`) +
-    put('sessions', sessions || '—', 'browser tabs that landed') +
-    put('completion', rate === null ? '—' : rate + '%', 'landed → applied') +
+    put('sessions', (failed('visits') || !sessions) ? '—' : sessions, sessionNote) +
+    put('completion', rate === null ? '—' : rate + '%', rateNote) +
     put('cities', cityCount, 'distinct places');
 }
 
@@ -2814,6 +3091,12 @@ document.getElementById('itForm').addEventListener('submit', async (e) => {
 function draftsPanel() {
   const body = document.getElementById('drBody');
   if (!body) return;
+  if (loading('drafts')) {
+    document.getElementById('drCount').textContent = '';
+    document.getElementById('drEmpty').hidden = true;
+    body.innerHTML = skelCells(9, 3);
+    return;
+  }
   const open = DRAFTS.filter(d => !d.converted);
   document.getElementById('drCount').textContent =
     open.length ? `${open.length} unfinished` : '—';
@@ -2857,6 +3140,12 @@ document.getElementById('drCsv').addEventListener('click', () => {
 function waitlistPanel() {
   const body = document.getElementById('wlBody');
   if (!body) return;
+  if (loading('waitlist')) {
+    document.getElementById('wlCount').textContent = '';
+    document.getElementById('wlEmpty').hidden = true;
+    body.innerHTML = skelCells(3, 3);
+    return;
+  }
   document.getElementById('wlCount').textContent =
     WAITLIST.length ? `${WAITLIST.length} email${WAITLIST.length === 1 ? '' : 's'}` : '—';
   document.getElementById('wlEmpty').hidden = WAITLIST.length > 0;
@@ -5267,7 +5556,12 @@ document.getElementById('crewCsv').addEventListener('click', () => {
 
 /* The live count decays with the clock, not with new rows — without this it would
    sit at whatever it was when the last visit landed and look stuck. */
-setInterval(() => { if (VISITS.length || CHECKINS.length || APPS.length) tiles(); }, 15000);
+setInterval(() => {
+  if (currentView() !== 'overview') return;          // nothing to see off-view
+  if (!(VISITS.length || CHECKINS.length || APPS.length)) return;
+  statsCache = null;
+  tiles();
+}, 15000);
 
 function days() {
   const out = [];
@@ -5293,6 +5587,84 @@ function days() {
   document.getElementById('days').innerHTML = out.join('');
 }
 
+/* ============================================================================
+   ONE SHAPE FOR THE TRAFFIC NUMBERS
+
+   The five panels below used to walk the whole raw visits table each, every
+   render — five passes over every page view the site has ever had. They now all
+   read this instead, which either unpacks what the database already counted
+   (public.visit_stats) or counts it here from the downloaded rows.
+
+   Identical shape either way, so the panels don't know which they got, and the
+   fallback reproduces exactly the numbers they produced before: distinct
+   sessions per funnel step, sessions per FIRST-seen source, and timezones by
+   row rather than by session — that last one is deliberately not a distinct
+   count, because that is what it has always been.
+   ========================================================================== */
+let statsCache = null;
+function trafficStats() {
+  if (statsCache) return statsCache;
+  const now = Date.now();
+
+  // the live window is always measured here, against the clock, never a snapshot
+  const recent = VISITS.filter(v => now - +new Date(v.created_at) < LIVE_WINDOW);
+  const live = new Set(recent.map(v => v.session_id)).size;
+  const liveBy = new Map();
+  for (const v of recent) {
+    const src = v.source || 'unknown';
+    if (!liveBy.has(src)) liveBy.set(src, new Set());
+    liveBy.get(src).add(v.session_id);
+  }
+  const liveBySource = [...liveBy.entries()].map(([s, set]) => [s, set.size]);
+
+  if (VSTATS) {
+    return statsCache = {
+      steps:    VSTATS.steps || {},
+      sources:  (VSTATS.sources || []).map(r => [r.source || 'unknown', r.sessions || 0]),
+      zones:    (VSTATS.zones   || []).map(r => [r.tz, r.rows || 0]),
+      sessions: VSTATS.sessions || 0,
+      live, liveBySource,
+    };
+  }
+
+  // ---- fallback: one pass, where there used to be five ----
+  const perStep = new Map();
+  const seen = new Set();
+  for (const v of VISITS) {
+    if (!perStep.has(v.reached)) perStep.set(v.reached, new Set());
+    perStep.get(v.reached).add(v.session_id);
+    seen.add(v.session_id);
+  }
+  const steps = {};
+  for (const [k, set] of perStep) steps[k] = set.size;
+
+  // one source per session: whatever it said on the first ping we have for it
+  const sessionSource = new Map();
+  for (const v of [...VISITS].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at))) {
+    if (!sessionSource.has(v.session_id)) sessionSource.set(v.session_id, v.source || 'unknown');
+  }
+  const bySource = new Map();
+  for (const src of sessionSource.values()) bySource.set(src, (bySource.get(src) || 0) + 1);
+
+  /* recompute the live-by-source using the session's first-seen source, which is
+     what the aggregate returns — so both paths group the same way */
+  const liveBy2 = new Map();
+  for (const v of recent) {
+    const src = sessionSource.get(v.session_id) || v.source || 'unknown';
+    if (!liveBy2.has(src)) liveBy2.set(src, new Set());
+    liveBy2.get(src).add(v.session_id);
+  }
+
+  return statsCache = {
+    steps,
+    sources:  [...bySource.entries()],
+    zones:    tally(VISITS, v => v.tz),
+    sessions: seen.size,
+    live,
+    liveBySource: [...liveBy2.entries()].map(([s, set]) => [s, set.size]),
+  };
+}
+
 const STEPS = [
   ['landed', 'landed on the site'],
   ['entered', 'tapped enter'],
@@ -5301,11 +5673,13 @@ const STEPS = [
   ['submitted', 'applied'],
 ];
 function funnel() {
-  const per = new Map(STEPS.map(([k]) => [k, new Set()]));
-  for (const v of VISITS) if (per.has(v.reached)) per.get(v.reached).add(v.session_id);
-  const top = Math.max(1, per.get('landed').size);
-  document.getElementById('funnel').innerHTML = STEPS.map(([k, label]) => {
-    const n = per.get(k).size, pct = Math.round(n / top * 100);
+  const el = document.getElementById('funnel');
+  if (!el) return;
+  if (loading('visits')) { el.innerHTML = skelRows(STEPS.length); return; }
+  const S = trafficStats();
+  const top = Math.max(1, S.steps.landed || 0);
+  el.innerHTML = STEPS.map(([k, label]) => {
+    const n = S.steps[k] || 0, pct = Math.round(n / top * 100);
     return bar(label, n, pct, `${label} — ${n} session${n === 1 ? '' : 's'} (${pct}% of everyone who landed)`);
   }).join('');
 }
@@ -5335,17 +5709,19 @@ const QUESTIONS = [
 function dropoff() {
   const el = document.getElementById('dropoff');
   if (!el) return;
-  const per = new Map(QUESTIONS.map(([k]) => [k, new Set()]));
-  const started = new Set();
-  for (const v of VISITS) {
-    if (v.reached === 'started_form') started.add(v.session_id);
-    if (per.has(v.reached)) per.get(v.reached).add(v.session_id);
+  const emptyEl = document.getElementById('dropEmpty');
+  if (loading('visits')) {
+    if (emptyEl) emptyEl.hidden = true;          // not empty — just not here yet
+    el.innerHTML = skelRows(QUESTIONS.length + 1);
+    return;
   }
-  const counts = QUESTIONS.map(([k, label]) => ({ label, n: per.get(k).size }));
-  const submitted = new Set(VISITS.filter(v => v.reached === 'submitted').map(v => v.session_id)).size;
+  const S = trafficStats();
+  const counts = QUESTIONS.map(([k, label]) => ({ label, n: S.steps[k] || 0 }));
+  const started = S.steps.started_form || 0;
+  const submitted = S.steps.submitted || 0;
 
-  const any = counts.some(c => c.n) || started.size;
-  document.getElementById('dropEmpty').hidden = !!any;
+  const any = counts.some(c => c.n) || started;
+  if (emptyEl) emptyEl.hidden = !!any;
   if (!any) { el.innerHTML = ''; return; }
 
   /* Baseline: the largest of q1, started_form, or any single question. Using q1
@@ -5353,7 +5729,7 @@ function dropoff() {
      a later question reports MORE sessions than the first, which renders as 150%
      and an overflowing bar. Taking the max means a lost ping understates a step
      rather than producing a number that can't be true. */
-  const top = Math.max(1, counts[0].n, started.size, ...counts.map(c => c.n));
+  const top = Math.max(1, counts[0].n, started, ...counts.map(c => c.n));
   let prev = null;
   const rows = counts.map(c => {
     const pct = Math.min(100, Math.round(c.n / top * 100));
@@ -5384,14 +5760,15 @@ function dropoff() {
 function sources() {
   const body = document.getElementById('srcBody');
   if (!body) return;
-
-  // one source per session: whatever it said on the first ping we have for it
-  const sessionSource = new Map();
-  for (const v of [...VISITS].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at))) {
-    if (!sessionSource.has(v.session_id)) sessionSource.set(v.session_id, v.source || 'unknown');
+  const emptyEl = document.getElementById('srcEmpty');
+  if (loading('visits') || loading('applications')) {
+    if (emptyEl) emptyEl.hidden = true;
+    body.innerHTML = skelCells(4, 4);
+    return;
   }
-  const sessions = new Map();
-  for (const src of sessionSource.values()) sessions.set(src, (sessions.get(src) || 0) + 1);
+
+  // sessions per source, counted on each session's first-seen source
+  const sessions = new Map(trafficStats().sources);
 
   const applied = new Map();
   for (const a of APPS) {
@@ -5404,17 +5781,9 @@ function sources() {
   const all = [...new Set([...sessions.keys(), ...applied.keys()])]
     .sort((x, y) => (sessions.get(y) || 0) - (sessions.get(x) || 0) || (applied.get(y) || 0) - (applied.get(x) || 0));
 
-  document.getElementById('srcEmpty').hidden = all.length > 0;
+  if (emptyEl) emptyEl.hidden = all.length > 0;
 
-  const LIVE = 5 * 60 * 1000, now = Date.now();
-  const liveBy = new Map();
-  for (const v of VISITS) {
-    if (now - +new Date(v.created_at) >= LIVE) continue;
-    const src = sessionSource.get(v.session_id) || 'unknown';
-    if (!liveBy.has(src)) liveBy.set(src, new Set());
-    liveBy.get(src).add(v.session_id);
-  }
-  const liveTxt = [...liveBy.entries()].map(([s, set]) => `${s} ${set.size}`).join(' · ');
+  const liveTxt = trafficStats().liveBySource.map(([s, n]) => `${s} ${n}`).join(' · ');
   document.getElementById('srcLive').textContent = liveTxt ? `now: ${liveTxt}` : 'nobody in the last 5 min';
 
   const maxS = Math.max(1, ...all.map(s => sessions.get(s) || 0));
@@ -5463,6 +5832,11 @@ const px = lon => (lon - BOUNDS.lon[0]) / (BOUNDS.lon[1] - BOUNDS.lon[0]) * W;
 const py = lat => H - (lat - BOUNDS.lat[0]) / (BOUNDS.lat[1] - BOUNDS.lat[0]) * H;
 
 function cities() {
+  if (loading('applications')) {
+    document.getElementById('cityRows').innerHTML = skelRows(5);
+    document.getElementById('mapNote').textContent = '';
+    return;
+  }
   const counts = tally(APPS, r => norm(r.city));
   const max = Math.max(1, ...counts.map(c => c[1]));
 
@@ -5493,6 +5867,10 @@ function cities() {
 }
 
 function roles() {
+  if (loading('applications')) {
+    document.getElementById('roleRows').innerHTML = skelRows(4);
+    return;
+  }
   const counts = tally(APPS, r => r.role);
   const max = Math.max(1, ...counts.map(c => c[1]));
   document.getElementById('roleRows').innerHTML = counts
@@ -5501,28 +5879,44 @@ function roles() {
 }
 
 function zones() {
-  const counts = tally(VISITS, v => v.tz);
+  const el = document.getElementById('tzRows');
+  if (!el) return;
+  if (loading('visits')) { el.innerHTML = skelRows(4); return; }
+  const counts = trafficStats().zones;
   const max = Math.max(1, ...counts.map(c => c[1]));
-  document.getElementById('tzRows').innerHTML = counts.slice(0, 6)
+  el.innerHTML = counts.slice(0, 6)
     .map(([tz, n]) => bar(tz.replace(/_/g, ' '), n, n / max * 100, `${tz} — ${n} session${n === 1 ? '' : 's'}`)).join('')
     || `<p class="empty">no visits recorded yet.</p>`;
 }
 
 /* --------------------------------------------------- table (the table view) */
 const q = document.getElementById('q');
-q.addEventListener('input', table);
 
-function table() {
-  const term = norm(q.value);
-  const rows = term
-    ? APPS.filter(r => [r.name, r.city, r.handle, r.email, r.role, r.why].some(f => norm(f).includes(term)))
-    : APPS;
-  document.getElementById('tblEmpty').hidden = rows.length > 0;
-  document.getElementById('tbody').innerHTML = rows.map(r => {
-    const when = new Date(r.created_at).toLocaleString('en-IN',
-      { timeZone: IST, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    const h = (r.handle || '').replace(/^@/, '');
-    return `<tr>
+/* ============================================================================
+   THE APPLICATIONS TABLE, A SCREENFUL AT A TIME
+
+   Six thousand applications is around fifty-six thousand cells, and the "about
+   them" column wraps rather than clipping, so laying the whole thing out was
+   close to a second of layout — and it was being redone on every render,
+   including once per live page view.
+
+   Only what is RENDERED is windowed. Search still runs across every
+   application, and the CSV export still writes every row and column, so
+   nothing here narrows what you can find or take away — it just stops building
+   six thousand rows you aren't looking at.
+   ========================================================================== */
+const PAGE_ROWS = 100;
+let shown = PAGE_ROWS;
+let matched = [];
+
+// typing shows the top of the new results, not row 400 of the old ones
+q.addEventListener('input', () => { shown = PAGE_ROWS; table(); });
+
+function appRow(r) {
+  const when = new Date(r.created_at).toLocaleString('en-IN',
+    { timeZone: IST, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const h = (r.handle || '').replace(/^@/, '');
+  return `<tr>
       <td>${esc(when)}</td>
       <td>${esc(r.name)}</td>
       <td>${esc(r.city)}</td>
@@ -5533,7 +5927,50 @@ function table() {
       <td>${esc(r.phone)}</td>
       <td class="why">${esc(r.why)}</td>
     </tr>`;
-  }).join('');
+}
+
+function table() {
+  const body = document.getElementById('tbody');
+  const emptyEl = document.getElementById('tblEmpty');
+  const moreEl = document.getElementById('tblMore');
+  if (!body) return;
+
+  const term = norm(q.value);
+  matched = term
+    ? APPS.filter(r => [r.name, r.city, r.handle, r.email, r.role, r.why].some(f => norm(f).includes(term)))
+    : APPS;
+
+  // still arriving and nothing to show yet — a skeleton, not "nothing yet."
+  if (loading('applications') && !matched.length) {
+    if (emptyEl) emptyEl.hidden = true;
+    if (moreEl) moreEl.hidden = true;
+    body.innerHTML = skelCells(9, 8);
+    return;
+  }
+
+  if (emptyEl) emptyEl.hidden = matched.length > 0;
+  const slice = matched.slice(0, shown);
+  body.innerHTML = slice.map(appRow).join('');
+
+  if (moreEl) {
+    const more = matched.length - slice.length;
+    moreEl.hidden = !more;
+    if (more) moreEl.textContent =
+      `showing ${slice.length} of ${matched.length}${term ? ' matching' : ''} — scroll for more.`;
+  }
+}
+
+/* Grows the window when the marker below the table comes into view. The table
+   scrolls with the page rather than in its own box, so this watches the
+   viewport. */
+if (window.IntersectionObserver) {
+  const marker = document.getElementById('tblMore');
+  if (marker) new IntersectionObserver(entries => {
+    if (!entries.some(e => e.isIntersecting)) return;
+    if (shown >= matched.length) return;
+    shown += PAGE_ROWS;
+    table();
+  }, { rootMargin: '400px' }).observe(marker);
 }
 
 /* --------------------------------------------------------------------- csv */
