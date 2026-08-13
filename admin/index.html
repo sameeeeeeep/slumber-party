@@ -1363,13 +1363,36 @@ let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], W
    sequential round trips before a single row appeared. Now each page paints as
    it lands: the first thousand are on screen while the rest are still coming. */
 async function fetchAll(build, onPage) {
-  const PAGE = 1000, out = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await build().range(from, from + PAGE - 1);
-    if (error) return { data: out, error };
-    out.push(...(data || []));
-    if (onPage && data && data.length) onPage(data);
-    if (!data || data.length < PAGE) return { data: out, error: null };
+  const PAGE = 1000, LANES = 4, out = [];
+
+  /* The first page on its own. Most tables here fit inside one, and firing four
+     requests at a table with fifty rows is three wasted round trips. It is also
+     the page that paints, so it must not queue behind anything. */
+  const first = await build().range(0, PAGE - 1);
+  if (first.error) return { data: out, error: first.error };
+  out.push(...(first.data || []));
+  if (onPage && first.data && first.data.length) onPage(first.data);
+  if (!first.data || first.data.length < PAGE) return { data: out, error: null };
+
+  /* Everything after it, four pages at a time.
+
+     Seven thousand applications is eight pages, and run one behind the other
+     that is eight round trips to ap-south-1 stacked end to end — seconds of
+     pure latency, before a single byte of the last page. Four lanes turns the
+     tail into two waits instead of seven.
+
+     Results are consumed in request order, not arrival order, so the rows stay
+     sorted the way the query asked for. The tail overshoots by at most three
+     requests, which is cheap and concurrent. */
+  for (let from = PAGE; ; from += LANES * PAGE) {
+    const batch = await Promise.all(Array.from({ length: LANES }, (_, i) =>
+      build().range(from + i * PAGE, from + (i + 1) * PAGE - 1)));
+    for (const { data, error } of batch) {
+      if (error) return { data: out, error };
+      out.push(...(data || []));
+      if (onPage && data && data.length) onPage(data);
+      if (!data || data.length < PAGE) return { data: out, error: null };
+    }
   }
 }
 
@@ -1472,7 +1495,17 @@ function loadAll() {
   /* applications first — it is the one query whose failure is worth showing a
      human. Note that NOT being an admin is not a failure: RLS returns zero
      rows rather than an error, so that case lands as an empty dashboard. */
-  fetchAll(() => sb.from('applications').select('*').order('created_at', { ascending: false }),
+  /* Named columns rather than *, to leave behind the two the dashboard never
+     reads. `user_agent` and `referrer` are the longest strings on the row and
+     nothing here displays, searches or exports them — across seven thousand
+     applications that was megabytes of payload fetched to be ignored.
+
+     Everything the table, the search, the panels and the CSV touch is here. If
+     a new column is added and the CSV starts exporting blanks, this list is
+     why. */
+  fetchAll(() => sb.from('applications')
+             .select('id,created_at,name,city,age,role,handle,phone,email,why,tz,followers,notes,status,source')
+             .order('created_at', { ascending: false }),
            page => { APPS = absorb(APPS, page); loaded('applications'); paintSoon(); })
     .then(r => {
       loaded('applications');
