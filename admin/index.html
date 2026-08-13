@@ -1825,17 +1825,39 @@ function pagesStrip(){
 
 /* A listed page that has stopped answering is worse than one that was never
    listed — it looks live from here. Checked once, quietly, on load. */
-async function checkPages(){
-  for (const [, href] of LIVE_PAGES) {
+/* ============================================================================
+   All of them at once, with HEAD, and not until the browser is idle.
+
+   This was nineteen full page downloads run strictly end to end: 256KB and
+   FOUR SECONDS of wall clock, measured on the live site. It started before the
+   login box had been filled in and was still going while the dashboard's own
+   data was loading — competing for the same six connections per host as the
+   applications pages, which is the worst possible thing to be doing with them.
+
+   Three things were wrong with it. It fetched bodies it never read: `.ok` is
+   the entire answer, and that is what HEAD is for. It ran sequentially, when
+   the checks are completely independent of each other. And it ran immediately,
+   when a deployment check is never more urgent than the data you opened the
+   dashboard to look at.
+
+   HEAD and GET were confirmed to agree — 200 on all seventeen listed pages —
+   before switching, because a host that refused HEAD would paint every link
+   red and cry wolf about a site that is perfectly fine. */
+function checkPages(){
+  const run = () => Promise.all(LIVE_PAGES.map(async ([, href]) => {
     const url = href.split('?')[0] || '/';
     let ok = false;
-    try { ok = (await fetch(url, { method: 'GET', cache: 'no-store' })).ok; } catch (e) {}
-    if (ok) continue;
+    try { ok = (await fetch(url, { method: 'HEAD', cache: 'no-store' })).ok; } catch (e) {}
+    if (ok) return;
     for (const a of document.querySelectorAll(`a[data-page="${CSS.escape(href)}"]`)) {
       a.style.borderColor = 'var(--critical)';
       a.title = "this page isn't answering — check it's deployed";
     }
-  }
+  }));
+  /* the timeout is the point: idle may never arrive on a busy dashboard, and
+     the check should still happen eventually */
+  if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 10000 });
+  else setTimeout(run, 4000);
 }
 
 function buildShell() {
