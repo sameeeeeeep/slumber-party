@@ -1456,11 +1456,45 @@ const skelCells = (cols, n = 4) =>
    nothing may render until boot() says so. */
 let BOOTED = false;
 let paintQueued = false;
+/* A REPAINT MUST NEVER LAND ON A FIELD SOMEONE IS TYPING IN.
+   Every panel here draws itself with innerHTML, so a repaint doesn't update the
+   inputs — it destroys them and builds new ones. Do that while a cursor is in a
+   box and the box is gone: focus falls back to <body> and whatever had been
+   typed since the last change event goes with it.
+
+   That is not a rare race. Saving a crew row echoes back through the realtime
+   `crew` subscription a moment later, so the reliable way to hit it was to work
+   the way the table asks you to — tab from one name box to the next. The change
+   from the box you LEFT saved, the echo arrived, the table redrew, and the box
+   you had just tabbed INTO disappeared mid-word.
+
+   So a repaint asked for while a field has focus is held, not dropped, and runs
+   when focus leaves. Nothing is lost: renderAll() paints from the arrays, which
+   the realtime handlers have already updated. */
+let paintHeld = false;
+const typingNow = () => {
+  const a = document.activeElement;
+  return !!a && a !== document.body &&
+         (a.matches('input, select, textarea') || a.isContentEditable);
+};
 function paintSoon() {
+  if (typingNow()) { paintHeld = true; return; }
   if (paintQueued) return;
   paintQueued = true;
-  requestAnimationFrame(() => { paintQueued = false; renderAll(); });
+  requestAnimationFrame(() => {
+    paintQueued = false;
+    // a cursor can land in a field between the request and the frame
+    if (typingNow()) { paintHeld = true; return; }
+    paintHeld = false;
+    renderAll();
+  });
 }
+/* focusout fires BEFORE focus lands on the next element, so tabbing between two
+   boxes would look like "nobody is typing" for one tick and repaint anyway.
+   The timeout lets the next field take focus before we decide. */
+document.addEventListener('focusout', () => {
+  setTimeout(() => { if (paintHeld && !typingNow()) paintSoon(); }, 0);
+});
 
 /* Every panel's data, each landing on its own.
 
@@ -5529,9 +5563,34 @@ document.getElementById('crewBody').addEventListener('change', async (e) => {
   if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
   msg.textContent = 'saved'; msg.className = 'sub';
   Object.assign(CREW.find(r => r.id === id) || {}, patch);
-  renderAll();
+  /* paintSoon(), not renderAll(): change fires as you TAB OUT of a cell, so by
+     the time this runs the cursor is already in the next one, and a straight
+     repaint would delete the box under it. Held until focus leaves the table. */
+  paintSoon();
   setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
 });
+
+/* The two things a saved name changes, patched in place. The row's chip counts
+   named-of-headcount, the line under the boxes counts what's left, and neither
+   is worth throwing away a table full of live inputs to redraw. The overview
+   strip above ("n people unnamed") is not touched here — it comes right on the
+   next full repaint, which is whenever the cursor leaves the panel. */
+function crewCounts(id) {
+  const row = CREW.find(r => r.id === id);
+  if (!row) return;
+  const gap = namedGap(row), head = Number(row.headcount) || 0, sel = CSS.escape(id);
+  const btn = document.querySelector(`.crNames[data-crew="${sel}"]`);
+  if (btn) {
+    btn.textContent = `${gap ? `${nameList(row).length}/${head}` : '✓ all'} ▾`;
+    btn.classList.toggle('miss', gap > 0);
+  }
+  const sub = document.querySelector(`.crName[data-crew="${sel}"]`)
+    ?.closest('.crNames-in')?.querySelector('.sub');
+  if (sub) {
+    sub.textContent = `${gap ? `${gap} still to name` : 'all named ✓'}`
+      + " · leave a box empty if you don't know yet";
+  }
+}
 
 /* Each box owns one slot in the list. Saving rejoins the whole thing, and trailing
    blanks are dropped so an unfilled box doesn't become an empty name. */
@@ -5553,9 +5612,11 @@ document.getElementById('crewBody').addEventListener('change', async (e) => {
   if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
   row.members = members;
   msg.textContent = 'saved'; msg.className = 'sub';
-  /* the panel is left alone on purpose: re-rendering mid-list would move the
-     caret out of the box you're tabbing through */
-  crewPanel();
+  /* The panel is left standing on purpose: re-rendering mid-list would move the
+     caret out of the box you're tabbing through. This USED to call crewPanel(),
+     which is exactly that re-render — so the two counters are patched by hand
+     instead, and every box keeps its cursor and its half-typed name. */
+  crewCounts(id);
   setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
 });
 
