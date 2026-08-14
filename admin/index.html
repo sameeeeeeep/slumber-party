@@ -1566,6 +1566,16 @@ function loadAll() {
    ========================================================================== */
 let VSTATS = null;                 // pre-aggregated; null means "use raw VISITS"
 
+/* IS THE SESSION COUNT A WHOLE NUMBER YET?
+   `loaded('visits')` clears on the FIRST page, on purpose — a panel with a
+   thousand real rows should show them rather than shimmer. But the completion
+   tile divides by this table, and a thousand rows of a seven-thousand-row
+   download is not a denominator. In fallback mode the count keeps climbing for
+   as long as the pagination runs, so "applications exceed sessions" during that
+   window is arithmetic against a number still arriving, not missing pings.
+   True means every row is in: the aggregate answered, or the last page landed. */
+let VISITS_WHOLE = false;
+
 /* "Active now" counts distinct sessions that pinged in the last five minutes. */
 const LIVE_WINDOW = 5 * 60 * 1000;
 
@@ -1586,6 +1596,7 @@ async function loadVisits() {
     const { data, error } = await sb.rpc('visit_stats');
     if (!error && data) {
       VSTATS = data;
+      VISITS_WHOLE = true;          // the database counted every row, in one answer
       /* Live counts are about the last five minutes and the clock keeps moving,
          so they can't come from a snapshot. The RPC seeds the recent rows and
          realtime keeps them current from there. */
@@ -1612,6 +1623,7 @@ async function loadVisits() {
            page => { VISITS = absorb(VISITS, page); loaded('visits'); paintSoon(); })
     .then(r => {
       if (r && r.error) { failedLoad('visits', r.error.message); return; }
+      VISITS_WHOLE = true;          // last page in: the count is now a whole number
       loaded('visits'); paintSoon();
     })
     .catch(e => failedLoad('visits', e));
@@ -2671,8 +2683,13 @@ function tiles() {
 
      Every one of those cases is a dash, and the caption says which.
      ========================================================================= */
-  const visitsBad = failed('visits') || loading('visits') || loading('applications');
-  const shortfall = sessions > 0 && APPS.length > sessions;
+  /* `loading('visits')` goes false on the FIRST page of the fallback download,
+     which is right for a panel of rows and wrong for a denominator — so the
+     completion tile waits for VISITS_WHOLE instead. Otherwise a partial count
+     gets read as "pings are missing" when the rows are merely still arriving. */
+  const counting = !VISITS_WHOLE || loading('visits') || loading('applications');
+  const visitsBad = failed('visits') || counting;
+  const shortfall = !counting && sessions > 0 && APPS.length > sessions;
   const rate = (visitsBad || shortfall || !sessions)
              ? null : Math.round(APPS.length / sessions * 100);
   const rateNote = failed('visits')     ? "visit data didn't load"
@@ -2681,6 +2698,7 @@ function tiles() {
                  : !sessions            ? 'no sessions recorded'
                  : 'landed → applied';
   const sessionNote = failed('visits')  ? "visit data didn't load"
+                 : counting             ? 'still counting'
                  : shortfall            ? 'fewer than applications — some pings missing'
                  : 'browser tabs that landed';
 
