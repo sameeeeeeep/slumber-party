@@ -13,3 +13,6 @@ besties/.password
 # Supabase CLI scratch — written by `functions deploy`. Local machine state
 # (which project this checkout is linked to), not part of the project.
 supabase/.temp/
+
+# Rendered email previews — regenerate with tools/render-emails.mjs.
+tools/out/

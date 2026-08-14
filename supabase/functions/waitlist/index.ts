@@ -12,9 +12,17 @@
 //  real phones — while per-visitor stays tight because one person needs to
 //  leave one email, not forty.
 //
+//  It also SENDS. /late ends on "check your inbox soon", and for a while that
+//  was a promise nothing kept — the row landed and no mail ever went out. The
+//  note is the same Y2K handset the applicants get (_shared/handset-email.ts),
+//  with different words, because a latecomer who forwards it to an applicant
+//  should see the same phone.
+//
 //  Deploy: supabase functions deploy waitlist
+//  Secrets: shares submit's — RESEND_API_KEY, MAIL_FROM, MAIL_REPLY_TO, MAIL_BCC
 // ============================================================================
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { handsetEmail, sendHandsetEmail } from '../_shared/handset-email.ts';
 
 const ALLOWED_ORIGINS = [
   'https://secretslumberparty.com',
@@ -41,6 +49,50 @@ const str = (v: unknown, max: number) =>
 
 // the pragmatic email shape — one @, something either side, a dot after
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/* The same door the confirmation email opens on. /late promises "a little
+   surprise in it for you" and this is it: the arcade is the one part of the
+   night that costs nothing to hand a latecomer, and it is a real link — it
+   drops the gate and opens the arcade directly, skipping the application flow
+   they can no longer use. If latecomers should NOT get in, point this at
+   https://secretslumberparty.com and change the third line below; nothing else
+   in this file assumes the arcade. */
+const ARCADE = 'https://secretslumberparty.com/?arcade';
+
+/* No name is ever collected on /late — one field, one row — so the greeting is
+   "hey you", not a first name guessed out of the local part of an address. */
+function waitlistEmail() {
+  return handsetEmail({
+    // no emoji, same as the confirmation: free to drop on a young domain
+    subject: 'noted — you got on the list after all',
+    preview: '1 new message from khushi &#9829; you missed the door, not the night',
+    greetingName: 'you',
+    lines: [
+      'you missed the applications &#8212; but not the rest of it.',
+      /* Three lines, and each one is shorter than it wants to be. The phone only
+         reads as a phone while the LCD stays around 45% of it — a fourth line,
+         or these three at full length, and the handset quietly becomes a slab
+         with a keypad glued underneath. */
+      "i'm keeping this list for whatever comes next. you'll hear it here first. &#10024;",
+      "and the surprise i promised: the arcade's open. &#129323;",
+    ],
+    cta: { label: '&#9658; OPEN ARCADE', href: ARCADE },
+    footerReason: "you're getting this because you left your email at",
+    text: `hey you,
+
+you missed the applications — but not the rest of it.
+
+i'm keeping this list for whatever comes next. you'll hear it here first.
+
+and the surprise i promised: the arcade's open.
+
+open the arcade: ${ARCADE}
+
+—
+you're getting this because you left your email at secretslumberparty.com.
+reply to this email if that wasn't you.`,
+  });
+}
 
 async function sha256(s: string) {
   const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
@@ -102,11 +154,25 @@ Deno.serve(async (req) => {
   });
 
   if (error) {
-    // 23505 = the unique index: they're already on the list, which is a happy path
+    /* 23505 = the unique index: they're already on the list, which is a happy path
+       — and deliberately NOT a second email. Re-sending on every repeat submit
+       would turn this endpoint into a way to mail a stranger five times an hour
+       (that being the per-visitor cap) by typing their address into /late. The
+       chat already answers this case with "you're already on my list". */
     if ((error as { code?: string }).code === '23505') {
       return new Response(JSON.stringify({ ok: true, already: true }), { headers: cors(origin) });
     }
     return new Response(JSON.stringify({ ok: false, error: 'db' }), { status: 500, headers: cors(origin) });
   }
-  return new Response(JSON.stringify({ ok: true }), { headers: cors(origin) });
+
+  /* Sent only once the row is safe, and a mail failure never fails the signup:
+     the email address is the thing this page exists to collect. The reason goes
+     to submit_log, which only admins can read — never to the response, because
+     Resend names the sending domain and the account state in its rejections. */
+  const { sent: emailed, reason } = await sendHandsetEmail(email, waitlistEmail());
+  if (!emailed && reason && reason !== 'no RESEND_API_KEY') {
+    await db.from('submit_log').insert({ kind: 'email_failed', ip_hash: 'n/a', note: 'waitlist: ' + reason });
+  }
+
+  return new Response(JSON.stringify({ ok: true, emailed }), { headers: cors(origin) });
 });
