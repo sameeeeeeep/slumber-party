@@ -1642,9 +1642,28 @@ async function loadVisits() {
       setInterval(refreshStats, 60000);
       return;
     }
-    if (error) console.info('visit_stats not available, counting client-side:', error.message);
+    /* THE FALLBACK IS EXPENSIVE, SO SAY WHY IT IS BEING USED.
+       Three different things land here and they need three different fixes,
+       but only one of them used to leave a trace:
+         · an error — the function isn't there, or `authenticated` was never
+           granted execute on it (re-apply the visit_stats migration);
+         · no error and no data — the function ran and is_admin() said no, so it
+           returned null. Nothing is wrong with the SQL; this account isn't in
+           public.admins;
+         · a throw — the network, mid-call.
+       The middle one was silent, which made "the whole table downloads on every
+       load" look like the design rather than a fallback nobody chose. */
+    if (error) {
+      console.warn('visit_stats refused, downloading visits instead —', error.message,
+                   '· if this says permission denied, re-apply the visit_stats migration:',
+                   'grant execute on function public.visit_stats() to authenticated');
+    } else {
+      console.warn('visit_stats returned nothing, downloading visits instead —',
+                   'the function ran but is_admin() was false for this account,',
+                   'so it is not in public.admins');
+    }
   } catch (e) {
-    console.info('visit_stats not available, counting client-side:', e && e.message);
+    console.warn('visit_stats call failed, downloading visits instead —', e && e.message);
   }
 
   /* Fallback. Last on purpose: it is far the biggest table and only the traffic
