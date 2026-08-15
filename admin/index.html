@@ -471,7 +471,7 @@
     <a href="#/bffs"         data-view="bffs"><span class="nvl">BFFs &amp; hampers</span><span class="nvc" id="nv-bffs"></span></a>
     <a href="#/stay"         data-view="stay"><span class="nvl">rooms</span><span class="nvc" id="nv-stay"></span></a>
     <a href="#/activity"     data-view="activity"><span class="nvl">activities</span><span class="nvc" id="nv-activity"></span></a>
-    <a href="#/day"          data-view="day"><span class="nvl">programming</span><span class="nvc" id="nv-day"></span></a>
+    <a href="#/day"          data-view="day"><span class="nvl">itinerary</span><span class="nvc" id="nv-day"></span></a>
     <a href="#/reach"        data-view="reach"><span class="nvl">reach</span><span class="nvc" id="nv-reach"></span></a>
   </div>
 </nav>
@@ -528,8 +528,8 @@
       <p class="note">Read from the browser's own user agent, because almost every social tap
         arrives with no referrer at all — Instagram, Threads, Facebook and Snapchat each name
         themselves, so they're identifiable anyway. <b>WhatsApp cannot be:</b> it opens the system
-        browser leaving no trace, so those land in “direct” along with anyone who typed the address.
-        Instagram’s bio link, stories and DMs also share one user agent; add
+        browser leaving no trace, so those land in "direct" along with anyone who typed the address.
+        Instagram's bio link, stories and DMs also share one user agent; add
         <code>?src=ig-story</code> to a link if you ever need to tell them apart.</p>
     </section>
   </div>
@@ -547,7 +547,7 @@
 
     <section class="panel">
       <h2>who they are</h2>
-      <p class="sub">answers to “what describes you best?”</p>
+      <p class="sub">answers to "what describes you best?"</p>
       <div class="rows" id="roleRows"></div>
       <h2 style="margin-top:18px">time zones</h2>
       <p class="sub">from the browser, including people who never applied</p>
@@ -569,7 +569,7 @@
         <tbody id="tbody"></tbody>
       </table>
     </div>
-    <p class="empty" id="tblEmpty" hidden>nothing yet.</p>
+    <p class="empty" id="tblEmpty" hidden>nobody has applied yet.</p>
     <!-- both the "showing n of m" label and the marker that loads the next
          rows when it scrolls into view -->
     <p class="note" id="tblMore" hidden></p>
@@ -654,7 +654,7 @@
         <tbody id="ciBody"></tbody>
       </table>
     </div>
-    <p class="empty" id="ciEmpty" hidden>no guests on the list yet — paste them below.</p>
+    <p class="empty" id="ciEmpty" hidden>no guests yet — add the first above.</p>
     <p class="sub" id="ciMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
 
 
@@ -673,7 +673,6 @@
         <button class="btn" id="ciAdd" type="button" style="width:auto">add &amp; mint links</button>
         <span class="sub" id="ciRosterMsg"></span>
       </div>
-      </div>
     </details>
 
     <!-- The honest bit about minting. A code in this database is only half a
@@ -689,9 +688,9 @@
         color:#e9e9ee;border:1px solid #262735;border-radius:8px;padding:8px 10px;
         font:12px ui-monospace,monospace"></textarea>
       <button class="btn ghost" id="sealCopy" type="button" style="margin-top:6px">copy command</button>
-    
+    </div>
 
-    <p class="note"><b>ID documents.</b> Held in a private bucket, never served publicly. “view” hands you
+    <p class="note"><b>ID documents.</b> Held in a private bucket, never served publicly. "view" hands you
       two signed links — one to open it in a tab, one to save it under the guest's own name so
       you can forward it to whoever runs the door. Both expire after five minutes, so a copied
       link is useless later. Delete the documents once the door list is done: the reason to hold
@@ -799,7 +798,7 @@
       <a class="btn ghost" href="/housemates/" target="_blank" rel="noopener"
          style="text-decoration:none">the intro round</a>
     </div>
-    <p class="sub">what guests see at <b>/itinerary</b> (password: <code>nailinit</code>).
+    <p class="sub">guests open <b>/itinerary</b> with the word <code>nailinit</code>.
       Changes land on their phones within a minute. Hidden items are drafts —
       only you see them. "now" pins the glowing <i>happening now</i> marker.</p>
 
@@ -932,9 +931,9 @@
     </div>
     <div class="ovs" id="ovActivities"></div>
     <p class="sub">everything actually happening at the party, what it is, how long it
-      takes, and whose job it is. This is the list of things; the programme is when they
+      takes, and whose job it is. This is the list of things; the itinerary is when they
       happen — an activity can live here for weeks before it has a time. When one is ready,
-      <b>→ programme</b> carries it across and you just pick the day and the hour.</p>
+      <b>→ itinerary</b> carries it across and you just pick the day and the hour.</p>
 
     <form id="acForm" class="addRow">
       <label>activity
@@ -954,12 +953,12 @@
       <table id="acTbl">
         <thead><tr>
           <th>activity</th><th>what happens</th><th>how long</th><th>whose job</th>
-          <th>slumber game</th><th>status</th><th>in the programme</th><th></th>
+          <th>slumber game</th><th>status</th><th>in the itinerary</th><th></th>
         </tr></thead>
         <tbody id="acBody"></tbody>
       </table>
     </div>
-    <p class="empty" id="acEmpty" hidden>nothing yet — add the first above.</p>
+    <p class="empty" id="acEmpty" hidden>no activities yet — add the first above.</p>
     <p class="sub" id="acMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
   </section>
 
@@ -1006,7 +1005,7 @@
       <h2 style="flex:1">never have I ever</h2>
       <span class="pill" id="nvCount">—</span>
       <button class="btn ghost" id="nvSeed" type="button">add a starter set</button>
-      <button class="btn ghost" id="nvCsv" type="button">csv</button>
+      <button class="btn ghost" id="nvCsv" type="button">download csv</button>
     </div>
     <div class="ovs" id="ovNever"></div>
     <p class="sub">one question at a time. Guests open <code>/never</code> and get two buttons;
@@ -1084,7 +1083,7 @@
       wall within three seconds. <b>clear the board</b> is only for when you want the bucket
       empty — take the zip first.</p>
     <div class="nbGrid" id="nbGrid"></div>
-    <p class="empty" id="nbEmpty" hidden>nothing added yet.</p>
+    <p class="empty" id="nbEmpty" hidden>nothing on the board yet — it fills as guests add designs at <code>/board</code>.</p>
     <p class="sub" id="nbMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
   </section>
 
@@ -1119,7 +1118,7 @@
         <tbody id="bfBody"></tbody>
       </table>
     </div>
-    <p class="empty" id="bfEmpty" hidden>none yet — add the first above.</p>
+    <p class="empty" id="bfEmpty" hidden>no BFFs yet — add the first above.</p>
     <p class="sub" id="bfMsg" style="min-height:1.1rem;margin:8px 0 0"></p>
   </section>
 
@@ -1257,7 +1256,7 @@
         <tbody id="crewBody"></tbody>
       </table>
     </div>
-    <p class="empty" id="crewEmpty" hidden>nobody added yet.</p>
+    <p class="empty" id="crewEmpty" hidden>nobody yet — add the first below.</p>
 
     <!-- one row, everything bottom-aligned. The controls all get margin:0 from
          .crewForm below rather than per-element inline styles — the select was
@@ -1288,7 +1287,7 @@
       <h2 style="flex:1">didn't reach the admin</h2>
       <span class="pill" id="failCount">—</span>
     </div>
-    <p class="sub">Applications the site sent that this database refused. These people are almost
+    <p class="sub">applications the site sent that this database refused. These people are almost
       certainly in the Google Sheet — that write happens first and doesn't depend on Supabase — so
       treat this as a to-do list for copying them across, not as lost applications.</p>
     <div class="scroll">
@@ -1819,7 +1818,7 @@ const VIEWS = [
   { id:'bffs',         title:'BFFs & hampers',      blurb:'brands giving product, and every hamper going out' },
   { id:'stay',         title:'rooms',               blurb:'the venue, and who sleeps where' },
   { id:'activity',     title:'activities',          blurb:'what is happening, what it is, and whose job it is' },
-  { id:'day',          title:'programming',         blurb:'the programme guests see at /itinerary' },
+  { id:'day',          title:'itinerary',           blurb:'what guests see at /itinerary' },
   { id:'reach',        title:'reach',               blurb:'the late list, and how the link looks when shared' },
 ];
 
@@ -1860,7 +1859,7 @@ const LIVE_PAGES = [
   ['public', '/terms.html',    'T&Cs',          null],
   ['public', '/privacy.html',  'privacy',       null],
   ['guests', '/besties/',      'besties gate',  'PINKYPROMISE'],
-  ['guests', '/itinerary/',    'programme',     'nailinit'],
+  ['guests', '/itinerary/',    'itinerary',     'nailinit'],
   ['guests', '/house/',        'the house',     'nailinit'],
   ['guests', '/housemates/',   'intro round',   'housemates'],
   ['guests', '/games/',        'scoreboard',    'nailinit'],
@@ -3624,7 +3623,7 @@ function activitiesPanel(){
     [live.filter(a => a.is_game).length, '🏆 slumber games'],
     [live.filter(a => a.status === 'ready').length, 'ready'],
     [live.filter(a => a.status === 'planned').length, 'still planning'],
-    [live.filter(a => !slotsFor(a.id).length && a.status !== 'done').length, 'not in the programme', true],
+    [live.filter(a => !slotsFor(a.id).length && a.status !== 'done').length, 'not in the itinerary', true],
     [live.filter(a => !a.owner).length, 'nobody owns it', true],
     [live.filter(a => !a.mins).length, 'no length yet', true],
   ]);
@@ -3660,7 +3659,7 @@ function activitiesPanel(){
       : '<span class="muted">not scheduled</span>'}</td>
     <td style="text-align:right;white-space:nowrap">
       ${a.status === 'cut' ? '' : `<button class="btn ghost acSend" data-act="${esc(a.id)}" type="button"
-        style="padding:4px 9px;font-size:12px">${slots.length ? '+ again' : '&rarr; programme'}</button>`}
+        style="padding:4px 9px;font-size:12px">${slots.length ? '+ again' : '&rarr; itinerary'}</button>`}
       <button class="btn ghost acDel" data-act="${esc(a.id)}" type="button"
         style="padding:4px 9px;font-size:12px">remove</button></td>
   </tr>${schedRow(a)}`;}).join('');
@@ -3738,12 +3737,12 @@ function schedRow(a){
         <input class="acEmoji" data-act="${esc(a.id)}" type="text" maxlength="8"
           placeholder="${a.is_game ? '🏆' : '💅'}" /></label>
       <button class="btn acPut" data-act="${esc(a.id)}" type="button" style="width:auto">
-        add to the programme</button>
+        add to the itinerary</button>
       <button class="btn ghost acShut" data-act="${esc(a.id)}" type="button" style="width:auto">cancel</button>
     </div>
     <p class="sub" style="margin:.4rem 0 0">${esc(a.name)}${a.mins ? ` · runs ${esc(hhmm(a.mins))}` : ''}${
       a.is_game ? ' · counts for the slumber games' : ''}${
-      a.what ? ` — “${esc(a.what)}” goes in as the detail` : ''}</p>
+      a.what ? ` — "${esc(a.what)}" goes in as the detail` : ''}</p>
   </td></tr>`;
 }
 
@@ -3827,7 +3826,7 @@ document.getElementById('acBody')?.addEventListener('click', async (e) => {
 
 document.getElementById('acCsv')?.addEventListener('click', () => {
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = [['activity','what happens','minutes','whose job','status','in the programme']
+  const lines = [['activity','what happens','minutes','whose job','status','in the itinerary']
     .map(cell).join(',')];
   for (const a of ACTS)
     lines.push([a.name, a.what || '', a.mins ?? '', a.owner || '', a.status,
@@ -4038,7 +4037,7 @@ function puzzlePanel(){
       </div>
       <div class="pzBar"><i style="width:${pct}%"></i></div>
     </div>`;
-  }).join('') || '<p class="empty">nothing cut up yet.</p>';
+  }).join('') || '<p class="empty">no puzzles yet — cut one up above.</p>';
 }
 
 /* ---- picking the image, and showing the grid before committing to it ------ */
@@ -4485,7 +4484,7 @@ function boardPanel(){
   document.getElementById('nbCount').textContent = BOARD.length
     ? `${shown.length} design${shown.length === 1 ? '' : 's'}` +
       (ranked.length ? ` · ${ranked.slice(0, 3).map(([t, n]) => `${t} ${n}`).join(' · ')}` : '')
-    : 'nothing yet';
+    : 'none yet';
   document.getElementById('nbEmpty').hidden = BOARD.length > 0;
 
   /* most-voted first once voting starts, newest first before that — the order
@@ -5251,7 +5250,7 @@ function stayPanel() {
       }
       html += '</div>';
     }
-    if (!rs.length) html += '<p class="sub" style="margin:0">no rooms yet — “+ room” adds them.</p>';
+    if (!rs.length) html += '<p class="sub" style="margin:0">no rooms yet — "+ room" adds them.</p>';
     html += '</div>';
   }
   if (!VENUES.length) html = '<p class="empty">no places yet — add the first one above.</p>';
