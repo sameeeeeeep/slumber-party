@@ -1612,6 +1612,41 @@ let VISITS_WHOLE = false;
 /* "Active now" counts distinct sessions that pinged in the last five minutes. */
 const LIVE_WINDOW = 5 * 60 * 1000;
 
+/* ---------------------------------------------------------------------------
+   THE SESSIONS TILE, TICKING UP RATHER THAN BEING RECOUNTED
+
+   VSTATS.sessions is a snapshot: correct at the moment the aggregate ran, and
+   then frozen until the next refresh a minute later. On a quiet day nobody
+   notices. During a launch the tile sat still through sixty seconds of arrivals
+   and then jumped, which reads as broken.
+
+   Recounting is the one thing that must not happen — counting distinct sessions
+   means walking the whole visits table, which is exactly the cost the aggregate
+   exists to remove. So the snapshot is never recomputed here; new sessions are
+   ADDED to it as realtime delivers them.
+
+   A session is new when its 'landed' ping arrives, because landing is the first
+   thing every session does — every later step (entered, opened_dm, q1…, submitted)
+   belongs to a session that already landed and is therefore already in the count.
+   Keying on 'landed' is what keeps a long applicant working through the form from
+   being counted a second time.
+
+   created_at is compared against the snapshot's own clock (`as_of`, stamped by
+   the database), so a row that landed before the aggregate ran but reached us
+   after it isn't added on top of a count that already includes it. */
+let SNAP_AT = 0;                   // DB-clock ms the current VSTATS was computed at
+let SINCE_SNAP = new Map();        // session_id → landed-at ms, for sessions after it
+
+/* The aggregate just answered: it counts everything up to as_of, so anything we
+   were holding from before that point is now part of it and must be dropped, or
+   it would be counted twice. Without as_of (the migration isn't applied yet) the
+   local clock stands in — close enough, since the only cost of being a second
+   out is one session counted for one refresh cycle. */
+function markSnapshot(data) {
+  SNAP_AT = data && data.as_of ? +new Date(data.as_of) : Date.now();
+  for (const [id, at] of SINCE_SNAP) if (at <= SNAP_AT) SINCE_SNAP.delete(id);
+}
+
 /* A page view arriving live. In fallback mode it simply joins the list. With
    the aggregate in use there is no full list to join — the counts arrived
    pre-computed — so VISITS holds only the live window, which is the one thing
@@ -1619,7 +1654,9 @@ const LIVE_WINDOW = 5 * 60 * 1000;
    Trimming is what stops it growing back into the problem this removed. */
 function noteVisit(row) {
   VISITS.push(row);
-  if (!VSTATS) return;
+  if (!VSTATS) return;             // fallback: the raw list is the count, nothing to add
+  const at = +new Date(row.created_at);
+  if (row.reached === 'landed' && at > SNAP_AT) SINCE_SNAP.set(row.session_id, at);
   const cut = Date.now() - LIVE_WINDOW;
   VISITS = VISITS.filter(v => +new Date(v.created_at) >= cut);
 }
@@ -1629,6 +1666,7 @@ async function loadVisits() {
     const { data, error } = await sb.rpc('visit_stats');
     if (!error && data) {
       VSTATS = data;
+      markSnapshot(data);           // anything realtime adds from here is on top of it
       VISITS_WHOLE = true;          // the database counted every row, in one answer
       /* Live counts are about the last five minutes and the clock keeps moving,
          so they can't come from a snapshot. The RPC seeds the recent rows and
@@ -1686,6 +1724,7 @@ async function refreshStats() {
     const { data, error } = await sb.rpc('visit_stats');
     if (error || !data) return;                 // keep the numbers we already have
     VSTATS = data;
+    markSnapshot(data);                         // fold the live additions back in
     /* merge, don't replace: realtime rows newer than this snapshot are already
        in VISITS and dropping them would make "active now" flicker downwards */
     VISITS = absorb(VISITS, data.recent || []);
@@ -5774,7 +5813,9 @@ function trafficStats() {
       steps:    VSTATS.steps || {},
       sources:  (VSTATS.sources || []).map(r => [r.source || 'unknown', r.sessions || 0]),
       zones:    (VSTATS.zones   || []).map(r => [r.tz, r.rows || 0]),
-      sessions: VSTATS.sessions || 0,
+      /* the snapshot, plus the sessions that have landed since it was taken —
+         an addition, never a recount. See SINCE_SNAP. */
+      sessions: (VSTATS.sessions || 0) + SINCE_SNAP.size,
       live, liveBySource,
     };
   }
