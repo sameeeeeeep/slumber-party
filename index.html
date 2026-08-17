@@ -2229,9 +2229,9 @@ roomimg.complete ? maybeHideVeil() : roomimg.addEventListener('load', maybeHideV
 addEventListener('load', maybeHideVeil); setTimeout(hideVeil, MAX_VEIL);   // hard cap so it never sticks
 
 /* ---------- countdown to when the application closes (gate screen only) ----
-   THE DEADLINE ITSELF NOW LIVES IN assets/config.js, as `formCloses`. It is read
-   here and on /late, which says the hour out loud — one date, two pages, so a
-   moved deadline can't leave her insisting the form closed at noon.
+   THE DEADLINE ITSELF LIVES IN assets/config.js, as `formCloses`. This countdown
+   is the only thing that reads it — /late used to name the hour out loud and no
+   longer does, so moving the deadline changes this clock and nothing else.
 
    Change it there, not here. The warnings that used to sit on this constant sit
    on it there too: it is not the party date, and the party date must never be
