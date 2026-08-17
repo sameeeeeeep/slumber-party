@@ -130,15 +130,17 @@
 <script>
 /* ============================================================================
    /late — the DM for people who arrived after applications closed.
-   The timestamp and one of her lines name the hour; CFG.formCloses in
-   assets/config.js is the single source of truth for when that is — the same
-   value the gate's countdown runs on — so if the deadline moves, they move
-   with it instead of going on saying noon.
+   The thread's timestamp names the hour, from CFG.formCloses in
+   assets/config.js — the same value the gate's countdown runs on, so it moves
+   when the deadline moves instead of going on saying noon. Her lines no longer
+   name it: see the note on the closing line for why.
 
-   Six of her lines, one question, one row in the database. Nothing here reveals
-   anything: no dates, no names beyond hers, no hint of what the something is.
-   The whole job of the page is to turn "you missed it" into "you're early for
-   the next part" — and to leave with an email.
+   Seven of her lines, one question, one row in the database. Nothing here
+   reveals anything: no dates, no names beyond hers, no hint of what the
+   something is. The whole job of the page is to turn "you missed it" into
+   "you're early for the next part" — and to leave with an email. The 20,000
+   carries that: it reframes missing out as having been late to something real,
+   rather than having been left off a list.
    ========================================================================== */
 const CFG = window.SLUMBER_CONFIG || {};
 const thread = document.getElementById('thread');
@@ -260,14 +262,19 @@ function spokenDay(d){
   if(same(a, yest)) return 'yesterday';
   return a.day + ' ' + a.month.toLowerCase();
 }
-/* A missing or malformed formCloses leaves both of these null, and she drops the
-   specifics rather than saying "closed at NaN" — still true, just vaguer. */
+/* A missing or malformed formCloses leaves both of these null, and the timestamp
+   falls back to a bare "today" rather than reading "NaN · just after NaN". */
 const CLOSED_DAY  = isNaN(CLOSED_AT) ? null : spokenDay(CLOSED_AT);
 const CLOSED_HOUR = isNaN(CLOSED_AT) ? null : spokenHour(CLOSED_AT);
-// "at noon today" / "at noon yesterday" / "at noon on 18 aug"
-const CLOSED_WHEN = !CLOSED_DAY ? ''
-  : ' at ' + CLOSED_HOUR + (CLOSED_DAY === 'today' || CLOSED_DAY === 'yesterday'
-                              ? ' ' + CLOSED_DAY : ' on ' + CLOSED_DAY);
+
+/* HOW MANY APPLIED. The one number she says out loud, and the reason the page
+   works: 20,000+ against thirty-five spots is the whole feeling of having
+   missed it. Deliberately a rounded floor, not a live count — /late cannot
+   read the applications table (row-level security refuses every read) and a
+   number that ticked upward while someone read it would look invented.
+   Round DOWN when you update it, so it stays true as more arrive. */
+const APPLIED = '20,000+';
+const SPOTS   = 'thirty-five';
 
 /* ---- her side of the conversation ---------------------------------------- */
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -277,8 +284,14 @@ async function start(){
   sys(CLOSED_DAY ? CLOSED_DAY + ' · just after ' + CLOSED_HOUR : 'today');
   await sleep(500);
   await her('omg hi 🙈', 800);
-  await her('you just missed it. applications closed' + CLOSED_WHEN, 900);
-  await her("thirty-five spots. i genuinely didn't expect this many of you", 950);
+  /* The bad news lands on its own line, with no hour attached. The clock was
+     doing damage: "closed at 2:21pm today" invites "but it's 2:40, come on" —
+     a precise minute reads like a door someone could still be let through.
+     Closed, full stop, and then the number that makes it obviously final.
+     (The hour still exists, up in the thread's timestamp, where a DM puts it.) */
+  await her('you missed it. applications are closed', 900);
+  await her(APPLIED + ' applications. for ' + SPOTS + ' spots', 1000);
+  await her("i genuinely did not expect that. not even close", 950);
   await her("okay so since you're here — context. the slumber party isn't just a party. i've been building something for months, and the party is the first night of it", 1250);
   await her("the people who applied get to see it first. i can't sneak you past the list — that's the whole point of a secret 🤫", 1100);
   await her("but leave me your email and you're first to know what happens after. and there's a little surprise in it for you", 1000);
