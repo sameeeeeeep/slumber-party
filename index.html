@@ -1052,7 +1052,13 @@ src="https://www.facebook.com/tr?id=637257295363759&ev=PageView&noscript=1" alt=
     <button class="acbtn" id="gquit" title="leave the arcade">✕</button>
   </div>
   <div id="veil"><div class="l">shhh…</div></div>
-  <script src="assets/config.js"></script>
+  <!-- ?v= IS NOT DECORATION. Cloudflare serves this file with max-age=14400, so a
+       returning visitor keeps their copy for FOUR HOURS — and the deadline lives
+       in it. Closing applications with an un-bumped URL shipped a new page that
+       read a stale config: the countdown went blank and the form stayed open for
+       everyone who had visited that morning.
+       EDIT assets/config.js → BUMP THIS, and the same tag in late/index.html. -->
+  <script src="assets/config.js?v=2026-08-17-closed"></script>
 
   <!-- the entry gate: the FIRST screen, shown once the veil lifts. One tap dismisses it and
        unlocks audio for the rest of the visit (there's no sound toggle anywhere else). The logo

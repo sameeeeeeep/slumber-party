@@ -10,6 +10,13 @@
    The SERVICE ROLE key is the opposite — it bypasses RLS entirely. It belongs
    only in `supabase secrets set`, never in this file and never in the repo.
    ============================================================================ */
+/* ---------------------------------------------------------------------------
+   EDITING THIS FILE IS HALF THE JOB. Cloudflare serves it with max-age=14400,
+   so anyone who has already visited keeps their copy for FOUR HOURS. Bump the
+   ?v= on the two tags that load it — index.html and late/index.html — or the
+   change simply does not reach returning visitors. /admin fetches this with
+   no-store and is always current.
+   --------------------------------------------------------------------------- */
 window.SLUMBER_CONFIG = {
   // Supabase → Project Settings → API → "Project URL"
   supabaseUrl: 'https://secseoyetyfqsfgzlnis.supabase.co',

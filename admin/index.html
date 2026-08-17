@@ -1306,7 +1306,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 /* ------------------------------------------------------------------ config */
-const CFG = await fetch('../assets/config.js')
+/* no-store, because this file is served with a four-hour max-age and the dashboard
+   is where you come to check what the site is actually doing. A cached copy here
+   would have the admin reading yesterday's deadline back to you. */
+const CFG = await fetch('../assets/config.js', { cache: 'no-store' })
   .then(r => r.text())
   .then(t => { const s = {}; new Function('window', t)(s); return s.SLUMBER_CONFIG || {}; })
   .catch(() => ({}));
