@@ -301,20 +301,47 @@
   /* ---- where they stay ---- */
   .vnCard{ border:1px solid var(--line); border-radius:11px; padding:.7rem .85rem; margin-bottom:8px;
     background:var(--surface-2); }
-  .vnCard.over{ border-color:var(--critical); }
   .vnHead{ display:flex; align-items:center; gap:8px; }
   .vnHead b{ font-size:.92rem; }
-  .vnWho{ display:flex; flex-wrap:wrap; gap:5px; margin-top:.2rem; }
+  .vnWho{ display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin:.2rem 0 .1rem; }
+  .vnWho .plab{ letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); }
   .vnChip{ font-size:.76rem; color:var(--ink-2); border:1px solid var(--line);
     border-radius:100px; padding:.15rem .5rem; white-space:nowrap; display:inline-block; margin:1px 0; }
+  /* ---- dragging people between rooms, floors and houses ----
+     grab tells you the chip is a handle before you try it; the half-faded
+     original stays where it was until the drop lands, so a failed save leaves
+     the board looking exactly like the truth. */
+  .vnChip[draggable]{ cursor:grab; }
+  .vnChip[draggable]:active{ cursor:grabbing; }
+  .vnChip.dragging{ opacity:.35; }
+  /* One highlight, on whatever would take the drop right now — a room, a whole
+     house, or the unplaced tray. --series-soft rather than a border alone,
+     because a 1px border change on a 118px box is easy to miss mid-drag. */
+  .roomBox.over, .vnCard.over, .vnPool.over{
+    border-color:var(--series); background:var(--series-soft); }
+  /* the tray of people with nowhere to sleep yet. It is a drag SOURCE as much as
+     a target: without it the only way into a room was the dropdown, and you
+     cannot drag out of a <select>. */
+  .vnPool{ border:1px dashed var(--line); border-radius:11px; padding:.5rem .6rem;
+    margin-bottom:8px; display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
+  .vnPool .plab{ font-size:.72rem; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-3); margin-right:4px; }
   /* the floor plan. auto-fill rather than fixed columns so 5 rooms and 10 rooms
      both read as a row of rooms instead of a ragged grid */
   .roomGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:6px; }
   .roomBox{ border:1px solid var(--line); border-radius:9px; padding:.4rem .5rem; background:var(--surface-1);
     min-height:74px; display:flex; flex-direction:column; gap:2px; }
   .roomBox.filled{ border-color:var(--series); }
-  .roomTop{ display:flex; align-items:center; justify-content:space-between; }
+  .roomTop{ display:flex; align-items:center; justify-content:space-between; gap:2px; }
   .roomTop b{ font-size:.82rem; }
+  /* The room's name is an input that does not look like one until you go for it.
+     Rooms are not all numbers — "Production Room", "Extra Room", "Staff Annexe"
+     — and a name you cannot fix is a name that stays wrong. */
+  .rmName{ margin:0; height:20px; padding:0 2px; width:100%; min-width:0;
+    font:600 .82rem/1.2 var(--sans); color:var(--ink);
+    background:transparent; border:1px solid transparent; border-radius:5px; }
+  .rmName:hover{ border-color:var(--line); }
+  .rmName:focus{ border-color:var(--series); background:var(--surface-1); }
   .roomMat{ margin:auto 0 0; font-size:.66rem; color:var(--ink-3); display:flex; align-items:center; gap:4px; }
   .roomMat input{ margin:0; width:44px; height:22px; padding:0 4px; font-size:.72rem; text-align:center; }
   #crewTbl td, #crewTbl th{ white-space:nowrap; }
@@ -1218,6 +1245,11 @@
     <p class="sub">add the places people sleep, then put each guest and each crew
       entry into one. A crew row takes its whole headcount with it, so "nail
       artists · 5" fills five beds.</p>
+    <p class="sub">drag a name into any room, onto a house to mean "here, room
+      later", or back to the unplaced tray — across properties too. Room names
+      are editable, so a room can become Production Room or Extra Room. The
+      dropdowns underneath do the same thing, and are the way to do it from a
+      keyboard or a phone.</p>
 
     <form id="vnForm" class="crewForm">
       <label style="flex:2 1 160px">place
@@ -5366,7 +5398,27 @@ function stayPanel() {
   };
   const selOf = (s) => s.room_id ? 'r:' + s.room_id : s.venue_id ? 'v:' + s.venue_id : '';
 
+  /* A person, as something you can pick up. kind+id is all a drop needs to know
+     which table to write; heads rides along so the tray can show "×5" without
+     looking the crew row up again. */
+  const chip = (x) => `<span class="vnChip" draggable="true"
+      data-kind="${esc(x.kind)}" data-id="${esc(x.id)}"
+      title="drag to a room, a house, or the unplaced tray">${esc(x.name)}${x.heads > 1 ? ` ×${x.heads}` : ''}</span>`;
+
   let html = '';
+
+  /* Everyone with nowhere to sleep, at the top, because they are the work. Drag
+     out of here into a room; drag back to undo. The tray stays visible when it
+     is empty so it never disappears as a drop target mid-drag. */
+  const loose = all.filter(s => !s.room_id && !s.venue_id);
+  if (VENUES.length) {
+    html += `<div class="vnPool" data-drop="none">
+      <span class="plab">unplaced${loose.length ? ` · ${loose.reduce((n, s) => n + s.heads, 0)}` : ''}</span>
+      ${loose.length ? loose.map(chip).join('')
+                     : '<span class="sub" style="margin:0">everyone has a bed — drop someone here to take theirs away</span>'}
+    </div>`;
+  }
+
   for (const v of VENUES) {
     const rs = ROOMS.filter(r => r.venue_id === v.id);
     const atVenue = all.filter(s => {
@@ -5376,7 +5428,10 @@ function stayPanel() {
     const heads = atVenue.reduce((n, s) => n + s.heads, 0);
     const mats  = rs.reduce((n, r) => n + (Number(r.mattresses) || 0), 0);
 
-    html += `<div class="vnCard">
+    /* data-drop on the card makes the whole house a target: a chip let go on the
+       header, the address or a gap between rooms lands at building level — the
+       same "here, room to be decided" the dropdown's "no room yet" means. */
+    html += `<div class="vnCard" data-drop="venue" data-vn="${esc(v.id)}">
       <div class="vnHead">
         <b>${esc(v.name)}</b>
         <span class="pill">${heads} in · ${rs.length} room${rs.length === 1 ? '' : 's'}${mats ? ` · +${mats} mattress${mats === 1 ? '' : 'es'}` : ''}</span>
@@ -5392,6 +5447,18 @@ function stayPanel() {
       </div>
       ${v.address ? `<p class="sub" style="margin:.2rem 0 .4rem">${esc(v.address)}</p>` : ''}`;
 
+    /* IN THE HOUSE, ROOM NOT DECIDED YET.
+       These people used to appear nowhere on the floor plan — they were in the
+       "N in" count and in the dropdown, and that was all. Dropping someone onto
+       a house therefore looked like losing them: the chip left the room it came
+       from and never landed anywhere you could pick it up again. Now they sit
+       here, on the card, and can be dragged straight into a room. */
+    const atVenueLoose = atVenue.filter(s => !s.room_id);
+    if (atVenueLoose.length) {
+      html += `<div class="vnWho"><span class="plab" style="font-size:.66rem">no room yet ·
+        ${atVenueLoose.reduce((n, s) => n + s.heads, 0)}</span>${atVenueLoose.map(chip).join('')}</div>`;
+    }
+
     // the floor plan, laid out the way the room list is read
     const floors = [...new Set(rs.map(r => r.floor || ''))];
     for (const fl of floors) {
@@ -5401,11 +5468,13 @@ function stayPanel() {
       for (const r of mine) {
         const who = all.filter(x => x.room_id === r.id);
         const used = who.reduce((n, x) => n + x.heads, 0);
-        html += `<div class="roomBox${used ? ' filled' : ''}">
-          <div class="roomTop"><b>${esc(r.label)}</b>
+        html += `<div class="roomBox${used ? ' filled' : ''}" data-drop="room" data-rm="${esc(r.id)}">
+          <div class="roomTop">
+            <input class="rmName" data-rm="${esc(r.id)}" value="${esc(r.label)}"
+              aria-label="room name" title="${esc(r.label)} — click to rename" />
             <button class="btn ghost rmAct" data-act="delroom" data-rm="${esc(r.id)}" type="button"
               title="remove room" style="padding:0 4px;font-size:11px;line-height:1.4">×</button></div>
-          ${who.map(x => `<span class="vnChip">${esc(x.name)}${x.heads > 1 ? ` ×${x.heads}` : ''}</span>`).join('')}
+          ${who.map(chip).join('')}
           <label class="roomMat">+mattress
             <input class="rmMat" data-rm="${esc(r.id)}" type="number" min="0" max="20"
               value="${Number(r.mattresses) || 0}" /></label>
@@ -5434,28 +5503,73 @@ function stayPanel() {
   board.innerHTML = html;
 }
 
+/* WHERE A PERSON SLEEPS, WRITTEN ONCE.
+   The dropdown and the drag both end here, so they cannot drift apart — one
+   place that decides what a placement is, checks it saved, and only then moves
+   the person on screen.
+
+   room_id and venue_id are ALWAYS written together. A room implies its house,
+   so a room drop carries the house it belongs to; that is what makes dragging
+   someone from Mansion House into another property a single write instead of
+   two that could half-fail and leave a guest in a room in the wrong building. */
+const placeAt = (target) =>
+  target.kind === 'room' ? { room_id: target.id, venue_id: (roomOf(target.id) || {}).venue_id || null }
+  : target.kind === 'venue' ? { room_id: null, venue_id: target.id }
+  : { room_id: null, venue_id: null };
+
+async function movePerson(kind, id, target) {
+  const table = kind === 'guest' ? 'guests' : 'crew';
+  const row = (table === 'guests' ? GUESTS : CREW).find(r => r.id === id);
+  const patch = placeAt(target);
+  // dropping someone back where they already are is not a write
+  if (row && (row.room_id || null) === patch.room_id && (row.venue_id || null) === patch.venue_id) return true;
+  const msg = document.getElementById('vnMsg');
+  const res = await save(sb.from(table).update(patch).eq('id', id), 'that placement');
+  if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return false; }
+  msg.textContent = ''; msg.className = 'sub';
+  if (row) Object.assign(row, patch);
+  return true;
+}
+
 /* one dropdown change = one row updated, in whichever table they came from */
 document.getElementById('vnBoard').addEventListener('change', async (e) => {
   const sel = e.target.closest('.vnPick');
   if (sel) {
-    const table = sel.dataset.kind === 'guest' ? 'guests' : 'crew';
-    /* "r:<id>" is a room, "v:<id>" the building with no room chosen yet. Both
-       columns are always written together so they can never disagree about
-       where someone is. */
+    /* "r:<id>" is a room, "v:<id>" the building with no room chosen yet. */
     const val = sel.value;
-    const patch = val.startsWith('r:')
-      ? { room_id: val.slice(2), venue_id: (roomOf(val.slice(2)) || {}).venue_id || null }
-      : val.startsWith('v:') ? { room_id: null, venue_id: val.slice(2) }
-      : { room_id: null, venue_id: null };
+    const target = val.startsWith('r:') ? { kind:'room',  id: val.slice(2) }
+                 : val.startsWith('v:') ? { kind:'venue', id: val.slice(2) }
+                 : { kind:'none' };
     sel.disabled = true;
-    const res = await save(sb.from(table).update(patch).eq('id', sel.dataset.id), 'that placement');
+    const ok = await movePerson(sel.dataset.kind, sel.dataset.id, target);
     sel.disabled = false;
+    if (ok) renderAll();
+    return;
+  }
+
+  /* Renaming a room. Not every room is a number — "Production Room", "Extra
+     Room", the annexe someone borrowed — and the label is what the venue's own
+     room list, the CSV export and every guest's "staying at" line all read. */
+  const nm = e.target.closest('.rmName');
+  if (nm) {
+    const r = roomOf(nm.dataset.rm);
+    if (!r) return;
     const msg = document.getElementById('vnMsg');
-    if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
+    const want = nm.value.trim();
+    // a blank name would leave an anonymous box on the floor plan
+    if (!want) { nm.value = r.label; msg.textContent = 'a room needs a name'; msg.className = 'sub err'; return; }
+    if (want === r.label) { msg.textContent = ''; msg.className = 'sub'; return; }
+    /* Two rooms called 101 in one house is how a guest ends up in "the other
+       101". Same guard the range-add uses, applied to renames too. */
+    const clash = ROOMS.some(x => x.venue_id === r.venue_id && x.id !== r.id && x.label === want);
+    if (clash) { nm.value = r.label; msg.textContent = `${want} already exists in ${venueName(r.venue_id)}`; msg.className = 'sub err'; return; }
+    const res = await save(sb.from('rooms').update({ label: want }).eq('id', r.id), 'that room name');
+    if (!res.ok) { nm.value = r.label; msg.textContent = res.msg; msg.className = 'sub err'; return; }
     msg.textContent = ''; msg.className = 'sub';
-    const row = (table === 'guests' ? GUESTS : CREW).find(r => r.id === sel.dataset.id);
-    if (row) Object.assign(row, patch);
-    renderAll();
+    r.label = want;
+    /* paintSoon(), not renderAll(): change fires as you tab or click away, and a
+       straight repaint here would delete the box the cursor just moved into. */
+    paintSoon();
     return;
   }
   const mat = e.target.closest('.rmMat');
@@ -5468,6 +5582,80 @@ document.getElementById('vnBoard').addEventListener('change', async (e) => {
     renderAll();
   }
 });
+
+/* ---------------------------------------------------------------------------
+   DRAGGING PEOPLE BETWEEN ROOMS, FLOORS AND HOUSES
+   The dropdown at the bottom of this panel still works and is still the only
+   way to do this from a keyboard or a phone — HTML5 drag events do not fire on
+   touch. This is the mouse path over the floor plan, for the part of the job
+   that is spatial: "these two swap", "this lot go to the other house".
+
+   Both paths call movePerson(), so a drag can't write a placement the dropdown
+   couldn't. Nothing moves on screen until the database confirms the write.
+   ------------------------------------------------------------------------- */
+const vnBoard = document.getElementById('vnBoard');
+let DRAG = null;                                  // {kind, id} of the chip in hand
+
+/* One highlight at a time. Tracked by clearing all of them and marking the
+   current target rather than by listening for dragleave — dragleave also fires
+   when the pointer crosses into a CHILD of the box, which flickers the
+   highlight off over exactly the element you are aiming at. */
+function markDrop(el) {
+  for (const n of vnBoard.querySelectorAll('.over')) if (n !== el) n.classList.remove('over');
+  if (el) el.classList.add('over');
+}
+const clearDrag = () => {
+  markDrop(null);
+  for (const n of vnBoard.querySelectorAll('.dragging')) n.classList.remove('dragging');
+  DRAG = null;
+};
+
+vnBoard.addEventListener('dragstart', (e) => {
+  const chip = e.target.closest('.vnChip[draggable]');
+  if (!chip) return;
+  /* A half-typed room name still in a field would be destroyed by the repaint
+     after the drop. Blurring first fires its change event, so the rename saves
+     instead of vanishing. */
+  const a = document.activeElement;
+  if (a && a !== document.body && a.matches('input, select, textarea')) a.blur();
+  DRAG = { kind: chip.dataset.kind, id: chip.dataset.id };
+  chip.classList.add('dragging');
+  /* setData is required or Firefox refuses to start the drag; the payload is
+     never read back — dataTransfer is unreadable during dragover, which is
+     exactly when we need to know what is in hand, so DRAG carries it. */
+  try {
+    e.dataTransfer.setData('text/plain', chip.textContent.trim());
+    e.dataTransfer.effectAllowed = 'move';
+  } catch (err) {}
+});
+
+vnBoard.addEventListener('dragover', (e) => {
+  if (!DRAG) return;
+  /* A room inside a house: closest() walks outward, so the room wins over the
+     card it sits in and dropping on a room never silently means "the building". */
+  const zone = e.target.closest('[data-drop]');
+  if (!zone) { markDrop(null); return; }
+  e.preventDefault();                             // without this the drop never fires
+  e.dataTransfer.dropEffect = 'move';
+  markDrop(zone);
+});
+
+vnBoard.addEventListener('drop', async (e) => {
+  if (!DRAG) return;
+  const zone = e.target.closest('[data-drop]');
+  if (!zone) { clearDrag(); return; }
+  e.preventDefault();
+  const { kind, id } = DRAG;
+  const target = zone.dataset.drop === 'room'  ? { kind:'room',  id: zone.dataset.rm }
+               : zone.dataset.drop === 'venue' ? { kind:'venue', id: zone.dataset.vn }
+               : { kind:'none' };
+  clearDrag();
+  if (await movePerson(kind, id, target)) renderAll();
+});
+
+/* Dropped on the desktop, on another panel, or Escape mid-drag: the chip must
+   not be left faded and no box left highlighted. dragend fires for all of them. */
+vnBoard.addEventListener('dragend', clearDrag);
 
 document.getElementById('vnBoard').addEventListener('click', async (e) => {
   const rm = e.target.closest('.rmAct');
