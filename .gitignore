@@ -14,5 +14,13 @@ besties/.password
 # (which project this checkout is linked to), not part of the project.
 supabase/.temp/
 
+# One-off data scripts — rows to paste into the SQL editor, not schema.
+# They carry the names of real guests, team and drivers, and this repo is
+# PUBLIC: committing them would publish in plaintext the very list the sealed
+# /besties payload exists to keep encrypted. Schema belongs in
+# supabase/schema*.sql and supabase/migrations/ — those describe shapes, not
+# people, and stay committed.
+supabase/local/
+
 # Rendered email previews — regenerate with tools/render-emails.mjs.
 tools/out/
