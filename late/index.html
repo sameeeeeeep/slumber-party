@@ -127,8 +127,10 @@
 <script>
 /* ============================================================================
    /late — the DM for people who arrived after applications closed.
-   Two of her lines name the hour; FORM_CLOSES in index.html is the source of
-   truth for when that is, so if the deadline moves again, they move with it.
+   The timestamp and one of her lines name the hour; CFG.formCloses in
+   assets/config.js is the single source of truth for when that is — the same
+   value the gate's countdown runs on — so if the deadline moves, they move
+   with it instead of going on saying noon.
 
    Six of her lines, one question, one row in the database. Nothing here reveals
    anything: no dates, no names beyond hers, no hint of what the something is.
@@ -218,15 +220,61 @@ async function her(text, beat = 700){
   return bubble('her', text);
 }
 
+/* ---- when the form closed, in her words -----------------------------------
+   Two things on this page name the hour out loud — the thread's timestamp and
+   her second line — and both are built from CFG.formCloses, the same value the
+   gate's countdown runs on. It used to be the literal words "noon today", which
+   would have gone on saying noon however far the real deadline moved.
+
+   The hour is read out of Asia/Kolkata on purpose. Formatting in the viewer's
+   own timezone would have her tell someone in London the form closed at 6:30am
+   — true for their clock, but she is speaking IST, the same reason formCloses
+   carries +05:30. */
+const CLOSED_AT = new Date(CFG.formCloses);
+const istParts = (d) => {
+  const f = new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Kolkata', hour12:false,
+              year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  const o = {}; for(const p of f.formatToParts(d)) o[p.type] = p.value;
+  return o;
+};
+/* "noon" and "midnight" are how a person says those two times; everything else
+   gets the clock — 9am, 9:30pm — with a bare :00 dropped, because nobody types
+   "9:00am" to a friend. */
+function spokenHour(d){
+  const p = istParts(d), h = +p.hour, m = +p.minute;
+  if(m === 0 && h === 12) return 'noon';
+  if(m === 0 && h === 0)  return 'midnight';
+  return (h % 12 || 12) + (m ? ':' + String(m).padStart(2,'0') : '') + (h < 12 ? 'am' : 'pm');
+}
+/* "today" only while it really is still that day in IST. Someone opening this
+   page a week late shouldn't be told the form closed this afternoon — after
+   yesterday she names the date instead. */
+function spokenDay(d){
+  const a = istParts(d), now = istParts(new Date()),
+        yest = istParts(new Date(Date.now() - 86400000));
+  const same = (x, y) => x.day === y.day && x.month === y.month && x.year === y.year;
+  if(same(a, now))  return 'today';
+  if(same(a, yest)) return 'yesterday';
+  return a.day + ' ' + a.month.toLowerCase();
+}
+/* A missing or malformed formCloses leaves both of these null, and she drops the
+   specifics rather than saying "closed at NaN" — still true, just vaguer. */
+const CLOSED_DAY  = isNaN(CLOSED_AT) ? null : spokenDay(CLOSED_AT);
+const CLOSED_HOUR = isNaN(CLOSED_AT) ? null : spokenHour(CLOSED_AT);
+// "at noon today" / "at noon yesterday" / "at noon on 18 aug"
+const CLOSED_WHEN = !CLOSED_DAY ? ''
+  : ' at ' + CLOSED_HOUR + (CLOSED_DAY === 'today' || CLOSED_DAY === 'yesterday'
+                              ? ' ' + CLOSED_DAY : ' on ' + CLOSED_DAY);
+
 /* ---- her side of the conversation ---------------------------------------- */
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 async function start(){
   track('late_landed');
-  sys('today · just after noon');
+  sys(CLOSED_DAY ? CLOSED_DAY + ' · just after ' + CLOSED_HOUR : 'today');
   await sleep(500);
   await her('omg hi 🙈', 800);
-  await her('you just missed it. applications closed at noon today', 900);
+  await her('you just missed it. applications closed' + CLOSED_WHEN, 900);
   await her("thirty-five spots. i genuinely didn't expect this many of you", 950);
   await her("okay so since you're here — context. the slumber party isn't just a party. i've been building something for months, and the party is the first night of it", 1250);
   await her("the people who applied get to see it first. i can't sneak you past the list — that's the whole point of a secret 🤫", 1100);

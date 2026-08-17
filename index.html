@@ -2223,22 +2223,18 @@ roomimg.complete ? maybeHideVeil() : roomimg.addEventListener('load', maybeHideV
 addEventListener('load', maybeHideVeil); setTimeout(hideVeil, MAX_VEIL);   // hard cap so it never sticks
 
 /* ---------- countdown to when the application closes (gate screen only) ----
-   THIS IS THE APPLICATION DEADLINE. IT IS NOT THE PARTY DATE, AND THE PARTY DATE
-   MUST NEVER BE PUT HERE.
+   THE DEADLINE ITSELF NOW LIVES IN assets/config.js, as `formCloses`. It is read
+   here and on /late, which says the hour out loud — one date, two pages, so a
+   moved deadline can't leave her insisting the form closed at noon.
 
-   Everything in this file is public: it ships to every visitor and reads straight
-   out of view-source. The party's actual dates live only inside the sealed
-   /besties payload, which is ciphertext until someone types the password — that
-   is the whole point of sealing it. A date pasted into this constant would undo
-   that quietly, with nothing on screen to show it had happened.
+   Change it there, not here. The warnings that used to sit on this constant sit
+   on it there too: it is not the party date, and the party date must never be
+   put in a world-readable file.
 
-   (It was called PARTY, with a note to "change when the date's confirmed", which
-   is exactly how the real date would have ended up here.) */
-/* +05:30 is load-bearing, not decoration. Without an offset this string is parsed
-   in the VIEWER's timezone, so the same countdown closed at midnight London and
-   midnight New York — hours after it closed in Mumbai. The party is IST, so the
-   deadline is IST for everyone, wherever they're reading from. */
-const FORM_CLOSES = new Date('2026-08-18T12:00:00+05:30');   // 18 Aug 2026, 12 noon IST
+   If config.js failed to load this is an Invalid Date, and every comparison
+   against it is false — so the form stays OPEN rather than slamming shut on a
+   missing file. That is the right way for this to break. */
+const FORM_CLOSES = new Date((window.SLUMBER_CONFIG || {}).formCloses);
 /* ?closed previews the closed state early — it reveals nothing someone couldn't
    see by waiting, and it's how the closed experience gets tested before it's real */
 const FORM_IS_CLOSED = () => new Date() >= FORM_CLOSES || new URLSearchParams(location.search).has('closed');
@@ -2247,6 +2243,12 @@ let cdTimer=0;
 function renderCountdown(){
   if(!cdEl) return;
   if(!cdEl.isConnected){ clearInterval(cdTimer); return; }   // the gate's gone — stop ticking into a detached node
+  /* No deadline configured (or a typo'd one) subtracts to NaN, and the digits
+     would read NaN:NaN:NaN:NaN. Show nothing at all instead: the gate still
+     works, and a missing clock is a far quieter failure than a broken one. */
+  if(isNaN(FORM_CLOSES) && !new URLSearchParams(location.search).has('closed')){
+    cdEl.innerHTML = ''; clearInterval(cdTimer); return;
+  }
   const s = Math.max(0, Math.floor((FORM_CLOSES - new Date())/1000));
   /* At zero the clock stops meaning anything — "closes in 00:00:00:00" forever
      reads as a broken page. Say what's true instead and stop ticking. The form

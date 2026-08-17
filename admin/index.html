@@ -2177,15 +2177,46 @@ function failPanel() {
 const MEAL_LABEL = { 'veg':'veg', 'non-veg':'non-veg', 'vegan':'vegan',
                      'jain':'jain', 'allergic':'allergic' };
 
+/* MATCHING A CHECK-IN TO A GUEST, WHEN NAME IS ALL THERE IS.
+   `guests` holds a name and an address; it has no phone and no email, so the
+   only thing a check-in can be matched on is what they typed their name as.
+   Lowercasing alone left real people sitting under "(not on list)" — the ways a
+   name comes back different are almost never the capitals:
+     · "Alina Hasan  rizvi"  — a double space, or a tab pasted from WhatsApp
+     · "Rahil  Sayed."       — a stray full stop
+     · "Asmita Adhikari"     — an accent the roster has and the form didn't
+   So strip the noise before comparing: accents folded, punctuation dropped,
+   runs of whitespace collapsed. This is still an EXACT match on the result — it
+   forgives typing, never spelling. "Adhikari" and "Adhikary" stay two people,
+   because guessing there is how someone gets another guest's address. */
+const normName = (s) => String(s || '')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // combining accents: é → e
+  .toLowerCase()
+  .replace(/[^a-z0-9\s]/g, ' ')                       // punctuation is not a name
+  .replace(/\s+/g, ' ').trim();
+
+/* How alike two names are, only ever used to ORDER the merge dropdown so the
+   likely one is at the top. Nothing is matched on this number. */
+const nameScore = (a, b) => {
+  const A = new Set(normName(a).split(' ').filter(Boolean));
+  const B = new Set(normName(b).split(' ').filter(Boolean));
+  if (!A.size || !B.size) return 0;
+  let hit = 0;
+  for (const t of A) if (B.has(t)) hit++;
+  return hit / Math.max(A.size, B.size);
+};
+
 function checkinPanel() {
   const body = document.getElementById('ciBody');
   if (!body) return;
-  const byName = new Map(CHECKINS.map(c => [String(c.name || '').trim().toLowerCase(), c]));
+  const byName = new Map(CHECKINS.map(c => [normName(c.name), c]));
   const usedIds = new Set();
 
   const rows = GUESTS.map(g => {
+    /* guest_id first, always: it is the link a human confirmed with the merge
+       control below, and it must outrank anything derived from spelling. */
     const c = CHECKINS.find(x => x.guest_id === g.id)
-           || byName.get(String(g.name).trim().toLowerCase()) || null;
+           || byName.get(normName(g.name)) || null;
     if (c) usedIds.add(c.id);
     return { id: g.id, name: g.name, c, onList: true, address: g.address || '',
              code: g.code || '', tier: g.tier || '', ig: g.instagram || '' };
@@ -2194,6 +2225,11 @@ function checkinPanel() {
   for (const c of CHECKINS) {
     if (!usedIds.has(c.id)) rows.push({ name: c.name, c, onList: false, address: '', code: '', tier: '', ig: '' });
   }
+
+  /* Who an off-list check-in could still BE: roster names nobody has checked in
+     against yet. A guest already holding a check-in is not offered, because
+     merging onto them would mean two people arrived as one person. */
+  const freeGuests = GUESTS.filter(g => !rows.some(r => r.onList && r.id === g.id && r.c));
 
   const onList = GUESTS.filter(g => g.code);
   const done = rows.filter(r => r.c).length;
@@ -2234,10 +2270,40 @@ function checkinPanel() {
     /* Both edit in place. The address is the one field that arrives by WhatsApp
        at midnight and gets corrected twice, and the name is how a guest is matched
        to their check-in — neither should need a modal. */
+    /* A merge has to be undoable from the same screen that made it. Once a
+       check-in is linked the off-list row is gone — which is the point — so the
+       way back sits here, on the guest who absorbed it, and only when there is
+       a stored link to clear. Clearing doesn't delete anything: it drops
+       guest_id and the check-in falls back to matching on name, which is where
+       it was before anyone pressed anything. */
     const nameCell = (r) => r.onList && r.id
       ? `<td><input class="gIn nm" data-gid="${esc(r.id)}" data-k="name" value="${esc(r.name)}"
-           style="width:9.5rem" /></td>`
-      : `<td>${esc(r.name)} <span class="muted">(not on list)</span></td>`;
+           style="width:9.5rem" />${
+           r.c && r.c.guest_id === r.id && normName(r.c.name) !== normName(r.name)
+             ? `<button class="btn ghost ciUnlink" data-cid="${esc(r.c.id)}" type="button"
+                  style="padding:2px 6px;font-size:11px;margin-left:5px"
+                  title="checked in as &quot;${esc(r.c.name)}&quot; — click to unlink">↔</button>` : ''}</td>`
+      /* NOT ON THE LIST — SAY SO, THEN OFFER THE FIX.
+         This row used to be a dead end: a name, "(not on list)", and dashes all
+         the way across, with no way to say "that's her, she typed it
+         differently". Every roster field — address, sizes, box, tier — stayed
+         empty for someone standing in the house.
+
+         The dropdown writes checkins.guest_id, so the match is STORED rather
+         than re-guessed from spelling on the next load, and it survives the
+         guest being renamed. Candidates are ordered by how much the two names
+         share, so the obvious one is first, but nothing is pre-selected: the
+         wrong pick here hands one guest another's address. */
+      : `<td>${esc(r.name)} <span class="muted">(not on list)</span>
+          <select class="ciLink" data-cid="${esc(r.c && r.c.id)}"
+            title="link this check-in to someone on the roster">
+            <option value="">same as… ▾</option>
+            ${freeGuests
+              .map(g => ({ g, s: nameScore(g.name, r.name) }))
+              .sort((a, b) => b.s - a.s || String(a.g.name).localeCompare(String(b.g.name)))
+              .map(({ g, s }) => `<option value="${esc(g.id)}">${esc(g.name)}${
+                s >= 0.5 ? ' ·  likely' : ''}</option>`).join('')}
+          </select></td>`;
     const addrCell = (r) => r.onList && r.id
       ? `<td><input class="gIn${r.address ? '' : ' miss'}" data-gid="${esc(r.id)}" data-k="address"
            value="${esc(r.address)}" placeholder="flat, street, city, pin" spellcheck="false"
@@ -2375,8 +2441,63 @@ document.getElementById('ciBody').addEventListener('change', async (e) => {
   if (!res.ok) { msg.textContent = res.msg; msg.className = 'sub err'; return; }
   msg.textContent = 'saved'; msg.className = 'sub';
   Object.assign(GUESTS.find(x => x.id === id) || {}, patch);
-  renderAll();
+  paintSoon();
   setTimeout(() => { if (msg.textContent === 'saved') msg.textContent = ''; }, 2000);
+});
+
+/* MERGING AN OFF-LIST CHECK-IN ONTO A ROSTER NAME.
+   One column, one write: checkins.guest_id. The panel matches on guest_id
+   before it matches on spelling, so the moment this lands the two rows collapse
+   into one and stay collapsed — through a re-render, a reload, and a later
+   correction to either name.
+
+   Nothing is copied between the two records. The check-in keeps the name they
+   typed and the roster keeps the name Khushi wrote, which is what you want when
+   you are working out later whether the merge was right. Undo lives on the
+   guest row that absorbed the check-in — the ↔ beside the name — because by
+   then this dropdown is gone, which is exactly what a merge is for. */
+document.getElementById('ciBody').addEventListener('change', async (e) => {
+  const el = e.target.closest('.ciLink');
+  if (!el) return;
+  const cid = el.dataset.cid, gid = el.value || null;
+  const msg = document.getElementById('ciMsg');
+  const g = gid ? GUESTS.find(x => x.id === gid) : null;
+  const c = CHECKINS.find(x => x.id === cid);
+  if (!c) return;
+  if (gid && !confirm(`Treat "${c.name}" as ${g ? g.name : 'that guest'}?\n\n`
+      + 'Their check-in — sizes, meal, ID — moves onto that roster row.')) {
+    el.value = ''; return;
+  }
+  el.disabled = true;
+  const res = await save(sb.from('checkins').update({ guest_id: gid }).eq('id', cid), 'that match');
+  el.disabled = false;
+  if (!res.ok) { if (msg) { msg.textContent = res.msg; msg.className = 'sub err'; } el.value = ''; return; }
+  c.guest_id = gid;
+  if (msg) { msg.textContent = g ? `matched to ${g.name}` : 'match cleared'; msg.className = 'sub'; }
+  paintSoon();
+  setTimeout(() => { if (msg && /^matched|^match cleared/.test(msg.textContent)) msg.textContent = ''; }, 3000);
+});
+
+/* The way back out of a merge. Drops the stored link only — the check-in row,
+   the ID document and everything on it are untouched — so the person reappears
+   under their own spelling, exactly as they arrived. */
+document.getElementById('ciBody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.ciUnlink');
+  if (!btn) return;
+  const cid = btn.dataset.cid;
+  const c = CHECKINS.find(x => x.id === cid);
+  if (!c) return;
+  if (!confirm(`Unlink the check-in from "${c.name}"?\n\n`
+      + 'Nothing is deleted — it goes back to being its own row, not on the list.')) return;
+  btn.disabled = true;
+  const res = await save(sb.from('checkins').update({ guest_id: null }).eq('id', cid), 'that match');
+  btn.disabled = false;
+  const msg = document.getElementById('ciMsg');
+  if (!res.ok) { if (msg) { msg.textContent = res.msg; msg.className = 'sub err'; } return; }
+  c.guest_id = null;
+  if (msg) { msg.textContent = 'match cleared'; msg.className = 'sub'; }
+  paintSoon();
+  setTimeout(() => { if (msg && msg.textContent === 'match cleared') msg.textContent = ''; }, 3000);
 });
 
 /* Delete a check-in and its ID document.

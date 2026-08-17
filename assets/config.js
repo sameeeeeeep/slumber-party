@@ -31,6 +31,26 @@ window.SLUMBER_CONFIG = {
   // cleanly for a few days.
   alsoPostGoogleForm: true,
 
+  /* ------------------------------------------------------- the deadline
+     WHEN APPLICATIONS CLOSE. THIS IS NOT THE PARTY DATE, AND THE PARTY DATE
+     MUST NEVER BE PUT HERE — this file is world-readable, and the party's
+     real dates exist only as ciphertext in besties/sealed.js. A date pasted
+     here would undo that quietly, with nothing on screen to show it.
+
+     Two pages read this and nothing else: the gate's countdown on / , and
+     the "you just missed it" lines on /late that name the hour out loud.
+     Move it here and they both move with it.
+
+     +05:30 is load-bearing, not decoration. Without an offset the string is
+     parsed in the VIEWER's timezone, so the same deadline passed at midnight
+     in London hours after it passed in Mumbai. The party is IST, so the
+     deadline is IST for everyone, wherever they're reading from. */
+  /* CLOSED. Was 18 Aug 12 noon IST; brought forward to 17 Aug, 2:21pm IST — the
+     moment it was actually called. The gate now reads "applications are closed"
+     and sends everyone to /late, where she says the hour this names. To reopen,
+     put a future time here; nothing else needs touching. */
+  formCloses: '2026-08-17T14:21:00+05:30',   // 17 Aug 2026, 2:21pm IST
+
   /* ---------------------------------------------------------------- /besties
      The private invitation. Note what is NOT here: the password, the dates, the
      location, the chat script. All of that lives encrypted in besties/sealed.js
