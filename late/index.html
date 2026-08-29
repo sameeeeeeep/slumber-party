@@ -85,6 +85,19 @@
   .send:disabled{ opacity:.62; box-shadow:none; cursor:default; }
   .err{ color:#ffb3c6; font-size:1.1rem; padding:.35rem .3rem 0; min-height:1.4rem; }
 
+  /* THE ONE THING LEFT TO TAP. A bubble on her side of the thread, but a link:
+     the surprise she promised in exchange for the email, handed over in the
+     same breath she says goodbye. Pixel type because it is a door to the
+     arcade, and the arcade is the only pixel thing on this page. */
+  a.cta{ align-self:flex-start; display:inline-block; text-decoration:none;
+    max-width:84%; font-family:var(--pixel); font-size:.7rem; line-height:1.6;
+    letter-spacing:.05em; color:#fff; padding:.85rem 1.1rem;
+    border-radius:1.15rem; border-bottom-left-radius:.3rem;
+    background:linear-gradient(120deg,var(--pink),#e2703f);
+    box-shadow:0 .25rem .9rem rgba(235,100,140,.4);
+    animation:pop .38s cubic-bezier(.2,.9,.3,1.2) both; scroll-margin-bottom:8.5rem; }
+  a.cta:active{ transform:scale(.98); }
+
   .done{ text-align:center; padding:1.6rem 1rem 2.4rem; }
   .done h1{ font-family:var(--serif); font-style:italic; font-size:2.2rem; margin:.2rem 0 .4rem; }
   .done p{ font-family:var(--hand); font-size:1.5rem; color:#ffd9e4; margin:.2rem 0 .8rem; }
@@ -215,6 +228,16 @@ function sys(text){
   p.className = 'sys'; p.textContent = text;
   thread.appendChild(p); keepUp(p);
 }
+/* her last message is a link. Same bubble, same entrance — it just goes
+   somewhere. /?arcade is the door that skips the closed gate on the front
+   page and opens the arcade directly (see index.html's jumpToArcade). */
+function cta(text, href){
+  const a = document.createElement('a');
+  a.className = 'cta'; a.href = href; a.textContent = text;
+  thread.appendChild(a);
+  keepUp(a);
+  return a;
+}
 async function her(text, beat = 700){
   const t = document.createElement('div');
   t.className = 'msg her typing';
@@ -304,6 +327,13 @@ function askEmail(){
         await her('tucked in ♡', 800);
         await her('check your inbox soon. and remember — you heard nothing 🤫', 950);
       }
+      /* THE SURPRISE, PAID OUT. She promised one in exchange for the email, so
+         it arrives the moment the email lands — not a section, just the last
+         message in the thread being a door. Everything else on the site is
+         behind the list; the arcade isn't, so it's the one thing she can
+         actually give someone who missed it. */
+      await her("oh — and the surprise. my arcade's open, you don't need a spot for that 🎮", 1000);
+      cta('▸ PLAY KHUSHI\'S ARCADE', '/?arcade');
       finish();
     }else{
       // the row didn't land — let them try again rather than pretending it did
