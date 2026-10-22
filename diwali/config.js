@@ -24,8 +24,10 @@ window.MKD = {
   },
 
   rsvp: {
-    // Apps Script web-app /exec URL (apps-script/rsvp.gs). Empty = RSVPs only stay on the guest's phone.
-    endpoint: '',
+    // Opens + RSVPs post to a Google Form (sameep@nailin.it) → sheet "Untitled form (Responses)".
+    form: 'https://docs.google.com/forms/d/e/1FAIpQLScVPd2rjBp13xfeLVU6ErMwKoqwCkv0xhqlg-vfh7Twq_0yWg/formResponse',
+    fields: { event: 'entry.1726605616', name: 'entry.1618333562', phone: 'entry.1862265163', rsvp: 'entry.944684585',
+              link: 'entry.1147065896', key: 'entry.736821260', device: 'entry.671865426' },
     whatsapp: '919999999999',                // PLACEHOLDER — country code, no +
     text: 'Haan ji! {name} pakka aa rahi/raha hai Mohalle ki Diwali pe 🪔',
   },

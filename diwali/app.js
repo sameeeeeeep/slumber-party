@@ -505,11 +505,13 @@ autoBtn.addEventListener('click', runAuto);
 /* ───────────── RSVP → Google Sheet (apps-script/rsvp.gs) ───────────── */
 let PHONE = '';
 function track(event, extra = {}) {
-  const url = C.rsvp.endpoint;
-  if (!url) return;
-  const key = INV ? 'inv:' + INV : 'name:' + (NAME || C.defaultName).toLowerCase();
-  const body = JSON.stringify({ event, key, name: NAME, phone: PHONE, link: INV ? 'inv' : (qs.get('name') ? 'name' : 'typed'), ua: navigator.userAgent, ...extra });
-  try { fetch(url, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body }); } catch (e) {}
+  const R = C.rsvp;
+  if (!R.form) return;
+  const data = { event, name: NAME || C.defaultName, phone: PHONE, rsvp: '', link: INV ? 'inv' : (qs.get('name') ? 'name' : 'typed'),
+    key: INV ? 'inv:' + INV : 'name:' + (NAME || C.defaultName).toLowerCase(), device: navigator.userAgent.slice(0, 140), ...extra };
+  const body = new URLSearchParams();
+  Object.entries(R.fields).forEach(([k, entry]) => body.append(entry, data[k] || ''));
+  try { fetch(R.form, { method: 'POST', mode: 'no-cors', keepalive: true, body }); } catch (e) {}
 }
 const rsvpAsk = $('#rsvpAsk'), rsvpDone = $('#rsvpDone');
 function showRsvp(ans) {
