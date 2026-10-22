@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792703551">
+<link rel="stylesheet" href="style.css?v=1792703691">
 </head>
 <body class="locked">
 
@@ -55,6 +55,7 @@
 
     <div id="after" class="after">
       <button id="seeDetails" class="cta small" type="button">scroll 4 something स्पेशल ↓</button>
+      <button class="sign blue share-btn small" data-share="invite" type="button">share the invite</button>
       <button id="replay" class="replay" type="button">↺ light it again</button>
     </div>
 
@@ -121,7 +122,7 @@
   <section class="games" id="games">
     <img class="deco-hang h1" src="assets/deco/diyastring_v.webp" alt=""><img class="deco-hang h2" src="assets/deco/diyastring_v.webp" alt="">
     <h2>mohalla game center</h2>
-    <p class="gc-sub">pick a stall. every game ends in an inaam.</p>
+    <p class="gc-sub">khelo. pata chalega.</p>
     <div class="stalls-row" role="tablist">
       <button class="stall on" data-game="tota" type="button"><span class="aw"></span><img src="assets/game/parrot_card.webp" alt=""><b>tota jyotish</b><small>the parrot picks your kismat</small></button>
       <button class="stall" data-game="gubbara" type="button"><span class="aw"></span><img src="assets/game/bal1.webp" alt=""><b>gubbara</b><small>shoot 5 balloons</small></button>
@@ -136,7 +137,7 @@
           <p class="k-sub" id="tsub">shuffle the deck. the tota will pick your kismat.</p>
           <div class="tota-table" id="ttable"><img class="tota" id="tota" src="assets/game/parrot.webp" alt="the fortune-teller parrot"></div>
           <div class="reading" id="tread" hidden><p class="r-kick">tota ji kehte hain…</p><p class="r-text" id="ttext"></p></div>
-          <div class="k-actions"><button class="sign red" id="tgo" type="button">shuffle the deck</button><button class="linkish" id="tagain" type="button" hidden>ask the tota again</button></div>
+          <div class="k-actions"><button class="sign red" id="tgo" type="button">shuffle the deck</button><button class="sign blue share-btn" data-share="tota" type="button" hidden>share my kismat</button><button class="linkish" id="tagain" type="button" hidden>ask the tota again</button></div>
         </div>
         <div class="game" data-panel="gubbara" hidden>
           <h3 class="g-head">gubbara phod</h3>
@@ -144,11 +145,11 @@
           <div class="range" id="range">
             <div class="range-wall" id="gwall"></div>
             <i class="cross" id="cross"></i>
-            <img class="rifle" id="rifle" src="assets/game/rifle_v.webp" alt="air rifle">
+            <img class="rifle" id="rifle" src="assets/game/rifle.webp" alt="air rifle">
             <div class="pellets" id="gshots"></div>
           </div>
-          <div class="haul" id="ghaul" hidden><p class="r-title">aapka inaam</p><ol id="glist"></ol></div>
-          <div class="k-actions"><button class="linkish" id="gagain" type="button" hidden>play again</button></div>
+          <div class="haul-cards" id="ghaul" hidden><div class="hc-row" id="glist"></div></div>
+          <div class="k-actions"><button class="sign blue share-btn" data-share="gubbara" type="button" hidden>share what i won</button><button class="linkish" id="gagain" type="button" hidden>play again</button></div>
         </div>
         <div class="game" data-panel="chhalla" hidden>
           <h3 class="g-head">chhalla</h3>
@@ -159,7 +160,7 @@
             <svg class="aim" id="caim" aria-hidden="true"><line id="caimline" x1="0" y1="0" x2="0" y2="0"/></svg>
           </div>
           <div class="reading" id="cread" hidden><p class="r-title" id="ctitle"></p><p class="r-text" id="ctext"></p></div>
-          <div class="k-actions"><button class="linkish" id="cagain" type="button" hidden>play again</button></div>
+          <div class="k-actions"><button class="sign blue share-btn" data-share="chhalla" type="button" hidden>share it</button><button class="linkish" id="cagain" type="button" hidden>play again</button></div>
         </div>
         <div class="game" data-panel="draw" hidden>
           <h3 class="g-head">lucky draw</h3>
@@ -178,7 +179,7 @@
               <i class="tix-sheen"></i>
             </div>
           </div>
-          <div class="k-actions"><button class="sign red" id="dspin" type="button">turn the crank</button><button class="linkish" id="dagain" type="button" hidden>draw again</button></div>
+          <div class="k-actions"><button class="sign red" id="dspin" type="button">turn the crank</button><button class="sign blue share-btn" data-share="draw" type="button" hidden>share my new-year self</button><button class="linkish" id="dagain" type="button" hidden>draw again</button></div>
         </div>
       </div>
     </div>
@@ -222,9 +223,9 @@
   <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
 </button>
 
-<script src="config.js?v=1792703551"></script>
-<script src="lib.js?v=1792703551"></script>
-<script src="app.js?v=1792703551"></script>
-<script src="games.js?v=1792703551"></script>
+<script src="config.js?v=1792703691"></script>
+<script src="lib.js?v=1792703691"></script>
+<script src="app.js?v=1792703691"></script>
+<script src="games.js?v=1792703691"></script>
 </body>
 </html>

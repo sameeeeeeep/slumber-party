@@ -1,4 +1,4 @@
-/* mohalla game center — tota jyotish, gubbara phod, chhalla, lucky draw. Every game ends in an inaam. */
+/* mohalla game center — tota jyotish, gubbara phod, chhalla, lucky draw. Play, find out, share. */
 (() => {
 'use strict';
 const $ = s => document.querySelector(s);
@@ -17,6 +17,76 @@ const clink = () => { noise(.05, 'bandpass', 4800, 4200, .5, 8); noise(.4, 'band
 const start = () => FX().initAudio();
 const buzz = ms => FX().buzz(ms);
 const local = (el, e) => { const r = el.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; };
+
+/* ═════════ share: every result becomes a story-sized card ═════════ */
+const SH = {};
+const SHARE_URL = 'https://secretslumberparty.com/diwali/';
+const showShare = k => { const b = document.querySelector(`.share-btn[data-share="${k}"]`); if (b) b.hidden = false; };
+const hideShare = k => { const b = document.querySelector(`.share-btn[data-share="${k}"]`); if (b) b.hidden = true; };
+const loadI = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+function wrap(c, text, x, y, maxW, lh) {
+  const words = text.split(' '); let line = '', yy = y;
+  for (const w of words) { const t = line ? line + ' ' + w : w; if (c.measureText(t).width > maxW && line) { c.fillText(line, x, yy); line = w; yy += lh; } else line = t; }
+  if (line) c.fillText(line, x, yy); return yy;
+}
+async function renderShare(k) {
+  const d = k === 'invite'
+    ? { img: 'assets/invite_card.webp', title: 'aao, mohalle ki diwali!', text: 'i’m invited to the nailinit diwali party. dress loud, gossip louder.', kick: 'chitthi aayi hai' }
+    : k === 'gubbara'
+      ? { img: 'assets/game/bal1.webp', title: 'i went balloon shooting', text: [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent).join(' · '), kick: 'gubbara phod' }
+      : SH[k];
+  if (!d) return null;
+  const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+  const [bg, swag, k1, k2, art, nl, rg, dy1, dy2, fl] = await Promise.all(['assets/pattern.webp', 'assets/swag.webp', 'assets/k1.webp', 'assets/k3.webp', d.img, 'assets/nailinit_light.webp', 'assets/deco/rangoli2.webp', 'assets/deco/diya1.webp', 'assets/deco/diya4.webp', 'assets/deco/flowers3.webp'].map(loadI));
+  c.fillStyle = '#75150f'; c.fillRect(0, 0, W, H);
+  if (bg) { c.globalAlpha = .1; for (let y = 0; y < H; y += 300) for (let x = 0; x < W; x += 300) c.drawImage(bg, x, y, 300, 300); c.globalAlpha = 1; }
+  const g = c.createRadialGradient(W / 2, H * .45, 100, W / 2, H * .45, 1100); g.addColorStop(0, 'rgba(255,190,80,.22)'); g.addColorStop(1, 'rgba(20,2,1,.5)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  if (rg) { c.globalAlpha = .16; c.drawImage(rg, W / 2 - 520, H * .52 - 520, 1040, 1040); c.globalAlpha = 1; }
+  if (swag) c.drawImage(swag, -40, -10, W + 80, (W + 80) * swag.height / swag.width);
+  if (k1) c.drawImage(k1, 40, 200, 150, 150 * k1.height / k1.width);
+  if (k2) c.drawImage(k2, W - 190, 230, 150, 150 * k2.height / k2.width);
+  c.textAlign = 'center';
+  c.font = '600 34px "Clash Display", sans-serif'; c.fillStyle = '#f7e6c8'; c.fillText(d.kick.toUpperCase().split('').join(' '), W / 2, 470);
+  let y = 520;
+  if (art && art.width > art.height * 1.4) y = 640;
+  if (art) {
+    const maxW = k === 'invite' ? 900 : k === 'draw' ? 900 : 620, maxH = 820;
+    const s = Math.min(maxW / art.width, maxH / art.height), aw = art.width * s, ah = art.height * s;
+    c.save(); c.shadowColor = 'rgba(20,2,1,.55)'; c.shadowBlur = 50; c.shadowOffsetY = 24;
+    c.translate(W / 2, y + ah / 2); c.rotate(k === 'tota' ? -.03 : 0); c.drawImage(art, -aw / 2, -ah / 2, aw, ah); c.restore();
+    y += ah + 90;
+  }
+  c.font = '84px "Bakbak One", sans-serif'; c.fillStyle = '#c4221a'; let yy = wrap(c, d.title, W / 2 + 5, y + 6, 940, 92);
+  c.fillStyle = '#efbd0d'; wrap(c, d.title, W / 2, y, 940, 92);
+  c.font = '500 42px "Clash Display", sans-serif'; c.fillStyle = '#f7e6c8'; yy = wrap(c, d.text, W / 2, yy + 80, 900, 58);
+  if (dy1) c.drawImage(dy1, 60, H - 470, 190, 190 * dy1.height / dy1.width);
+  if (dy2) c.drawImage(dy2, W - 250, H - 470, 190, 190 * dy2.height / dy2.width);
+  if (fl) c.drawImage(fl, W / 2 - 110, H - 520, 220, 220 * fl.height / fl.width);
+  if (nl) c.drawImage(nl, W / 2 - 150, H - 230, 300, 300 * nl.height / nl.width);
+  c.font = '600 30px "Clash Display", sans-serif'; c.fillStyle = '#efbd0d'; c.fillText('DIWALI PARTY · MOHALLA GAME CENTER', W / 2, H - 120);
+  c.fillStyle = '#f7e6c8'; c.font = '500 28px "Clash Display", sans-serif'; c.fillText('secretslumberparty.com/diwali', W / 2, H - 76);
+  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+  return { blob, d };
+}
+async function shareCard(k) {
+  start();
+  const out = await renderShare(k); if (!out) return;
+  const { blob, d } = out;
+  const file = new File([blob], `nailinit-diwali-${k}.png`, { type: 'image/png' });
+  const text = k === 'invite' ? `chitthi aayi hai ✉️ nailinit diwali party` : `${d.kick}: ${d.title} 🪔 play at ${SHARE_URL}`;
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text, title: 'nailinit diwali party' }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+  try { await navigator.clipboard.writeText(text); } catch (e) {}
+  toast('image saved, caption copied. post it!');
+}
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.classList.add('on'), 10); setTimeout(() => { t.classList.remove('on'); setTimeout(() => t.remove(), 400); }, 2600);
+}
+window.MKDShare = { render: renderShare };
+document.querySelectorAll('.share-btn').forEach(b => b.addEventListener('click', () => shareCard(b.dataset.share)));
 
 /* ── stall picker ── */
 const stalls = [...document.querySelectorAll('.stall')];
@@ -114,7 +184,7 @@ function fanPos(i) {
 const W_SCALE = () => (T.table.clientWidth < 420 ? 1.25 : 1.5);
 async function totaPlay() {
   if (T.busy) return; T.busy = true; start();
-  $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true;
+  $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true; hideShare('tota');
   totaBuild(); bob(2);
   $('#tsub').textContent = 'shuffling…';
   await sleep(300); await riffle(); await riffle(); await bridge();
@@ -147,6 +217,7 @@ async function totaPlay() {
   $('#ttext').textContent = f.text;
   $('#tread').hidden = false; $('#tagain').hidden = false;
   $('#tsub').textContent = 'tota ji has spoken.';
+  SH.tota = { img: `assets/cards/${f.img}.webp`, title: f.title, text: f.text, kick: 'my kismat for next year' }; showShare('tota');
   T.busy = false;
 }
 $('#tgo').addEventListener('click', totaPlay);
@@ -162,6 +233,12 @@ const INAAMS = [
   'one guilt-free extra gulab jamun', 'a compliment on your nails from a stranger', 'the window seat at the chai tapri',
   'unlimited unsolicited advice from mausi', 'a diya that refuses to go out', 'a thumka lesson from the aunties',
 ];
+function addWin(text, img) {
+  const c = document.createElement('div'); c.className = 'win-card';
+  const i = document.createElement('img'); i.src = img; i.alt = '';
+  const p = document.createElement('p'); p.textContent = text;
+  c.append(i, p); $('#glist').appendChild(c);
+}
 const MISS_LINES = ['chook gaye!', 'thoda left, beta', 'hawa mein!', 'almost!'];
 const G = { balloons: [], shots: 5, aiming: false, ax: 0, ay: 0, cx: 0, cy: 0, raf: 0, t0: 0 };
 const range = $('#range'), wall = $('#gwall'), cross = $('#cross'), rifle = $('#rifle');
@@ -173,10 +250,10 @@ function gubbaraReset() {
     const el = document.createElement('div'); el.className = 'gub';
     const img = document.createElement('img'); img.src = `assets/game/bal${(r * cols + c) % 8}.webp`; img.alt = '';
     el.appendChild(img); wall.appendChild(el);
-    G.balloons.push({ el, bx: (c + .5) / cols, by: .2 + r * .27, ph: rnd(0, 6.3), sp: rnd(.6, 1.1), amp: rnd(.015, .035), alive: true, prize: pool[(r * cols + c) % pool.length] });
+    G.balloons.push({ img: img.src, el, bx: (c + .5) / cols, by: .2 + r * .27, ph: rnd(0, 6.3), sp: rnd(.6, 1.1), amp: rnd(.022, .045), alive: true, prize: pool[(r * cols + c) % pool.length] });
   }
   $('#gshots').innerHTML = Array.from({ length: 5 }, () => '<i></i>').join('');
-  $('#ghaul').hidden = true; $('#glist').replaceChildren(); $('#gagain').hidden = true;
+  $('#ghaul').hidden = true; $('#glist').replaceChildren(); $('#gagain').hidden = true; hideShare('gubbara');
   $('#gsub').textContent = 'drag to aim, let go to fire. 5 pellets.';
   requestAnimationFrame(() => { const r0 = range.getBoundingClientRect(); G.ax = r0.width / 2; G.ay = r0.height * .35; });
   cancelAnimationFrame(G.raf); G.t0 = performance.now(); G.raf = requestAnimationFrame(gubbaraLoop);
@@ -192,9 +269,10 @@ function gubbaraLoop(now) {
   const sway = G.aiming ? 1 : .4;                       // a little hand sway — skill still wins
   G.cx = G.ax + Math.sin(t * 2.1) * 4 * sway; G.cy = G.ay + Math.cos(t * 1.7) * 3 * sway;
   cross.style.transform = `translate(${G.cx}px,${G.cy}px)`;
-  const W = range.clientWidth, H = range.clientHeight;
-  const ang = Math.atan2(G.cy - (H + 20), G.cx - W / 2) * 180 / Math.PI;
-  rifle.style.transform = `translateX(-50%) rotate(${(ang + 90).toFixed(2)}deg)`;
+  const W = range.clientWidth, H = range.clientHeight, bx = W * .86, by = H * 1.02;
+  const ang = Math.atan2(G.cy - by, G.cx - bx) * 180 / Math.PI;
+  rifle.style.left = bx + 'px'; rifle.style.top = by + 'px';
+  rifle.style.transform = `translate(0, -50%) rotate(${ang.toFixed(2)}deg) scaleY(${Math.abs(ang) > 90 ? -1 : 1})`;
   G.raf = requestAnimationFrame(gubbaraLoop);
 }
 function aimAt(e) { const p = local(range, e); G.ax = clamp(p.x, 6, p.w - 6); G.ay = clamp(p.y - (e.pointerType === 'touch' ? 60 : 0), 6, p.h * .78); }
@@ -209,7 +287,7 @@ async function fire() {
   if (G.shots <= 0) return;
   G.shots--; $('#gshots').children[4 - G.shots].classList.add('used');
   noise(.08, 'bandpass', 2400, 900, .9, 2); buzz(12);
-  rifle.animate([{ marginTop: '0px' }, { marginTop: '12px' }, { marginTop: '0px' }], { duration: 170 });
+  rifle.animate([{ translate: '0 0' }, { translate: '14px 10px' }, { translate: '0 0' }], { duration: 180 });
   const x = G.cx, y = G.cy; await sleep(90);
   const t = (performance.now() - G.t0) / 1000;
   const wx = x - wall.offsetLeft, wy = y - wall.offsetTop;
@@ -224,14 +302,15 @@ async function fire() {
     pop(); buzz(25); hit.alive = false; hit.el.classList.add('popped');
     hit.el.querySelector('img').src = 'assets/game/bal8.webp';
     const tag = document.createElement('span'); tag.className = 'gtag'; tag.textContent = hit.prize; hit.el.appendChild(tag);
-    const li = document.createElement('li'); li.textContent = hit.prize; $('#glist').appendChild(li); $('#ghaul').hidden = false;
+    addWin(hit.prize, hit.img); $('#ghaul').hidden = false;
   } else {
     thup(); const m = document.createElement('span'); m.className = 'gmiss'; m.textContent = pick(MISS_LINES); m.style.left = x + 'px'; m.style.top = y + 'px'; range.appendChild(m); setTimeout(() => m.remove(), 900);
   }
   if (G.shots === 0) {
     const n = $('#glist').children.length;
-    if (!n) { const li = document.createElement('li'); li.textContent = 'consolation prize: one pat on the head from the stall uncle'; $('#glist').appendChild(li); $('#ghaul').hidden = false; }
-    $('#gsub').textContent = n ? `${n} of 5 popped! collect your inaam.` : 'all misses! uncle feels bad for you.';
+    if (!n) { addWin('one pat on the head from the stall uncle', 'assets/game/bal8.webp'); $('#ghaul').hidden = false; }
+    $('#gsub').textContent = n ? `${n} of 5 popped! here’s what you got.` : 'all misses! uncle feels bad for you.';
+    showShare('gubbara');
     $('#gagain').hidden = false; ding(700, .6);
   } else $('#gsub').textContent = `${G.shots} pellet${G.shots > 1 ? 's' : ''} left.`;
 }
@@ -258,7 +337,7 @@ function chhallaReset() {
     const tag = document.createElement('span'); tag.className = 'btag'; tag.textContent = PRIZES[p][0];
     b.append(img, tag); shelf.appendChild(b);
   });
-  R.left = 3; R.busy = false; ringHome();
+  R.left = 3; R.busy = false; ringHome(); hideShare('chhalla');
   $('#cread').hidden = true; $('#cagain').hidden = true;
   $('#csub').textContent = 'flick the bangle up at a bottle. 3 throws.';
 }
@@ -310,6 +389,7 @@ async function chhallaThrow(vx, vy) {
     clink(); buzz(25); hitB.el.classList.add('ringed');
     const [name, text] = PRIZES[+hitB.el.dataset.p];
     $('#ctitle').textContent = name; $('#ctext').textContent = text; ding(880, .55);
+    SH.chhalla = { img: hitB.el.querySelector('img').src, title: name, text, kick: 'i ringed the banta and won' }; showShare('chhalla');
     ring.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' });
   } else {
     clink();
@@ -396,10 +476,11 @@ async function drawDrop() {
   ding(700, .6); buzz(25);
   $('#dsub').textContent = 'here you are, next year.';
   setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'center' }), 250);
+  SH.draw = { img: 'assets/game/ticket.webp', title: p.name, text: p.text, kick: 'my new-year personality' }; showShare('draw');
   $('#dagain').hidden = false;
 }
 $('#dagain').addEventListener('click', () => {
-  D.done = false; D.total = 0; $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
+  D.done = false; D.total = 0; hideShare('draw'); $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
   $('#drDrop').classList.remove('go'); $('#dsub').textContent = 'turn the crank. drag it round, or tap the button.';
   $('#dstage').scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
