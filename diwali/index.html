@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792696332">
+<link rel="stylesheet" href="style.css?v=1792696863">
 </head>
 <body class="locked">
 
@@ -46,14 +46,14 @@
     </div>
 
     <div class="bottom">
-      <ol id="steps" class="steps" aria-hidden="true"><li data-n="1">kholo</li><li data-n="2">ragdo</li><li data-n="3">lagao</li><li data-n="4">padho</li></ol>
+      <ol id="steps" class="steps" aria-hidden="true"><li data-n="1">open</li><li data-n="2">strike</li><li data-n="3">light</li><li data-n="4">read</li></ol>
       <div id="caption" class="caption" aria-live="polite"><span>Chitthi aayi hai!</span></div>
-      <button id="autobtn" class="autobtn" type="button" hidden>mushkil lag raha? <b>aap kar do ▸</b></button>
+      <button id="autobtn" class="autobtn" type="button" hidden>stuck? <b>do it for me ▸</b></button>
     </div>
 
     <div id="after" class="after">
       <button id="seeDetails" class="cta small" type="button">scroll 4 something स्पेशल ↓</button>
-      <button id="replay" class="replay" type="button">↺ phir se jalao</button>
+      <button id="replay" class="replay" type="button">↺ light it again</button>
     </div>
 
     <p class="powered">powered by <b>BASTIAN</b></p>
@@ -91,6 +91,20 @@
   </section>
 
 
+  <section class="kismat" id="kismat">
+    <h2>pick your kismat</h2>
+    <p class="k-sub">shuffle the deck, then pick a card.</p>
+    <div class="k-table" id="ktable" aria-live="polite"></div>
+    <div class="k-read" id="kread" hidden>
+      <p class="k-title" id="ktitle"></p>
+      <p class="k-text" id="ktext"></p>
+    </div>
+    <div class="k-actions">
+      <button class="sign red" id="kshuffle" type="button">shuffle the deck</button>
+      <button class="linkish" id="kagain" type="button" hidden>shuffle again</button>
+    </div>
+  </section>
+
   <section class="wall">
     <h2>mohalle ki deewar</h2>
     <div class="posters">
@@ -108,18 +122,18 @@
     <img class="rsvp-star s2" src="assets/star_pale.webp" alt="">
     <div class="board b-yellow rsvp-card">
       <div id="rsvpAsk" class="rsvp-ask">
-        <h2>aa rahe ho na, <span data-name>dost</span>?</h2>
+        <h2>coming, <span data-name>dost</span>?</h2>
         <p class="b-note"><span data-c="dateLong"></span> · <span data-c="time"></span> · <span data-c="venue"></span></p>
         <div class="rsvp-btns">
-          <button class="sign red" id="yes" type="button">haan, pakka!</button>
-          <button class="sign blue" id="no" type="button">nahi aa paunga</button>
+          <button class="sign red" id="yes" type="button">yes, pakka!</button>
+          <button class="sign blue" id="no" type="button">can't make it</button>
         </div>
       </div>
       <div id="rsvpDone" class="rsvp-done" hidden>
         <h2 id="doneHead">pakka!</h2>
         <p class="b-note" id="doneMsg"></p>
-        <button class="sign blue" id="ics" type="button">calendar mein daalo</button>
-        <button class="linkish" id="change" type="button">jawab badalna hai?</button>
+        <button class="sign blue" id="ics" type="button">add to calendar</button>
+        <button class="linkish" id="change" type="button">change answer</button>
       </div>
     </div>
     <p class="by" data-c="rsvpBy"></p>
@@ -140,11 +154,11 @@
     <img class="g-env" src="assets/envelope.webp" alt="">
     <form id="gform" autocomplete="on" novalidate>
       <div class="g-field" id="nameField" hidden>
-        <label class="g-lbl" for="gname">aapka naam?</label>
+        <label class="g-lbl" for="gname">your name?</label>
         <div class="g-row"><input id="gname" name="name" type="text" autocomplete="given-name" placeholder="Riya" maxlength="32"></div>
       </div>
       <div class="g-field" id="phoneField" hidden>
-      <label class="g-lbl" for="phone">apna phone number daalo</label>
+      <label class="g-lbl" for="phone">your phone number</label>
       <div class="g-row">
         <span class="g-cc">+91</span>
         <input id="phone" name="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="98765 43210" maxlength="16">
@@ -161,8 +175,8 @@
   <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
 </button>
 
-<script src="config.js?v=1792696332"></script>
-<script src="lib.js?v=1792696332"></script>
-<script src="app.js?v=1792696332"></script>
+<script src="config.js?v=1792696863"></script>
+<script src="lib.js?v=1792696863"></script>
+<script src="app.js?v=1792696863"></script>
 </body>
 </html>

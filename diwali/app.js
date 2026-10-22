@@ -393,12 +393,12 @@ const ptr = { down: false, id: null, x: 0, y: 0, sx: 0, sy: 0, moved: 0, hist: [
 const strike = { x0: 0, travel: 0, best: 0, hx: 0 };
 
 const CAPS = {
-  gate: 'chitthi aayi hai!', enter: 'maachis aa rahi hai…',
-  closed: coarse ? 'maachis ko tap karo' : 'maachis pe click karo',
-  opening: 'ek teeli nikal rahi hai…', lift: 'ek teeli nikal rahi hai…',
-  strike: coarse ? 'teeli ko ragdo — swipe ya tap' : 'teeli ko ragdo — drag ya click',
-  carry: 'aag chitthi tak ja rahi hai…',
-  touch: 'lag gayi!', burn: 'ooh… it burns', reveal: 'aapka amantran!', done: 'neeche scroll karo ↓',
+  gate: '', enter: 'here comes the matchbox…',
+  closed: coarse ? 'tap the matchbox' : 'click the matchbox',
+  opening: 'taking out a match…', lift: 'taking out a match…',
+  strike: coarse ? 'swipe or tap to strike the match' : 'drag or click to strike the match',
+  carry: 'lighting your invite…',
+  touch: 'it caught!', burn: 'ooh… it burns', reveal: '', done: 'scroll down ↓',
 };
 let capOverride = '', capUntil = 0, lastCap = '';
 function setPhase(ph) { S.ph = ph; S.t = 0; S.idle = 0; S.rest = null; document.body.dataset.ph = ph; }
@@ -466,7 +466,7 @@ function pup(e) {
   if (S.ph === 'strike' && ptr.moved < 10) { S.tapStrike = true; S.tapT = 0; return; }
   if (S.ph === 'strike') {
     if (strike.travel > 6) { S.fails++; sfx.sputter(); sparks(mt.x, mt.y, box.rot + 180, 6, 40, 40, 160);
-      say(S.fails >= 2 ? 'thoda aur tez — ya bas tap karo' : 'zor se ragdo!', 1.8); }
+      say(S.fails >= 2 ? 'a little faster, or just tap' : 'strike it harder!', 1.8); }
     strike.hx = strikeL();
   }
   if (S.ph === 'carry') {
@@ -515,8 +515,8 @@ const rsvpAsk = $('#rsvpAsk'), rsvpDone = $('#rsvpDone');
 function showRsvp(ans) {
   rsvpAsk.hidden = !!ans; rsvpDone.hidden = !ans;
   if (!ans) return;
-  $('#doneHead').textContent = ans === 'yes' ? 'pakka!' : 'koi nahi.';
-  $('#doneMsg').textContent = ans === 'yes' ? `milte hain ${C.event.dateLong}, ${C.event.time} · ${C.event.venue}` : 'agli baar pakka. mohalla yaad karega.';
+  $('#doneHead').textContent = ans === 'yes' ? 'pakka!' : 'next time then.';
+  $('#doneMsg').textContent = ans === 'yes' ? `see you ${C.event.dateLong}, ${C.event.time} · ${C.event.venue}` : "we'll miss you at the mohalla.";
   $('#ics').hidden = ans !== 'yes';
 }
 function answer(ans) {
@@ -531,7 +531,7 @@ showRsvp(store.get('mkd:rsvp:' + (INV || (NAME || '').toLowerCase())) || '');
 
 /* ───────────── gate ───────────── */
 const gate = $('#gate'), gform = $('#gform'), gopen = $('#gopen'), gerr = $('#gerr');
-const ERRS = ['arre, ye number nahi chalega.', 'wahi number daalo jis pe invite aaya tha.', 'nazar lag gayi kya? ek baar aur try karo.'];
+const ERRS = ['hmm, that number doesn\'t match.', 'use the number this invite was sent to.', 'not quite. try once more?'];
 let errN = 0;
 const needPhone = !!KEY && store.get('mkd:' + KEY) !== '1';
 const needName = !NAME;
@@ -553,12 +553,12 @@ gform.addEventListener('submit', e => {
   e.preventDefault();
   if (needName) {
     const n = nice($('#gname').value);
-    if (!n) { gerr.textContent = 'apna naam toh batao!'; return; }
+    if (!n) { gerr.textContent = 'tell us your name first!'; return; }
     NAME = n; applyName(); envDirty = true;
   }
   if (!needPhone) { gerr.textContent = ''; open(); return; }
   const v = $('#phone').value;
-  if (L.digits(v).length < 10) { gerr.textContent = 'poore 10 digit daalo.'; return; }
+  if (L.digits(v).length < 10) { gerr.textContent = 'enter all 10 digits.'; return; }
   if (L.keyFor(v, C.salt) === KEY) { gerr.textContent = ''; PHONE = L.digits(v); open(); return; }
   gerr.textContent = ERRS[errN++ % ERRS.length];
   gate.classList.remove('shake'); void gate.offsetWidth; gate.classList.add('shake');
@@ -838,6 +838,100 @@ function finish() {
   nameEl.classList.add('on');
   store.set('mkd:done', '1');
 }
+
+/* ───────────── kismat: shuffle the deck's posters, pick one, read it ───────────── */
+const FORTUNES = [
+  { img: 'nakhre', title: 'nakhre unlimited', text: "this year you're allowed to be extra, and everyone will play along." },
+  { img: 'nazar', title: 'buri nazar wale, tera bhi bhala ho', text: "the haters are watching. you're thriving anyway." },
+  { img: 'spicy', title: 'spicy par pyaari', text: 'a year of hot takes, delivered sweetly.' },
+  { img: 'naacho', title: 'naacho, gaao', text: 'looks like a year of dance floors. warm up those thumkas.' },
+  { img: 'spark', title: 'nails that spark joy', text: "fresh sets, fresh starts. it's your glow-up year." },
+  { img: 'meethe', title: 'meethe nakhoon, khatte log', text: 'keep the sweet ones close and the sour ones at arm’s length.' },
+  { img: 'girlies', title: 'desi nail girlies club', text: 'membership confirmed. your girl gang is about to get bigger.' },
+  { img: 'chugli', title: 'aao behen, chugli karein', text: "seems like you're going to have a year filled with gossip to share." },
+  { img: 'bsfree', title: 'bullsh*t free zone', text: "no fake friends, no drama you didn't ask for." },
+  { img: 'door', title: 'made in india', text: 'new doors are opening. walk in like you own the place.' },
+];
+FORTUNES.forEach(f => { const i = new Image(); i.src = `assets/cards/${f.img}.webp`; });
+const K = { table: $('#ktable'), cards: [], busy: false, state: 'stack' };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const tick = () => noiseHit(.025, 'highpass', 4200, 3000, .22);
+function kT(el, x, y, r, sc = 1, z) {
+  el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${sc})`;
+  if (z != null) el.style.zIndex = z;
+}
+function kBuild() {
+  K.table.replaceChildren();
+  K.cards = Array.from({ length: 9 }, () => {
+    const el = document.createElement('div'); el.className = 'kc';
+    el.innerHTML = '<div class="kc-in"><div class="kc-f kc-back"></div><div class="kc-f kc-front"></div></div>';
+    el.addEventListener('click', () => kPick(el));
+    K.table.appendChild(el); return el;
+  });
+  kStack();
+}
+function kStack() {
+  K.cards.forEach((el, i) => { el.style.opacity = 1; el.classList.remove('flip', 'pickable'); kT(el, (i - 4) * .5, -i * 1.4, rnd(-3, 3), 1, i); });
+  K.state = 'stack';
+}
+async function kRiffle() {
+  const w = K.cards[0].offsetWidth, half = Math.ceil(K.cards.length / 2);
+  const L0 = K.cards.slice(0, half), R0 = K.cards.slice(half);
+  L0.forEach((el, i) => kT(el, -w * .58, -i * 1.4, -9));
+  R0.forEach((el, i) => kT(el, w * .58, -i * 1.4, 9));
+  await sleep(380);
+  const out = [];
+  while (L0.length || R0.length) {                     // drop one from each half, bottom first, like a real riffle
+    const pick = (Math.random() < .5 && L0.length) || !R0.length ? L0 : R0;
+    out.push(pick.shift());
+  }
+  for (let i = 0; i < out.length; i++) { kT(out[i], (i - 4) * .5, -i * 1.4, rnd(-3, 3), 1, i); if (A.ac) tick(); await sleep(55); }
+  K.cards = out;
+  await sleep(320);
+}
+async function kBridge() {
+  K.cards.forEach((el, i) => kT(el, (i - 4) * .5, -i * 1.4 - 26, rnd(-2, 2), 1.06));
+  await sleep(260);
+  for (let i = 0; i < K.cards.length; i++) { kT(K.cards[i], (i - 4) * .5, -i * 1.4, rnd(-3, 3), 1, i); if (A.ac) tick(); await sleep(30); }
+  await sleep(300);
+}
+async function kFan() {
+  const W = K.table.clientWidth, cw = K.cards[0].offsetWidth, spread = W < 500 ? 26 : 32, n = K.cards.length;
+  const R = Math.min(460, (W / 2 - cw * .62) / Math.sin(rad(spread)));   // keep the outer cards on screen
+  for (let i = 0; i < n; i++) {
+    const a = lerp(-spread, spread, i / (n - 1)), ar = rad(a);
+    kT(K.cards[i], Math.sin(ar) * R, R - Math.cos(ar) * R - 10, a, 1, i);
+    K.cards[i].classList.add('pickable');
+    if (A.ac) tick(); await sleep(45);
+  }
+  K.state = 'fan';
+}
+async function kShuffle() {
+  if (K.busy) return; K.busy = true; initAudio();
+  $('#kread').hidden = true; $('#kagain').hidden = true; $('#kshuffle').hidden = true;
+  kStack(); await sleep(250);
+  await kRiffle(); await kRiffle(); await kBridge(); await kFan();
+  $('.k-sub').textContent = 'pick a card.';
+  K.busy = false;
+}
+async function kPick(el) {
+  if (K.state !== 'fan' || K.busy) return; K.busy = true; K.state = 'picked';
+  const f = FORTUNES[(Math.random() * FORTUNES.length) | 0];
+  el.querySelector('.kc-front').style.backgroundImage = `url(assets/cards/${f.img}.webp)`;
+  K.cards.forEach(c => { c.classList.remove('pickable'); if (c !== el) { c.style.opacity = .18; } });
+  kT(el, 0, -6, 0, 1.45, 50);
+  await sleep(380);
+  el.classList.add('flip'); sfx.bell(780, .5); buzz(20);
+  await sleep(500);
+  $('#ktitle').textContent = f.title; $('#ktext').textContent = f.text;
+  $('#kread').hidden = false; $('#kagain').hidden = false;
+  $('.k-sub').textContent = 'here\'s your kismat.';
+  K.busy = false;
+}
+$('#kshuffle').addEventListener('click', kShuffle);
+$('#kagain').addEventListener('click', kShuffle);
+K.table.addEventListener('click', e => { if (K.state === 'stack' && !K.busy) kShuffle(); });
+kBuild();
 
 /* ───────────── boot ───────────── */
 let rz;

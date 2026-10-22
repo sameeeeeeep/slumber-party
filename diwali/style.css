@@ -424,3 +424,29 @@ body:not(.open) .bottom, body:not(.open) .snd { opacity: 0; }
 .card-pb { position: absolute; left: 0; right: 0; top: 24.3%; text-align: center; pointer-events: none;
   font: 600 2.6cqw/1 var(--sans); letter-spacing: .32em; text-transform: uppercase; color: #1c1410; }
 .card-pb b { font-weight: 700; color: var(--sun); text-shadow: .15cqw .15cqw 0 #1c1410; letter-spacing: .34em; }
+
+/* ═════════ kismat: shuffle, fan, pick, flip ═════════ */
+.kismat { text-align: center; overflow: hidden; max-width: none !important; }
+.kismat h2 { font: 400 clamp(28px, 7.4vw, 46px)/1.05 var(--display); color: var(--cream); text-shadow: 2px 2px 0 var(--red); }
+.k-sub { font: 500 17px/1.4 var(--sans); color: var(--cream); opacity: .85; margin: 8px 0 0; }
+.k-table { position: relative; height: clamp(360px, 62vw, 520px); margin: 10px auto 0; max-width: 900px; perspective: 1400px; }
+.kc { --w: clamp(108px, 30vw, 170px); position: absolute; left: 50%; top: 46%; width: var(--w); height: calc(var(--w) / .72);
+  margin: calc(var(--w) / -1.44) 0 0 calc(var(--w) / -2);
+  transition: transform .5s cubic-bezier(.3,.9,.3,1), opacity .4s; cursor: default; transform-style: preserve-3d; }
+.kc.pickable { cursor: pointer; }
+.kc.pickable:hover .kc-in { transform: translateY(-14px); }
+.kc-in { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.3,1.2,.4,1); }
+.kc.flip .kc-in { transform: rotateY(180deg); }
+.kc-f { position: absolute; inset: 0; border-radius: 8px; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden;
+  box-shadow: 0 10px 22px rgba(30,3,2,.5), 0 0 0 1px rgba(0,0,0,.2); }
+.kc-back { background: var(--maroon) url(assets/pattern.webp) center / 120px;
+  box-shadow: inset 0 0 0 5px var(--yellow), inset 0 0 0 7px var(--maroon), inset 0 0 0 8.5px var(--pink), inset 0 0 0 10px var(--maroon), inset 0 0 0 11.5px var(--teal), 0 10px 22px rgba(30,3,2,.5); }
+.kc-back::before { content: ''; position: absolute; inset: 22% 18%; background: url(assets/conf/c03.webp) center / contain no-repeat; filter: drop-shadow(0 2px 0 rgba(0,0,0,.3)); }
+.kc-back::after { content: 'kismat'; position: absolute; left: 0; right: 0; bottom: 12%; font: 400 calc(var(--w) * .13)/1 var(--display); color: var(--yellow); text-shadow: 1px 1px 0 var(--red); }
+.kc-front { transform: rotateY(180deg); background: var(--cream) center / cover no-repeat; }
+.k-read { max-width: 30ch; margin: 6px auto 0; }
+.k-read[hidden] { display: none; }
+.k-title { font: 400 clamp(24px, 6vw, 32px)/1.1 var(--display); color: var(--yellow); text-shadow: 2px 2px 0 var(--red); animation: pop .45s cubic-bezier(.2,1.5,.4,1); }
+.k-text { font: 500 18px/1.45 var(--sans); color: var(--cream); margin-top: 8px; }
+.k-actions { margin-top: 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.k-actions [hidden] { display: none; }
