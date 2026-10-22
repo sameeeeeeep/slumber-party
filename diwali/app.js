@@ -83,7 +83,7 @@ let vw = 0, vh = 0, dpr = 1, lastEnvW = 0, wide = false;
 const E = {}, EB = {}, EZ = {}, B = {}, M = {}, C2 = {};
 let zoom = 0, RS = 2;                                         // envelope zoom (0 = resting, 1 = lit close-up)
 const tilt = { x: 0, y: 0, px: 0, py: 0 };
-const ENV_AR = 1600 / 866, POSTER_AR = 1000 / 1201, SLEEVE_AR = 1000 / 625, DRAWER = .253;
+const ENV_AR = 1600 / 866, POSTER_AR = 1400 / 692, SLEEVE_AR = 1000 / 625, DRAWER = .253;
 const ORIGIN = [.05, .9];
 
 function setE() {
@@ -109,8 +109,8 @@ function layout() {
   css(envC, '--ew', EB.w + 'px'); css(envC, '--eh', EB.h + 'px');
 
   // the AAO poster: starts inside the envelope, grows into the hero
-  C2.h = EB.h * .9; C2.w = C2.h * POSTER_AR;
-  C2.fh = Math.min(vh * .6, (vw * .82) / POSTER_AR, 660); C2.fs = C2.fh / C2.h;
+  C2.w = EB.w * .86; C2.h = C2.w / POSTER_AR;
+  C2.fh = Math.min(vh * .5, (vw * .94) / POSTER_AR, 460); C2.fs = C2.fh / C2.h;
   C2.fy = clamp(vh * .45, C2.fh / 2 + 84, vh - C2.fh / 2 - 120);
   css(card, '--cw', C2.w + 'px'); css(card, '--ch', C2.h + 'px');
   css(nameEl, '--ny', (C2.fy + C2.fh / 2 + 20) + 'px');

@@ -499,3 +499,10 @@ body:not(.open) .bottom, body:not(.open) .snd { opacity: 0; }
 .t-kick { font: 600 11px/1.2 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--maroon); }
 .t-name { font: 400 clamp(24px, 6vw, 32px)/1.05 var(--display); color: var(--ink); text-shadow: 2px 2px 0 var(--red); margin: 8px 0 8px; }
 .t-text { font: 500 16px/1.45 var(--sans); color: var(--maroon-d); }
+
+/* reveal = the deck's clean landscape card (new deck p.3) */
+.card img { object-fit: contain !important; box-shadow: none !important; border-radius: 0 !important; }
+.card::after { -webkit-mask: url(assets/invite_card.webp) center / contain no-repeat; mask: url(assets/invite_card.webp) center / contain no-repeat; border-radius: 0; }
+.card-pb { top: 79.5% !important; font-size: 2.1cqw !important; letter-spacing: .4em !important; }
+.card-pb b { color: var(--red) !important; text-shadow: none !important; }
+.card-pb { top: 82% !important; }
