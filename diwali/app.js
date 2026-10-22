@@ -75,7 +75,7 @@ const fontsReady = Promise.all(['700 20px "Palanquin Dark"', '600 20px "Palanqui
 const stage = $('#stage'), envC = $('#env'), card = $('#card');
 const boxEl = $('#box'), drawer = boxEl.querySelector('.drawer');
 const matchEl = $('#match'), fxC = $('#fx'), fx = fxC.getContext('2d');
-const glowEl = $('#glow'), capEl = $('#caption'), nameEl = $('#cardname'), ghost = $('#ghost');
+const nightEl = $('#night'), glowEl = $('#glow'), capEl = $('#caption'), nameEl = $('#cardname'), ghost = $('#ghost');
 const autoBtn = $('#autobtn'), afterEl = $('#after'), stepsEl = [...document.querySelectorAll('#steps li')];
 const css = (el, k, v) => el.style.setProperty(k, v);
 
@@ -133,24 +133,16 @@ function layout() {
 /* kandils + marigold strings hanging from the top edge */
 function buildDecor() {
   const box = $('#decor');
-  const n = wide ? Math.max(11, Math.round(vw / 120)) : 9;
-  let h = '', k = 0;
+  const n = wide ? Math.max(5, Math.round(vw / 260)) : 3;
+  const top = Math.min(110, vw * .14) * .62;
+  let h = '';
   for (let i = 0; i < n; i++) {
-    const x = 5 + (i + .5) / n * 90;
-    const centre = false;
-    if (centre) continue;
-    const isK = i % 3 === 1;
+    const x = (i + .5) / n * 100;
+    const drop = top + ((i * 37) % (wide ? 70 : 36));
+    const w = wide ? 92 : 60;
     const sw = (3.4 + (i * .71) % 1.9).toFixed(2), d = (-i * .63).toFixed(2);
-    if (isK) {
-      const drop = (wide ? 40 : 26) + ((i * 29) % (wide ? 60 : 34));
-      const w = wide ? 96 : 58;
-      h += `<div class="hang kandil" style="left:${x}%;--drop:${drop}px;--w:${w}px;--sw:${sw}s;--d:${d}s">` +
-        `<i class="cord"></i><span class="lamp"><img class="bloom" src="assets/k${1 + k % 4}.webp" alt=""><img src="assets/k${1 + k % 4}.webp" alt=""></span></div>`;
-      k++;
-    } else {
-      const len = (wide ? 170 : 104) + ((i * 53) % (wide ? 140 : 70));
-      h += `<div class="hang mari" style="left:${x}%;--len:${len}px;--sw:${sw}s;--d:${d}s"><img src="assets/m${1 + i % 5}.webp" alt=""></div>`;
-    }
+    h += `<div class="hang kandil" style="left:${x}%;--drop:${drop}px;--w:${w}px;--sw:${sw}s;--d:${d}s">` +
+      `<i class="cord"></i><span class="lamp"><img class="bloom" src="assets/k${1 + i % 4}.webp" alt=""><img src="assets/k${1 + i % 4}.webp" alt=""></span></div>`;
   }
   box.innerHTML = h;
 }
@@ -732,6 +724,15 @@ function frame(nowMs) {
   css(glowEl, '--gr', (14 + 22 * burning + 10 * fk) + 'vmax');
   glowEl.style.opacity = Math.min(1, fk * .5 + burning * .85).toFixed(3);
   css(document.documentElement, '--lit', light.toFixed(3));
+  // night until the invite is revealed: only the flame / burning paper light the scene
+  const dark = ['reveal', 'done'].includes(S.ph) ? 0 : 1;
+  S.dark = lerp(S.dark ?? 1, dark, dark ? .08 : .06);
+  const hole = 50 + fk * 110 + burning * E.w * .38 + (['closed', 'enter', 'opening', 'lift', 'strike'].includes(S.ph) ? 190 : 0);
+  css(nightEl, '--gx', gx + 'px'); css(nightEl, '--gy', gy + 'px'); css(nightEl, '--hr', hole.toFixed(0) + 'px');
+  css(nightEl, '--nx', (S.ph === 'closed' || S.ph === 'opening' || S.ph === 'lift' || S.ph === 'strike' ? box.x : gx) + 'px');
+  css(nightEl, '--ny', (S.ph === 'closed' || S.ph === 'opening' || S.ph === 'lift' || S.ph === 'strike' ? box.y : gy) + 'px');
+  nightEl.style.opacity = (S.dark * (['carry', 'touch', 'burn'].includes(S.ph) ? .92 : .72)).toFixed(3);
+  document.body.classList.toggle('lit', S.dark < .5);
 
   /* ── caption, ghost hint, auto button ── */
   let cap = performance.now() < capUntil ? capOverride : CAPS[S.ph] || '';
@@ -841,162 +842,7 @@ function finish() {
   store.set('mkd:done', '1');
 }
 
-/* ───────────── kismat: shuffle the deck's posters, pick one, read it ───────────── */
-const FORTUNES = [
-  { img: 'nakhre', title: 'nakhre unlimited', text: "this year you're allowed to be extra, and everyone will play along." },
-  { img: 'nazar', title: 'buri nazar wale, tera bhi bhala ho', text: "the haters are watching. you're thriving anyway." },
-  { img: 'spicy', title: 'spicy par pyaari', text: 'a year of hot takes, delivered sweetly.' },
-  { img: 'naacho', title: 'naacho, gaao', text: 'looks like a year of dance floors. warm up those thumkas.' },
-  { img: 'spark', title: 'nails that spark joy', text: "fresh sets, fresh starts. it's your glow-up year." },
-  { img: 'meethe', title: 'meethe nakhoon, khatte log', text: 'keep the sweet ones close and the sour ones at arm’s length.' },
-  { img: 'girlies', title: 'desi nail girlies club', text: 'membership confirmed. your girl gang is about to get bigger.' },
-  { img: 'chugli', title: 'aao behen, chugli karein', text: "seems like you're going to have a year filled with gossip to share." },
-  { img: 'bsfree', title: 'bullsh*t free zone', text: "no fake friends, no drama you didn't ask for." },
-  { img: 'door', title: 'made in india', text: 'new doors are opening. walk in like you own the place.' },
-];
-FORTUNES.forEach(f => { const i = new Image(); i.src = `assets/cards/${f.img}.webp`; });
-const K = { table: $('#ktable'), cards: [], busy: false, state: 'stack' };
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const tick = () => noiseHit(.025, 'highpass', 4200, 3000, .22);
-function kT(el, x, y, r, sc = 1, z) {
-  el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${sc})`;
-  if (z != null) el.style.zIndex = z;
-}
-function kBuild() {
-  K.table.replaceChildren();
-  K.cards = Array.from({ length: 9 }, () => {
-    const el = document.createElement('div'); el.className = 'kc';
-    el.innerHTML = '<div class="kc-in"><div class="kc-f kc-back"></div><div class="kc-f kc-front"></div></div>';
-    el.addEventListener('click', () => kPick(el));
-    K.table.appendChild(el); return el;
-  });
-  kStack();
-}
-function kStack() {
-  K.cards.forEach((el, i) => { el.style.opacity = 1; el.classList.remove('flip', 'pickable'); kT(el, (i - 4) * .5, -i * 1.4, rnd(-3, 3), 1, i); });
-  K.state = 'stack';
-}
-async function kRiffle() {
-  const w = K.cards[0].offsetWidth, half = Math.ceil(K.cards.length / 2);
-  const L0 = K.cards.slice(0, half), R0 = K.cards.slice(half);
-  L0.forEach((el, i) => kT(el, -w * .58, -i * 1.4, -9));
-  R0.forEach((el, i) => kT(el, w * .58, -i * 1.4, 9));
-  await sleep(380);
-  const out = [];
-  while (L0.length || R0.length) {                     // drop one from each half, bottom first, like a real riffle
-    const pick = (Math.random() < .5 && L0.length) || !R0.length ? L0 : R0;
-    out.push(pick.shift());
-  }
-  for (let i = 0; i < out.length; i++) { kT(out[i], (i - 4) * .5, -i * 1.4, rnd(-3, 3), 1, i); if (A.ac) tick(); await sleep(55); }
-  K.cards = out;
-  await sleep(320);
-}
-async function kBridge() {
-  K.cards.forEach((el, i) => kT(el, (i - 4) * .5, -i * 1.4 - 26, rnd(-2, 2), 1.06));
-  await sleep(260);
-  for (let i = 0; i < K.cards.length; i++) { kT(K.cards[i], (i - 4) * .5, -i * 1.4, rnd(-3, 3), 1, i); if (A.ac) tick(); await sleep(30); }
-  await sleep(300);
-}
-async function kFan() {
-  const W = K.table.clientWidth, cw = K.cards[0].offsetWidth, spread = W < 500 ? 26 : 32, n = K.cards.length;
-  const R = Math.min(460, (W / 2 - cw * .62) / Math.sin(rad(spread)));   // keep the outer cards on screen
-  for (let i = 0; i < n; i++) {
-    const a = lerp(-spread, spread, i / (n - 1)), ar = rad(a);
-    kT(K.cards[i], Math.sin(ar) * R, R - Math.cos(ar) * R - 10, a, 1, i);
-    K.cards[i].classList.add('pickable');
-    if (A.ac) tick(); await sleep(45);
-  }
-  K.state = 'fan';
-}
-async function kShuffle() {
-  if (K.busy) return; K.busy = true; initAudio();
-  $('#kread').hidden = true; $('#kagain').hidden = true; $('#kshuffle').hidden = true;
-  kStack(); await sleep(250);
-  await kRiffle(); await kRiffle(); await kBridge(); await kFan();
-  $('.k-sub').textContent = 'pick a card.';
-  K.busy = false;
-}
-async function kPick(el) {
-  if (K.state !== 'fan' || K.busy) return; K.busy = true; K.state = 'picked';
-  const f = FORTUNES[(Math.random() * FORTUNES.length) | 0];
-  el.querySelector('.kc-front').style.backgroundImage = `url(assets/cards/${f.img}.webp)`;
-  K.cards.forEach(c => { c.classList.remove('pickable'); if (c !== el) { c.style.opacity = .18; } });
-  kT(el, 0, -6, 0, 1.45, 50);
-  await sleep(380);
-  el.classList.add('flip'); sfx.bell(780, .5); buzz(20);
-  await sleep(500);
-  $('#ktitle').textContent = f.title; $('#ktext').textContent = f.text;
-  $('#kread').hidden = false; $('#kagain').hidden = false;
-  $('.k-sub').textContent = 'here\'s your kismat.';
-  K.busy = false;
-}
-$('#kshuffle').addEventListener('click', kShuffle);
-$('#kagain').addEventListener('click', kShuffle);
-K.table.addEventListener('click', e => { if (K.state === 'stack' && !K.busy) kShuffle(); });
-kBuild();
-
-/* ───────────── games: tabs + lucky draw ───────────── */
-document.querySelectorAll('.g-tabs [data-game]').forEach(btn => btn.addEventListener('click', () => {
-  document.querySelectorAll('.g-tabs [data-game]').forEach(b => { const on = b === btn; b.classList.toggle('on', on); b.classList.toggle('red', on); b.classList.toggle('blue', !on); });
-  document.querySelectorAll('.game[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== btn.dataset.game; });
-  if (btn.dataset.game === 'draw' && !D.busy) D.settle();
-}));
-const PERSONAS = [
-  { name: 'the chugli champion', text: "you'll know everything before it happens. use your powers wisely (or don't)." },
-  { name: 'main-character energy', text: 'every room you walk into this year is your entrance scene.' },
-  { name: 'the dance-floor auntie', text: 'first on the floor, last to leave. the DJ already fears you.' },
-  { name: 'the jugaad genius', text: "no plan? no problem. you'll fix everything with a safety pin and a smile." },
-  { name: 'the chai-tapri philosopher', text: 'deep thoughts, cutting chai, zero conclusions. iconic.' },
-  { name: 'the glow-up of the year', text: 'new set, new vibe, new you. people will ask what changed.' },
-  { name: 'the soft-spoken savage', text: 'sweet voice, sharp comebacks. nobody sees it coming.' },
-  { name: 'the matchmaker', text: 'at least one wedding next year will be your fault. take the credit.' },
-  { name: 'the selfie director', text: "you'll get everyone's best angle. nobody will get yours." },
-  { name: 'the plan-maker', text: "you'll organise every outing. at least half will actually happen." },
-  { name: 'the chaat-stall regular', text: 'you know every chaatwala by name, and they know your order.' },
-  { name: 'the lucky charm', text: 'good things follow you around this year. keep your people close.' },
-];
-const D = { slips: [], busy: false, turns: 0 };
-(() => {
-  const box = $('#drumSlips'), cols = ['#efbd0d', '#ec5a86', '#2f9790', '#1d8cc4', '#c4221a', '#f7e6c8'];
-  for (let i = 0; i < 16; i++) {
-    const el = document.createElement('i'); el.className = 'slip'; el.style.background = cols[i % cols.length];
-    box.appendChild(el); D.slips.push(el);
-  }
-  const settle = () => D.slips.forEach((el, i) => {      // slips rest in a heap at the bottom of the drum
-    const a = rnd(-55, 55), r = rnd(.25, .42) * box.clientWidth;
-    el.style.transform = `translate(${(Math.sin(rad(a)) * r).toFixed(1)}px,${(Math.cos(rad(a)) * r * .9).toFixed(1)}px) rotate(${rnd(-50, 50).toFixed(0)}deg)`;
-  });
-  D.settle = settle; settle();
-})();
-async function draw() {
-  if (D.busy) return; D.busy = true; initAudio();
-  $('#ticket').hidden = true; $('#dagain').hidden = true; $('#dspin').hidden = true;
-  D.turns += 1;
-  $('#drumWheel').style.transform = `rotate(${D.turns * 900 + rnd(0, 120)}deg)`;
-  $('#crank').style.transform = `rotate(${D.turns * 1080}deg)`;
-  const box = $('#drumSlips'), t0 = performance.now();
-  while (performance.now() - t0 < 2400) {                 // tumble: slips fly around the drum
-    D.slips.forEach(el => {
-      const a = rnd(0, 360), r = rnd(0, .42) * box.clientWidth;
-      el.style.transform = `translate(${(Math.cos(rad(a)) * r).toFixed(1)}px,${(Math.sin(rad(a)) * r).toFixed(1)}px) rotate(${rnd(0, 360).toFixed(0)}deg)`;
-    });
-    if (A.ac) noiseHit(.03, 'bandpass', rnd(1800, 3200), 1400, .12, 2);
-    await sleep(90);
-  }
-  D.settle();
-  await sleep(350);
-  const p = PERSONAS[(Math.random() * PERSONAS.length) | 0];
-  $('#tno').textContent = String(1000 + ((Math.random() * 9000) | 0));
-  $('#tname').textContent = p.name; $('#ttext').textContent = p.text;
-  $('#ticket').hidden = false; void $('#ticket').offsetWidth;
-  sfx.bell(700, .6); buzz(25);
-  $('#dsub').textContent = 'here you are, next year.';
-  $('#dagain').hidden = false;
-  D.busy = false;
-}
-$('#dspin').addEventListener('click', draw);
-$('#crank').addEventListener('click', draw);
-$('#dagain').addEventListener('click', draw);
+window.MKDFX = { sfx, initAudio, noiseHit, buzz, get audio() { return A.ac; } };
 
 /* ───────────── boot ───────────── */
 let rz;

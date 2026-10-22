@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792699379">
+<link rel="stylesheet" href="style.css?v=1792701871">
 </head>
 <body class="locked">
 
@@ -22,6 +22,7 @@
   <div id="stage">
     <div class="ground"></div>
     <div id="decor" class="decor" aria-hidden="true"></div>
+    <div class="decor-swag" aria-hidden="true"></div>
 
 
     <!-- the invite inside the envelope: the deck's AAO poster -->
@@ -39,6 +40,7 @@
 
     <canvas id="fx" aria-hidden="true"></canvas>
     <div id="glow" aria-hidden="true"></div>
+    <div id="night" aria-hidden="true"></div>
 
     <div id="ghost" class="ghost" aria-hidden="true">
       <svg viewBox="0 0 48 56"><path d="M18 30V9a4 4 0 0 1 8 0v15l2-.6a4 4 0 0 1 4.6 2.3l.4-.1a4 4 0 0 1 5 2.6l.2-.1a4 4 0 0 1 5 3.2c1 6 .4 12-2.6 16.6A12 12 0 0 1 30.6 54H25a12 12 0 0 1-9.6-4.8L7.6 38.6a4 4 0 0 1 6.2-5z" fill="#f7e6c8" stroke="#1c1410" stroke-width="2.2" stroke-linejoin="round"/></svg>
@@ -115,47 +117,52 @@
   </section>
 
   <section class="games" id="games">
-    <h2>mohalla games</h2>
-    <div class="g-tabs" role="tablist">
-      <button class="sign red on" role="tab" data-game="kismat" type="button">kismat cards</button>
-      <button class="sign blue" role="tab" data-game="draw" type="button">lucky draw</button>
+    <h2>mohalla game center</h2>
+    <p class="gc-sub">pick a stall. every game ends in an inaam.</p>
+    <div class="stalls-row" role="tablist">
+      <button class="stall on" data-game="tota" type="button"><span class="aw"></span><img src="assets/game/parrot_card.webp" alt=""><b>tota jyotish</b><small>the parrot picks your kismat</small></button>
+      <button class="stall" data-game="gubbara" type="button"><span class="aw"></span><img src="assets/game/bal1.webp" alt=""><b>gubbara phod</b><small>5 shots, 5 inaams</small></button>
+      <button class="stall" data-game="chhalla" type="button"><span class="aw"></span><img src="assets/game/bottle0.webp" alt=""><b>chhalla</b><small>ring the banta, win the prize</small></button>
+      <button class="stall" data-game="draw" type="button"><span class="aw"></span><img src="assets/game/drum.webp" alt=""><b>lucky draw</b><small>your new-year personality</small></button>
     </div>
-    <div class="game kismat" id="kismat" data-panel="kismat">
-    <h3 class="g-head">pick your kismat</h3>
-    <p class="k-sub">shuffle the deck, then pick a card.</p>
-    <div class="k-table" id="ktable" aria-live="polite"></div>
-    <div class="k-read" id="kread" hidden>
-      <p class="k-title" id="ktitle"></p>
-      <p class="k-text" id="ktext"></p>
-    </div>
-    <div class="k-actions">
-      <button class="sign red" id="kshuffle" type="button">shuffle the deck</button>
-      <button class="linkish" id="kagain" type="button" hidden>shuffle again</button>
-    </div>
-  </div>
-    <div class="game draw" id="draw" data-panel="draw" hidden>
-      <h3 class="g-head">your new-year personality</h3>
-      <p class="k-sub" id="dsub">turn the crank. one ticket, one you.</p>
-      <div class="d-stage">
-        <div class="drum" id="drum">
-          <div class="drum-wheel" id="drumWheel"></div>
-          <div class="drum-slips" id="drumSlips"></div>
-          <div class="drum-hub"></div>
+
+    <div class="booth" id="booth">
+      <div class="booth-aw"></div>
+      <div class="booth-in">
+
+        <div class="game" data-panel="tota">
+          <h3 class="g-head">tota jyotish</h3>
+          <p class="k-sub" id="tsub">shuffle the deck. the tota will pick your kismat.</p>
+          <div class="tota-table" id="ttable"><img class="tota" id="tota" src="assets/game/parrot.webp" alt="the fortune-teller parrot"></div>
+          <div class="reading" id="tread" hidden><p class="r-title" id="ttitle"></p><p class="r-text" id="ttext"></p></div>
+          <div class="k-actions"><button class="sign red" id="tgo" type="button">shuffle the deck</button><button class="linkish" id="tagain" type="button" hidden>ask the tota again</button></div>
         </div>
-        <div class="drum-stand"></div>
-        <button class="crank" id="crank" type="button" aria-label="Turn the crank"><i></i></button>
-      </div>
-      <div class="ticket" id="ticket" hidden>
-        <div class="t-stub"><span>no.</span><b id="tno">0026</b></div>
-        <div class="t-main">
-          <p class="t-kick">nailinit lucky draw · diwali 2026</p>
-          <p class="t-name" id="tname"></p>
-          <p class="t-text" id="ttext"></p>
+
+        <div class="game" data-panel="gubbara" hidden>
+          <h3 class="g-head">gubbara phod</h3>
+          <p class="k-sub" id="gsub">5 shots. every pop wins you something.</p>
+          <div class="gub-board" id="gboard"></div>
+          <div class="shots" id="gshots"></div>
+          <div class="haul" id="ghaul" hidden><p class="r-title">aapka inaam</p><ol id="glist"></ol></div>
+          <div class="k-actions"><button class="linkish" id="gagain" type="button" hidden>play again</button></div>
         </div>
-      </div>
-      <div class="k-actions">
-        <button class="sign red" id="dspin" type="button">turn the crank</button>
-        <button class="linkish" id="dagain" type="button" hidden>draw again</button>
+
+        <div class="game" data-panel="chhalla" hidden>
+          <h3 class="g-head">chhalla</h3>
+          <p class="k-sub" id="csub">3 bangles. tap a bottle to throw.</p>
+          <div class="ring-stage" id="cstage"><div class="shelf" id="cshelf"></div><i class="ring" id="cring"></i></div>
+          <div class="reading" id="cread" hidden><p class="r-title" id="ctitle"></p><p class="r-text" id="ctext"></p></div>
+          <div class="k-actions"><button class="linkish" id="cagain" type="button" hidden>play again</button></div>
+        </div>
+
+        <div class="game" data-panel="draw" hidden>
+          <h3 class="g-head">lucky draw</h3>
+          <p class="k-sub" id="dsub">turn the crank. one ticket, one you.</p>
+          <div class="drum-stage"><img class="drum-img" id="drum" src="assets/game/drum.webp" alt="raffle drum"></div>
+          <div class="ticket2" id="ticket" hidden><img src="assets/game/ticket.webp" alt=""><div class="t2"><p class="t-kick">nailinit lucky draw · no. <span id="tno">0026</span></p><p class="t-name" id="tname"></p><p class="t-text" id="ttext2"></p></div></div>
+          <div class="k-actions"><button class="sign red" id="dspin" type="button">turn the crank</button><button class="linkish" id="dagain" type="button" hidden>draw again</button></div>
+        </div>
+
       </div>
     </div>
   </section>
@@ -198,8 +205,9 @@
   <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
 </button>
 
-<script src="config.js?v=1792699379"></script>
-<script src="lib.js?v=1792699379"></script>
-<script src="app.js?v=1792699379"></script>
+<script src="config.js?v=1792701871"></script>
+<script src="lib.js?v=1792701871"></script>
+<script src="app.js?v=1792701871"></script>
+<script src="games.js?v=1792701871"></script>
 </body>
 </html>
