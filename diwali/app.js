@@ -26,7 +26,7 @@ const INV = (qs.get('inv') || '').trim();
 const KEY = (INV ? INV.slice(0, 5) : (qs.get('k') || '')).trim().toLowerCase();
 const SEALED = INV.length > 5 ? INV.slice(5) : '';
 let NAME = nice(qs.get('name') || qs.get('to'));
-if (!NAME && SEALED) NAME = store.get('mkd:name:' + INV) || '';      // remembered from an earlier unlock
+if (!NAME && SEALED) NAME = nice(L.unseal(SEALED, C.salt));
 function applyName() {
   const n = NAME || C.defaultName;
   document.querySelectorAll('[data-name]').forEach(e => { e.textContent = n; });
@@ -527,10 +527,6 @@ gform.addEventListener('submit', e => {
   if (L.digits(v).length < 10) { gerr.textContent = 'Poore 10 digit daalo ji.'; return; }
   if (L.keyFor(v, C.salt) === KEY) {
     gerr.textContent = '';
-    if (SEALED) {
-      const n = nice(L.unseal(SEALED, v, C.salt));
-      if (n) { NAME = n; store.set('mkd:name:' + INV, n); applyName(); envDirty = true; }
-    }
     open(); return;
   }
   gerr.textContent = ERRS[errN++ % ERRS.length];
