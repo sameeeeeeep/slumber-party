@@ -510,7 +510,10 @@ autoBtn.addEventListener('click', runAuto);
 const gate = $('#gate'), gform = $('#gform'), gopen = $('#gopen'), gerr = $('#gerr');
 const ERRS = ['Arre, ye number nahi chalega.', 'Wahi number daalo jis pe invite aaya tha.', 'Nazar lag gayi kya? Ek baar aur try karo.'];
 let errN = 0;
-if (!KEY || store.get('mkd:' + KEY) === '1') { gform.hidden = true; gopen.hidden = false; }
+const needPhone = !!KEY && store.get('mkd:' + KEY) !== '1';
+const needName = !NAME;
+$('#phoneField').hidden = !needPhone;
+$('#nameField').hidden = !needName;
 function open() {
   if (S.ph !== 'gate') return;
   initAudio(); sfx.bell(520, .7);
@@ -518,17 +521,21 @@ function open() {
   document.body.classList.add('open');
   sndBtn.hidden = false;
   document.activeElement && document.activeElement.blur();
+  S.openedAt = performance.now();
   setPhase('enter');
 }
 gopen.addEventListener('click', open);
 gform.addEventListener('submit', e => {
   e.preventDefault();
-  const v = $('#phone').value;
-  if (L.digits(v).length < 10) { gerr.textContent = 'Poore 10 digit daalo ji.'; return; }
-  if (L.keyFor(v, C.salt) === KEY) {
-    gerr.textContent = '';
-    open(); return;
+  if (needName) {
+    const n = nice($('#gname').value);
+    if (!n) { gerr.textContent = 'apna naam toh batao!'; return; }
+    NAME = n; applyName(); envDirty = true;
   }
+  if (!needPhone) { gerr.textContent = ''; open(); return; }
+  const v = $('#phone').value;
+  if (L.digits(v).length < 10) { gerr.textContent = 'poore 10 digit daalo.'; return; }
+  if (L.keyFor(v, C.salt) === KEY) { gerr.textContent = ''; open(); return; }
   gerr.textContent = ERRS[errN++ % ERRS.length];
   gate.classList.remove('shake'); void gate.offsetWidth; gate.classList.add('shake');
 });
@@ -565,7 +572,7 @@ function frame(nowMs) {
 
   /* ── advance the story ── */
   const ph = S.ph;
-  if (ph === 'enter') { box.off = 1 - eo(clamp(S.t / .9)); if (S.t > .9) setPhase(S.auto ? 'opening' : 'closed'); }
+  if (ph === 'enter') { box.off = 1 - eo(clamp((S.t - .45) / .9)); if (S.t > 1.35) setPhase(S.auto ? 'opening' : 'closed'); }
   if (ph === 'closed' && S.auto && S.t > .35) openBox();
   if (ph === 'opening') { box.dx = ease(clamp(S.t / .55)) * DRAWER * B.w; if (S.t > .6) { sfx.pick(); setPhase('lift'); } }
   if (ph === 'strike' && S.auto) {
@@ -674,7 +681,9 @@ function frame(nowMs) {
   if (showEnv !== envShown) { envC.style.visibility = showEnv ? 'visible' : 'hidden'; envShown = showEnv; }
   if (showEnv) {
     renderBurn(burnP, now);
-    envC.style.transform = `translate(${E.cx - EB.w / 2}px,${E.cy - EB.h / 2 + bob}px) perspective(1100px) rotateX(${tilt.x.toFixed(2)}deg) rotateY(${tilt.y.toFixed(2)}deg) scale(${E.s.toFixed(4)})`;
+    const inK = S.openedAt ? eob(clamp((nowMs - S.openedAt) / 900)) : 0, drop = (1 - inK) * -vh * .75;
+    envC.style.opacity = S.openedAt ? 1 : 0;
+    envC.style.transform = `translate(${E.cx - EB.w / 2}px,${E.cy - EB.h / 2 + bob + drop}px) perspective(1100px) rotateX(${tilt.x.toFixed(2)}deg) rotateY(${tilt.y.toFixed(2)}deg) rotate(${((1 - inK) * -14).toFixed(2)}deg) scale(${E.s.toFixed(4)})`;
     const sx = (-tilt.y * 2.2).toFixed(1), sy = (16 + tilt.x * 2 + zoom * 10).toFixed(1);
     envC.style.filter = `drop-shadow(${sx}px ${sy}px ${(22 + zoom * 18).toFixed(0)}px rgba(40,4,2,.55)) drop-shadow(0 2px 3px rgba(40,4,2,.4))`;
     css(document.documentElement, '--sheen', (50 + tilt.y * 6).toFixed(1) + '%');

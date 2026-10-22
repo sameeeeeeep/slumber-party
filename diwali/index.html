@@ -136,11 +136,18 @@
   <div class="gate-card">
     <p class="g-kick">चिट्ठी आई है!</p>
     <h2 class="g-title"><span data-name>Dost</span> ji, ye chitthi sirf aapke liye hai.</h2>
+    <img class="g-env" src="assets/envelope.webp" alt="">
     <form id="gform" autocomplete="on" novalidate>
-      <label class="g-lbl" for="phone">Apna phone number daalo</label>
+      <div class="g-field" id="nameField" hidden>
+        <label class="g-lbl" for="gname">aapka naam?</label>
+        <div class="g-row"><input id="gname" name="name" type="text" autocomplete="given-name" placeholder="Riya" maxlength="32"></div>
+      </div>
+      <div class="g-field" id="phoneField" hidden>
+      <label class="g-lbl" for="phone">apna phone number daalo</label>
       <div class="g-row">
         <span class="g-cc">+91</span>
         <input id="phone" name="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="98765 43210" maxlength="16">
+      </div>
       </div>
       <button class="g-btn" type="submit">kholo</button>
       <p class="g-err" id="gerr" role="alert"></p>

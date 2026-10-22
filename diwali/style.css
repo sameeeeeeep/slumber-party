@@ -375,3 +375,20 @@ body.open .gate { transform: translateY(110%); opacity: 0; pointer-events: none;
   background: linear-gradient(115deg, transparent calc(var(--sheen, 50%) - 24%), rgba(255,248,225,.45) var(--sheen, 50%), transparent calc(var(--sheen, 50%) + 24%)); }
 #env, .card { transform-style: preserve-3d; backface-visibility: hidden; }
 .cardname small { display: block; margin-top: 6px; font: 600 .42em/1 var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--cream); text-shadow: none; opacity: .85; }
+
+/* ═════════ the popup comes first: centred card over a blurred stage ═════════ */
+.gate { position: fixed !important; inset: 0 !important; width: auto !important; z-index: 30; padding: 20px 16px !important;
+  display: grid !important; place-items: center; align-items: center;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(117,21,15,.55), rgba(40,4,2,.88));
+  -webkit-backdrop-filter: blur(16px) saturate(1.1); backdrop-filter: blur(16px) saturate(1.1);
+  transition: opacity .55s ease, visibility 0s linear .55s; }
+.gate .gate-card { animation: popIn .7s cubic-bezier(.2,1.3,.4,1) both .15s; width: min(100%, 400px); padding: 26px 22px 18px; }
+@keyframes popIn { from { opacity: 0; transform: translateY(24px) scale(.92); } to { opacity: 1; transform: none; } }
+body.open .gate { transform: none !important; opacity: 0; visibility: hidden; pointer-events: none; }
+body.open .gate .gate-card { transform: translateY(-30px) scale(.96); transition: transform .5s; }
+.g-env { width: 72%; height: auto; margin: -6px auto 10px; filter: drop-shadow(0 8px 10px rgba(40,4,2,.35)); transform: rotate(-4deg); animation: envBob 3s ease-in-out infinite alternate; }
+@keyframes envBob { from { transform: rotate(-4deg) translateY(0); } to { transform: rotate(-2deg) translateY(-4px); } }
+.g-field { margin-bottom: 10px; }
+.g-field .g-row input { font-size: 20px; }
+#env { opacity: 0; }
+body:not(.open) .bottom, body:not(.open) .snd { opacity: 0; }
