@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>nailinit Diwali Party · Chitthi aayi hai</title>
+<meta name="description" content="nailinit Diwali Party. Aapke naam ki chitthi aayi hai.">
+<meta property="og:title" content="Chitthi aayi hai ✉️ nailinit Diwali Party">
+<meta property="og:description" content="Aapke naam ki chitthi aayi hai. Kholo, jalao, aao.">
+<meta property="og:image" content="assets/og.jpg">
+<meta name="theme-color" content="#75150f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="locked">
+
+<!-- ═════════════ Scroll sequence: maachis → teeli → aag → chitthi ═════════════ -->
+<section id="seq">
+  <div id="stage">
+    <div class="ground"></div>
+    <svg id="bulbs" class="bulbs" aria-hidden="true"></svg>
+
+    <header class="mast">
+      <img class="mast-nl" src="assets/nailinit_light.webp" alt="nailinit">
+      <span class="mast-pre">presents</span>
+    </header>
+
+    <!-- the invite inside the envelope: the deck's AAO poster -->
+    <div id="card" class="card" aria-hidden="true"><img src="assets/poster.webp" alt="nailinit Diwali Party — आओ"></div>
+    <div id="cardname" class="cardname"><span data-name>Dost</span> ji, <b>आओ!</b></div>
+
+    <canvas id="env" aria-label="Your envelope"></canvas>
+
+    <div id="box" class="box" aria-hidden="true">
+      <div class="drawer"><img src="assets/mb_tray.webp" alt=""></div>
+      <img class="sleeve" src="assets/mb_sleeve.webp" alt="">
+    </div>
+
+    <div id="match" class="match" aria-hidden="true"><i class="head"><i class="char"></i></i></div>
+
+    <canvas id="fx" aria-hidden="true"></canvas>
+    <div id="glow" aria-hidden="true"></div>
+    <div id="shade" aria-hidden="true"></div>
+
+    <div id="caption" class="caption" aria-live="polite"><span>Chitthi aayi hai!</span></div>
+    <div id="play" class="play">
+      <button id="playbtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>जलाओ · Jalao</button>
+      <span>ya khud scroll karo ↓</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ The invite ═════════════ -->
+<main id="details">
+  <div class="bunting" aria-hidden="true"></div>
+
+  <section class="aao">
+    <div class="aao-text">
+      <p class="kicker">सादर आमंत्रण</p>
+      <h1><span data-name>Dost</span>, mohalla aapka <em>intezaar</em> kar raha hai.</h1>
+      <p class="lede">Diye, chugli, chai aur <b>nakhre unlimited.</b> Is Diwali poora mohalla ek chhat ke neeche, aur aapke bina party adhoori hai.</p>
+    </div>
+  </section>
+
+  <section class="boards">
+    <article class="board b-yellow">
+      <p class="b-hi">कब?</p><p class="b-en">Kab</p>
+      <p class="b-val" data-c="dateLong"></p>
+      <p class="b-note"><span data-c="dateHi"></span> · <span data-c="time"></span></p>
+    </article>
+    <article class="board b-blue">
+      <p class="b-hi">कहाँ?</p><p class="b-en">Kahan</p>
+      <p class="b-val" data-c="venue"></p>
+      <p class="b-note" data-c="area"></p>
+      <a class="b-btn" id="map" href="#" target="_blank" rel="noopener" hidden>Rasta dikhao →</a>
+    </article>
+    <article class="board b-pink">
+      <p class="b-hi">क्या पहनें?</p><p class="b-en">Kya pehnein</p>
+      <p class="b-val" data-c="dress"></p>
+      <p class="b-note" data-c="dressNote"></p>
+    </article>
+  </section>
+
+  <section class="stalls">
+    <h2><span class="hi">मोहल्ले में क्या क्या है</span>Mohalle mein kya kya hai</h2>
+    <div class="ticker"><div class="row" id="row1"></div></div>
+    <div class="ticker rev"><div class="row" id="row2"></div></div>
+  </section>
+
+  <section class="wall">
+    <h2><span class="hi">मोहल्ले की दीवार</span>Mohalle ki deewar</h2>
+    <div class="posters">
+      <figure class="p p1"><img src="assets/nakhre.webp" alt=""><figcaption>नखरे <b>unlimited</b></figcaption></figure>
+      <figure class="p p2"><img src="assets/hand_chilli.webp" alt=""><figcaption>spicy <b>पर प्यारी</b></figcaption></figure>
+      <figure class="p p3"><img src="assets/gossip.webp" alt=""><figcaption>आओ sis, <b>let's चुगली</b></figcaption></figure>
+      <figure class="p p4"><img src="assets/tiger.webp" alt=""><figcaption>made in <b>india</b></figcaption></figure>
+      <figure class="p p5"><img src="assets/hand_nimbu.webp" alt=""><figcaption>no बुरी <b>नज़र</b></figcaption></figure>
+      <figure class="p p6"><img src="assets/door.webp" alt=""><figcaption>मेड इन <b>इंडिया</b></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="rsvp">
+    <img class="rsvp-star s1" src="assets/star_pink.webp" alt="">
+    <img class="rsvp-star s2" src="assets/star_pale.webp" alt="">
+    <p class="kicker">आ रहे हो ना?</p>
+    <h2>Aa rahe ho na, <span data-name>Dost</span>?</h2>
+    <a class="cta" id="wa" href="#" target="_blank" rel="noopener">Haan ji, pakka! <span>→</span></a>
+    <button class="cta ghost" id="ics" type="button">Calendar mein daalo</button>
+    <p class="by" data-c="rsvpBy"></p>
+  </section>
+
+  <footer class="foot">
+    <div class="foot-tick"><div class="row" id="row3"></div></div>
+    <img src="assets/nailinit_light.webp" alt="nailinit" class="foot-nl">
+    <p>मेड इन इंडिया · Made in India · No buri nazar</p>
+  </footer>
+</main>
+
+<!-- ═════════════ Gate ═════════════ -->
+<div id="gate" class="gate">
+  <div class="gate-card">
+    <p class="g-kick">चिट्ठी आई है!</p>
+    <h2 class="g-title"><span data-name>Dost</span> ji, ye chitthi sirf aapke liye hai.</h2>
+    <form id="gform" autocomplete="on" novalidate>
+      <label class="g-lbl" for="phone">Apna phone number daalo</label>
+      <div class="g-row">
+        <span class="g-cc">+91</span>
+        <input id="phone" name="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="98765 43210" maxlength="16">
+      </div>
+      <button class="g-btn" type="submit">खोलो · Kholo</button>
+      <p class="g-err" id="gerr" role="alert"></p>
+    </form>
+    <button class="g-btn solo" id="gopen" type="button" hidden>खोलो · Kholo</button>
+  </div>
+</div>
+
+<button id="snd" class="snd" type="button" aria-label="Sound on" hidden>
+  <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+</button>
+
+<script src="config.js"></script>
+<script src="lib.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
