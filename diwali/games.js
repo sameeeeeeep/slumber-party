@@ -26,15 +26,15 @@ stalls.forEach(st => st.addEventListener('click', () => {
 /* ═════════ tota jyotish ═════════ */
 const FORTUNES = [
   { img: 'nakhre', title: 'nakhre unlimited', text: "this year you're allowed to be extra, and everyone will play along." },
-  { img: 'nazar', title: 'buri nazar wale, tera bhi bhala ho', text: "the haters are watching. you're thriving anyway." },
+  { img: 'nazar', title: 'buri nazar wale, tera bhi bhala ho', text: "the haters are watching. you're thriving anyway. keep the nimbu-mirchi handy." },
   { img: 'spicy', title: 'spicy par pyaari', text: 'a year of hot takes, delivered sweetly.' },
-  { img: 'naacho', title: 'naacho, gaao', text: 'looks like a year of dance floors. warm up those thumkas.' },
+  { img: 'naacho', title: 'naacho, gaao, lagao nakhoon', text: 'a year of dance floors and fresh sets. warm up those thumkas.' },
   { img: 'spark', title: 'nails that spark joy', text: "fresh sets, fresh starts. it's your glow-up year." },
   { img: 'meethe', title: 'meethe nakhoon, khatte log', text: 'keep the sweet ones close and the sour ones at arm’s length.' },
   { img: 'girlies', title: 'desi nail girlies club', text: 'membership confirmed. your girl gang is about to get bigger.' },
   { img: 'chugli', title: 'aao behen, chugli karein', text: "seems like you're going to have a year filled with gossip to share." },
-  { img: 'bsfree', title: 'bullsh*t free zone', text: "no fake friends, no drama you didn't ask for." },
-  { img: 'door', title: 'made in india', text: 'new doors are opening. walk in like you own the place.' },
+  { img: 'bsfree', title: 'bullsh*t free zone', text: "no fake friends, no drama you didn't ask for. bliss." },
+  { img: 'door', title: 'darwaaza khula hai', text: 'new doors are opening this year. walk in like you own the mohalla.' },
 ];
 FORTUNES.forEach(f => { const i = new Image(); i.src = `assets/cards/${f.img}.webp`; });
 const T = { table: $('#ttable'), tota: $('#tota'), cards: [], busy: false, state: 'stack' };
@@ -117,11 +117,11 @@ totaBuild();
 
 /* ═════════ gubbara phod ═════════ */
 const INAAMS = [
-  'one free rishta proposal (from mausi)', 'a lifetime supply of nazar', 'unlimited unsolicited advice',
-  'front-row seat at the next family drama', 'one (1) compliment on your nails', 'a chai refill you didn’t ask for',
-  'the aux cord, for one song only', 'your name in tonight’s chugli', 'a VIP pass to the selfie corner',
-  'one guilt-free extra gulab jamun', 'a thumka lesson from the aunties', 'immunity from “beta, shaadi kab?”',
-  'a free nail-art upgrade', 'one excuse to leave early (unused)', 'a mysterious kiss on the cheek from a stranger aunty',
+  'the last kaju katli in the dabba', 'a soan papdi box you can regift (again)', 'immunity from “beta, shaadi kab?”',
+  'first dibs on tonight’s chugli', 'a lifetime supply of nazar (with nimbu-mirchi)', 'one excuse to skip rangoli duty',
+  'the aux cord, for exactly one song', 'a phuljhadi that actually lights', 'front-row seat at the family drama',
+  'one guilt-free extra gulab jamun', 'a compliment on your nails from a stranger', 'the window seat at the chai tapri',
+  'unlimited unsolicited advice from mausi', 'a diya that refuses to go out', 'a thumka lesson from the aunties',
 ];
 const G = { ready: false, shots: 5, won: [] };
 function gubbaraReset() {
@@ -159,13 +159,13 @@ $('#gagain').addEventListener('click', gubbaraReset);
 
 /* ═════════ chhalla (ring toss on banta bottles) ═════════ */
 const PRIZES = [
-  ['aunty approval', 'she said “kitni sundar lag rahi hai”. framed and laminated.'],
-  ['gossip VIP pass', 'you get the chugli first, before the group chat.'],
-  ['nail art on the house', 'one free set at the nail bar tonight. go on.'],
-  ['dance-floor immunity', 'nobody can drag you to dance. (we both know you’ll go anyway.)'],
-  ['the last samosa', 'it’s yours. nobody will fight you. legally binding.'],
+  ['aunty approval', 'she said “kitni sundar lag rahi hai”. frame it.'],
+  ['gossip VIP pass', 'you hear the chugli first, before the group chat does.'],
+  ['dance-floor immunity', 'nobody can drag you to dance. (you’ll go anyway.)'],
+  ['the last samosa', 'it’s yours. nobody will fight you for it. probably.'],
+  ['no-nazar shield', 'one nimbu-mirchi, personally assigned to you for the year.'],
 ];
-const MISSES = ['try karo, beta. consolation prize: a pat on the head.', 'so close! you win… our sympathy.', 'missed! but the bottle respects your effort.'];
+const MISSES = ['try karo, beta. consolation prize: one pat on the head.', 'so close! the banta respects your effort.', 'missed! but your nails looked great doing it.'];
 const R = { ready: false, left: 3, busy: false };
 function chhallaReset() {
   const shelf = $('#cshelf'); shelf.replaceChildren();
@@ -218,14 +218,14 @@ const PERSONAS = [
   { name: 'main-character energy', text: 'every room you walk into this year is your entrance scene.' },
   { name: 'the dance-floor auntie', text: 'first on the floor, last to leave. the DJ already fears you.' },
   { name: 'the jugaad genius', text: "no plan? no problem. you'll fix everything with a safety pin and a smile." },
-  { name: 'the chai-tapri philosopher', text: 'deep thoughts, cutting chai, zero conclusions. iconic.' },
+  { name: 'the phuljhadi', text: 'small, sparkly, impossible to ignore. you light up every room for exactly as long as you want.' },
+  { name: 'the rangoli perfectionist', text: "everything has to be just right this year, and somehow it will be." },
+  { name: 'the soan papdi re-gifter', text: 'resourceful, practical, slightly suspicious. a legend in the making.' },
   { name: 'the glow-up of the year', text: 'new set, new vibe, new you. people will ask what changed.' },
   { name: 'the soft-spoken savage', text: 'sweet voice, sharp comebacks. nobody sees it coming.' },
   { name: 'the matchmaker', text: 'at least one wedding next year will be your fault. take the credit.' },
   { name: 'the selfie director', text: "you'll get everyone's best angle. nobody will get yours." },
-  { name: 'the plan-maker', text: "you'll organise every outing. at least half will actually happen." },
-  { name: 'the chaat-stall regular', text: 'you know every chaatwala by name, and they know your order.' },
-  { name: 'the lucky charm', text: 'good things follow you around this year. keep your people close.' },
+  { name: 'the mohalla’s lucky charm', text: 'good things follow you around this year. keep your people close.' },
 ];
 const D = { busy: false };
 async function draw() {
