@@ -229,23 +229,64 @@ document.querySelectorAll('.next-btn').forEach(b => b.addEventListener('click', 
 /* ═════════ tota jyotish ═════════ */
 // the card carries its own words (the poster); the tota's reading for next year sits below
 const FORTUNES = [
-  { img: 'nakhre', title: 'nakhre unlimited', text: 'next year, your nakhre get accepted without question. ask for the window seat.' },
-  { img: 'nazar', title: 'buri nazar wale', text: "you'll be doing so well next year that people will stare. keep the nimbu-mirchi close." },
-  { img: 'spicy', title: 'spicy par pyaari', text: 'one big, spicy plot twist is coming next year. you’ll handle it beautifully.' },
-  { img: 'naacho', title: 'naacho gaao', text: 'a year of baraats, sangeets and dance floors. your thumka goes viral (locally).' },
-  { img: 'meethe', title: 'meethe log, khatte log', text: 'some people will turn sour next year. the sweet ones stay. you’ll finally know who’s who.' },
-  { img: 'girlies', title: 'the girls club', text: 'your gang gets bigger next year. at least one new best friend is on the way.' },
-  { img: 'chugli', title: 'aao behen, chugli karein', text: "you're going to have a year filled with gossip to share. some of it might be about you." },
-  { img: 'bsfree', title: 'bullsh*t free zone', text: 'next year you cut the drama. no fake friends, no explaining yourself.' },
-  { img: 'door', title: 'darwaaza khula hai', text: 'a new door opens next year: new home, new job, maybe a new city. walk in like you own it.' },
-  { img: 'boss', title: 'boss nani era', text: 'next year you play your cards right, and everybody notices. shades on.' },
-  { img: 'baegum', title: 'baegum', text: 'you walk into next year like royalty. expect to be treated like one.' },
-  { img: 'kaam', title: 'keep kaam se kaam', text: 'big work year. head down, kaam se kaam, and it pays off before next diwali.' },
-  { img: 'chai', title: 'chai pe charcha', text: 'one long chai conversation next year changes your mind about something big.' },
-  { img: 'romance', title: 'pyaar ka chakkar', text: 'romance is in the cards next year. pick the good one this time.' },
+  // the deck's own posters (they carry their own words)
+  { img: 'nakhre', title: 'nakhre unlimited', text: ['next year, your nakhre get accepted without question. ask for the window seat.', 'every demand you make next year gets met. start small. or don’t.'] },
+  { img: 'nazar', title: 'buri nazar wale', text: ["you'll be doing so well next year that people will stare. keep the nimbu-mirchi close.", 'someone’s watching your glow-up very closely. let them.'] },
+  { img: 'spicy', title: 'spicy par pyaari', text: ['one big, spicy plot twist is coming next year. you’ll handle it beautifully.', 'next year has a little masala in it. you’ll love the taste.'] },
+  { img: 'naacho', title: 'naacho gaao', text: ['a year of baraats, sangeets and dance floors. your thumka goes viral (locally).', 'you’ll dance at more parties next year than the last five combined.'] },
+  { img: 'meethe', title: 'meethe log, khatte log', text: ['some people will turn sour next year. the sweet ones stay. you’ll finally know who’s who.', 'next year sorts your people for you. keep the meethe ones close.'] },
+  { img: 'girlies', title: 'the girls club', text: ['your gang gets bigger next year. at least one new best friend is on the way.', 'a girls’ trip finally leaves the group chat and actually happens.'] },
+  { img: 'chugli', title: 'aao behen, chugli karein', text: ["you're going to have a year filled with gossip to share. some of it might be about you.", 'next year you’re first to know everything. use it wisely. (you won’t.)'] },
+  { img: 'bsfree', title: 'bullsh*t free zone', text: ['next year you cut the drama. no fake friends, no explaining yourself.', 'a cleaner, calmer year. you’ll block what drains you and not miss it.'] },
+  { img: 'door', title: 'darwaaza khula hai', text: ['a new door opens next year: new home, new job, maybe a new city. walk in like you own it.', 'something you knocked on for ages finally opens next year.'] },
+  { img: 'boss', title: 'boss nani era', text: ['next year you play your cards right, and everybody notices. shades on.', 'you call the shots next year. everyone else just shuffles.'] },
+  { img: 'baegum', title: 'baegum', text: ['you walk into next year like royalty. expect to be treated like one.', 'next year, people roll out the red carpet. act surprised.'] },
+  { img: 'kaam', title: 'keep kaam se kaam', text: ['big work year. head down, kaam se kaam, and it pays off before next diwali.', 'the hustle finally shows up in the bank account next year.'] },
+  { img: 'chai', title: 'chai pe charcha', text: ['one long chai conversation next year changes your mind about something big.', 'next year’s best decision gets made over a cutting chai.'] },
+  { img: 'romance', title: 'pyaar ka chakkar', text: ['romance is in the cards next year. pick the good one this time.', 'someone makes your heart do a little thumka next year.'] },
+  // new illustrated cards
+  { img: 'safar', title: 'safar likha hai', text: ['a trip you’ve been postponing finally happens next year. pack light.', 'your passport gets a new stamp next year. maybe two.'] },
+  { img: 'ghar', title: 'naya ghar, naya scene', text: ['next year you get the keys to something: a new home, a new room, a new start.', 'your space gets a glow-up next year. housewarming on you.'] },
+  { img: 'kursi', title: 'kursi tumhari hai', text: ['a promotion, a title, a bigger chair. next year you sit at the head of the table.', 'next year someone finally hands you the power. don’t give it back.'] },
+  { img: 'paisa', title: 'paisa hi paisa', text: ['money flows in next year from somewhere you didn’t expect.', 'next year your bank balance gives you a pleasant shock. for once.'] },
+  { img: 'shaadi', title: 'shehnai bajegi', text: ['wedding bells ring next year. maybe yours, definitely someone close.', 'clear your calendar: next year is wall-to-wall shaadis.'] },
+  { img: 'excall', title: 'ex ka phone aayega', text: ['an old flame calls next year. you let it ring. iconic.', 'someone from your past tries to come back next year. you’ve upgraded.'] },
+  { img: 'dil', title: 'dil ka mamla', text: ['matters of the heart get sweeter next year. let someone in.', 'next year your heart gets exactly what it’s been asking for.'] },
+  { img: 'single', title: 'single and thriving', text: ['next year you choose yourself, and it’s the best relationship you’ve had.', 'solo dates, solo trips, solo glow. next year is all you.'] },
+  { img: 'party', title: 'party har weekend', text: ['your social calendar explodes next year. pace yourself.', 'next year you host the party everyone talks about till holi.'] },
+  { img: 'filmy', title: 'filmy saal', text: ['next year plays out like a full movie: drama, songs and a happy ending.', 'your life gets filmy next year. at least one slow-motion moment.'] },
+  { img: 'neend', title: 'neend poori hogi', text: ['next year you finally sleep eight hours. the dark circles retire.', 'peace and proper rest next year. your bed is your best friend.'] },
+  { img: 'viral', title: 'viral hone wale ho', text: ['next year something you post blows up. keep the ring light charged.', 'your fifteen minutes of fame arrive next year. look cute.'] },
+  { img: 'glow', title: 'glow up guaranteed', text: ['next year you look better every month. people will ask what changed.', 'skin clear, mind clear, calendar clear. the next-year glow is real.'] },
+  { img: 'fit', title: 'fit and fabulous', text: ['next year you actually stick to the gym. and you mention it a lot.', 'strongest year yet, body and mind. flex accordingly.'] },
+  { img: 'shanti', title: 'shanti hi shanti', text: ['next year is calm. no drama you didn’t sign up for.', 'peace is the plan next year, and for once the plan works.'] },
+  { img: 'swaad', title: 'haath mein swaad', text: ['next year your cooking becomes famous. everyone wants an invite.', 'one dish next year becomes your signature. guard the recipe.'] },
+  { img: 'mummy', title: 'mummy proud hai', text: ['next year you make your family very, very proud. expect forwarded photos.', 'mummy’s approval rating hits an all-time high next year.'] },
+  { img: 'doggo', title: 'ek naya dost', text: ['a furry new friend enters your life next year. adopt, don’t shop.', 'next year your camera roll fills up with one very good boy (or girl).'] },
+  { img: 'khushkhabri', title: 'khushkhabri aane wali hai', text: ['good news lands in the family next year. sweets on you.', 'next year someone close gives you news worth a whole box of laddoos.'] },
+  { img: 'dosti', title: 'dosti zindabad', text: ['next year your friendships get stronger. one trip, many inside jokes.', 'your gang levels up next year. ride or die, all of them.'] },
+  { img: 'lucky', title: 'kismat connection', text: ['luck sits on your shoulder all next year. buy the ticket.', 'next year the small lucky things keep stacking up.'] },
+  { img: 'taare', title: 'taare tumhare saath', text: ['the stars line up for you next year. ask for what you want.', 'next year a wish you made quietly comes true.'] },
+  { img: 'lakshmi', title: 'lakshmi ghar aayegi', text: ['prosperity walks in through your front door next year.', 'next year the money comes home, and stays.'] },
+  { img: 'shopping', title: 'shopping spree', text: ['next year you treat yourself. no guilt, all receipts.', 'your wardrobe gets a full upgrade next year. the mohalla will copy.'] },
+  { img: 'startup', title: 'apna kaam, apna naam', text: ['that side idea becomes real next year. launch it.', 'next year you build something that’s fully yours.'] },
+  { img: 'seekho', title: 'kuch naya seekhoge', text: ['next year you pick up a new skill and surprise everyone, mostly yourself.', 'a class, a hobby, an instrument: next year you finally start.'] },
+  { img: 'stage', title: 'spotlight tumhari', text: ['next year you take the stage, literally or not. the room is yours.', 'you get noticed next year for exactly what you’re good at.'] },
+  { img: 'detox', title: 'phone kam, life zyada', text: ['next year you scroll less and live more. weirdly, you love it.', 'one month off social media next year changes everything.'] },
+  { img: 'drama', title: 'serial wala drama', text: ['next year has one epic family drama. you watch from the front row.', 'dramatic zoom, dramatic music: next year has a twist. you survive it in style.'] },
+  { img: 'raaz', title: 'ek raaz khulega', text: ['a secret comes out next year. it explains a lot.', 'next year someone tells you something that changes how you see them.'] },
+  { img: 'comeback', title: 'comeback saal', text: ['next year is your comeback. feathers out, head high.', 'whatever knocked you down, next year you rise like a full peacock.'] },
+  { img: 'rani', title: 'mohalle ki rani', text: ['next year you run the neighbourhood. everyone knows your scooter.', 'queen of every gali you walk into next year.'] },
+  { img: 'baarish', title: 'baarish wala pyaar', text: ['one monsoon next year turns very romantic. carry an umbrella for two.', 'next year’s best memory: rain, chai and the right person.'] },
+  { img: 'chakka', title: 'chakka maaroge', text: ['next year you hit it out of the park. at work, in love, everywhere.', 'big swings next year. most of them land.'] },
+  { img: 'roadtrip', title: 'road trip pakka', text: ['next year your friends finally do the road trip. you choose the music.', 'mountains are calling next year. you pick up.'] },
+  { img: 'birthday', title: 'yaadgaar birthday', text: ['your next birthday is the best one yet. make a big wish.', 'next year someone throws you the surprise party you deserve.'] },
+  { img: 'boundary', title: 'na matlab na', text: ['next year you say no without explaining. it feels amazing.', 'boundaries up next year. the right people stay.'] },
+  { img: 'ghanti', title: 'shubh aarambh', text: ['a big new beginning starts next year. ring the bell.', 'next year opens with good news and keeps going.'] },
+  { img: 'chess', title: 'rani ki chaal', text: ['next year you play it smart. three moves ahead, always.', 'next year every move you make is the right one. checkmate.'] },
+  { img: 'sher', title: 'sherni saal', text: ['fearless year ahead. you roar, they listen.', 'next year you’re calm, confident and not to be messed with.'] },
 ];
-const HAS_TEXT = new Set(['nakhre', 'nazar', 'spicy', 'naacho', 'meethe', 'girlies', 'chugli', 'bsfree', 'door', 'patriarchy', 'baegum', 'kaam']);   // posters that already carry their words
-FORTUNES.forEach(f => { const i = new Image(); i.src = `assets/cards/${f.img}.webp`; });
+const HAS_TEXT = new Set(['nakhre', 'nazar', 'spicy', 'naacho', 'meethe', 'girlies', 'chugli', 'bsfree', 'baegum', 'kaam']);   // posters that already carry their words
 const T = { table: $('#ttable'), tota: $('#tota'), cards: [], busy: false, x: 0, y: 0, face: 1, run: 0 };
 const tsnd = (n, o) => { if (ACTIVE === 'tota') snd(n, o); };
 const cardT = (el, x, y, r, sc = 1, z) => { el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${sc})`; if (z != null) el.style.zIndex = z; };
@@ -317,6 +358,8 @@ async function totaPlay() {
   const bail = () => { if (T.run === my) T.busy = false; };
   $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true; $('#tlabel').hidden = true; hideShare('tota'); hidePin('tota');
   T.table.classList.remove('can-shuffle');
+  let pool = FORTUNES.filter(f => !SEEN_K.has(f.img)); if (!pool.length) { SEEN_K.clear(); pool = FORTUNES; }
+  const f = pick(pool); SEEN_K.add(f.img); new Image().src = `assets/cards/${f.img}.webp`;   // load just this one while the deck shuffles
   totaBuild(); bob(2); tsnd('parrot', { vol: .5 });
   $('#tsub').textContent = 'shuffling…';
   await sleep(300); if (!alive()) return bail();
@@ -335,8 +378,6 @@ async function totaPlay() {
     if (k === 2 || k === path.length - 2) { await bob((rnd(1, 3)) | 0); if (Math.random() < .5) tsnd('parrot', { vol: .45 }); } else await sleep(rnd(80, 260));
   }
   await bob(1); if (!alive()) return bail();
-  let pool = FORTUNES.filter(f => !SEEN_K.has(f.img)); if (!pool.length) { SEEN_K.clear(); pool = FORTUNES; }
-  const f = pick(pool); SEEN_K.add(f.img);
   const reading = Array.isArray(f.text) ? pick(f.text) : f.text;
   const p = fanPos(choice), el = T.cards[choice];
   const front = el.querySelector('.kc-front'); front.style.backgroundImage = `url(assets/cards/${f.img}.webp)`;
