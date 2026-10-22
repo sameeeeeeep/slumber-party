@@ -25,10 +25,11 @@ const nice = v => String(v || '').trim().replace(/\s+/g, ' ').slice(0, 32).repla
 const INV = (qs.get('inv') || '').trim();
 const KEY = (INV ? INV.slice(0, 5) : (qs.get('k') || '')).trim().toLowerCase();
 const SEALED = INV.length > 5 ? INV.slice(5) : '';
-let NAME = nice(qs.get('name') || qs.get('to'));
+let NAME = nice(qs.get('name') || qs.get('to'));            // full name: used for tracking / sheet rows
+const FIRST = () => (NAME || '').split(' ')[0];                 // first name: what the guest sees
 if (!NAME && SEALED) NAME = nice(L.unseal(SEALED, C.salt));
 function applyName() {
-  const n = NAME || C.defaultName;
+  const n = FIRST() || C.defaultName;
   document.querySelectorAll('[data-name]').forEach(e => { e.textContent = n; });
   $('.g-title').textContent = `${n}, ye chitthi sirf aapke liye hai…`;
   if ($('#wa')) $('#wa').href = `https://wa.me/${C.rsvp.whatsapp}?text=${encodeURIComponent(C.rsvp.text.replace('{name}', n))}`;
@@ -165,7 +166,7 @@ function drawEnvelope() {
   const L0 = { x: W * .263, y: H * .659, w: W * .473, h: H * .228 };
   x.textAlign = 'left'; x.fillStyle = '#c4221a'; x.font = `700 ${u * 2.4}px "Palanquin Dark"`;
   x.fillText('namastey,', L0.x + u * 2.8, L0.y + u * 3.5);
-  const label = NAME || C.defaultName;
+  const label = FIRST() || C.defaultName;
   let fs = u * 5.2; x.font = `400 ${fs}px "Bakbak One"`;
   while (x.measureText(label).width > L0.w - u * 6 && fs > u * 3) { fs -= .5; x.font = `400 ${fs}px "Bakbak One"`; }
   const nx = L0.x + L0.w / 2, ny = L0.y + u * 8.7;
