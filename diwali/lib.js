@@ -44,5 +44,30 @@
   // only gets in by luck (1 in a million) — fine for a party invite.
   const keyFor = (phone, salt) => sha256(salt + ':' + digits(phone)).slice(0, 5);
 
-  window.MKDLib = { sha256, digits, keyFor };
+  // Name sealed with the phone number: XOR with a sha256 keystream, base64url. Only the right
+  // number turns the tail of an ?inv= code back into the guest's name.
+  const b64u = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64u = str => { const b = atob(str.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((str.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+  function stream(phone, salt, n) {
+    let out = [];
+    for (let i = 0; out.length < n; i++) {
+      const h = sha256(salt + ':name:' + digits(phone) + ':' + i);
+      for (let j = 0; j < h.length; j += 2) out.push(parseInt(h.slice(j, j + 2), 16));
+    }
+    return out.slice(0, n);
+  }
+  function seal(name, phone, salt) {
+    const bytes = new TextEncoder().encode(String(name).trim().slice(0, 40));
+    const ks = stream(phone, salt, bytes.length);
+    return b64u(bytes.map((b, i) => b ^ ks[i]));
+  }
+  function unseal(blob, phone, salt) {
+    try {
+      const bytes = unb64u(blob), ks = stream(phone, salt, bytes.length);
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes.map((b, i) => b ^ ks[i]));
+    } catch (e) { return ''; }
+  }
+  const invite = (name, phone, salt) => keyFor(phone, salt) + seal(name, phone, salt);
+
+  window.MKDLib = { sha256, digits, keyFor, seal, unseal, invite };
 })();

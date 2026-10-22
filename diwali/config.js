@@ -5,22 +5,22 @@
 window.MKD = {
   // Changing the salt invalidates every link already sent — set it once.
   salt: 'mkd26',
-  defaultName: 'Dost',
+  defaultName: 'dost',
 
   event: {
-    dateLong: 'Saturday, 7 November 2026',   // PLACEHOLDER
-    dateHi: 'शनिवार, ७ नवंबर',               // PLACEHOLDER
-    dateShort: '07·11·26',                   // PLACEHOLDER (postmark)
-    time: '7 PM onwards',                    // PLACEHOLDER
-    venue: 'Venue revealed soon',            // PLACEHOLDER
-    area: 'Mumbai',                          // PLACEHOLDER
-    mapUrl: '',                              // e.g. https://maps.app.goo.gl/…
-    dress: 'Desi maximalist. Jitna loud, utna proud.',
-    dressNote: 'Bangles, bindis, nakhre — sab allowed.',
+    dateLong: '2 nov, 2026',
+    dateHi: 'रविवार, २ नवंबर',
+    dateShort: '02·11·26',
+    time: '7pm onwards',
+    venue: 'bastian beach club, juhu',
+    area: 'Mumbai',
+    mapUrl: 'https://www.google.com/maps/search/?api=1&query=Bastian+Beach+Club+Juhu+Mumbai',
+    dress: 'desi maximalist',
+    dressNote: '(be loud, basically)',
     rsvpBy: 'RSVP by 1 November',            // PLACEHOLDER
     // calendar file
-    start: '2026-11-07T19:00:00+05:30',       // PLACEHOLDER
-    end: '2026-11-08T01:00:00+05:30',         // PLACEHOLDER
+    start: '2026-11-02T19:00:00+05:30',
+    end: '2026-11-03T01:00:00+05:30',          // end time assumed
   },
 
   rsvp: {

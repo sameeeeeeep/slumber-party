@@ -18,12 +18,24 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 
 /* ───────────── guest + page content ───────────── */
 const qs = new URLSearchParams(location.search);
-const NAME = (qs.get('to') || '').trim().replace(/\s+/g, ' ').slice(0, 32) || C.defaultName;
-const KEY = (qs.get('k') || '').trim().toLowerCase();
-document.querySelectorAll('[data-name]').forEach(e => { e.textContent = NAME; });
+// ?inv=<5-char phone check><name sealed with the phone>  → phone-locked, name appears on unlock
+// ?name=riya                                             → open to anyone
+// ?to=Riya&k=<check>                                     → older links, still honoured
+const nice = v => String(v || '').trim().replace(/\s+/g, ' ').slice(0, 32).replace(/(^|\s)(\p{Ll})/gu, (m, a, b) => a + b.toUpperCase());
+const INV = (qs.get('inv') || '').trim();
+const KEY = (INV ? INV.slice(0, 5) : (qs.get('k') || '')).trim().toLowerCase();
+const SEALED = INV.length > 5 ? INV.slice(5) : '';
+let NAME = nice(qs.get('name') || qs.get('to'));
+if (!NAME && SEALED) NAME = store.get('mkd:name:' + INV) || '';      // remembered from an earlier unlock
+function applyName() {
+  const n = NAME || C.defaultName;
+  document.querySelectorAll('[data-name]').forEach(e => { e.textContent = n; });
+  $('.g-title').textContent = `${n}, ye chitthi sirf aapke liye hai…`;
+  $('#wa').href = `https://wa.me/${C.rsvp.whatsapp}?text=${encodeURIComponent(C.rsvp.text.replace('{name}', n))}`;
+}
+applyName();
 document.querySelectorAll('[data-c]').forEach(e => { e.textContent = C.event[e.dataset.c] || ''; });
 if (C.event.mapUrl) { const m = $('#map'); m.href = C.event.mapUrl; m.hidden = false; }
-$('#wa').href = `https://wa.me/${C.rsvp.whatsapp}?text=${encodeURIComponent(C.rsvp.text.replace('{name}', NAME))}`;
 $('#ics').addEventListener('click', () => {
   const f = iso => new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const ev = C.event;
@@ -164,12 +176,15 @@ function drawEnvelope() {
 
   // the pasted label: सेवा में, + the guest's name in Bakbak with the deck's red drop shadow
   const L0 = { x: W * .263, y: H * .659, w: W * .473, h: H * .228 };
-  x.textAlign = 'left'; x.fillStyle = '#c4221a'; x.font = `700 ${u * 2.5}px "Palanquin Dark"`;
-  x.fillText('सेवा में,', L0.x + u * 2.8, L0.y + u * 3.7);
-  const label = NAME + ' ji';
-  let fs = u * 7.4; x.font = `400 ${fs}px "Bakbak One"`;
-  while (x.measureText(label).width > L0.w - u * 5 && fs > u * 3) { fs -= .5; x.font = `400 ${fs}px "Bakbak One"`; }
-  const nx = L0.x + L0.w / 2, ny = L0.y + L0.h - u * 2.1;
+  x.textAlign = 'left'; x.fillStyle = '#c4221a'; x.font = `700 ${u * 2.4}px "Palanquin Dark"`;
+  x.fillText('namastey,', L0.x + u * 2.8, L0.y + u * 3.5);
+  const label = NAME || C.defaultName;
+  let fs = u * 5.2; x.font = `400 ${fs}px "Bakbak One"`;
+  while (x.measureText(label).width > L0.w - u * 6 && fs > u * 3) { fs -= .5; x.font = `400 ${fs}px "Bakbak One"`; }
+  const nx = L0.x + L0.w / 2, ny = L0.y + u * 8.7;
+  x.textAlign = 'center'; x.fillStyle = '#75150f'; x.font = `600 ${u * 1.9}px "Palanquin Dark"`;
+  x.fillText('mohalla no 26. khushiyon wali gali', nx, L0.y + L0.h - u * 1.1);
+  x.font = `400 ${fs}px "Bakbak One"`;
   x.textAlign = 'center';
   x.fillStyle = '#c4221a'; x.fillText(label, nx + u * .4, ny + u * .45);
   x.fillStyle = '#1c1410'; x.fillText(label, nx, ny);
@@ -388,7 +403,7 @@ const CAPS = {
   opening: 'Ek teeli nikal rahi hai…', lift: 'Ek teeli nikal rahi hai…',
   strike: coarse ? 'Teeli ko patti pe ragdo →' : 'Teeli ko patti pe tez drag karo →',
   carry: coarse ? 'Aag ko chitthi ke kone tak lao' : 'Aag ko kone tak drag karo',
-  touch: 'Lag gayi!', burn: 'Jal rahi hai… nazar na lage!', reveal: 'Aapka amantran!', done: 'Neeche scroll karo — details ↓',
+  touch: 'Lag gayi!', burn: 'ooh… it burns', reveal: 'Aapka amantran!', done: 'Neeche scroll karo — details ↓',
 };
 let capOverride = '', capUntil = 0, lastCap = '';
 function setPhase(ph) { S.ph = ph; S.t = 0; S.idle = 0; S.rest = null; document.body.dataset.ph = ph; }
@@ -510,7 +525,14 @@ gform.addEventListener('submit', e => {
   e.preventDefault();
   const v = $('#phone').value;
   if (L.digits(v).length < 10) { gerr.textContent = 'Poore 10 digit daalo ji.'; return; }
-  if (L.keyFor(v, C.salt) === KEY) { gerr.textContent = ''; open(); return; }
+  if (L.keyFor(v, C.salt) === KEY) {
+    gerr.textContent = '';
+    if (SEALED) {
+      const n = nice(L.unseal(SEALED, v, C.salt));
+      if (n) { NAME = n; store.set('mkd:name:' + INV, n); applyName(); envDirty = true; }
+    }
+    open(); return;
+  }
   gerr.textContent = ERRS[errN++ % ERRS.length];
   gate.classList.remove('shake'); void gate.offsetWidth; gate.classList.add('shake');
 });

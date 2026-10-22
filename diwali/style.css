@@ -374,3 +374,4 @@ body.open .gate { transform: translateY(110%); opacity: 0; pointer-events: none;
 .card::after { content: ''; position: absolute; inset: 0; border-radius: 3px; pointer-events: none; mix-blend-mode: soft-light;
   background: linear-gradient(115deg, transparent calc(var(--sheen, 50%) - 24%), rgba(255,248,225,.45) var(--sheen, 50%), transparent calc(var(--sheen, 50%) + 24%)); }
 #env, .card { transform-style: preserve-3d; backface-visibility: hidden; }
+.cardname small { display: block; margin-top: 6px; font: 600 .42em/1 var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--cream); text-shadow: none; opacity: .85; }
