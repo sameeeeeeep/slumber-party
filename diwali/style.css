@@ -369,3 +369,8 @@ body.open .gate { transform: translateY(110%); opacity: 0; pointer-events: none;
   .autobtn { font-size: 16px !important; }
   .powered { font-size: 11px; }
 }
+
+/* paper sheen that drifts with the tilt — makes the poster read as a printed object */
+.card::after { content: ''; position: absolute; inset: 0; border-radius: 3px; pointer-events: none; mix-blend-mode: soft-light;
+  background: linear-gradient(115deg, transparent calc(var(--sheen, 50%) - 24%), rgba(255,248,225,.45) var(--sheen, 50%), transparent calc(var(--sheen, 50%) + 24%)); }
+#env, .card { transform-style: preserve-3d; backface-visibility: hidden; }

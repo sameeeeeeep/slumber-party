@@ -70,10 +70,18 @@ const autoBtn = $('#autobtn'), afterEl = $('#after'), stepsEl = [...document.que
 const css = (el, k, v) => el.style.setProperty(k, v);
 
 let vw = 0, vh = 0, dpr = 1, lastEnvW = 0, wide = false;
-const E = {}, B = {}, M = {}, C2 = {};
+const E = {}, EB = {}, EZ = {}, B = {}, M = {}, C2 = {};
+let zoom = 0, RS = 2;                                         // envelope zoom (0 = resting, 1 = lit close-up)
+const tilt = { x: 0, y: 0, px: 0, py: 0 };
 const ENV_AR = 1600 / 788, POSTER_AR = 1000 / 1201, SLEEVE_AR = 1000 / 625, DRAWER = .253;
 const ORIGIN = [.05, .9];
 
+function setE() {
+  const z = ease(clamp(zoom));
+  E.w = lerp(EB.w, EZ.w, z); E.h = E.w / ENV_AR;
+  E.cx = lerp(EB.cx, EZ.cx, z); E.cy = lerp(EB.cy, EZ.cy, z);
+  E.x = E.cx - E.w / 2; E.y = E.cy - E.h / 2; E.s = E.w / EB.w;
+}
 function layout() {
   vw = stage.clientWidth; vh = stage.clientHeight;
   if (vw < 50 || vh < 50) return;
@@ -82,12 +90,16 @@ function layout() {
 
   // envelope
   const ew = wide ? Math.min(vw * .44, 640, vh * .42 * ENV_AR) : Math.min(vw * .9, 600, vh * .27 * ENV_AR);
-  Object.assign(E, { w: ew, h: ew / ENV_AR, cx: wide ? vw * .4 : vw / 2, cy: wide ? vh * .52 : vh * .39 });
-  E.x = E.cx - E.w / 2; E.y = E.cy - E.h / 2;
-  css(envC, '--ex', E.x + 'px'); css(envC, '--ey', E.y + 'px'); css(envC, '--ew', E.w + 'px'); css(envC, '--eh', E.h + 'px');
+  Object.assign(EB, { w: ew, h: ew / ENV_AR, cx: wide ? vw * .4 : vw / 2, cy: wide ? vh * .52 : vh * .39 });
+  // once the match is lit, the envelope comes forward and fills the frame
+  const zw = wide ? Math.min(vw * .66, vh * .64 * ENV_AR, 1100) : Math.min(vw * .97, vh * .4 * ENV_AR);
+  Object.assign(EZ, { w: zw, cx: vw / 2, cy: wide ? vh * .5 : vh * .42 });
+  RS = Math.min(3.2, dpr * Math.max(1, EZ.w / EB.w));
+  setE();
+  css(envC, '--ew', EB.w + 'px'); css(envC, '--eh', EB.h + 'px');
 
   // the AAO poster: starts inside the envelope, grows into the hero
-  C2.h = E.h * .9; C2.w = C2.h * POSTER_AR;
+  C2.h = EB.h * .9; C2.w = C2.h * POSTER_AR;
   C2.fh = Math.min(vh * .6, (vw * .82) / POSTER_AR, 660); C2.fs = C2.fh / C2.h;
   C2.fy = clamp(vh * .45, C2.fh / 2 + 84, vh - C2.fh / 2 - 120);
   css(card, '--cw', C2.w + 'px'); css(card, '--ch', C2.h + 'px');
@@ -96,8 +108,8 @@ function layout() {
   // matchbox
   const bw = wide ? Math.min(vw * .24, 360) : Math.min(vw * .64, 330), bh = bw / SLEEVE_AR;
   Object.assign(B, wide
-    ? { w: bw, h: bh, cx: Math.min(vw - bw * .75 - 24, E.x + E.w + bw * .7), cy: E.cy + E.h * .25 }
-    : { w: bw, h: bh, cx: vw / 2 - bw * DRAWER * .5, cy: Math.min(vh - bh / 2 - 150, E.y + E.h + (vh - E.y - E.h) * .42) });
+    ? { w: bw, h: bh, cx: Math.min(vw - bw * .75 - 24, EB.cx + EB.w / 2 + bw * .7), cy: EB.cy + EB.h * .25 }
+    : { w: bw, h: bh, cx: vw / 2 - bw * DRAWER * .5, cy: Math.min(vh - bh / 2 - 150, EB.cy + EB.h / 2 + (vh - EB.cy - EB.h / 2) * .42) });
   css(boxEl, '--bw', bw + 'px'); css(boxEl, '--bh', bh + 'px');
 
   M.L = bw * .82; M.mh = M.L / 10.6; M.st = Math.max(6, M.mh); M.h = M.L * .455;   // head centre sits ~45% of the length from the middle
@@ -105,7 +117,7 @@ function layout() {
 
   fxC.width = Math.round(vw * dpr); fxC.height = Math.round(vh * dpr);
   buildDecor();
-  if (Math.abs(lastEnvW - E.w) > 1) { lastEnvW = E.w; envDirty = true; }
+  if (Math.abs(lastEnvW - EB.w) > 1) { lastEnvW = EB.w; envDirty = true; }
 }
 
 /* kandils + marigold strings hanging from the top edge */
@@ -137,9 +149,9 @@ function buildDecor() {
 const envArt = document.createElement('canvas'), ea = envArt.getContext('2d');
 let envDirty = true;
 function drawEnvelope() {
-  const W = E.w, H = E.h, u = W / 100, x = ea;
-  envArt.width = Math.round(W * dpr); envArt.height = Math.round(H * dpr);
-  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = EB.w, H = EB.h, u = W / 100, x = ea;
+  envArt.width = Math.round(W * RS); envArt.height = Math.round(H * RS);
+  x.setTransform(RS, 0, 0, RS, 0, 0);
   x.clearRect(0, 0, W, H);
   if (IMG.env) x.drawImage(IMG.env, 0, 0, W, H);
   // deck lockup: nailinit / DIWALI / P A R T Y
@@ -211,7 +223,7 @@ if (gl) {
 }
 if (!gl) ctx2d = envC.getContext('2d');
 function uploadEnvelope() {
-  if (!(E.w > 20)) return;
+  if (!(EB.w > 20)) return;
   drawEnvelope();
   envC.width = envArt.width; envC.height = envArt.height;
   if (gl) {
@@ -460,6 +472,11 @@ function pup(e) {
 }
 stage.addEventListener('pointerdown', pdown);
 stage.addEventListener('pointermove', pmove);
+stage.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse') return;
+  const r = stage.getBoundingClientRect();
+  tilt.px = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1); tilt.py = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1);
+});
 stage.addEventListener('pointerup', pup);
 stage.addEventListener('pointercancel', pup);
 window.addEventListener('keydown', e => {
@@ -506,7 +523,7 @@ $('#replay').addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setTimeout(() => {
     document.body.classList.add('locked'); afterEl.classList.remove('on');
-    burnP = 0; cardT = 0; mt.lit = 0; mt.char = 0; S.auto = false; autoBtn.classList.remove('on'); box.dx = 0; box.off = 1; parts.length = 0;
+    burnP = 0; cardT = 0; mt.lit = 0; mt.char = 0; S.auto = false; autoBtn.classList.remove('on'); box.dx = 0; box.off = 1; parts.length = 0; zoom = 0;
     envC.style.visibility = 'visible'; nameEl.classList.remove('on');
     setPhase('enter');
   }, 450);
@@ -524,6 +541,14 @@ function frame(nowMs) {
   S.t += dt; S.idle += dt;
   if (envDirty) uploadEnvelope();
   B.x0 = B.cx; B.y0 = B.cy;
+  const zTarget = ['carry', 'touch', 'burn'].includes(S.ph) ? 1 : (S.ph === 'reveal' || S.ph === 'done') ? zoom : 0;
+  zoom = lerp(zoom, zTarget, 1 - Math.exp(-dt * 2.6));
+  setE();
+  // floating-object feel: slow breathing tilt + bob, leaning toward the cursor
+  tilt.x = lerp(tilt.x, Math.sin(now * .7) * 3.2 + tilt.py * -6, .06);
+  tilt.y = lerp(tilt.y, Math.cos(now * .55) * 4.2 + tilt.px * 7, .06);
+  const bob = reduced ? 0 : Math.sin(now * 1.1) * 4;
+  if (reduced) { tilt.x = 0; tilt.y = 0; }
 
   /* ── advance the story ── */
   const ph = S.ph;
@@ -634,13 +659,21 @@ function frame(nowMs) {
   if (S.ph === 'touch') burnP = .012 * clamp(S.t / .5);
   const showEnv = burnP < .999;
   if (showEnv !== envShown) { envC.style.visibility = showEnv ? 'visible' : 'hidden'; envShown = showEnv; }
-  if (showEnv) renderBurn(burnP, now);
+  if (showEnv) {
+    renderBurn(burnP, now);
+    envC.style.transform = `translate(${E.cx - EB.w / 2}px,${E.cy - EB.h / 2 + bob}px) perspective(1100px) rotateX(${tilt.x.toFixed(2)}deg) rotateY(${tilt.y.toFixed(2)}deg) scale(${E.s.toFixed(4)})`;
+    const sx = (-tilt.y * 2.2).toFixed(1), sy = (16 + tilt.x * 2 + zoom * 10).toFixed(1);
+    envC.style.filter = `drop-shadow(${sx}px ${sy}px ${(22 + zoom * 18).toFixed(0)}px rgba(40,4,2,.55)) drop-shadow(0 2px 3px rgba(40,4,2,.4))`;
+    css(document.documentElement, '--sheen', (50 + tilt.y * 6).toFixed(1) + '%');
+  }
   card.style.visibility = burnP > 0 ? 'visible' : 'hidden';
   const rv = eob(cardT);
-  css(card, '--cx', (lerp(E.cx, vw / 2, eo(cardT)) - C2.w / 2) + 'px');
-  css(card, '--cy', (lerp(E.cy, C2.fy, eo(cardT)) - C2.h / 2) + 'px');
-  css(card, '--cs', lerp(1, C2.fs, rv).toFixed(4));
-  css(card, '--crot', (lerp(-4, 0, eo(cardT))).toFixed(2) + 'deg');
+  const ccx = lerp(E.cx, vw / 2, eo(cardT)), ccy = lerp(E.cy, C2.fy, eo(cardT)) + bob * (.4 + cardT * .6);
+  const ctx3 = cardT > 0 ? tilt.x * (.6 + cardT * .5) : 0, cty3 = cardT > 0 ? tilt.y * (.6 + cardT * .5) : 0;
+  card.style.transform = `translate(${ccx - C2.w / 2}px,${ccy - C2.h / 2}px) perspective(1200px) rotateX(${ctx3.toFixed(2)}deg) rotateY(${cty3.toFixed(2)}deg) scale(${lerp(E.s, C2.fs, rv).toFixed(4)}) rotate(${lerp(-4, 0, eo(cardT)).toFixed(2)}deg)`;
+  css(card, '--sheen', (50 + cty3 * 7).toFixed(1) + '%');
+  card.style.filter = `drop-shadow(${(-cty3 * 2.4).toFixed(1)}px ${(22 + ctx3 * 2).toFixed(1)}px 36px rgba(40,4,2,.6))`;
+  nameEl.style.transform = nameEl.classList.contains('on') ? `translateY(${(bob * .5).toFixed(1)}px)` : '';
 
   /* ── light ── */
   const burning = burnP > 0 && burnP < 1 ? Math.sin(Math.PI * burnP) : 0;
