@@ -28,6 +28,7 @@ const SEALED = INV.length > 5 ? INV.slice(5) : '';
 let NAME = nice(qs.get('name') || qs.get('to'));            // full name: used for tracking / sheet rows
 const FIRST = () => (NAME || '').split(' ')[0];                 // first name: what the guest sees
 if (!NAME && SEALED) NAME = nice(L.unseal(SEALED, C.salt));
+window.MKDGuest = { get first() { return FIRST() || C.defaultName; }, get full() { return NAME || C.defaultName; } };
 function applyName() {
   const n = FIRST() || C.defaultName;
   document.querySelectorAll('[data-name]').forEach(e => { e.textContent = n; });
@@ -66,7 +67,7 @@ const IMG = {};
 const loadImg = (k, src) => new Promise(res => { const i = new Image(); i.onload = () => { IMG[k] = i; res(); }; i.onerror = res; i.src = src; });
 const CONF = Array.from({ length: 32 }, (_, i) => 'c' + String(i + 1).padStart(2, '0'));
 const assetsReady = Promise.all([
-  loadImg('env', 'assets/envelope.webp'), loadImg('nl', 'assets/nailinit.webp'), loadImg('diwali', 'assets/diwali_blue.webp'),
+  loadImg('env', 'assets/envelope.webp'), loadImg('nl', 'assets/nailinit.webp'), loadImg('dot', 'assets/dot_dark.webp'), loadImg('diwali', 'assets/diwali_blue.webp'),
   ...CONF.map(k => loadImg(k, `assets/conf/${k}.webp`)),
 ]);
 const fontsReady = Promise.all(['700 20px "Palanquin Dark"', '600 20px "Palanquin Dark"', '20px "Bakbak One"', '600 20px "Clash Display"']
@@ -76,7 +77,7 @@ const fontsReady = Promise.all(['700 20px "Palanquin Dark"', '600 20px "Palanqui
 const stage = $('#stage'), envC = $('#env'), card = $('#card');
 const boxEl = $('#box'), drawer = boxEl.querySelector('.drawer');
 const matchEl = $('#match'), fxC = $('#fx'), fx = fxC.getContext('2d');
-const nightEl = $('#night'), glowEl = $('#glow'), capEl = $('#caption'), nameEl = $('#cardname'), ghost = $('#ghost');
+const nightEl = $('#night'), nctx = nightEl.getContext('2d'), glowEl = $('#glow'), capEl = $('#caption'), nameEl = $('#cardname'), ghost = $('#ghost');
 const autoBtn = $('#autobtn'), afterEl = $('#after'), stepsEl = [...document.querySelectorAll('#steps li')];
 const css = (el, k, v) => el.style.setProperty(k, v);
 
@@ -127,6 +128,7 @@ function layout() {
   css(matchEl, '--L', M.L + 'px'); css(matchEl, '--st', M.st + 'px');
 
   fxC.width = Math.round(vw * dpr); fxC.height = Math.round(vh * dpr);
+  nightEl.width = Math.round(vw * dpr * .5); nightEl.height = Math.round(vh * dpr * .5);
   buildDecor();
   if (Math.abs(lastEnvW - EB.w) > 1) { lastEnvW = EB.w; envDirty = true; }
 }
@@ -160,7 +162,9 @@ function drawEnvelope() {
   // deck lockup on the top flap: nailinit / DIWALI / P A R T Y
   x.textBaseline = 'alphabetic';
   let ly = H * .085;
-  if (IMG.nl) { const h = u * 4.2, w = h * IMG.nl.width / IMG.nl.height; x.drawImage(IMG.nl, W / 2 - w / 2, H * .13, w, h); }
+  if (IMG.dot) { const h = u * 3.4, w = h * IMG.dot.width / IMG.dot.height; x.drawImage(IMG.dot, W / 2 - w / 2, H * .085, w, h); }
+  x.fillStyle = '#1c1410'; x.font = `600 ${u * 1.2}px "Clash Display", sans-serif`; x.textAlign = 'center'; x.fillText('P R E S E N T S', W / 2, H * .085 + u * 5);
+  if (IMG.nl) { const h = u * 3.8, w = h * IMG.nl.width / IMG.nl.height; x.drawImage(IMG.nl, W / 2 - w / 2, H * .085 + u * 6.2, w, h); }
 
   // the pasted label: सेवा में, + the guest's name in Bakbak with the deck's red drop shadow
   const L0 = { x: W * .263, y: H * .659, w: W * .473, h: H * .228 };
@@ -174,22 +178,47 @@ function drawEnvelope() {
   x.fillText('mohalla no 26. khushiyon wali gali', nx, L0.y + L0.h - u * 1.1);
   x.font = `400 ${fs}px "Bakbak One"`;
   x.textAlign = 'center';
-  x.fillStyle = '#c4221a'; x.fillText(label, nx + u * .4, ny + u * .45);
-  x.fillStyle = '#1c1410'; x.fillText(label, nx, ny);
+  // gold foil, hot-stamped: debossed shadow, metallic fill, a bright top edge
+  x.fillStyle = 'rgba(110,20,10,.85)'; x.fillText(label, nx + u * .3, ny + u * .38);
+  const fg = x.createLinearGradient(0, ny - fs * .8, 0, ny + fs * .1);
+  fg.addColorStop(0, '#f3d27a'); fg.addColorStop(.3, '#c48a1e'); fg.addColorStop(.5, '#6e3f08'); fg.addColorStop(.64, '#d9a234'); fg.addColorStop(1, '#5a3006');
+  x.fillStyle = fg; x.fillText(label, nx, ny);
+  x.strokeStyle = 'rgba(255,248,220,.55)'; x.lineWidth = Math.max(.6, u * .08); x.strokeText(label, nx, ny - u * .05);
   x.textAlign = 'left';
+  // mask: R = foil (name), G = wax seal
+  maskArt.width = envArt.width; maskArt.height = envArt.height;
+  const m = maskArt.getContext('2d'); m.setTransform(RS, 0, 0, RS, 0, 0); m.clearRect(0, 0, W, H);
+  m.fillStyle = 'rgb(0,0,0)'; m.fillRect(0, 0, W, H);
+  m.font = x.font; m.textAlign = 'center'; m.textBaseline = 'alphabetic'; m.font = `400 ${fs}px "Bakbak One"`;
+  m.fillStyle = 'rgb(255,0,0)'; m.fillText(label, nx, ny);
+  m.globalCompositeOperation = 'lighter';
+  const sg = m.createRadialGradient(W * .498, H * .495, 0, W * .498, H * .495, W * .05);
+  sg.addColorStop(0, 'rgb(0,255,0)'); sg.addColorStop(.85, 'rgb(0,200,0)'); sg.addColorStop(1, 'rgb(0,0,0)');
+  m.fillStyle = sg; m.beginPath(); m.arc(W * .498, H * .495, W * .05, 0, 7); m.fill();
 }
+const maskArt = document.createElement('canvas');
 
 /* ───────────── burn shader (WebGL, 2D fallback) ───────────── */
-let gl = null, glu = {}, tex = null, ctx2d = null;
+let gl = null, glu = {}, tex = null, mtex = null, ctx2d = null;
 try { gl = envC.getContext('webgl', { premultipliedAlpha: false, alpha: true, antialias: false }); } catch (e) {}
 if (gl) {
   const vs = `attribute vec2 p;varying vec2 v;void main(){v=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}`;
-  const fs = `precision highp float;varying vec2 v;uniform sampler2D T;uniform float P,Ti;uniform vec2 O,A;
+  const fs = `precision highp float;varying vec2 v;uniform sampler2D T;uniform sampler2D M;uniform float P,Ti,Li;uniform vec2 O,A,Lp;
   float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
   float n(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),u.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),u.x),u.y);}
   float fb(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*n(p);p*=2.03;a*=.5;}return s;}
   void main(){
     vec4 c=texture2D(T,v);
+    vec4 mk=texture2D(M,v);
+    // foil glint: a bright band sweeping across the hot-stamped name
+    float band=smoothstep(.06,0.,abs(fract(v.x*.9+v.y*.35-Ti*.18)-.5)-.0);
+    c.rgb+=mk.r*(band*vec3(1.,.95,.75)*.85 + vec3(.06,.04,0.));
+    // wax seal: glossy specular that follows the light (the flame)
+    vec2 sc=vec2(.498,.495); vec2 dir=normalize((Lp-sc)*A+vec2(1e-4)); vec2 sp=sc+dir/A*.022;
+    float spec=exp(-dot((v-sp)*A,(v-sp)*A)/.00012);
+    float rim=smoothstep(.0,.6,mk.g)*(1.-smoothstep(.6,1.,mk.g));
+    c.rgb+=mk.g/1.*(spec*(.35+Li*.9)*vec3(1.,.92,.85)) + rim*.05;
+    c.rgb*=1.-mk.g*.08*(1.-Li);
     if(P<=0.){gl_FragColor=c;return;}
     float d=length((v-O)*A)/length(A);
     float nz=fb(v*A*4.+vec2(0.,Ti*.05));
@@ -213,7 +242,10 @@ if (gl) {
     const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    ['T', 'P', 'Ti', 'O', 'A'].forEach(k => { glu[k] = gl.getUniformLocation(pr, k); });
+    ['T', 'M', 'P', 'Ti', 'O', 'A', 'Lp', 'Li'].forEach(k => { glu[k] = gl.getUniformLocation(pr, k); });
+    mtex = gl.createTexture(); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, mtex);
+    [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]].forEach(([k, v]) => gl.texParameteri(gl.TEXTURE_2D, k, v));
+    gl.activeTexture(gl.TEXTURE0);
     tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
     [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]
       .forEach(([k, v]) => gl.texParameteri(gl.TEXTURE_2D, k, v));
@@ -228,12 +260,18 @@ function uploadEnvelope() {
     gl.viewport(0, 0, envC.width, envC.height);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, envArt);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, mtex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, maskArt);
+    gl.activeTexture(gl.TEXTURE0);
   }
   envDirty = false;
 }
 function renderBurn(b, t) {
   if (gl) {
-    gl.uniform1i(glu.T, 0); gl.uniform1f(glu.P, b); gl.uniform1f(glu.Ti, t);
+    gl.uniform1i(glu.T, 0); gl.uniform1i(glu.M, 1); gl.uniform1f(glu.P, b); gl.uniform1f(glu.Ti, t);
+    // light position in envelope uv: the flame if lit, else a soft key from the top-left
+    const lx = mt.lit ? (mt.x - E.x) / E.w : -.3, ly = mt.lit ? (mt.y - E.y) / E.h : -.4;
+    gl.uniform2f(glu.Lp, lx, ly); gl.uniform1f(glu.Li, mt.lit ? 1 : .35);
     gl.uniform2f(glu.O, ORIGIN[0], ORIGIN[1]); gl.uniform2f(glu.A, E.w / E.h, 1);
     gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   } else {
@@ -342,28 +380,53 @@ function petalRain(dt) {
       flip: rnd(0, 6), vf: rnd(2, 5), s: rnd(14, 24), life: 0, max: rnd(5, 8), drag: .2, sway: rnd(20, 50), float: true });
   }
 }
+// value noise for flame turbulence
+const _nz = (() => { const p = Array.from({ length: 256 }, () => Math.random()); return x => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return p[i & 255] * (1 - u) + p[(i + 1) & 255] * u; }; })();
+function flameShape(c, x, by, w, h, lx, t, seed) {
+  // teardrop with a turbulent, licking tip
+  const n1 = _nz(t * 6 + seed) - .5, n2 = _nz(t * 9.3 + seed * 3) - .5, n3 = _nz(t * 14 + seed * 7) - .5;
+  const tipX = x + lx + n1 * w * 1.4, tipY = by - h * (1 + n2 * .18);
+  const midL = x - w * (1.05 + n3 * .25), midR = x + w * (1.05 - n3 * .25);
+  c.beginPath();
+  c.moveTo(x, by + w * .55);
+  c.bezierCurveTo(x - w * 1.25, by + w * .35, midL + lx * .25, by - h * .38, x + lx * .55 + n2 * w * .6, by - h * .72);
+  c.quadraticCurveTo(tipX - w * .12, by - h * .9, tipX, tipY);
+  c.quadraticCurveTo(tipX + w * .18, by - h * .86, x + lx * .55 - n2 * w * .4 + w * .3, by - h * .7);
+  c.bezierCurveTo(midR + lx * .25, by - h * .38, x + w * 1.25, by + w * .35, x, by + w * .55);
+  c.closePath();
+}
 function drawFlame(c, x, y, s, k, t, lean) {
   if (k <= .01) return;
-  const fl = .92 + .08 * Math.sin(t * 23) + .06 * Math.sin(t * 37 + 1.3) + .05 * Math.sin(t * 11.7);
-  const h = s * 3.3 * k * fl, w = s * .95 * Math.sqrt(k);
+  const fl = .9 + .1 * Math.sin(t * 23) + .07 * Math.sin(t * 37 + 1.3) + .06 * (_nz(t * 8) - .5);
+  const h = s * 3.6 * k * fl, w = s * .9 * Math.sqrt(k);
   c.save(); c.globalCompositeOperation = 'lighter';
-  let g = c.createRadialGradient(x, y - h * .35, 0, x, y - h * .35, h * 2.6);
-  g.addColorStop(0, `rgba(255,170,60,${.36 * Math.min(1, k)})`); g.addColorStop(1, 'rgba(255,110,30,0)');
-  c.fillStyle = g; c.beginPath(); c.arc(x, y - h * .35, h * 2.6, 0, 7); c.fill();
-  const layers = [[1, ['rgba(255,170,60,.95)', 'rgba(255,96,20,.75)', 'rgba(190,30,10,0)']],
-    [.7, ['rgba(255,244,190,1)', 'rgba(255,190,70,.9)', 'rgba(255,140,40,0)']],
-    [.42, ['rgba(150,180,255,.85)', 'rgba(255,255,245,1)', 'rgba(255,240,200,0)']]];
-  for (const [m, st] of layers) {
-    const hh = h * m, ww = w * m, lx = lean * m, by = y + ww * .35;
-    g = c.createLinearGradient(x, by, x + lx, by - hh);
-    g.addColorStop(0, st[0]); g.addColorStop(.45, st[1]); g.addColorStop(1, st[2]);
-    c.fillStyle = g; c.beginPath();
-    c.moveTo(x, by + ww * .5);
-    c.bezierCurveTo(x - ww * 1.35, by, x - ww * .55 + lx * .5, by - hh * .62, x + lx, by - hh);
-    c.bezierCurveTo(x + ww * .55 + lx * .5, by - hh * .62, x + ww * 1.35, by, x, by + ww * .5);
-    c.fill();
-  }
+  // halo
+  let g = c.createRadialGradient(x, y - h * .4, 0, x, y - h * .4, h * 3);
+  g.addColorStop(0, `rgba(255,180,70,${.42 * Math.min(1, k)})`); g.addColorStop(.35, `rgba(255,120,30,${.16 * Math.min(1, k)})`); g.addColorStop(1, 'rgba(255,90,20,0)');
+  c.fillStyle = g; c.beginPath(); c.arc(x, y - h * .4, h * 3, 0, 7); c.fill();
+  const by = y + w * .2;
+  c.filter = 'blur(' + Math.max(1, s * .12).toFixed(1) + 'px)';
+  // outer body: deep orange → red tips
+  g = c.createLinearGradient(x, by + w, x + lean, by - h * 1.1);
+  g.addColorStop(0, 'rgba(255,120,30,.0)'); g.addColorStop(.12, 'rgba(255,110,25,.85)'); g.addColorStop(.55, 'rgba(255,80,15,.7)'); g.addColorStop(1, 'rgba(200,30,10,0)');
+  c.fillStyle = g; flameShape(c, x, by, w * 1.05, h * 1.05, lean, t, 1.7); c.fill();
+  // body: amber/yellow
+  g = c.createLinearGradient(x, by + w, x + lean, by - h * .9);
+  g.addColorStop(0, 'rgba(255,200,90,.2)'); g.addColorStop(.2, 'rgba(255,215,110,.95)'); g.addColorStop(.7, 'rgba(255,160,50,.6)'); g.addColorStop(1, 'rgba(255,120,30,0)');
+  c.fillStyle = g; flameShape(c, x, by, w * .78, h * .8, lean * .8, t, 4.2); c.fill();
+  // core: near-white
+  c.filter = 'blur(' + Math.max(.6, s * .08).toFixed(1) + 'px)';
+  g = c.createLinearGradient(x, by + w * .4, x, by - h * .45);
+  g.addColorStop(0, 'rgba(255,255,240,.95)'); g.addColorStop(.6, 'rgba(255,245,200,.8)'); g.addColorStop(1, 'rgba(255,230,160,0)');
+  c.fillStyle = g; flameShape(c, x, by, w * .45, h * .48, lean * .5, t, 9.1); c.fill();
+  // blue root at the wick
+  g = c.createRadialGradient(x, by + w * .25, 0, x, by + w * .25, w * 1.1);
+  g.addColorStop(0, 'rgba(120,160,255,.75)'); g.addColorStop(1, 'rgba(80,110,255,0)');
+  c.fillStyle = g; c.beginPath(); c.ellipse(x, by + w * .2, w * .9, w * .65, 0, 0, 7); c.fill();
+  c.filter = 'none';
   c.restore();
+  // a thin smoke wisp off the tip
+  if (Math.random() < .35) spawn({ k: 'smoke', x: x + lean + rnd(-2, 2), y: y - h * 1.05, vx: rnd(-8, 8) + lean * .3, vy: rnd(-55, -35), life: 0, max: rnd(.8, 1.4), r: rnd(3, 6) });
 }
 function drawTarget(c, x, y, t, k) {
   if (k <= .01) return;
@@ -408,7 +471,7 @@ function target() { return { x: E.x + E.w * ORIGIN[0], y: E.y + E.h * ORIGIN[1] 
 function holdPose() { return wide ? { x: B.x0 - B.w * .2, y: E.cy - E.h * .1 } : { x: vw * .62, y: E.y + E.h + (B.y0 - B.h / 2 - E.y - E.h) * .45 }; }
 
 function ignite() {
-  mt.lit = 1; S.fails = 0;
+  mt.lit = 1; S.fails = 0; S.flash = 1;
   sfx.ignite(); buzz(30);
   const d = rad(box.rot - 10);
   sparks(mt.x, mt.y, box.rot - 20, reduced ? 14 : 60, 50);
@@ -506,6 +569,7 @@ function track(event, extra = {}) {
   Object.entries(R.fields).forEach(([k, entry]) => body.append(entry, data[k] || ''));
   try { fetch(R.form, { method: 'POST', mode: 'no-cors', keepalive: true, body }); } catch (e) {}
 }
+window.MKDTrack = (ev, extra) => track(ev, extra);
 const rsvpAsk = $('#rsvpAsk'), rsvpDone = $('#rsvpDone');
 function showRsvp(ans) {
   rsvpAsk.hidden = !!ans; rsvpDone.hidden = !ans;
@@ -724,14 +788,31 @@ function frame(nowMs) {
   css(glowEl, '--gr', (14 + 22 * burning + 10 * fk) + 'vmax');
   glowEl.style.opacity = Math.min(1, fk * .5 + burning * .85).toFixed(3);
   css(document.documentElement, '--lit', light.toFixed(3));
-  // night until the invite is revealed: only the flame / burning paper light the scene
+  // night from the first frame; the match (then the burning paper) is the only real light
   const dark = ['reveal', 'done'].includes(S.ph) ? 0 : 1;
-  S.dark = lerp(S.dark ?? 1, dark, dark ? .08 : .06);
-  const hole = 50 + fk * 110 + burning * E.w * .38 + (['closed', 'enter', 'opening', 'lift', 'strike'].includes(S.ph) ? 190 : 0);
-  css(nightEl, '--gx', gx + 'px'); css(nightEl, '--gy', gy + 'px'); css(nightEl, '--hr', hole.toFixed(0) + 'px');
-  css(nightEl, '--nx', (S.ph === 'closed' || S.ph === 'opening' || S.ph === 'lift' || S.ph === 'strike' ? box.x : gx) + 'px');
-  css(nightEl, '--ny', (S.ph === 'closed' || S.ph === 'opening' || S.ph === 'lift' || S.ph === 'strike' ? box.y : gy) + 'px');
-  nightEl.style.opacity = (S.dark * (['carry', 'touch', 'burn'].includes(S.ph) ? .92 : .72)).toFixed(3);
+  S.dark = lerp(S.dark ?? 1, dark, dark ? .08 : .045);
+  S.flash = Math.max(0, (S.flash || 0) - dt * 3.2);
+  const flick = .86 + .1 * Math.sin(now * 23) + .07 * Math.sin(now * 37 + 1.3) + .05 * Math.sin(now * 11.7 + .4);
+  const lights = [];
+  if (['gate', 'enter', 'closed', 'opening', 'lift', 'strike'].includes(S.ph) && !mt.lit) lights.push({ x: box.x, y: box.y, r: Math.max(B.w * 1.3, 190), a: .62 }, { x: E.cx, y: E.cy, r: E.w * .75, a: .28 });
+  if (fk > .01) lights.push({ x: mt.x, y: mt.y - M.st, r: (Math.min(vw, vh) * .34 + 60) * Math.min(1.25, fk) * flick, a: .97 });
+  if (S.flash > 0) lights.push({ x: mt.x, y: mt.y, r: Math.min(vw, vh) * .8 * S.flash, a: S.flash });
+  if (burning > .02) { const n = 4; for (let i = 0; i < n; i++) { const q = burnFront(burnP); if (q) lights.push({ x: q.x, y: q.y, r: E.w * (.45 + burning * .5) * flick, a: .7 }); } lights.push({ x: E.cx, y: E.cy, r: E.w * (.75 + burning * .6), a: .92 * Math.max(.55, burning) }); }
+  const nw = nightEl.width, nh = nightEl.height, ns = nw / vw;
+  nctx.setTransform(1, 0, 0, 1, 0, 0); nctx.globalCompositeOperation = 'source-over'; nctx.clearRect(0, 0, nw, nh);
+  if (S.dark > .005) {
+    nctx.fillStyle = `rgba(9,2,3,${(.93 * S.dark).toFixed(3)})`; nctx.fillRect(0, 0, nw, nh);
+    nctx.globalCompositeOperation = 'destination-out';
+    for (const L of lights) {
+      const g = nctx.createRadialGradient(L.x * ns, L.y * ns, 0, L.x * ns, L.y * ns, L.r * ns);
+      g.addColorStop(0, `rgba(0,0,0,${L.a})`); g.addColorStop(.45, `rgba(0,0,0,${L.a * .7})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      nctx.fillStyle = g; nctx.beginPath(); nctx.arc(L.x * ns, L.y * ns, L.r * ns, 0, 7); nctx.fill();
+    }
+  }
+  nightEl.style.opacity = 1;
+  // warm light colour on whatever the flame touches
+  css(glowEl, '--gx', gx + 'px'); css(glowEl, '--gy', gy + 'px');
+  glowEl.style.opacity = Math.min(1, fk * .75 * flick + burning * .9 + S.flash * .8).toFixed(3);
   document.body.classList.toggle('lit', S.dark < .5);
 
   /* ── caption, ghost hint, auto button ── */
@@ -741,7 +822,7 @@ function frame(nowMs) {
     lastCap = cap; capEl.classList.add('swap');
     setTimeout(() => { capEl.firstChild.textContent = cap; capEl.classList.remove('swap'); }, 200);
   }
-  const stepOf = { closed: 0, enter: 0, opening: 1, lift: 1, strike: 1, carry: 2, touch: 2, burn: 3, reveal: 3, done: 4 }[S.ph] ?? -1;
+  const stepOf = { closed: 0, enter: 0, opening: 1, lift: 1, strike: 1, carry: 2, touch: 2, burn: 2, reveal: 3, done: 3 }[S.ph] ?? -1;
   if (stepOf !== S.lastStep) { S.lastStep = stepOf; stepsEl.forEach((li, i) => { li.classList.toggle('on', i === stepOf); li.classList.toggle('done', i < stepOf); }); }
   updateGhost(now);
   autoBtn.hidden = !['closed', 'opening', 'lift', 'strike', 'carry'].includes(S.ph) || S.auto;
@@ -843,6 +924,16 @@ function finish() {
 }
 
 window.MKDFX = { sfx, initAudio, noiseHit, buzz, get audio() { return A.ac; } };
+
+/* ───────────── section entrances ───────────── */
+(() => {
+  const mark = (sel, cls) => document.querySelectorAll(sel).forEach(el => el.classList.add(cls));
+  mark('.aao h1, .aao .lede, .games > h2, .games .gc-sub, .wall2 h2, .wall2 .gc-sub, .rsvp h2', 'reveal-text');
+  mark('.rsvp-card, .booth', 'reveal-pop');
+  mark('.stall', 'reveal-up');
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .2 });
+  document.querySelectorAll('.reveal-up, .reveal-pop, .reveal-text').forEach(el => io.observe(el));
+})();
 
 /* ───────────── boot ───────────── */
 let rz;

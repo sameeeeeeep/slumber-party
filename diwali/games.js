@@ -20,6 +20,7 @@ const local = (el, e) => { const r = el.getBoundingClientRect(); return { x: e.c
 
 /* ═════════ share: every result becomes a story-sized card ═════════ */
 const SH = {};
+const who = () => (window.MKDGuest ? window.MKDGuest.first : 'dost');
 const SHARE_URL = 'https://secretslumberparty.com/diwali/';
 const showShare = k => { const b = document.querySelector(`.share-btn[data-share="${k}"]`); if (b) b.hidden = false; };
 const hideShare = k => { const b = document.querySelector(`.share-btn[data-share="${k}"]`); if (b) b.hidden = true; };
@@ -31,9 +32,9 @@ function wrap(c, text, x, y, maxW, lh) {
 }
 async function renderShare(k) {
   const d = k === 'invite'
-    ? { img: 'assets/invite_card.webp', title: 'aao, mohalle ki diwali!', text: 'i’m invited to the nailinit diwali party. dress loud, gossip louder.', kick: 'chitthi aayi hai' }
+    ? { img: 'assets/invite_card.webp', title: `${who()} is invited!`, text: 'nailinit diwali party · dress loud, gossip louder.', kick: 'chitthi aayi hai' }
     : k === 'gubbara'
-      ? { img: 'assets/game/bal1.webp', title: 'i went balloon shooting', text: [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent).join(' · '), kick: 'gubbara phod' }
+      ? { img: 'assets/game/bal1.webp', title: `${who()} popped ${document.querySelectorAll('#glist .win-card').length} balloons`, text: [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent).join(' · '), kick: 'gubbara phod' }
       : SH[k];
   if (!d) return null;
   const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
@@ -86,6 +87,60 @@ function toast(msg) {
   setTimeout(() => t.classList.add('on'), 10); setTimeout(() => { t.classList.remove('on'); setTimeout(() => t.remove(), 400); }, 2600);
 }
 window.MKDShare = { render: renderShare };
+const GAME_ICON = { tota: 'assets/game/parrot_card.webp', gubbara: 'assets/game/bal1.webp', chhalla: 'assets/game/bottle0.webp', draw: 'assets/game/drum.webp' };
+const GAME_NAME = { tota: 'tota jyotish', gubbara: 'gubbara phod', chhalla: 'chhalla', draw: 'lucky draw' };
+const showPin = k => { const b = document.querySelector(`.pin-btn[data-pin="${k}"]`); if (b) { b.hidden = false; b.disabled = false; b.textContent = 'pin to the wall'; } };
+const hidePin = k => { const b = document.querySelector(`.pin-btn[data-pin="${k}"]`); if (b) b.hidden = true; };
+function pinPayload(k) {
+  if (k === 'gubbara') { const wins = [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent); return { title: `popped ${wins.length}/5`, text: wins.join(' · ') }; }
+  const d = SH[k]; return d ? { title: d.title, text: d.text } : null;
+}
+document.querySelectorAll('.pin-btn').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.pin, p = pinPayload(k); if (!p) return;
+  if (window.MKDTrack) window.MKDTrack('wall', { rsvp: k, link: p.title.slice(0, 80), device: p.text.slice(0, 140) });
+  b.disabled = true; b.textContent = 'pinned ✓'; ding(990, .45); buzz(15);
+  addWallCard({ name: window.MKDGuest ? window.MKDGuest.full : 'dost', game: k, title: p.title, text: p.text }, true);
+  toast('pinned to mohalle ki deewar!');
+}));
+/* wall: published CSV → two moving rows of cards */
+function parseCSV(t) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < t.length; i++) { const ch = t[i];
+    if (q) { if (ch === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; }
+    else if (ch === '"') q = true; else if (ch === ',') { row.push(f); f = ''; } else if (ch === '\n') { row.push(f); rows.push(row); row = []; f = ''; } else if (ch !== '\r') f += ch; }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+const shortName = n => { const p = String(n || 'dost').trim().split(/\s+/); return p[0] + (p[1] ? ' ' + p[1][0].toUpperCase() + '.' : ''); };
+function wallCard(e) {
+  const c = document.createElement('div'); c.className = 'wcard w-' + (GAME_ICON[e.game] ? e.game : 'tota');
+  const i = document.createElement('img'); i.src = GAME_ICON[e.game] || GAME_ICON.tota; i.alt = '';
+  const g = document.createElement('span'); g.className = 'wc-game'; g.textContent = GAME_NAME[e.game] || e.game;
+  const n = document.createElement('b'); n.className = 'wc-name'; n.textContent = shortName(e.name);
+  const t = document.createElement('p'); t.className = 'wc-title'; t.textContent = e.title;
+  const x = document.createElement('p'); x.className = 'wc-text'; x.textContent = e.text;
+  c.append(i, g, n, t, x); return c;
+}
+let WALL = [];
+function renderWall() {
+  const r1 = $('#wrow1'), r2 = $('#wrow2'); if (!r1) return;
+  $('#wempty').hidden = WALL.length > 0;
+  const half = Math.ceil(WALL.length / 2), a = WALL.slice(0, Math.max(half, 1)), b = WALL.slice(half);
+  const fill = (row, list) => { row.replaceChildren(); if (!list.length) return; let items = list; while (items.length < 8) items = items.concat(list); [...items, ...items].forEach(e => row.appendChild(wallCard(e))); row.style.animationDuration = (items.length * 6) + 's'; };
+  fill(r1, a); fill(r2, b.length ? b : a);
+}
+function addWallCard(e, mine) { WALL = [e, ...WALL]; renderWall(); }
+async function loadWall() {
+  const url = window.MKD && window.MKD.rsvp && window.MKD.rsvp.wall; if (!url) return;
+  try {
+    const t = await (await fetch(url + '&t=' + Date.now())).text();
+    const rows = parseCSV(t).slice(1).filter(r => r.length >= 4 && r[1]);
+    WALL = rows.map(r => ({ time: r[0], name: r[1], game: r[2], title: r[3], text: r[4] || '' }));
+    renderWall();
+  } catch (e) {}
+}
+loadWall(); setInterval(loadWall, 60000);
+
 document.querySelectorAll('.share-btn').forEach(b => b.addEventListener('click', () => shareCard(b.dataset.share)));
 
 /* ── stall picker ── */
@@ -119,6 +174,7 @@ const FORTUNES = [
   { img: 'chai', title: 'chai pe charcha', text: 'one long chai conversation next year changes your mind about something big.' },
   { img: 'romance', title: 'pyaar ka chakkar', text: 'romance is in the cards next year. pick the good one this time.' },
 ];
+const HAS_TEXT = new Set(['nakhre', 'nazar', 'spicy', 'naacho', 'meethe', 'girlies', 'chugli', 'bsfree', 'door', 'patriarchy', 'baegum', 'kaam']);   // posters that already carry their words
 FORTUNES.forEach(f => { const i = new Image(); i.src = `assets/cards/${f.img}.webp`; });
 const T = { table: $('#ttable'), tota: $('#tota'), cards: [], busy: false, x: 0, y: 0, face: 1 };
 const cardT = (el, x, y, r, sc = 1, z) => { el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${sc})`; if (z != null) el.style.zIndex = z; };
@@ -184,7 +240,7 @@ function fanPos(i) {
 const W_SCALE = () => (T.table.clientWidth < 420 ? 1.25 : 1.5);
 async function totaPlay() {
   if (T.busy) return; T.busy = true; start();
-  $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true; hideShare('tota');
+  $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true; hideShare('tota'); hidePin('tota');
   totaBuild(); bob(2);
   $('#tsub').textContent = 'shuffling…';
   await sleep(300); await riffle(); await riffle(); await bridge();
@@ -203,7 +259,8 @@ async function totaPlay() {
   await bob(1);
   const p = fanPos(choice), el = T.cards[choice], f = pick(FORTUNES);
   const front = el.querySelector('.kc-front'); front.style.backgroundImage = `url(assets/cards/${f.img}.webp)`;
-  const lab = document.createElement('span'); lab.className = 'kc-label'; lab.textContent = f.title; front.replaceChildren(lab);
+  front.replaceChildren();
+  if (!HAS_TEXT.has(f.img)) { const lab = document.createElement('span'); lab.className = 'kc-label'; lab.textContent = f.title; front.appendChild(lab); }
   T.tota.src = 'assets/game/parrot_card.webp';
   cardT(el, p.x, p.y - 30, p.a, 1, 60); buzz(15);
   await sleep(340);
@@ -217,7 +274,7 @@ async function totaPlay() {
   $('#ttext').textContent = f.text;
   $('#tread').hidden = false; $('#tagain').hidden = false;
   $('#tsub').textContent = 'tota ji has spoken.';
-  SH.tota = { img: `assets/cards/${f.img}.webp`, title: f.title, text: f.text, kick: 'my kismat for next year' }; showShare('tota');
+  SH.tota = { img: `assets/cards/${f.img}.webp`, title: f.title, text: f.text, kick: `${who()}’s kismat for next year` }; showShare('tota'); showPin('tota');
   T.busy = false;
 }
 $('#tgo').addEventListener('click', totaPlay);
@@ -253,7 +310,7 @@ function gubbaraReset() {
     G.balloons.push({ img: img.src, el, bx: (c + .5) / cols, by: .2 + r * .27, ph: rnd(0, 6.3), sp: rnd(.6, 1.1), amp: rnd(.022, .045), alive: true, prize: pool[(r * cols + c) % pool.length] });
   }
   $('#gshots').innerHTML = Array.from({ length: 5 }, () => '<i></i>').join('');
-  $('#ghaul').hidden = true; $('#glist').replaceChildren(); $('#gagain').hidden = true; hideShare('gubbara');
+  $('#ghaul').hidden = true; $('#glist').replaceChildren(); $('#gagain').hidden = true; hideShare('gubbara'); hidePin('gubbara');
   $('#gsub').textContent = 'drag to aim, let go to fire. 5 pellets.';
   requestAnimationFrame(() => { const r0 = range.getBoundingClientRect(); G.ax = r0.width / 2; G.ay = r0.height * .35; });
   cancelAnimationFrame(G.raf); G.t0 = performance.now(); G.raf = requestAnimationFrame(gubbaraLoop);
@@ -269,9 +326,9 @@ function gubbaraLoop(now) {
   const sway = G.aiming ? 1 : .4;                       // a little hand sway — skill still wins
   G.cx = G.ax + Math.sin(t * 2.1) * 4 * sway; G.cy = G.ay + Math.cos(t * 1.7) * 3 * sway;
   cross.style.transform = `translate(${G.cx}px,${G.cy}px)`;
-  const W = range.clientWidth, H = range.clientHeight, bx = W * .86, by = H * 1.02;
+  const W = range.clientWidth, H = range.clientHeight, bx = W * .5, by = H * 1.04;   // the shooter stands back from the counter
   const ang = Math.atan2(G.cy - by, G.cx - bx) * 180 / Math.PI;
-  rifle.style.left = bx + 'px'; rifle.style.top = by + 'px';
+  rifle.style.left = bx + 'px'; rifle.style.top = by + 'px'; rifle.style.width = (H * .36) + 'px';
   rifle.style.transform = `translate(0, -50%) rotate(${ang.toFixed(2)}deg) scaleY(${Math.abs(ang) > 90 ? -1 : 1})`;
   G.raf = requestAnimationFrame(gubbaraLoop);
 }
@@ -310,13 +367,13 @@ async function fire() {
     const n = $('#glist').children.length;
     if (!n) { addWin('one pat on the head from the stall uncle', 'assets/game/bal8.webp'); $('#ghaul').hidden = false; }
     $('#gsub').textContent = n ? `${n} of 5 popped! here’s what you got.` : 'all misses! uncle feels bad for you.';
-    showShare('gubbara');
+    showShare('gubbara'); showPin('gubbara');
     $('#gagain').hidden = false; ding(700, .6);
   } else $('#gsub').textContent = `${G.shots} pellet${G.shots > 1 ? 's' : ''} left.`;
 }
 $('#gagain').addEventListener('click', gubbaraReset);
 
-/* ═════════ chhalla — flick the bangle at a banta bottle ═════════ */
+/* ═════════ chhalla — flick the bangle at a banta bottle (2 practice throws, then 3 for real) ═════════ */
 const PRIZES = [
   ['aunty approval', 'she said “kitni sundar lag rahi hai”. frame it.'],
   ['gossip VIP pass', 'you hear the chugli first, before the group chat does.'],
@@ -324,27 +381,34 @@ const PRIZES = [
   ['the last samosa', 'it’s yours. nobody will fight you for it. probably.'],
   ['no-nazar shield', 'one nimbu-mirchi, personally assigned to you for the year.'],
 ];
-const MISSES = ['try karo, beta. consolation prize: one pat on the head.', 'so close! the banta respects your effort.', 'missed! but your nails looked great doing it.'];
-const R = { left: 3, busy: false, drag: null };
+const R = { practice: 2, left: 3, busy: false, drag: null, won: [] };
 const cstage = $('#cstage'), ring = $('#cring'), aimLine = $('#caimline');
 function ringHome() { ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 1; ring.style.transform = 'translate(-50%, 0)'; }
+function chhallaStatus() {
+  $('#csub').textContent = R.practice > 0
+    ? `practice throw ${3 - R.practice} of 2. flick the bangle up at a bottle.`
+    : R.left > 0 ? `for real now: ${R.left} bangle${R.left > 1 ? 's' : ''} left.` : 'all bangles thrown!';
+  cstage.classList.toggle('practice', R.practice > 0);
+}
 function chhallaReset() {
   const shelf = $('#cshelf'); shelf.replaceChildren();
   const order = [0, 1, 2, 3, 4].sort(() => Math.random() - .5);
   order.forEach((p, i) => {
-    const b = document.createElement('div'); b.className = 'bot'; b.dataset.p = p;
+    const b = document.createElement('div'); b.className = 'bot'; b.dataset.p = p; b.style.animationDelay = (-i * .7).toFixed(1) + 's';
+    const back = document.createElement('i'); back.className = 'hoop back';
     const img = document.createElement('img'); img.src = `assets/game/bottle${i}.webp`; img.alt = '';
+    const front = document.createElement('i'); front.className = 'hoop front';
     const tag = document.createElement('span'); tag.className = 'btag'; tag.textContent = PRIZES[p][0];
-    b.append(img, tag); shelf.appendChild(b);
+    b.append(back, img, front, tag); shelf.appendChild(b);
   });
-  R.left = 3; R.busy = false; ringHome(); hideShare('chhalla');
-  $('#cread').hidden = true; $('#cagain').hidden = true;
-  $('#csub').textContent = 'flick the bangle up at a bottle. 3 throws.';
+  R.practice = 2; R.left = 3; R.busy = false; R.won = []; ringHome(); hideShare('chhalla'); hidePin('chhalla');
+  $('#cread').hidden = true; $('#cagain').hidden = true; $('#ccoach').hidden = true;
+  chhallaStatus();
 }
 cstage.addEventListener('pointerdown', e => {
-  if (R.busy || R.left <= 0) return;
+  if (R.busy || (R.left <= 0 && R.practice <= 0)) return;
   const rr = ring.getBoundingClientRect();
-  if (Math.hypot(e.clientX - (rr.left + rr.width / 2), e.clientY - (rr.top + rr.height / 2)) > rr.width * 1.5) return;
+  if (Math.hypot(e.clientX - (rr.left + rr.width / 2), e.clientY - (rr.top + rr.height / 2)) > rr.width * 1.6) return;
   start(); e.preventDefault(); try { cstage.setPointerCapture(e.pointerId); } catch (err) {}
   R.drag = { x0: e.clientX, y0: e.clientY, hist: [{ x: e.clientX, y: e.clientY, t: performance.now() }] };
   cstage.classList.add('aiming');
@@ -361,21 +425,24 @@ function endDrag() { R.drag = null; cstage.classList.remove('aiming'); aimLine.s
 cstage.addEventListener('pointerup', () => {
   if (!R.drag) return;
   const h = R.drag.hist, a = h[0], b = h[h.length - 1], dt = Math.max(16, b.t - a.t);
-  const vx = (b.x - a.x) / dt, vy = (b.y - a.y) / dt;          // px per ms
+  const vx = (b.x - a.x) / dt, vy = (b.y - a.y) / dt;
   endDrag();
-  if (vy > -.25) { ringHome(); $('#csub').textContent = 'flick it upwards, a little faster!'; return; }
+  if (vy > -.25) { ringHome(); coach('flick it upwards, a bit quicker.'); return; }
   chhallaThrow(vx, vy);
 });
 cstage.addEventListener('pointercancel', () => { endDrag(); ringHome(); });
+function coach(msg, good) { const c = $('#ccoach'); c.hidden = false; c.textContent = msg; c.classList.toggle('good', !!good); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
 async function chhallaThrow(vx, vy) {
   R.busy = true;
+  const practice = R.practice > 0;
   const s = cstage.getBoundingClientRect(), rr = ring.getBoundingClientRect();
   const cx = rr.left + rr.width / 2 - s.left, cy = rr.top + rr.height / 2 - s.top;
   const power = clamp(-vy, .25, 3.2), tx = cx + vx * 220 + rnd(-8, 8), ty = cy - power * 240;
-  let hitB = null;
+  let hitB = null, near = null, nd = 1e9;
   document.querySelectorAll('.bot').forEach(b => {
-    const r = b.getBoundingClientRect(), nx = r.left + r.width / 2 - s.left, ny = r.top + r.height * .14 - s.top;
-    if (Math.abs(tx - nx) < r.width * .45 && Math.abs(ty - ny) < r.height * .42) hitB = { el: b, x: nx, y: ny };
+    const r = b.getBoundingClientRect(), nx = r.left + r.width / 2 - s.left, ny = r.top + r.height * .2 - s.top;
+    const d = Math.hypot(tx - nx, ty - ny); if (d < nd) { nd = d; near = { el: b, x: nx, y: ny, w: r.width, h: r.height }; }
+    if (!b.classList.contains('ringed') && Math.abs(tx - nx) < r.width * .42 && Math.abs(ty - ny) < r.height * .2) hitB = { el: b, x: nx, y: ny };
   });
   const endX = hitB ? hitB.x : tx, endY = hitB ? hitB.y : ty, arcH = 60 + power * 30;
   const anim = ring.animate([
@@ -384,26 +451,35 @@ async function chhallaThrow(vx, vy) {
     { transform: `translate(calc(-50% + ${endX - cx}px), ${endY - cy}px) scale(.5) rotateX(68deg) rotate(720deg)` },
   ], { duration: 650, easing: 'cubic-bezier(.3,.2,.4,1)', fill: 'forwards' });
   await anim.finished.catch(() => {});
-  R.left--;
+  if (practice) R.practice--; else R.left--;
   if (hitB) {
-    clink(); buzz(25); hitB.el.classList.add('ringed');
-    const [name, text] = PRIZES[+hitB.el.dataset.p];
-    $('#ctitle').textContent = name; $('#ctext').textContent = text; ding(880, .55);
-    SH.chhalla = { img: hitB.el.querySelector('img').src, title: name, text, kick: 'i ringed the banta and won' }; showShare('chhalla');
-    ring.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' });
+    clink(); buzz(25);
+    ring.style.opacity = 0; ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 0;
+    hitB.el.classList.add('ringed');                     // the bangle now lives on the bottle neck and sways with it
+    if (practice) { coach('perfect! that’s exactly it. now for real.', true); hitB.el.classList.add('practice-hit'); setTimeout(() => hitB.el.classList.remove('ringed', 'practice-hit'), 1400); }
+    else {
+      const [name, text] = PRIZES[+hitB.el.dataset.p]; R.won.push(name);
+      $('#ctitle').textContent = name; $('#ctext').textContent = text; $('#cread').hidden = false; ding(880, .55);
+      SH.chhalla = { img: hitB.el.querySelector('img').src, title: name, text, kick: `${who()} ringed the banta` }; showShare('chhalla'); showPin('chhalla');
+      coach('ringed it!', true);
+    }
   } else {
     clink();
     ring.animate([
       { transform: `translate(calc(-50% + ${endX - cx}px), ${endY - cy}px) scale(.5) rotateX(68deg)`, opacity: 1 },
       { transform: `translate(calc(-50% + ${endX - cx + rnd(-60, 60)}px), ${endY - cy + 140}px) scale(.45) rotateX(80deg) rotate(260deg)`, opacity: 0 },
     ], { duration: 520, easing: 'cubic-bezier(.5,0,1,1)', fill: 'forwards' });
-    $('#ctitle').textContent = 'missed!'; $('#ctext').textContent = pick(MISSES);
+    // tell them what to change
+    const dy = ty - near.y, dxn = tx - near.x, tips = [];
+    if (dy < -near.h * .2) tips.push('too far — less force');
+    else if (dy > near.h * .2) tips.push('too short — flick harder');
+    if (Math.abs(dxn) > near.w * .42) tips.push(dxn > 0 ? 'aim a little left' : 'aim a little right');
+    coach(tips.length ? tips.join(', ') + '.' : 'so close! same again.');
   }
-  $('#cread').hidden = false;
   await sleep(750);
-  if (R.left > 0) { ringHome(); $('#csub').textContent = `${R.left} throw${R.left > 1 ? 's' : ''} left.`; }
-  else { ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 0; $('#csub').textContent = 'all bangles thrown!'; $('#cagain').hidden = false; }
-  R.busy = false;
+  if (R.practice > 0 || R.left > 0) ringHome(); else { ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 0; $('#cagain').hidden = false;
+    if (!R.won.length) { $('#ctitle').textContent = 'no rings this time'; $('#ctext').textContent = 'the banta stays undefeated. one more go?'; $('#cread').hidden = false; } }
+  chhallaStatus(); R.busy = false;
 }
 $('#cagain').addEventListener('click', chhallaReset);
 
@@ -476,11 +552,11 @@ async function drawDrop() {
   ding(700, .6); buzz(25);
   $('#dsub').textContent = 'here you are, next year.';
   setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'center' }), 250);
-  SH.draw = { img: 'assets/game/ticket.webp', title: p.name, text: p.text, kick: 'my new-year personality' }; showShare('draw');
+  SH.draw = { img: 'assets/game/ticket.webp', title: p.name, text: p.text, kick: `${who()}’s new-year personality` }; showShare('draw'); showPin('draw');
   $('#dagain').hidden = false;
 }
 $('#dagain').addEventListener('click', () => {
-  D.done = false; D.total = 0; hideShare('draw'); $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
+  D.done = false; D.total = 0; hideShare('draw'); hidePin('draw'); $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
   $('#drDrop').classList.remove('go'); $('#dsub').textContent = 'turn the crank. drag it round, or tap the button.';
   $('#dstage').scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
