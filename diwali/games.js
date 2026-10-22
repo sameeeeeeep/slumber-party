@@ -3,32 +3,40 @@
 'use strict';
 const $ = s => document.querySelector(s);
 const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const pick = arr => arr[(Math.random() * arr.length) | 0];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const rad = d => d * Math.PI / 180;
 const FX = () => window.MKDFX || { sfx: {}, initAudio() {}, noiseHit() {}, buzz() {}, audio: null };
-const tick = () => { const f = FX(); if (f.audio) f.noiseHit(.025, 'highpass', 4200, 3000, .22); };
+const noise = (...a) => { const f = FX(); if (f.audio) f.noiseHit(...a); };
+const tick = () => noise(.025, 'highpass', 4200, 3000, .22);
 const ding = (hz = 760, v = .6) => { const f = FX(); if (f.sfx.bell) f.sfx.bell(hz, v); };
-const pop = () => { const f = FX(); if (f.audio) { f.noiseHit(.12, 'lowpass', 1600, 200, .9, 1); f.noiseHit(.3, 'highpass', 5200, 3000, .3, .7, .02); } };
-const clink = () => { const f = FX(); if (f.audio) { f.noiseHit(.05, 'bandpass', 4800, 4200, .5, 8); f.noiseHit(.4, 'bandpass', 3100, 3000, .2, 14, .03); } };
+const pop = () => { noise(.12, 'lowpass', 1600, 200, .9, 1); noise(.3, 'highpass', 5200, 3000, .3, .7, .02); };
+const thup = () => noise(.06, 'bandpass', 900, 500, .5, 3);
+const clink = () => { noise(.05, 'bandpass', 4800, 4200, .5, 8); noise(.4, 'bandpass', 3100, 3000, .2, 14, .03); };
 const start = () => FX().initAudio();
+const buzz = ms => FX().buzz(ms);
+const local = (el, e) => { const r = el.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; };
 
-/* ── stalls ── */
+/* ── stall picker ── */
 const stalls = [...document.querySelectorAll('.stall')];
 stalls.forEach(st => st.addEventListener('click', () => {
   stalls.forEach(s => s.classList.toggle('on', s === st));
   document.querySelectorAll('.game[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== st.dataset.game; });
-  if (st.dataset.game === 'gubbara' && !G.ready) gubbaraReset();
-  if (st.dataset.game === 'chhalla' && !R.ready) chhallaReset();
+  if (st.dataset.game === 'gubbara') gubbaraReset();
+  if (st.dataset.game === 'chhalla') chhallaReset();
+  if (st.dataset.game === 'tota') requestAnimationFrame(() => { if (!T.busy) totaBuild(); });
+  if (st.dataset.game === 'draw') kick();
   $('#booth').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }));
 
 /* ═════════ tota jyotish ═════════ */
-const FORTUNES = [   // next year's kismat — each reading matches the poster the tota pulls
+// the card carries its own words (the poster); the tota's reading for next year sits below
+const FORTUNES = [
   { img: 'nakhre', title: 'nakhre unlimited', text: 'next year, your nakhre get accepted without question. ask for the window seat.' },
-  { img: 'nazar', title: 'buri nazar wale, tera bhi bhala ho', text: "you'll be doing so well next year that people will stare. keep the nimbu-mirchi close." },
+  { img: 'nazar', title: 'buri nazar wale', text: "you'll be doing so well next year that people will stare. keep the nimbu-mirchi close." },
   { img: 'spicy', title: 'spicy par pyaari', text: 'one big, spicy plot twist is coming next year. you’ll handle it beautifully.' },
-  { img: 'naacho', title: 'naacho, gaao', text: 'a year of baraats, sangeets and dance floors. your thumka goes viral (locally).' },
+  { img: 'naacho', title: 'naacho gaao', text: 'a year of baraats, sangeets and dance floors. your thumka goes viral (locally).' },
   { img: 'meethe', title: 'meethe log, khatte log', text: 'some people will turn sour next year. the sweet ones stay. you’ll finally know who’s who.' },
   { img: 'girlies', title: 'the girls club', text: 'your gang gets bigger next year. at least one new best friend is on the way.' },
   { img: 'chugli', title: 'aao behen, chugli karein', text: "you're going to have a year filled with gossip to share. some of it might be about you." },
@@ -37,13 +45,40 @@ const FORTUNES = [   // next year's kismat — each reading matches the poster t
   { img: 'boss', title: 'boss nani era', text: 'next year you play your cards right, and everybody notices. shades on.' },
   { img: 'patriarchy', title: 'scratch the patriarchy', text: 'next year you break something that’s been holding you back. no apologies.' },
   { img: 'baegum', title: 'baegum', text: 'you walk into next year like royalty. expect to be treated like one.' },
-  { img: 'kaam', title: 'keep kaam se kaam', text: 'big work year. head down, kaam se kaam, and it pays off before next Diwali.' },
+  { img: 'kaam', title: 'keep kaam se kaam', text: 'big work year. head down, kaam se kaam, and it pays off before next diwali.' },
   { img: 'chai', title: 'chai pe charcha', text: 'one long chai conversation next year changes your mind about something big.' },
   { img: 'romance', title: 'pyaar ka chakkar', text: 'romance is in the cards next year. pick the good one this time.' },
 ];
 FORTUNES.forEach(f => { const i = new Image(); i.src = `assets/cards/${f.img}.webp`; });
-const T = { table: $('#ttable'), tota: $('#tota'), cards: [], busy: false, state: 'stack' };
-function tT(el, x, y, r, sc = 1, z) { el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${sc})`; if (z != null) el.style.zIndex = z; }
+const T = { table: $('#ttable'), tota: $('#tota'), cards: [], busy: false, x: 0, y: 0, face: 1 };
+const cardT = (el, x, y, r, sc = 1, z) => { el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${sc})`; if (z != null) el.style.zIndex = z; };
+function totaPlace(x, y, face = T.face) { T.x = x; T.y = y; T.face = face; T.tota.style.transform = `translate(${x}px,${y}px) scaleX(${face})`; }
+function perchSpot() {          // waiting off to the side while the deck is shuffled
+  const W = T.table.clientWidth, H = T.table.clientHeight;
+  return { x: -W / 2 + 2, y: H / 2 - T.tota.offsetHeight - 4 };
+}
+async function hop(x, y, { face, h = 34, ms = 360 } = {}) {   // a real hop: arc up, land with a little squash
+  const f = face ?? (x < T.x ? -1 : 1);
+  const a = T.tota.animate([
+    { transform: `translate(${T.x}px,${T.y}px) scaleX(${f}) scaleY(1)` },
+    { transform: `translate(${(T.x + x) / 2}px,${Math.min(T.y, y) - h}px) scaleX(${f}) scaleY(1.04)`, offset: .5 },
+    { transform: `translate(${x}px,${y}px) scaleX(${f * 1.06}) scaleY(.92)`, offset: .88 },
+    { transform: `translate(${x}px,${y}px) scaleX(${f}) scaleY(1)` },
+  ], { duration: ms, easing: 'cubic-bezier(.3,.1,.4,1)' });
+  totaPlace(x, y, f);
+  await a.finished.catch(() => {}); tick();
+}
+async function bob(n = 2) {     // head-bob / curious look in place
+  for (let i = 0; i < n; i++) {
+    const a = T.tota.animate([
+      { transform: `translate(${T.x}px,${T.y}px) scaleX(${T.face}) rotate(0deg)` },
+      { transform: `translate(${T.x + 4 * T.face}px,${T.y + 5}px) scaleX(${T.face}) rotate(${8 * T.face}deg)` },
+      { transform: `translate(${T.x}px,${T.y}px) scaleX(${T.face}) rotate(0deg)` },
+    ], { duration: rnd(240, 340), easing: 'ease-in-out' });
+    await a.finished.catch(() => {});
+    await sleep(rnd(60, 220));
+  }
+}
 function totaBuild() {
   T.cards.forEach(c => c.remove());
   T.cards = Array.from({ length: 9 }, () => {
@@ -51,76 +86,75 @@ function totaBuild() {
     el.innerHTML = '<div class="kc-in"><div class="kc-f kc-back"></div><div class="kc-f kc-front"></div></div>';
     T.table.appendChild(el); return el;
   });
-  totaStack();
-  totaParrot('home');
-}
-function totaStack() { T.cards.forEach((el, i) => { el.style.opacity = 1; el.classList.remove('flip'); tT(el, (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); }); T.state = 'stack'; }
-function totaParrot(where, x = 0, y = 0, peck = false) {
-  const W = T.table.clientWidth, el = T.tota;
-  el.src = peck ? 'assets/game/parrot_card.webp' : 'assets/game/parrot.webp';
-  if (where === 'home') { el.style.transition = 'transform .6s cubic-bezier(.3,.9,.3,1)'; el.style.transform = `translate(${-W * .5 - 40}px, 30px) scaleX(1)`; }
-  else el.style.transform = `translate(${x}px, ${y}px) scaleX(${peck ? 1 : 1})`;
+  T.cards.forEach((el, i) => { el.style.opacity = 1; el.classList.remove('flip'); cardT(el, (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); });
+  T.tota.src = 'assets/game/parrot.webp';
+  const p = perchSpot(); totaPlace(p.x, p.y, 1);
 }
 async function riffle() {
   const w = T.cards[0].offsetWidth, half = Math.ceil(T.cards.length / 2);
   const L = T.cards.slice(0, half), R = T.cards.slice(half);
-  L.forEach((el, i) => tT(el, -w * .56, -i * 1.3, -9)); R.forEach((el, i) => tT(el, w * .56, -i * 1.3, 9));
+  L.forEach((el, i) => cardT(el, -w * .56, -i * 1.3, -9)); R.forEach((el, i) => cardT(el, w * .56, -i * 1.3, 9));
   await sleep(360);
   const out = [];
   while (L.length || R.length) out.push(((Math.random() < .5 && L.length) || !R.length ? L : R).shift());
-  for (let i = 0; i < out.length; i++) { tT(out[i], (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); tick(); await sleep(50); }
-  T.cards = out; await sleep(280);
+  for (let i = 0; i < out.length; i++) { cardT(out[i], (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); tick(); await sleep(50); }
+  T.cards = out; await sleep(260);
 }
 async function bridge() {
-  T.cards.forEach((el, i) => tT(el, (i - 4) * .5, -i * 1.3 - 24, rnd(-2, 2), 1.05)); await sleep(240);
-  for (let i = 0; i < T.cards.length; i++) { tT(T.cards[i], (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); tick(); await sleep(28); }
-  await sleep(260);
+  T.cards.forEach((el, i) => cardT(el, (i - 4) * .5, -i * 1.3 - 24, rnd(-2, 2), 1.05)); await sleep(240);
+  for (let i = 0; i < T.cards.length; i++) { cardT(T.cards[i], (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); tick(); await sleep(28); }
+  await sleep(240);
 }
 function fanPos(i) {
   const W = T.table.clientWidth, cw = T.cards[0].offsetWidth, n = T.cards.length, spread = W < 500 ? 22 : 30;
   const R = Math.min(520, (W / 2 - cw * .6) / Math.sin(rad(spread)));
   const a = -spread + 2 * spread * i / (n - 1);
-  return { x: Math.sin(rad(a)) * R, y: R - Math.cos(rad(a)) * R - 30, a };
+  return { x: Math.sin(rad(a)) * R, y: R - Math.cos(rad(a)) * R - 40, a };
 }
-async function fan() { for (let i = 0; i < T.cards.length; i++) { const p = fanPos(i); tT(T.cards[i], p.x, p.y, p.a, 1, i); tick(); await sleep(40); } }
+const W_SCALE = () => (T.table.clientWidth < 420 ? 1.25 : 1.5);
 async function totaPlay() {
   if (T.busy) return; T.busy = true; start();
   $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true;
+  totaBuild(); bob(2);
   $('#tsub').textContent = 'shuffling…';
-  totaBuild(); await sleep(300);
-  await riffle(); await riffle(); await bridge(); await fan();
+  await sleep(300); await riffle(); await riffle(); await bridge();
+  for (let i = 0; i < T.cards.length; i++) { const p = fanPos(i); cardT(T.cards[i], p.x, p.y, p.a, 1, i); tick(); await sleep(40); }
   $('#tsub').textContent = 'tota ji is choosing…';
-  // the parrot hops along the fan, hesitates, then pecks one out
-  const choice = 1 + ((Math.random() * (T.cards.length - 2)) | 0);
-  const tw = T.tota.offsetWidth, th = T.tota.offsetHeight;
-  const stops = [0, 2, 4, 6, 8].filter(i => i < T.cards.length);
-  T.tota.style.transition = 'transform .55s cubic-bezier(.4,1.6,.5,1)';
-  for (const i of [...stops, choice]) {
-    const p = fanPos(i);
-    totaParrot('at', p.x - tw * .78, p.y + T.cards[0].offsetHeight * .22 - th * .32);
-    tick(); await sleep(560);
+  const ch = T.cards[0].offsetHeight, tw = T.tota.offsetWidth, th = T.tota.offsetHeight;
+  const spot = i => { const p = fanPos(i); return { x: p.x - tw * .7, y: p.y + ch * .32 - th * .5 }; };
+  // wander: hop on, look around, double back, consider, then commit
+  const n = T.cards.length, choice = 1 + ((Math.random() * (n - 2)) | 0);
+  const path = [1, 3, 5, Math.min(n - 2, 7), clamp(choice + (choice > 4 ? -2 : 2), 0, n - 1), choice];
+  for (let k = 0; k < path.length; k++) {
+    const s = spot(path[k]);
+    await hop(s.x, s.y, { h: rnd(22, 46), ms: rnd(300, 440) });
+    if (k === 2 || k === path.length - 2) await bob((rnd(1, 3)) | 0); else await sleep(rnd(80, 260));
   }
-  const p = fanPos(choice);
-  totaParrot('at', p.x - tw * .74, p.y + T.cards[0].offsetHeight * .18 - th * .3, true);
-  const el = T.cards[choice];
-  const f = pick(FORTUNES);
-  el.querySelector('.kc-front').style.backgroundImage = `url(assets/cards/${f.img}.webp)`;
-  T.cards.forEach(c => { if (c !== el) c.style.opacity = .16; });
-  tT(el, p.x, p.y - 26, p.a, 1, 60); await sleep(380);
-  totaParrot('home'); await sleep(250);
-  tT(el, 0, -10, 0, 1.45, 60); await sleep(420);
-  el.classList.add('flip'); ding(820, .55); FX().buzz(20);
-  await sleep(480);
-  $('#ttitle').textContent = f.title; $('#ttext').textContent = f.text;
+  await bob(1);
+  const p = fanPos(choice), el = T.cards[choice], f = pick(FORTUNES);
+  const front = el.querySelector('.kc-front'); front.style.backgroundImage = `url(assets/cards/${f.img}.webp)`;
+  const lab = document.createElement('span'); lab.className = 'kc-label'; lab.textContent = f.title; front.replaceChildren(lab);
+  T.tota.src = 'assets/game/parrot_card.webp';
+  cardT(el, p.x, p.y - 30, p.a, 1, 60); buzz(15);
+  await sleep(340);
+  T.cards.forEach(c => { if (c !== el) c.style.opacity = .14; });
+  T.tota.src = 'assets/game/parrot.webp';
+  const home = perchSpot();
+  hop(home.x, home.y, { face: -1, h: 50, ms: 520 }).then(() => totaPlace(home.x, home.y, 1));
+  cardT(el, 0, -26, 0, W_SCALE(), 60); await sleep(440);
+  el.classList.add('flip'); ding(820, .55); buzz(20);
+  await sleep(520);
+  $('#ttext').textContent = f.text;
   $('#tread').hidden = false; $('#tagain').hidden = false;
   $('#tsub').textContent = 'tota ji has spoken.';
   T.busy = false;
 }
 $('#tgo').addEventListener('click', totaPlay);
 $('#tagain').addEventListener('click', totaPlay);
-totaBuild();
+requestAnimationFrame(totaBuild);
+window.addEventListener('resize', () => { if (!T.busy) totaBuild(); });
 
-/* ═════════ gubbara phod ═════════ */
+/* ═════════ gubbara phod — air rifle, drag to aim, release to fire ═════════ */
 const INAAMS = [
   'the last kaju katli in the dabba', 'a soan papdi box you can regift (again)', 'immunity from “beta, shaadi kab?”',
   'first dibs on tonight’s chugli', 'a lifetime supply of nazar (with nimbu-mirchi)', 'one excuse to skip rangoli duty',
@@ -128,41 +162,82 @@ const INAAMS = [
   'one guilt-free extra gulab jamun', 'a compliment on your nails from a stranger', 'the window seat at the chai tapri',
   'unlimited unsolicited advice from mausi', 'a diya that refuses to go out', 'a thumka lesson from the aunties',
 ];
-const G = { ready: false, shots: 5, won: [] };
+const MISS_LINES = ['chook gaye!', 'thoda left, beta', 'hawa mein!', 'almost!'];
+const G = { balloons: [], shots: 5, aiming: false, ax: 0, ay: 0, cx: 0, cy: 0, raf: 0, t0: 0 };
+const range = $('#range'), wall = $('#gwall'), cross = $('#cross'), rifle = $('#rifle');
 function gubbaraReset() {
-  const board = $('#gboard'); board.replaceChildren();
-  G.shots = 5; G.won = []; G.ready = true;
-  const n = 15, pool = [...INAAMS].sort(() => Math.random() - .5);
-  for (let i = 0; i < n; i++) {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'gub';
-    b.style.setProperty('--d', (-Math.random() * 3).toFixed(2) + 's');
-    b.innerHTML = `<img src="assets/game/bal${i % 8}.webp" alt="balloon">`;
-    b.dataset.prize = pool[i % pool.length];
-    b.addEventListener('click', () => gubbaraShoot(b));
-    board.appendChild(b);
+  wall.replaceChildren(); G.balloons = []; G.shots = 5; G.aiming = false;
+  const pool = [...INAAMS].sort(() => Math.random() - .5);
+  const cols = 5, rows = 3;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const el = document.createElement('div'); el.className = 'gub';
+    const img = document.createElement('img'); img.src = `assets/game/bal${(r * cols + c) % 8}.webp`; img.alt = '';
+    el.appendChild(img); wall.appendChild(el);
+    G.balloons.push({ el, bx: (c + .5) / cols, by: .2 + r * .27, ph: rnd(0, 6.3), sp: rnd(.6, 1.1), amp: rnd(.015, .035), alive: true, prize: pool[(r * cols + c) % pool.length] });
   }
   $('#gshots').innerHTML = Array.from({ length: 5 }, () => '<i></i>').join('');
   $('#ghaul').hidden = true; $('#glist').replaceChildren(); $('#gagain').hidden = true;
-  $('#gsub').textContent = '5 shots. every pop wins you something.';
+  $('#gsub').textContent = 'drag to aim, let go to fire. 5 pellets.';
+  requestAnimationFrame(() => { const r0 = range.getBoundingClientRect(); G.ax = r0.width / 2; G.ay = r0.height * .35; });
+  cancelAnimationFrame(G.raf); G.t0 = performance.now(); G.raf = requestAnimationFrame(gubbaraLoop);
 }
-function gubbaraShoot(b) {
-  if (G.shots <= 0 || b.classList.contains('popped')) return;
-  start(); pop(); FX().buzz(15);
+function balloonPos(b, t) {
+  const W = wall.clientWidth, H = wall.clientHeight;
+  return { x: (b.bx + Math.sin(t * b.sp + b.ph) * b.amp) * W, y: (b.by + Math.cos(t * b.sp * 1.3 + b.ph) * b.amp * .8) * H };
+}
+function gubbaraLoop(now) {
+  if ($('[data-panel=gubbara]').hidden) { G.raf = 0; return; }
+  const t = (now - G.t0) / 1000;
+  G.balloons.forEach(b => { if (!b.alive) return; const p = balloonPos(b, t); b.el.style.transform = `translate(${p.x}px,${p.y}px) translate(-50%,-50%) rotate(${Math.sin(t * b.sp + b.ph) * 6}deg)`; });
+  const sway = G.aiming ? 1 : .4;                       // a little hand sway — skill still wins
+  G.cx = G.ax + Math.sin(t * 2.1) * 4 * sway; G.cy = G.ay + Math.cos(t * 1.7) * 3 * sway;
+  cross.style.transform = `translate(${G.cx}px,${G.cy}px)`;
+  const W = range.clientWidth, H = range.clientHeight;
+  const ang = Math.atan2(G.cy - (H + 20), G.cx - W / 2) * 180 / Math.PI;
+  rifle.style.transform = `translateX(-50%) rotate(${(ang + 90).toFixed(2)}deg)`;
+  G.raf = requestAnimationFrame(gubbaraLoop);
+}
+function aimAt(e) { const p = local(range, e); G.ax = clamp(p.x, 6, p.w - 6); G.ay = clamp(p.y - (e.pointerType === 'touch' ? 60 : 0), 6, p.h * .78); }
+range.addEventListener('pointerdown', e => {
+  if (G.shots <= 0) return; start(); e.preventDefault();
+  G.aiming = true; try { range.setPointerCapture(e.pointerId); } catch (err) {} aimAt(e); range.classList.add('aiming');
+});
+range.addEventListener('pointermove', e => { if (G.aiming || e.pointerType === 'mouse') aimAt(e); });
+range.addEventListener('pointerup', () => { if (!G.aiming) return; G.aiming = false; range.classList.remove('aiming'); fire(); });
+range.addEventListener('pointercancel', () => { G.aiming = false; range.classList.remove('aiming'); });
+async function fire() {
+  if (G.shots <= 0) return;
   G.shots--; $('#gshots').children[4 - G.shots].classList.add('used');
-  b.classList.add('popped');
-  b.querySelector('img').src = 'assets/game/bal8.webp';
-  const tag = document.createElement('span'); tag.className = 'gtag'; tag.textContent = b.dataset.prize; b.appendChild(tag);
-  G.won.push(b.dataset.prize);
-  const li = document.createElement('li'); li.textContent = b.dataset.prize; $('#glist').appendChild(li);
-  $('#ghaul').hidden = false;
+  noise(.08, 'bandpass', 2400, 900, .9, 2); buzz(12);
+  rifle.animate([{ marginTop: '0px' }, { marginTop: '12px' }, { marginTop: '0px' }], { duration: 170 });
+  const x = G.cx, y = G.cy; await sleep(90);
+  const t = (performance.now() - G.t0) / 1000;
+  const wx = x - wall.offsetLeft, wy = y - wall.offsetTop;
+  let hit = null, best = 1e9;
+  G.balloons.forEach(b => {
+    if (!b.alive) return;
+    const p = balloonPos(b, t), r = b.el.offsetWidth * .48, d = Math.hypot(p.x - wx, (p.y - b.el.offsetHeight * .15) - wy);
+    if (d < r && d < best) { best = d; hit = b; }
+  });
+  const fx = document.createElement('i'); fx.className = hit ? 'gfx pop' : 'gfx puff'; fx.style.left = x + 'px'; fx.style.top = y + 'px'; range.appendChild(fx); setTimeout(() => fx.remove(), 700);
+  if (hit) {
+    pop(); buzz(25); hit.alive = false; hit.el.classList.add('popped');
+    hit.el.querySelector('img').src = 'assets/game/bal8.webp';
+    const tag = document.createElement('span'); tag.className = 'gtag'; tag.textContent = hit.prize; hit.el.appendChild(tag);
+    const li = document.createElement('li'); li.textContent = hit.prize; $('#glist').appendChild(li); $('#ghaul').hidden = false;
+  } else {
+    thup(); const m = document.createElement('span'); m.className = 'gmiss'; m.textContent = pick(MISS_LINES); m.style.left = x + 'px'; m.style.top = y + 'px'; range.appendChild(m); setTimeout(() => m.remove(), 900);
+  }
   if (G.shots === 0) {
-    $('#gsub').textContent = 'shots khatam! collect your inaam below.';
+    const n = $('#glist').children.length;
+    if (!n) { const li = document.createElement('li'); li.textContent = 'consolation prize: one pat on the head from the stall uncle'; $('#glist').appendChild(li); $('#ghaul').hidden = false; }
+    $('#gsub').textContent = n ? `${n} of 5 popped! collect your inaam.` : 'all misses! uncle feels bad for you.';
     $('#gagain').hidden = false; ding(700, .6);
-  } else $('#gsub').textContent = `${G.shots} shot${G.shots > 1 ? 's' : ''} left.`;
+  } else $('#gsub').textContent = `${G.shots} pellet${G.shots > 1 ? 's' : ''} left.`;
 }
 $('#gagain').addEventListener('click', gubbaraReset);
 
-/* ═════════ chhalla (ring toss on banta bottles) ═════════ */
+/* ═════════ chhalla — flick the bangle at a banta bottle ═════════ */
 const PRIZES = [
   ['aunty approval', 'she said “kitni sundar lag rahi hai”. frame it.'],
   ['gossip VIP pass', 'you hear the chugli first, before the group chat does.'],
@@ -171,60 +246,95 @@ const PRIZES = [
   ['no-nazar shield', 'one nimbu-mirchi, personally assigned to you for the year.'],
 ];
 const MISSES = ['try karo, beta. consolation prize: one pat on the head.', 'so close! the banta respects your effort.', 'missed! but your nails looked great doing it.'];
-const R = { ready: false, left: 3, busy: false };
+const R = { left: 3, busy: false, drag: null };
+const cstage = $('#cstage'), ring = $('#cring'), aimLine = $('#caimline');
+function ringHome() { ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 1; ring.style.transform = 'translate(-50%, 0)'; }
 function chhallaReset() {
   const shelf = $('#cshelf'); shelf.replaceChildren();
   const order = [0, 1, 2, 3, 4].sort(() => Math.random() - .5);
   order.forEach((p, i) => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'bot';
-    b.innerHTML = `<img src="assets/game/bottle${i}.webp" alt="banta bottle"><span class="btag">${PRIZES[p][0]}</span>`;
-    b.dataset.p = p; b.addEventListener('click', () => chhallaThrow(b));
-    shelf.appendChild(b);
+    const b = document.createElement('div'); b.className = 'bot'; b.dataset.p = p;
+    const img = document.createElement('img'); img.src = `assets/game/bottle${i}.webp`; img.alt = '';
+    const tag = document.createElement('span'); tag.className = 'btag'; tag.textContent = PRIZES[p][0];
+    b.append(img, tag); shelf.appendChild(b);
   });
-  R.left = 3; R.ready = true; R.busy = false;
+  R.left = 3; R.busy = false; ringHome();
   $('#cread').hidden = true; $('#cagain').hidden = true;
-  $('#csub').textContent = '3 bangles. tap a bottle to throw.';
-  const ring = $('#cring'); ring.style.transition = 'none'; ring.style.transform = 'translate(-50%, 0) scale(1)'; ring.style.opacity = 1;
+  $('#csub').textContent = 'flick the bangle up at a bottle. 3 throws.';
 }
-async function chhallaThrow(b) {
-  if (R.busy || R.left <= 0) return; R.busy = true; start();
-  const ring = $('#cring'), stage = $('#cstage').getBoundingClientRect(), br = b.getBoundingClientRect(), rr = ring.getBoundingClientRect();
-  const hit = Math.random() < .55;
-  const tx = br.left + br.width / 2 - (rr.left + rr.width / 2) + (hit ? 0 : rnd(-1, 1) * br.width * .9);
-  const ty = (br.top + br.height * (hit ? .16 : -.1)) - (rr.top + rr.height / 2);
-  ring.style.transition = 'transform .7s cubic-bezier(.25,.6,.35,1)';
-  ring.style.transform = `translate(calc(-50% + ${tx}px), ${ty}px) rotate(${rnd(360, 720)}deg) scale(.55) rotateX(62deg)`;
-  await sleep(720);
+cstage.addEventListener('pointerdown', e => {
+  if (R.busy || R.left <= 0) return;
+  const rr = ring.getBoundingClientRect();
+  if (Math.hypot(e.clientX - (rr.left + rr.width / 2), e.clientY - (rr.top + rr.height / 2)) > rr.width * 1.5) return;
+  start(); e.preventDefault(); try { cstage.setPointerCapture(e.pointerId); } catch (err) {}
+  R.drag = { x0: e.clientX, y0: e.clientY, hist: [{ x: e.clientX, y: e.clientY, t: performance.now() }] };
+  cstage.classList.add('aiming');
+});
+cstage.addEventListener('pointermove', e => {
+  if (!R.drag) return;
+  const now = performance.now(); R.drag.hist.push({ x: e.clientX, y: e.clientY, t: now }); while (R.drag.hist.length > 2 && now - R.drag.hist[0].t > 90) R.drag.hist.shift();
+  const dx = e.clientX - R.drag.x0, dy = e.clientY - R.drag.y0;
+  ring.style.transform = `translate(calc(-50% + ${dx * .35}px), ${dy * .35}px) scale(1.05)`;
+  const s = cstage.getBoundingClientRect(), rr = ring.getBoundingClientRect(), cx = rr.left + rr.width / 2 - s.left, cy = rr.top + rr.height / 2 - s.top;
+  aimLine.setAttribute('x1', cx); aimLine.setAttribute('y1', cy); aimLine.setAttribute('x2', cx + dx * 1.6); aimLine.setAttribute('y2', cy + dy * 1.6);
+});
+function endDrag() { R.drag = null; cstage.classList.remove('aiming'); aimLine.setAttribute('x2', aimLine.getAttribute('x1')); aimLine.setAttribute('y2', aimLine.getAttribute('y1')); }
+cstage.addEventListener('pointerup', () => {
+  if (!R.drag) return;
+  const h = R.drag.hist, a = h[0], b = h[h.length - 1], dt = Math.max(16, b.t - a.t);
+  const vx = (b.x - a.x) / dt, vy = (b.y - a.y) / dt;          // px per ms
+  endDrag();
+  if (vy > -.25) { ringHome(); $('#csub').textContent = 'flick it upwards, a little faster!'; return; }
+  chhallaThrow(vx, vy);
+});
+cstage.addEventListener('pointercancel', () => { endDrag(); ringHome(); });
+async function chhallaThrow(vx, vy) {
+  R.busy = true;
+  const s = cstage.getBoundingClientRect(), rr = ring.getBoundingClientRect();
+  const cx = rr.left + rr.width / 2 - s.left, cy = rr.top + rr.height / 2 - s.top;
+  const power = clamp(-vy, .25, 3.2), tx = cx + vx * 220 + rnd(-8, 8), ty = cy - power * 240;
+  let hitB = null;
+  document.querySelectorAll('.bot').forEach(b => {
+    const r = b.getBoundingClientRect(), nx = r.left + r.width / 2 - s.left, ny = r.top + r.height * .14 - s.top;
+    if (Math.abs(tx - nx) < r.width * .45 && Math.abs(ty - ny) < r.height * .42) hitB = { el: b, x: nx, y: ny };
+  });
+  const endX = hitB ? hitB.x : tx, endY = hitB ? hitB.y : ty, arcH = 60 + power * 30;
+  const anim = ring.animate([
+    { transform: 'translate(-50%, 0) scale(1) rotateX(0deg)' },
+    { transform: `translate(calc(-50% + ${(endX - cx) / 2}px), ${(endY - cy) / 2 - arcH}px) scale(.75) rotateX(40deg) rotate(360deg)`, offset: .5 },
+    { transform: `translate(calc(-50% + ${endX - cx}px), ${endY - cy}px) scale(.5) rotateX(68deg) rotate(720deg)` },
+  ], { duration: 650, easing: 'cubic-bezier(.3,.2,.4,1)', fill: 'forwards' });
+  await anim.finished.catch(() => {});
   R.left--;
-  if (hit) {
-    clink(); FX().buzz(25); b.classList.add('ringed');
-    const [name, text] = PRIZES[+b.dataset.p];
+  if (hitB) {
+    clink(); buzz(25); hitB.el.classList.add('ringed');
+    const [name, text] = PRIZES[+hitB.el.dataset.p];
     $('#ctitle').textContent = name; $('#ctext').textContent = text; ding(880, .55);
-    ring.style.opacity = 0;
+    ring.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' });
   } else {
     clink();
-    ring.style.transition = 'transform .5s ease-in, opacity .4s .2s';
-    ring.style.transform = `translate(calc(-50% + ${tx + rnd(-40, 40)}px), ${ty + 160}px) rotate(900deg) scale(.5)`; ring.style.opacity = 0;
+    ring.animate([
+      { transform: `translate(calc(-50% + ${endX - cx}px), ${endY - cy}px) scale(.5) rotateX(68deg)`, opacity: 1 },
+      { transform: `translate(calc(-50% + ${endX - cx + rnd(-60, 60)}px), ${endY - cy + 140}px) scale(.45) rotateX(80deg) rotate(260deg)`, opacity: 0 },
+    ], { duration: 520, easing: 'cubic-bezier(.5,0,1,1)', fill: 'forwards' });
     $('#ctitle').textContent = 'missed!'; $('#ctext').textContent = pick(MISSES);
   }
   $('#cread').hidden = false;
-  await sleep(500);
-  if (R.left > 0) {
-    ring.style.transition = 'none'; ring.style.opacity = 1; ring.style.transform = 'translate(-50%, 0) scale(1)';
-    $('#csub').textContent = `${R.left} bangle${R.left > 1 ? 's' : ''} left.`;
-  } else { $('#csub').textContent = 'all bangles thrown!'; $('#cagain').hidden = false; }
+  await sleep(750);
+  if (R.left > 0) { ringHome(); $('#csub').textContent = `${R.left} throw${R.left > 1 ? 's' : ''} left.`; }
+  else { ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 0; $('#csub').textContent = 'all bangles thrown!'; $('#cagain').hidden = false; }
   R.busy = false;
 }
 $('#cagain').addEventListener('click', chhallaReset);
 
-/* ═════════ lucky draw ═════════ */
+/* ═════════ lucky draw — a real crank ═════════ */
 const PERSONAS = [
   { name: 'the chugli champion', text: "you'll know everything before it happens. use your powers wisely (or don't)." },
   { name: 'main-character energy', text: 'every room you walk into this year is your entrance scene.' },
   { name: 'the dance-floor auntie', text: 'first on the floor, last to leave. the DJ already fears you.' },
   { name: 'the jugaad genius', text: "no plan? no problem. you'll fix everything with a safety pin and a smile." },
-  { name: 'the phuljhadi', text: 'small, sparkly, impossible to ignore. you light up every room for exactly as long as you want.' },
-  { name: 'the rangoli perfectionist', text: "everything has to be just right this year, and somehow it will be." },
+  { name: 'the phuljhadi', text: 'small, sparkly, impossible to ignore. you light up every room.' },
+  { name: 'the rangoli perfectionist', text: 'everything has to be just right this year, and somehow it will be.' },
   { name: 'the soan papdi re-gifter', text: 'resourceful, practical, slightly suspicious. a legend in the making.' },
   { name: 'the glow-up of the year', text: 'new set, new vibe, new you. people will ask what changed.' },
   { name: 'the soft-spoken savage', text: 'sweet voice, sharp comebacks. nobody sees it coming.' },
@@ -232,25 +342,65 @@ const PERSONAS = [
   { name: 'the selfie director', text: "you'll get everyone's best angle. nobody will get yours." },
   { name: 'the mohalla’s lucky charm', text: 'good things follow you around this year. keep your people close.' },
 ];
-const D = { busy: false };
-async function draw() {
-  if (D.busy) return; D.busy = true; start();
-  $('#ticket').hidden = true; $('#dagain').hidden = true; $('#dspin').hidden = true;
-  $('#dsub').textContent = 'ghuma ghuma ke…';
-  const drum = $('#drum'); drum.classList.add('spin');
+const D = { ang: 0, vel: 0, total: 0, need: 1080, busy: false, done: false, drag: null, raf: 0, last: 0, slips: [] };
+const body = $('#drBody'), crank = $('#drCrank'), slipBox = $('#drSlips');
+(() => { const cols = ['#efbd0d', '#ec5a86', '#2f9790', '#1d8cc4', '#c4221a', '#f7e6c8'];
+  for (let i = 0; i < 14; i++) { const s = document.createElement('i'); s.style.background = cols[i % cols.length]; slipBox.appendChild(s); D.slips.push({ el: s, a: rnd(0, 6.3), r: rnd(.15, .42), spin: rnd(0, 360) }); } })();
+function drawLoop(now) {
+  const dt = Math.min(.05, (now - (D.last || now)) / 1000); D.last = now;
+  if (!D.drag) D.vel *= Math.pow(.3, dt);                 // the drum coasts and slows down
+  D.ang += D.vel * dt; D.total += Math.abs(D.vel * dt);
+  crank.style.transform = `rotateX(${D.ang.toFixed(1)}deg)`;
+  // the cage rolls about its axle: a squash/bob in step with the crank, slips tumbling inside
+  const ph = rad(D.ang);
+  body.style.transform = `scaleY(${(.94 + .06 * Math.abs(Math.cos(ph * 3))).toFixed(3)}) translateY(${(Math.sin(ph * 3) * 3).toFixed(1)}px)`;
+  const W = slipBox.clientWidth, H = slipBox.clientHeight, sp = Math.min(1, Math.abs(D.vel) / 500), rest = 1 - sp;
+  D.slips.forEach((s, i) => {
+    s.a += D.vel * dt * (.012 + i * .0006); s.spin += D.vel * dt * .6;
+    const x = W / 2 + Math.cos(s.a) * s.r * W * (1 - rest * .2), y = H / 2 + Math.sin(s.a) * s.r * H * sp + rest * H * (.12 + s.r * .45);
+    s.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${s.spin.toFixed(0)}deg)`;
+  });
+  if (Math.abs(D.vel) > 60 && Math.random() < dt * Math.abs(D.vel) / 40) noise(.03, 'bandpass', rnd(1800, 3200), 1400, .12, 2);
+  if (!D.done && D.total >= D.need && !D.drag && Math.abs(D.vel) < 220) drawDrop();
+  if (!$('[data-panel=draw]').hidden || Math.abs(D.vel) > 1) D.raf = requestAnimationFrame(drawLoop); else D.raf = 0;
+}
+function kick() { if (!D.raf) { D.last = 0; D.raf = requestAnimationFrame(drawLoop); } }
+crank.addEventListener('pointerdown', e => {
+  if (D.done) return; start(); e.preventDefault(); try { crank.setPointerCapture(e.pointerId); } catch (err) {}
+  D.drag = { lastX: e.clientX, lastY: e.clientY, lastT: performance.now() };
+  $('#dsub').textContent = 'keep turning…'; kick();
+});
+crank.addEventListener('pointermove', e => {
+  if (!D.drag) return;
+  const now = performance.now(), dt = Math.max(8, now - D.drag.lastT);
+  const w = (Math.abs(e.clientY - D.drag.lastY) + Math.abs(e.clientX - D.drag.lastX) * .5) * 2.2;   // any circular-ish motion turns it
+  D.ang += w; D.total += w; D.vel = clamp(w / dt * 1000, 0, 1400);
+  D.drag.lastX = e.clientX; D.drag.lastY = e.clientY; D.drag.lastT = now;
+});
+const endCrank = () => { D.drag = null; };
+crank.addEventListener('pointerup', endCrank); crank.addEventListener('pointercancel', endCrank);
+$('#dspin').addEventListener('click', async () => {             // for anyone who'd rather tap
+  if (D.done || D.busy) return; start(); D.busy = true; $('#dsub').textContent = 'ghuma ghuma ke…'; kick();
   const t0 = performance.now();
-  while (performance.now() - t0 < 2300) { const f = FX(); if (f.audio) f.noiseHit(.03, 'bandpass', rnd(1800, 3200), 1400, .14, 2); await sleep(85); }
-  drum.classList.remove('spin');
-  await sleep(200);
+  while (performance.now() - t0 < 1700) { D.vel = Math.min(900, D.vel + 120); await sleep(60); }
+  D.busy = false;
+});
+async function drawDrop() {
+  D.done = true; $('#dspin').hidden = true;
   const p = pick(PERSONAS);
   $('#tno').textContent = String(1000 + ((Math.random() * 9000) | 0));
   $('#tname').textContent = p.name; $('#ttext2').textContent = p.text;
-  const t = $('#ticket'); t.hidden = false; t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
-  ding(700, .6); FX().buzz(25);
+  const drop = $('#drDrop'); drop.classList.remove('go'); void drop.offsetWidth; drop.classList.add('go');   // folded ticket tumbles out
+  thup(); await sleep(700);
+  const t = $('#ticket'); t.hidden = false; t.classList.remove('open'); void t.offsetWidth; t.classList.add('open');  // …and unfolds
+  ding(700, .6); buzz(25);
   $('#dsub').textContent = 'here you are, next year.';
-  $('#dagain').hidden = false; D.busy = false;
+  setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'center' }), 250);
+  $('#dagain').hidden = false;
 }
-$('#dspin').addEventListener('click', draw);
-$('#drum').addEventListener('click', draw);
-$('#dagain').addEventListener('click', draw);
+$('#dagain').addEventListener('click', () => {
+  D.done = false; D.total = 0; $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
+  $('#drDrop').classList.remove('go'); $('#dsub').textContent = 'turn the crank. drag it round, or tap the button.';
+  $('#dstage').scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
 })();
