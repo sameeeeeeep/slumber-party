@@ -73,7 +73,7 @@ let vw = 0, vh = 0, dpr = 1, lastEnvW = 0, wide = false;
 const E = {}, EB = {}, EZ = {}, B = {}, M = {}, C2 = {};
 let zoom = 0, RS = 2;                                         // envelope zoom (0 = resting, 1 = lit close-up)
 const tilt = { x: 0, y: 0, px: 0, py: 0 };
-const ENV_AR = 1600 / 788, POSTER_AR = 1000 / 1201, SLEEVE_AR = 1000 / 625, DRAWER = .253;
+const ENV_AR = 1600 / 866, POSTER_AR = 1000 / 1201, SLEEVE_AR = 1000 / 625, DRAWER = .253;
 const ORIGIN = [.05, .9];
 
 function setE() {
@@ -154,31 +154,26 @@ function drawEnvelope() {
   x.setTransform(RS, 0, 0, RS, 0, 0);
   x.clearRect(0, 0, W, H);
   if (IMG.env) x.drawImage(IMG.env, 0, 0, W, H);
-  // deck lockup: nailinit / DIWALI / P A R T Y
-  const lx = u * 8.5;
-  if (IMG.nl) { const h = u * 3.3; x.drawImage(IMG.nl, lx, u * 6.6, h * IMG.nl.width / IMG.nl.height, h); }
-  let dh = 0;
-  if (IMG.diwali) { const w = u * 25; dh = w * IMG.diwali.height / IMG.diwali.width; x.drawImage(IMG.diwali, lx - u * .3, u * 10.6, w, dh); }
-  x.fillStyle = '#1c1410'; x.font = `600 ${u * 2.3}px "Clash Display", "Barlow Condensed"`; x.textBaseline = 'alphabetic'; x.textAlign = 'left';
-  'PARTY'.split('').forEach((ch, i) => x.fillText(ch, lx + u * 4.4 + i * u * 3.4, u * 10.6 + dh + u * 2.9));
-  // address: Palanquin Dark + Bakbak One with the deck's red drop shadow
-  const ax = u * 8.5, ay = u * 27.5;
-  x.fillStyle = '#c4221a'; x.font = `700 ${u * 3.2}px "Palanquin Dark"`;
-  x.fillText('सेवा में,', ax, ay);
+  // deck lockup on the top flap: nailinit / DIWALI / P A R T Y
+  x.textBaseline = 'alphabetic';
+  let ly = H * .085;
+  if (IMG.nl) { const h = u * 3.2, w = h * IMG.nl.width / IMG.nl.height; x.drawImage(IMG.nl, W / 2 - w / 2, ly, w, h); ly += h + u * .9; }
+  if (IMG.diwali) { const w = u * 22, h = w * IMG.diwali.height / IMG.diwali.width; x.drawImage(IMG.diwali, W / 2 - w / 2, ly, w, h); ly += h; }
+  x.fillStyle = '#1c1410'; x.font = `600 ${u * 2.1}px "Clash Display", "Barlow Condensed"`; x.textAlign = 'center';
+  'PARTY'.split('').forEach((ch, i) => x.fillText(ch, W / 2 + (i - 2) * u * 3.1, ly + u * 2.7));
+
+  // the pasted label: सेवा में, + the guest's name in Bakbak with the deck's red drop shadow
+  const L0 = { x: W * .263, y: H * .659, w: W * .473, h: H * .228 };
+  x.textAlign = 'left'; x.fillStyle = '#c4221a'; x.font = `700 ${u * 2.5}px "Palanquin Dark"`;
+  x.fillText('सेवा में,', L0.x + u * 2.8, L0.y + u * 3.7);
   const label = NAME + ' ji';
-  let fs = u * 7.2; x.font = `400 ${fs}px "Bakbak One"`;
-  while (x.measureText(label).width > W * .52 && fs > u * 3.6) { fs -= .5; x.font = `400 ${fs}px "Bakbak One"`; }
-  const ny = ay + fs * 1.05;
-  x.fillStyle = '#c4221a'; x.fillText(label, ax + u * .45, ny + u * .5);
-  x.fillStyle = '#1c1410'; x.fillText(label, ax, ny);
-  const ry = ny + u * 2.4, rw = Math.max(W * .3, x.measureText(label).width);
-  x.strokeStyle = '#c4221a'; x.lineWidth = Math.max(1, u * .26);
-  x.beginPath(); x.moveTo(ax, ry); x.lineTo(ax + rw * .45, ry); x.moveTo(ax + rw * .55, ry); x.lineTo(ax + rw, ry); x.stroke();
-  x.fillStyle = '#2f9790'; x.font = `700 ${u * 2.4}px "Palanquin Dark"`; x.textAlign = 'center';
-  x.fillText('✦', ax + rw / 2, ry + u * .85);
+  let fs = u * 7.4; x.font = `400 ${fs}px "Bakbak One"`;
+  while (x.measureText(label).width > L0.w - u * 5 && fs > u * 3) { fs -= .5; x.font = `400 ${fs}px "Bakbak One"`; }
+  const nx = L0.x + L0.w / 2, ny = L0.y + L0.h - u * 2.1;
+  x.textAlign = 'center';
+  x.fillStyle = '#c4221a'; x.fillText(label, nx + u * .4, ny + u * .45);
+  x.fillStyle = '#1c1410'; x.fillText(label, nx, ny);
   x.textAlign = 'left';
-  x.fillStyle = '#75150f'; x.font = `600 ${u * 2.6}px "Palanquin Dark"`;
-  x.fillText('Mohalla No. 26, Khushiyon Wali Gali', ax, ry + u * 4.8);
 }
 
 /* ───────────── burn shader (WebGL, 2D fallback) ───────────── */
