@@ -56,8 +56,6 @@ const STALLS = [['Chai tapri', 'चाय'], ['Kulfi', 'कुल्फी'], ['
   ['Post box', 'डाक'], ['Patang', 'पतंग'], ['Bangles & bindi', 'चूड़ी'], ['Stamp mehendi', 'मेहंदी']];
 const chips = list => list.map(([en]) => `<span class="chip">${en.toLowerCase()}</span>`).join('');
 const half = Math.ceil(STALLS.length / 2);
-$('#row1').innerHTML = chips(STALLS.slice(0, half)).repeat(2);
-$('#row2').innerHTML = chips(STALLS.slice(half)).repeat(2);
 const CHATPATI = ['scratch the patriarchy', 'namaslayyyy', 'no nazar, thu thu', 'kabhi khushi, kabhi rum',
   "aao sis, let's chuglyyyy", 'love urself diva', 'coca-patola', 'khushi-khabri', "i'm just a naari", 'nakhre maxxing', 'spicy par pyaari'];
 $('#row3').innerHTML = CHATPATI.map(t => `<span>${t}</span>`).join('').repeat(2);
@@ -139,7 +137,7 @@ function buildDecor() {
   let h = '', k = 0;
   for (let i = 0; i < n; i++) {
     const x = 5 + (i + .5) / n * 90;
-    const centre = Math.abs(x - 50) < (wide ? 8 : 14);              // keep the masthead clear
+    const centre = false;
     if (centre) continue;
     const isK = i % 3 === 1;
     const sw = (3.4 + (i * .71) % 1.9).toFixed(2), d = (-i * .63).toFixed(2);
@@ -169,10 +167,7 @@ function drawEnvelope() {
   // deck lockup on the top flap: nailinit / DIWALI / P A R T Y
   x.textBaseline = 'alphabetic';
   let ly = H * .085;
-  if (IMG.nl) { const h = u * 3.2, w = h * IMG.nl.width / IMG.nl.height; x.drawImage(IMG.nl, W / 2 - w / 2, ly, w, h); ly += h + u * .9; }
-  if (IMG.diwali) { const w = u * 22, h = w * IMG.diwali.height / IMG.diwali.width; x.drawImage(IMG.diwali, W / 2 - w / 2, ly, w, h); ly += h; }
-  x.fillStyle = '#1c1410'; x.font = `600 ${u * 2.1}px "Clash Display", "Barlow Condensed"`; x.textAlign = 'center';
-  'PARTY'.split('').forEach((ch, i) => x.fillText(ch, W / 2 + (i - 2) * u * 3.1, ly + u * 2.7));
+  if (IMG.nl) { const h = u * 4.2, w = h * IMG.nl.width / IMG.nl.height; x.drawImage(IMG.nl, W / 2 - w / 2, H * .13, w, h); }
 
   // the pasted label: सेवा में, + the guest's name in Bakbak with the deck's red drop shadow
   const L0 = { x: W * .263, y: H * .659, w: W * .473, h: H * .228 };

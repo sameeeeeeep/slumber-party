@@ -418,3 +418,9 @@ body:not(.open) .bottom, body:not(.open) .snd { opacity: 0; }
 @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
 .b-hi { font-family: var(--display), var(--deva); }
 .steps li::before { font-family: var(--sans); }
+
+/* the poster already carries DOT presents / nailinit DIWALI PARTY — add the Bastian line under PARTY */
+.card { container-type: inline-size; }
+.card-pb { position: absolute; left: 0; right: 0; top: 24.3%; text-align: center; pointer-events: none;
+  font: 600 2.6cqw/1 var(--sans); letter-spacing: .32em; text-transform: uppercase; color: #1c1410; }
+.card-pb b { font-weight: 700; color: var(--sun); text-shadow: .15cqw .15cqw 0 #1c1410; letter-spacing: .34em; }
