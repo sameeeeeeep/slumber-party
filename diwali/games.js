@@ -24,17 +24,22 @@ stalls.forEach(st => st.addEventListener('click', () => {
 }));
 
 /* ═════════ tota jyotish ═════════ */
-const FORTUNES = [
-  { img: 'nakhre', title: 'nakhre unlimited', text: "this year you're allowed to be extra, and everyone will play along." },
-  { img: 'nazar', title: 'buri nazar wale, tera bhi bhala ho', text: "the haters are watching. you're thriving anyway. keep the nimbu-mirchi handy." },
-  { img: 'spicy', title: 'spicy par pyaari', text: 'a year of hot takes, delivered sweetly.' },
-  { img: 'naacho', title: 'naacho, gaao, lagao nakhoon', text: 'a year of dance floors and fresh sets. warm up those thumkas.' },
-  { img: 'spark', title: 'nails that spark joy', text: "fresh sets, fresh starts. it's your glow-up year." },
-  { img: 'meethe', title: 'meethe nakhoon, khatte log', text: 'keep the sweet ones close and the sour ones at arm’s length.' },
-  { img: 'girlies', title: 'desi nail girlies club', text: 'membership confirmed. your girl gang is about to get bigger.' },
-  { img: 'chugli', title: 'aao behen, chugli karein', text: "seems like you're going to have a year filled with gossip to share." },
-  { img: 'bsfree', title: 'bullsh*t free zone', text: "no fake friends, no drama you didn't ask for. bliss." },
-  { img: 'door', title: 'darwaaza khula hai', text: 'new doors are opening this year. walk in like you own the mohalla.' },
+const FORTUNES = [   // next year's kismat — each reading matches the poster the tota pulls
+  { img: 'nakhre', title: 'nakhre unlimited', text: 'next year, your nakhre get accepted without question. ask for the window seat.' },
+  { img: 'nazar', title: 'buri nazar wale, tera bhi bhala ho', text: "you'll be doing so well next year that people will stare. keep the nimbu-mirchi close." },
+  { img: 'spicy', title: 'spicy par pyaari', text: 'one big, spicy plot twist is coming next year. you’ll handle it beautifully.' },
+  { img: 'naacho', title: 'naacho, gaao', text: 'a year of baraats, sangeets and dance floors. your thumka goes viral (locally).' },
+  { img: 'meethe', title: 'meethe log, khatte log', text: 'some people will turn sour next year. the sweet ones stay. you’ll finally know who’s who.' },
+  { img: 'girlies', title: 'the girls club', text: 'your gang gets bigger next year. at least one new best friend is on the way.' },
+  { img: 'chugli', title: 'aao behen, chugli karein', text: "you're going to have a year filled with gossip to share. some of it might be about you." },
+  { img: 'bsfree', title: 'bullsh*t free zone', text: 'next year you cut the drama. no fake friends, no explaining yourself.' },
+  { img: 'door', title: 'darwaaza khula hai', text: 'a new door opens next year: new home, new job, maybe a new city. walk in like you own it.' },
+  { img: 'boss', title: 'boss nani era', text: 'next year you play your cards right, and everybody notices. shades on.' },
+  { img: 'patriarchy', title: 'scratch the patriarchy', text: 'next year you break something that’s been holding you back. no apologies.' },
+  { img: 'baegum', title: 'baegum', text: 'you walk into next year like royalty. expect to be treated like one.' },
+  { img: 'kaam', title: 'keep kaam se kaam', text: 'big work year. head down, kaam se kaam, and it pays off before next Diwali.' },
+  { img: 'chai', title: 'chai pe charcha', text: 'one long chai conversation next year changes your mind about something big.' },
+  { img: 'romance', title: 'pyaar ka chakkar', text: 'romance is in the cards next year. pick the good one this time.' },
 ];
 FORTUNES.forEach(f => { const i = new Image(); i.src = `assets/cards/${f.img}.webp`; });
 const T = { table: $('#ttable'), tota: $('#tota'), cards: [], busy: false, state: 'stack' };
