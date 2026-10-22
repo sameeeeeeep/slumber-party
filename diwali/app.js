@@ -533,7 +533,6 @@ $('#phoneField').hidden = !needPhone;
 $('#nameField').hidden = !needName;
 function open() {
   if (S.ph !== 'gate') return;
-  initAudio(); sfx.bell(520, .7);
   if (KEY) store.set('mkd:' + KEY, '1');
   document.body.classList.add('open');
   sndBtn.hidden = false;
@@ -853,6 +852,7 @@ Promise.all([assetsReady, fontsReady]).then(() => {
   ready = true;
   document.body.classList.add('ready');
   document.body.dataset.ph = 'gate';
+  open();                                   // no popup: the envelope greets them straight away
 });
 requestAnimationFrame(frame);
 })();

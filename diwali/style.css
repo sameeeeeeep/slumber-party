@@ -608,3 +608,6 @@ body.lit .kandil .lamp img:not(.bloom) { filter: drop-shadow(0 6px 8px rgba(40,4
 .booth { padding-top: 60px; }
 .t2 { left: 25%; right: 9%; top: 17%; bottom: 15%; }
 .btag { bottom: -62px !important; } .ring-stage { height: clamp(330px, 70vw, 400px) !important; } .shelf { padding-bottom: 14px; }
+
+/* no gate any more — invites open straight onto the envelope */
+#gate { display: none !important; }

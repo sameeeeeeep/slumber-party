@@ -45,81 +45,42 @@
 <body>
 <main>
   <h1>invite link maker</h1>
-  <p class="sub">Phone-locked links (<code>?inv=</code>) carry the guest's name sealed with their number — it only shows after they unlock. Open links (<code>?name=</code>) need no number.</p>
+  <p class="sub">Each guest gets <code>?name=their-name</code>. Opening and RSVPs show up in the sheet under that name.</p>
 
   <section class="card">
-    <h2>ek guest</h2>
-    <div class="row">
-      <div><label for="n">Name</label><input id="n" placeholder="Riya"></div>
-      <div><label for="p">Phone (for the lock + WhatsApp)</label><input id="p" inputmode="tel" placeholder="98765 43210"></div>
-    </div>
+    <h2>guest links</h2>
+    <label for="bulk">One name per line</label>
+    <textarea id="bulk" placeholder="Riya&#10;Aditi Shah&#10;Kabir"></textarea>
     <label for="base">Invite page URL</label><input id="base">
-    <button id="go" type="button">link banao</button>
-    <p class="err" id="err"></p>
-    <div class="out" id="out"></div>
-  </section>
-
-  <section class="card">
-    <h2>poori list</h2>
-    <label for="bulk">One guest per line: <em>name, phone</em> (phone optional → open link)</label>
-    <textarea id="bulk" placeholder="Riya, 98765 43210&#10;Aditi Shah, +91 99300 11223&#10;Kabir"></textarea>
     <div class="actions">
-      <button id="bulkgo" type="button">sab ke links banao</button>
-      <button id="csv" class="alt" type="button">copy as CSV</button>
+      <button id="bulkgo" type="button">make links</button>
+      <button id="csv" class="alt" type="button">copy all</button>
     </div>
     <table id="tbl" hidden><thead><tr><th>Name</th><th>Link</th><th></th></tr></thead><tbody></tbody></table>
-    <p class="note">Everything runs in this browser — names and numbers aren't sent anywhere.</p>
   </section>
 </main>
-<script src="config.js?v=1792702033"></script>
-<script src="lib.js?v=1792702033"></script>
+<script src="config.js?v=1792702106"></script>
+<script src="lib.js?v=1792702106"></script>
 <script>
 (() => {
-  const C = window.MKD, L = window.MKDLib, $ = s => document.querySelector(s);
+  const $ = s => document.querySelector(s);
   $('#base').value = location.href.replace(/make\.html.*$/, '');
-  const MSG = (name, url) => `namastey ${name}! ✉️ ek chitthi aapke liye — nailinit Diwali Party\n${url}`;
-  function linkFor(name, phone) {
-    const base = $('#base').value.trim();
-    const d = L.digits(phone);
-    if (d.length === 10) return { url: `${base}?inv=${L.invite(name, d, C.salt)}`, locked: true, d };
-    return { url: `${base}?name=${encodeURIComponent(name.trim().toLowerCase())}`, locked: false, d };
-  }
+  const url = n => `${$('#base').value.trim()}?name=${encodeURIComponent(n.trim().toLowerCase())}`;
   const copy = t => navigator.clipboard && navigator.clipboard.writeText(t);
-  const wa = (d, name, url) => `https://wa.me/91${d}?text=${encodeURIComponent(MSG(name, url))}`;
-  function el(tag, props, kids = []) { const e = Object.assign(document.createElement(tag), props); kids.forEach(k => e.append(k)); return e; }
-
-  $('#go').onclick = () => {
-    const name = $('#n').value.trim(), phone = $('#p').value;
-    $('#err').textContent = ''; $('#out').replaceChildren();
-    if (!name) { $('#err').textContent = 'Naam toh daalo.'; return; }
-    const locked = linkFor(name, phone), open = { url: `${$('#base').value.trim()}?name=${encodeURIComponent(name.toLowerCase())}` };
-    const block = (title, url, d) => el('div', { className: 'link' }, [
-      el('b', { textContent: title }), url,
-      el('div', { className: 'actions' }, [
-        el('button', { type: 'button', textContent: 'copy', onclick: () => copy(url) }),
-        ...(d ? [el('a', { className: 'btn alt', href: wa(d, name, url), target: '_blank', rel: 'noopener', textContent: 'WhatsApp pe bhejo' })] : []),
-      ]),
-    ]);
-    if (locked.locked) $('#out').append(block('Phone-locked (?inv=)', locked.url, locked.d));
-    else $('#err').textContent = 'No 10-digit number, so only an open link.';
-    $('#out').append(block('Open — no number needed (?name=)', open.url, locked.locked ? locked.d : ''));
-  };
-
   let rows = [];
   $('#bulkgo').onclick = () => {
-    rows = $('#bulk').value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-      const [name, ...rest] = l.split(','); const phone = rest.join(',');
-      return { name: name.trim(), ...linkFor(name, phone) };
-    }).filter(r => r.name);
+    rows = $('#bulk').value.split('\n').map(l => l.trim()).filter(Boolean).map(n => ({ name: n, url: url(n) }));
     const tb = $('#tbl tbody'); tb.replaceChildren();
-    rows.forEach(r => tb.append(el('tr', {}, [
-      el('td', { textContent: r.name + (r.locked ? ' 🔒' : '') }),
-      el('td', { textContent: r.url }),
-      el('td', {}, [r.d.length === 10 ? el('a', { href: wa(r.d, r.name, r.url), target: '_blank', rel: 'noopener', textContent: 'WhatsApp' }) : '']),
-    ])));
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      const a = document.createElement('td'); a.textContent = r.name;
+      const b = document.createElement('td'); b.textContent = r.url;
+      const c = document.createElement('td'); const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'copy'; btn.onclick = () => copy(r.url); c.append(btn);
+      tr.append(a, b, c); tb.append(tr);
+    });
     $('#tbl').hidden = !rows.length;
   };
-  $('#csv').onclick = () => copy(['name,phone,link', ...rows.map(r => `"${r.name}",${r.d},${r.url}`)].join('\n'));
+  $('#csv').onclick = () => copy(rows.map(r => `${r.name}\t${r.url}`).join('\n'));
 })();
 </script>
 </body>
