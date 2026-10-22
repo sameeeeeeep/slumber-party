@@ -39,7 +39,10 @@
 
   // Indian numbers: keep the last 10 digits so +91 / 0 / spaces don't matter.
   const digits = phone => String(phone || '').replace(/\D/g, '').slice(-10);
-  const keyFor = (phone, salt) => sha256(salt + ':' + digits(phone)).slice(0, 10);
+  // Deliberately short (20 bits): ~4,000 valid Indian mobile numbers share each key, so a
+  // forwarded link can't be brute-forced back to the guest's number. A wrong guess still
+  // only gets in by luck (1 in a million) — fine for a party invite.
+  const keyFor = (phone, salt) => sha256(salt + ':' + digits(phone)).slice(0, 5);
 
   window.MKDLib = { sha256, digits, keyFor };
 })();
