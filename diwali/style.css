@@ -404,3 +404,17 @@ body:not(.open) .bottom, body:not(.open) .snd { opacity: 0; }
 .done-msg { font: 500 18px/1.4 var(--sans); color: var(--cream); max-width: 30ch; }
 .linkish { border: 0; background: none; cursor: pointer; color: var(--cream); opacity: .75; font: 600 14px/1 var(--sans); text-decoration: underline; text-underline-offset: 4px; display: inline-block; margin-top: 14px; }
 .rsvp .cta.ghost { margin-top: 0; }
+
+/* RSVP = one deck board: the question, then the answer, same card */
+.rsvp-card { max-width: 520px; margin: 0 auto; padding: 34px 26px 30px !important; }
+.rsvp-card h2 { font: 400 clamp(28px, 7.4vw, 40px)/1.05 var(--display) !important; color: var(--ink) !important; text-shadow: 2px 2px 0 var(--red) !important; margin: 0 0 10px !important; }
+.rsvp-card .b-note { color: var(--maroon) !important; font: 600 15px/1.4 var(--sans); margin: 0 0 20px; }
+.rsvp-btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.rsvp-btns .sign { font-size: 19px; padding: 15px 22px 13px; }
+.rsvp-done .sign { font-size: 16px; padding: 13px 20px 11px; }
+.rsvp-card .linkish { color: var(--maroon); opacity: .8; margin-top: 16px; }
+.rsvp-ask, .rsvp-done { display: block; text-align: center; }
+.rsvp-done #doneHead { font-size: clamp(40px, 11vw, 60px) !important; animation: pop .45s cubic-bezier(.2,1.5,.4,1); }
+@keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
+.b-hi { font-family: var(--display), var(--deva); }
+.steps li::before { font-family: var(--sans); }

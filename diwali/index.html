@@ -50,14 +50,14 @@
     </div>
 
     <div class="bottom">
-      <ol id="steps" class="steps" aria-hidden="true"><li data-n="१">Kholo</li><li data-n="२">Ragdo</li><li data-n="३">Lagao</li><li data-n="४">Padho</li></ol>
+      <ol id="steps" class="steps" aria-hidden="true"><li data-n="1">kholo</li><li data-n="2">ragdo</li><li data-n="3">lagao</li><li data-n="4">padho</li></ol>
       <div id="caption" class="caption" aria-live="polite"><span>Chitthi aayi hai!</span></div>
-      <button id="autobtn" class="autobtn" type="button" hidden>Mushkil lag raha? <b>Aap kar do ▸</b></button>
+      <button id="autobtn" class="autobtn" type="button" hidden>mushkil lag raha? <b>aap kar do ▸</b></button>
     </div>
 
     <div id="after" class="after">
       <button id="seeDetails" class="cta small" type="button">scroll 4 something स्पेशल ↓</button>
-      <button id="replay" class="replay" type="button">↺ Phir se jalao</button>
+      <button id="replay" class="replay" type="button">↺ phir se jalao</button>
     </div>
 
     <p class="powered">powered by <b>BASTIAN</b></p>
@@ -70,7 +70,6 @@
 
   <section class="aao">
     <div class="aao-text">
-      <p class="kicker">सादर आमंत्रण</p>
       <h1>why be boring, when you can be <em>partying, gossiping, dancing</em> &amp; nailinit!</h1>
       <p class="lede">kyunki ye diwali, hain <b>mohalle wali.</b></p>
     </div>
@@ -78,12 +77,12 @@
 
   <section class="boards">
     <article class="board b-yellow">
-      <p class="b-hi">कब?</p><p class="b-en">kab</p>
+      <p class="b-hi">kab?</p><p class="b-en">when</p>
       <p class="b-val" data-c="dateLong"></p>
       <p class="b-note" data-c="time"></p>
     </article>
     <article class="board b-blue">
-      <p class="b-hi">कहाँ?</p><p class="b-en">kaha</p>
+      <p class="b-hi">kaha?</p><p class="b-en">where</p>
       <p class="b-val" data-c="venue"></p>
       <p class="b-note" data-c="area"></p>
       <a class="b-btn" id="map" href="#" target="_blank" rel="noopener" hidden>Rasta dikhao →</a>
@@ -96,54 +95,56 @@
   </section>
 
   <section class="stalls">
-    <h2><span class="hi">मोहल्ले में क्या क्या है</span>Mohalle mein kya kya hai</h2>
+    <h2>mohalle mein kya kya hai</h2>
     <div class="ticker"><div class="row" id="row1"></div></div>
     <div class="ticker rev"><div class="row" id="row2"></div></div>
   </section>
 
   <section class="wall">
-    <h2><span class="hi">मोहल्ले की दीवार</span>Mohalle ki deewar</h2>
+    <h2>mohalle ki deewar</h2>
     <div class="posters">
       <figure class="p p1"><img src="assets/nakhre.webp" alt=""><figcaption>khoonkhaar <b>cutie</b></figcaption></figure>
-      <figure class="p p2"><img src="assets/hand_chilli.webp" alt=""><figcaption>spicy <b>पर प्यारी</b></figcaption></figure>
-      <figure class="p p3"><img src="assets/gossip.webp" alt=""><figcaption>आओ sis, <b>let's चुगली</b></figcaption></figure>
+      <figure class="p p2"><img src="assets/hand_chilli.webp" alt=""><figcaption>spicy <b>par pyaari</b></figcaption></figure>
+      <figure class="p p3"><img src="assets/gossip.webp" alt=""><figcaption>aao sis, <b>let's chugli</b></figcaption></figure>
       <figure class="p p4"><img src="assets/tiger.webp" alt=""><figcaption>untamed &amp; <b>unhinged</b></figcaption></figure>
-      <figure class="p p5"><img src="assets/hand_nimbu.webp" alt=""><figcaption>no बुरी <b>नज़र</b></figcaption></figure>
-      <figure class="p p6"><img src="assets/door.webp" alt=""><figcaption>मेड इन <b>इंडिया</b></figcaption></figure>
+      <figure class="p p5"><img src="assets/hand_nimbu.webp" alt=""><figcaption>no buri <b>nazar</b></figcaption></figure>
+      <figure class="p p6"><img src="assets/door.webp" alt=""><figcaption>made in <b>india</b></figcaption></figure>
     </div>
   </section>
 
   <section class="rsvp">
     <img class="rsvp-star s1" src="assets/star_pink.webp" alt="">
     <img class="rsvp-star s2" src="assets/star_pale.webp" alt="">
-    <p class="kicker">आ रहे हो ना?</p>
-    <h2>aa rahe ho na, <span data-name>dost</span>?</h2>
-    <div id="rsvpAsk" class="rsvp-ask">
-      <button class="cta" id="yes" type="button">haan ji, pakka!</button>
-      <button class="cta ghost" id="no" type="button">nahi aa paunga</button>
-    </div>
-    <div id="rsvpDone" class="rsvp-done" hidden>
-      <p class="stamp" id="stamp">pakka ✓</p>
-      <p class="done-msg" id="doneMsg"></p>
-      <button class="cta ghost" id="ics" type="button">calendar mein daalo</button>
-      <button class="linkish" id="change" type="button">jawab badalna hai?</button>
+    <div class="board b-yellow rsvp-card">
+      <div id="rsvpAsk" class="rsvp-ask">
+        <h2>aa rahe ho na, <span data-name>dost</span>?</h2>
+        <p class="b-note"><span data-c="dateLong"></span> · <span data-c="time"></span> · <span data-c="venue"></span></p>
+        <div class="rsvp-btns">
+          <button class="sign red" id="yes" type="button">haan, pakka!</button>
+          <button class="sign blue" id="no" type="button">nahi aa paunga</button>
+        </div>
+      </div>
+      <div id="rsvpDone" class="rsvp-done" hidden>
+        <h2 id="doneHead">pakka!</h2>
+        <p class="b-note" id="doneMsg"></p>
+        <button class="sign blue" id="ics" type="button">calendar mein daalo</button>
+        <button class="linkish" id="change" type="button">jawab badalna hai?</button>
+      </div>
     </div>
     <p class="by" data-c="rsvpBy"></p>
-    <a class="linkish" id="wa" href="#" target="_blank" rel="noopener">host ko WhatsApp karo →</a>
   </section>
 
   <footer class="foot">
     <div class="foot-tick"><div class="row" id="row3"></div></div>
     <img src="assets/nailinit_light.webp" alt="nailinit" class="foot-nl">
     <p>DOT Media presents · nailinit Diwali Party · powered by Bastian</p>
-    <p>मेड इन इंडिया · No buri nazar</p>
   </footer>
 </main>
 
 <!-- ═════════════ Gate ═════════════ -->
 <div id="gate" class="gate">
   <div class="gate-card">
-    <p class="g-kick">चिट्ठी आई है!</p>
+    <p class="g-kick">chitthi aayi hai!</p>
     <h2 class="g-title"><span data-name>Dost</span> ji, ye chitthi sirf aapke liye hai.</h2>
     <img class="g-env" src="assets/envelope.webp" alt="">
     <form id="gform" autocomplete="on" novalidate>

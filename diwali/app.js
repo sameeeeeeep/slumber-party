@@ -31,7 +31,7 @@ function applyName() {
   const n = NAME || C.defaultName;
   document.querySelectorAll('[data-name]').forEach(e => { e.textContent = n; });
   $('.g-title').textContent = `${n}, ye chitthi sirf aapke liye hai…`;
-  $('#wa').href = `https://wa.me/${C.rsvp.whatsapp}?text=${encodeURIComponent(C.rsvp.text.replace('{name}', n))}`;
+  if ($('#wa')) $('#wa').href = `https://wa.me/${C.rsvp.whatsapp}?text=${encodeURIComponent(C.rsvp.text.replace('{name}', n))}`;
 }
 applyName();
 document.querySelectorAll('[data-c]').forEach(e => { e.textContent = C.event[e.dataset.c] || ''; });
@@ -54,7 +54,7 @@ const STALLS = [['Chai tapri', 'चाय'], ['Kulfi', 'कुल्फी'], ['
   ['Irani bakery', 'बेकरी'], ['Cotton candy', 'बुढ़िया के बाल'], ['Matka rabdi', 'रबड़ी'], ['Nail bar', 'नाखून'],
   ['Jyotish', 'ज्योतिष'], ['Now showing', 'सिनेमा'], ['Bus stop', 'बस स्टॉप'], ['Toffee shop', 'टॉफ़ी'],
   ['Post box', 'डाक'], ['Patang', 'पतंग'], ['Bangles & bindi', 'चूड़ी'], ['Stamp mehendi', 'मेहंदी']];
-const chips = list => list.map(([en, hi]) => `<span class="chip">${en}<small>${hi}</small></span>`).join('');
+const chips = list => list.map(([en]) => `<span class="chip">${en.toLowerCase()}</span>`).join('');
 const half = Math.ceil(STALLS.length / 2);
 $('#row1').innerHTML = chips(STALLS.slice(0, half)).repeat(2);
 $('#row2').innerHTML = chips(STALLS.slice(half)).repeat(2);
@@ -398,12 +398,12 @@ const ptr = { down: false, id: null, x: 0, y: 0, sx: 0, sy: 0, moved: 0, hist: [
 const strike = { x0: 0, travel: 0, best: 0, hx: 0 };
 
 const CAPS = {
-  gate: 'Chitthi aayi hai!', enter: 'Maachis aa rahi hai…',
-  closed: coarse ? 'Maachis ko tap karo' : 'Maachis pe click karo',
-  opening: 'Ek teeli nikal rahi hai…', lift: 'Ek teeli nikal rahi hai…',
-  strike: coarse ? 'Teeli ko patti pe ragdo →' : 'Teeli ko patti pe tez drag karo →',
-  carry: coarse ? 'Aag ko chitthi ke kone tak lao' : 'Aag ko kone tak drag karo',
-  touch: 'Lag gayi!', burn: 'ooh… it burns', reveal: 'Aapka amantran!', done: 'Neeche scroll karo — details ↓',
+  gate: 'chitthi aayi hai!', enter: 'maachis aa rahi hai…',
+  closed: coarse ? 'maachis ko tap karo' : 'maachis pe click karo',
+  opening: 'ek teeli nikal rahi hai…', lift: 'ek teeli nikal rahi hai…',
+  strike: coarse ? 'teeli ko ragdo — swipe ya tap' : 'teeli ko ragdo — drag ya click',
+  carry: 'aag chitthi tak ja rahi hai…',
+  touch: 'lag gayi!', burn: 'ooh… it burns', reveal: 'aapka amantran!', done: 'neeche scroll karo ↓',
 };
 let capOverride = '', capUntil = 0, lastCap = '';
 function setPhase(ph) { S.ph = ph; S.t = 0; S.idle = 0; S.rest = null; document.body.dataset.ph = ph; }
@@ -453,24 +453,25 @@ function pmove(e) {
     // project the finger's motion onto the striker strip
     const c = Math.cos(rad(box.rot)), s = Math.sin(rad(box.rot));
     const along = dx * c + dy * s;
-    strike.hx = clamp(strike.hx + along * (coarse ? 1.15 : 1), strikeL(), strikeR() + B.w * .12);
-    strike.travel += Math.max(0, along);
+    strike.hx = clamp(strike.hx + Math.abs(along) * (coarse ? 1.3 : 1.1), strikeL(), strikeR() + B.w * .12);   // any direction rubs the strip
+    strike.travel += Math.abs(along) + Math.abs(dx * -s + dy * c) * .4;
     const h0 = ptr.hist[0], h1 = ptr.hist[ptr.hist.length - 1];
-    const v = h1.t > h0.t ? (((h1.x - h0.x) * c + (h1.y - h0.y) * s) / (h1.t - h0.t)) : 0;   // px per ms along the strip
+    const v = h1.t > h0.t ? Math.hypot(h1.x - h0.x, h1.y - h0.y) / (h1.t - h0.t) : 0;   // px per ms, any direction
     strike.best = Math.max(strike.best, v);
     if (v > .25) { if (Math.random() < .5) sparks(mt.x, mt.y, box.rot + 170, 1, 30, 60, 220); }
     if (A.sg) A.sg.gain.setTargetAtTime(clamp(v, 0, 2) * .22, A.ac.currentTime, .03);
-    const need = S.fails >= 3 ? .35 : S.fails >= 2 ? .5 : .7;          // gets more forgiving after misses
-    if (v > need && strike.travel > B.w * (S.fails >= 2 ? .25 : .38)) ignite();
+    const need = S.fails >= 1 ? .18 : .3;                               // forgiving; even more so after a miss
+    if (v > need && strike.travel > B.w * (S.fails >= 1 ? .14 : .22)) ignite();
   }
 }
 function pup(e) {
   if (!ptr.down || (e && e.pointerId !== ptr.id)) return;
   ptr.down = false; strike.pid = null;
   if (A.sg) A.sg.gain.setTargetAtTime(0, A.ac.currentTime, .05);
+  if (S.ph === 'strike' && ptr.moved < 10) { S.tapStrike = true; S.tapT = 0; return; }
   if (S.ph === 'strike') {
     if (strike.travel > 6) { S.fails++; sfx.sputter(); sparks(mt.x, mt.y, box.rot + 180, 6, 40, 40, 160);
-      say(S.fails >= 2 ? 'Aur tez! Ek jhatke mein ragdo 💥' : 'Zor se ragdo!', 1.8); }
+      say(S.fails >= 2 ? 'thoda aur tez — ya bas tap karo' : 'zor se ragdo!', 1.8); }
     strike.hx = strikeL();
   }
   if (S.ph === 'carry') {
@@ -519,9 +520,8 @@ const rsvpAsk = $('#rsvpAsk'), rsvpDone = $('#rsvpDone');
 function showRsvp(ans) {
   rsvpAsk.hidden = !!ans; rsvpDone.hidden = !ans;
   if (!ans) return;
-  $('#stamp').textContent = ans === 'yes' ? 'pakka ✓' : 'koi nahi 💔';
-  $('#stamp').classList.toggle('no', ans === 'no');
-  $('#doneMsg').textContent = ans === 'yes' ? `milte hain ${C.event.dateLong} ko, ${C.event.venue} pe!` : 'agli baar pakka. mohalla yaad karega!';
+  $('#doneHead').textContent = ans === 'yes' ? 'pakka!' : 'koi nahi.';
+  $('#doneMsg').textContent = ans === 'yes' ? `milte hain ${C.event.dateLong}, ${C.event.time} · ${C.event.venue}` : 'agli baar pakka. mohalla yaad karega.';
   $('#ics').hidden = ans !== 'yes';
 }
 function answer(ans) {
@@ -536,7 +536,7 @@ showRsvp(store.get('mkd:rsvp:' + (INV || (NAME || '').toLowerCase())) || '');
 
 /* ───────────── gate ───────────── */
 const gate = $('#gate'), gform = $('#gform'), gopen = $('#gopen'), gerr = $('#gerr');
-const ERRS = ['Arre, ye number nahi chalega.', 'Wahi number daalo jis pe invite aaya tha.', 'Nazar lag gayi kya? Ek baar aur try karo.'];
+const ERRS = ['arre, ye number nahi chalega.', 'wahi number daalo jis pe invite aaya tha.', 'nazar lag gayi kya? ek baar aur try karo.'];
 let errN = 0;
 const needPhone = !!KEY && store.get('mkd:' + KEY) !== '1';
 const needName = !NAME;
@@ -604,17 +604,18 @@ function frame(nowMs) {
   if (ph === 'enter') { box.off = 1 - eo(clamp((S.t - .45) / .9)); if (S.t > 1.35) setPhase(S.auto ? 'opening' : 'closed'); }
   if (ph === 'closed' && S.auto && S.t > .35) openBox();
   if (ph === 'opening') { box.dx = ease(clamp(S.t / .55)) * DRAWER * B.w; if (S.t > .6) { sfx.pick(); setPhase('lift'); } }
-  if (ph === 'strike' && S.auto) {
-    // a confident demo swipe
-    const k = clamp((S.t - .25) / .38);
+  if (ph === 'strike' && (S.auto || S.tapStrike)) {
+    // a confident swipe, played for anyone who taps or asks
+    if (S.tapStrike) S.tapT += dt;
+    const k = S.auto ? clamp((S.t - .25) / .38) : clamp(S.tapT / .32);
     strike.hx = lerp(strikeL(), strikeR(), k * k);
     if (k > .1 && Math.random() < .7) sparks(mt.x, mt.y, box.rot + 170, 1, 30, 60, 220);
-    if (k >= .72) ignite();
+    if (k >= .72) { S.tapStrike = false; ignite(); }
   }
   if (ph === 'carry') {
     const tg = target();
     if (Math.hypot(mt.x - tg.x, mt.y - tg.y) < Math.max(34, E.w * .1)) { sfx.catch(); buzz(20); setPhase('touch'); }
-    else if ((S.auto || S.autoCarry) && !ptr.down && S.t > .45) S.autoCarry = true;
+    else if (!ptr.down && (S.auto || S.autoCarry || S.t > 1.1)) S.autoCarry = true;     // goes on its own; dragging is optional
   }
   if (ph === 'touch' && S.t > .7) setPhase('burn');
   if (ph === 'burn') {
@@ -650,7 +651,7 @@ function frame(nowMs) {
     const p = bpt(strike.hx, STRIP_Y() + Math.sin(now * 40) * (ptr.down ? .6 : 0));
     const tilt = clamp((strike.hx - strikeL()) / B.w, 0, 1) * 6;
     pose = { x: p.x, y: p.y, a: STRIKE_A() + tilt, s: 1.08 };
-    if (!ptr.down && !S.auto) strike.hx = lerp(strike.hx, strikeL(), .2);
+    if (!ptr.down && !S.auto && !S.tapStrike) strike.hx = lerp(strike.hx, strikeL(), .2);
   } else if (S.ph === 'carry') {
     let tx, ty;
     if (S.autoCarry) {
