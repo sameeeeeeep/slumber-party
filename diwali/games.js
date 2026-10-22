@@ -15,6 +15,9 @@ const pop = () => { noise(.12, 'lowpass', 1600, 200, .9, 1); noise(.3, 'highpass
 const thup = () => noise(.06, 'bandpass', 900, 500, .5, 3);
 const clink = () => { noise(.05, 'bandpass', 4800, 4200, .5, 8); noise(.4, 'bandpass', 3100, 3000, .2, 14, .03); };
 const start = () => FX().initAudio();
+let ACTIVE = 'tota';                                   // only the open stall may make noise
+const snd = (n, o) => { const f = FX(); if (f.play) f.play(n, o); };
+const loopVol = (n, v) => { const f = FX(); if (f.loop) f.loop(n, v); };
 const buzz = ms => FX().buzz(ms);
 const local = (el, e) => { const r = el.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; };
 
@@ -38,11 +41,10 @@ async function renderShare(k) {
       : SH[k];
   if (!d) return null;
   const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
-  const [bg, swag, k1, k2, art, nl, rg, dy1, dy2, fl] = await Promise.all(['assets/pattern.webp', 'assets/swag.webp', 'assets/k1.webp', 'assets/k3.webp', d.img, 'assets/nailinit_light.webp', 'assets/deco/rangoli2.webp', 'assets/deco/diya1.webp', 'assets/deco/diya4.webp', 'assets/deco/flowers3.webp'].map(loadI));
+  const [bg, swag, k1, k2, art, nl] = await Promise.all(['assets/pattern.webp', 'assets/swag.webp', 'assets/k1.webp', 'assets/k3.webp', d.img, 'assets/nailinit_light.webp'].map(loadI));
   c.fillStyle = '#75150f'; c.fillRect(0, 0, W, H);
   if (bg) { c.globalAlpha = .1; for (let y = 0; y < H; y += 300) for (let x = 0; x < W; x += 300) c.drawImage(bg, x, y, 300, 300); c.globalAlpha = 1; }
   const g = c.createRadialGradient(W / 2, H * .45, 100, W / 2, H * .45, 1100); g.addColorStop(0, 'rgba(255,190,80,.22)'); g.addColorStop(1, 'rgba(20,2,1,.5)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
-  if (rg) { c.globalAlpha = .16; c.drawImage(rg, W / 2 - 520, H * .52 - 520, 1040, 1040); c.globalAlpha = 1; }
   if (swag) c.drawImage(swag, -40, -10, W + 80, (W + 80) * swag.height / swag.width);
   if (k1) c.drawImage(k1, 40, 200, 150, 150 * k1.height / k1.width);
   if (k2) c.drawImage(k2, W - 190, 230, 150, 150 * k2.height / k2.width);
@@ -60,9 +62,6 @@ async function renderShare(k) {
   c.font = '84px "Bakbak One", sans-serif'; c.fillStyle = '#c4221a'; let yy = wrap(c, d.title, W / 2 + 5, y + 6, 940, 92);
   c.fillStyle = '#efbd0d'; wrap(c, d.title, W / 2, y, 940, 92);
   c.font = '500 42px "Clash Display", sans-serif'; c.fillStyle = '#f7e6c8'; yy = wrap(c, d.text, W / 2, yy + 80, 900, 58);
-  if (dy1) c.drawImage(dy1, 60, H - 470, 190, 190 * dy1.height / dy1.width);
-  if (dy2) c.drawImage(dy2, W - 250, H - 470, 190, 190 * dy2.height / dy2.width);
-  if (fl) c.drawImage(fl, W / 2 - 110, H - 520, 220, 220 * fl.height / fl.width);
   if (nl) c.drawImage(nl, W / 2 - 150, H - 230, 300, 300 * nl.height / nl.width);
   c.font = '600 30px "Clash Display", sans-serif'; c.fillStyle = '#efbd0d'; c.fillText('DIWALI PARTY · MOHALLA GAME CENTER', W / 2, H - 120);
   c.fillStyle = '#f7e6c8'; c.font = '500 28px "Clash Display", sans-serif'; c.fillText('secretslumberparty.com/diwali', W / 2, H - 76);
@@ -88,20 +87,49 @@ function toast(msg) {
 }
 window.MKDShare = { render: renderShare };
 const GAME_ICON = { tota: 'assets/game/parrot_card.webp', gubbara: 'assets/game/bal1.webp', chhalla: 'assets/game/bottle0.webp', draw: 'assets/game/drum.webp' };
-const GAME_NAME = { tota: 'tota jyotish', gubbara: 'gubbara phod', chhalla: 'chhalla', draw: 'lucky draw' };
-const showPin = k => { const b = document.querySelector(`.pin-btn[data-pin="${k}"]`); if (b) { b.hidden = false; b.disabled = false; b.textContent = 'pin to the wall'; } };
-const hidePin = k => { const b = document.querySelector(`.pin-btn[data-pin="${k}"]`); if (b) b.hidden = true; };
+const GAME_NAME = { tota: 'tota jyotish', gubbara: 'gubbara phod', chhalla: 'ring toss', draw: 'lucky draw' };
+const GAME_WHAT = { tota: 'kismat for 2027', gubbara: 'gubbara winnings', chhalla: 'ring toss winnings', draw: 'mood in the coming year' };
+const showPin = k => { const b = document.querySelector(`.pin-btn[data-pin="${k}"]`); if (b) { b.hidden = false; b.disabled = false; b.textContent = 'pin to the wall'; } const n = document.querySelector(`.next-btn`) && document.querySelector(`[data-panel="${k}"] .next-btn`); if (n) n.hidden = false; };
+const hidePin = k => { const b = document.querySelector(`.pin-btn[data-pin="${k}"]`); if (b) b.hidden = true; const n = document.querySelector(`[data-panel="${k}"] .next-btn`); if (n) n.hidden = true; };
 function pinPayload(k) {
-  if (k === 'gubbara') { const wins = [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent); return { title: `popped ${wins.length}/5`, text: wins.join(' · ') }; }
+  if (k === 'gubbara' || k === 'chhalla') { const wins = [...document.querySelectorAll(k === 'gubbara' ? '#glist .win-card p' : '#clist .win-card p')].map(p => p.textContent);
+    return wins.length ? { title: k === 'gubbara' ? `popped ${wins.length} balloon${wins.length > 1 ? 's' : ''}` : `ringed ${wins.length} bottle${wins.length > 1 ? 's' : ''}`, text: wins.join(' · ') } : null; }
   const d = SH[k]; return d ? { title: d.title, text: d.text } : null;
 }
-document.querySelectorAll('.pin-btn').forEach(b => b.addEventListener('click', () => {
-  const k = b.dataset.pin, p = pinPayload(k); if (!p) return;
+const PINNED = {};
+function pinIt(k) {
+  const p = pinPayload(k); if (!p || PINNED[k] === p.title + p.text) return;
+  PINNED[k] = p.title + p.text;
   if (window.MKDTrack) window.MKDTrack('wall', { rsvp: k, link: p.title.slice(0, 80), device: p.text.slice(0, 140) });
-  b.disabled = true; b.textContent = 'pinned ✓'; ding(990, .45); buzz(15);
-  addWallCard({ name: window.MKDGuest ? window.MKDGuest.full : 'dost', game: k, title: p.title, text: p.text }, true);
+  snd('pin', { vol: .9 }); buzz(15);
+  addWallCard({ name: window.MKDGuest ? window.MKDGuest.full : 'dost', game: k, title: p.title, text: p.text });
+  document.querySelectorAll(`[data-pin="${k}"]`).forEach(x => { x.disabled = true; x.textContent = 'pinned ✓'; });
   toast('pinned to mohalle ki deewar!');
-}));
+}
+document.addEventListener('click', e => {
+  const pb = e.target.closest('[data-pin]'); if (pb) { pinIt(pb.dataset.pin); return; }
+  const sb = e.target.closest('.mh-card [data-share]'); if (sb) shareCard(sb.dataset.share);
+});
+/* the haul: every result of the night, pin or share any of it later */
+const HAUL = {};
+function haul(k, title, text, img) {
+  HAUL[k] = { title, text, img };
+  const row = $('#mhrow'); row.replaceChildren();
+  ['tota', 'gubbara', 'chhalla', 'draw'].forEach(g => { const h = HAUL[g]; if (!h) return;
+    const c = document.createElement('div'); c.className = 'mh-card w-' + g;
+    const lab = document.createElement('p'); lab.className = 'res-label'; lab.textContent = 'your ' + GAME_WHAT[g];
+    const i = document.createElement('img'); i.src = h.img; i.alt = '';
+    const t = document.createElement('p'); t.className = 'mh-title'; t.textContent = h.title;
+    const x = document.createElement('p'); x.className = 'mh-text'; x.textContent = h.text;
+    const acts = document.createElement('div'); acts.className = 'mh-acts';
+    const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'sign red small'; pb.dataset.pin = g;
+    const pp = pinPayload(g); const done = pp && PINNED[g] === pp.title + pp.text; pb.textContent = done ? 'pinned ✓' : 'pin'; pb.disabled = !!done;
+    const sb = document.createElement('button'); sb.type = 'button'; sb.className = 'sign blue small'; sb.dataset.share = g; sb.textContent = 'share';
+    acts.append(pb, sb); c.append(lab, i, t, x, acts); row.appendChild(c); });
+  $('#myhaul').hidden = false;
+  const st = document.querySelector(`.stall[data-game="${k}"]`); if (st) st.classList.add('done');
+}
+
 /* wall: published CSV → two moving rows of cards */
 function parseCSV(t) {
   const rows = []; let row = [], f = '', q = false;
@@ -121,38 +149,81 @@ function wallCard(e) {
   const x = document.createElement('p'); x.className = 'wc-text'; x.textContent = e.text;
   c.append(i, g, n, t, x); return c;
 }
-let WALL = [];
-function renderWall() {
-  const r1 = $('#wrow1'), r2 = $('#wrow2'); if (!r1) return;
-  $('#wempty').hidden = WALL.length > 0;
-  const half = Math.ceil(WALL.length / 2), a = WALL.slice(0, Math.max(half, 1)), b = WALL.slice(half);
-  const fill = (row, list) => { row.replaceChildren(); if (!list.length) return; let items = list; while (items.length < 8) items = items.concat(list); [...items, ...items].forEach(e => row.appendChild(wallCard(e))); row.style.animationDuration = (items.length * 6) + 's'; };
-  fill(r1, a); fill(r2, b.length ? b : a);
+let WALL = [], MINE = [];
+const WALL_FROM = new Date('2026-10-23T03:16:01+05:30');            // test pins before launch stay off the wall
+// placeholder pins (generic names) so the wall never looks empty; real pins push them out
+const SEED = [
+  { name: 'Ananya K', game: 'tota', title: 'chai pe charcha', text: 'one long chai conversation next year changes your mind about something big.' },
+  { name: 'Kabir M', game: 'draw', title: '“i’m my own good luck charm”', text: 'good things keep finding you. lucky snack: jalebi.' },
+  { name: 'Zoya S', game: 'gubbara', title: 'popped 3 balloons', text: 'the aux cord, for exactly one song · the last plate of pani puri · a free pass on one bad decision' },
+  { name: 'Rohan P', game: 'chhalla', title: 'ringed 2 bottles', text: 'gossip VIP pass · the good lighting spot' },
+  { name: 'Meher A', game: 'tota', title: 'nakhre unlimited', text: 'next year, your nakhre get accepted without question.' },
+  { name: 'Ishaan T', game: 'draw', title: '“delulu, but i deliver”', text: 'the plan sounds crazy out loud. it works anyway.' },
+  { name: 'Tara D', game: 'tota', title: 'naacho gaao', text: 'a year of baraats, sangeets and dance floors.' },
+  { name: 'Vikram R', game: 'chhalla', title: 'ringed 1 bottle', text: 'dance-floor immunity' },
+  { name: 'Naina B', game: 'draw', title: '“first on the dance floor”', text: 'last to leave. the DJ knows your name.' },
+  { name: 'Aarav J', game: 'gubbara', title: 'popped 2 balloons', text: 'the last laddoo, unclaimed · a cab that arrives in 2 minutes' },
+];
+const parseWhen = t => { const m = String(t).match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)/); return m ? new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5]) : new Date(0); };
+const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const WS = { x: 0, w: 0, t: 0, v: 38, drag: null, raf: 0 };
+function renderWall() {          // one row, every game remixed, drifting forever (drag to scrub)
+  const r = $('#wrow1'); if (!r) return;
+  const seen = new Set(MINE.map(e => e.name + '|' + e.title)), real = WALL.filter(e => !seen.has(e.name + '|' + e.title));
+  const rest = real.length + MINE.length >= 8 ? real : [...real, ...SEED];
+  const all = [...MINE, ...rest];
+  $('#wempty').hidden = all.length > 0;
+  r.replaceChildren(); WS.w = 0; if (!all.length) return;
+  let items = [...MINE, ...shuffle(rest)];
+  while (items.length < 10) items = items.concat(shuffle(all));
+  [...items, ...items].forEach(e => r.appendChild(wallCard(e)));
+  requestAnimationFrame(() => { WS.w = r.scrollWidth / 2; });
+  if (!WS.raf) WS.raf = requestAnimationFrame(wallLoop);
 }
-function addWallCard(e, mine) { WALL = [e, ...WALL]; renderWall(); }
+function wallLoop(now) {
+  const r = $('#wrow1'), dt = Math.min(.05, (now - (WS.t || now)) / 1000); WS.t = now;
+  if (!WS.drag) WS.x -= WS.v * dt;
+  if (WS.w) { WS.x %= WS.w; if (WS.x > 0) WS.x -= WS.w; }
+  r.style.transform = `translate3d(${WS.x.toFixed(1)}px,0,0)`;
+  WS.raf = requestAnimationFrame(wallLoop);
+}
+(() => { const tr = $('#wall .w-track'); if (!tr) return;
+  tr.addEventListener('pointerdown', e => { WS.drag = { x: e.clientX, x0: WS.x }; });
+  tr.addEventListener('pointermove', e => { if (WS.drag) WS.x = WS.drag.x0 + (e.clientX - WS.drag.x); });
+  const up = () => { WS.drag = null; }; tr.addEventListener('pointerup', up); tr.addEventListener('pointercancel', up); tr.addEventListener('pointerleave', up);
+})();
+function addWallCard(e) { MINE = [e, ...MINE]; WS.x = 0; renderWall(); }
 async function loadWall() {
   const url = window.MKD && window.MKD.rsvp && window.MKD.rsvp.wall; if (!url) return;
   try {
     const t = await (await fetch(url + '&t=' + Date.now())).text();
     const rows = parseCSV(t).slice(1).filter(r => r.length >= 4 && r[1]);
-    WALL = rows.map(r => ({ time: r[0], name: r[1], game: r[2], title: r[3], text: r[4] || '' }));
+    WALL = rows.map(r => ({ time: r[0], name: r[1], game: r[2], title: r[3], text: r[4] || '' })).filter(e => parseWhen(e.time) >= WALL_FROM);
     renderWall();
   } catch (e) {}
 }
-loadWall(); setInterval(loadWall, 60000);
+renderWall(); loadWall(); setInterval(loadWall, 60000);
 
 document.querySelectorAll('.share-btn').forEach(b => b.addEventListener('click', () => shareCard(b.dataset.share)));
 
-/* ── stall picker ── */
+/* ── stall picker: one stall at a time; leaving a stall silences it ── */
 const stalls = [...document.querySelectorAll('.stall')];
-stalls.forEach(st => st.addEventListener('click', () => {
-  stalls.forEach(s => s.classList.toggle('on', s === st));
-  document.querySelectorAll('.game[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== st.dataset.game; });
-  if (st.dataset.game === 'gubbara') gubbaraReset();
-  if (st.dataset.game === 'chhalla') chhallaReset();
-  if (st.dataset.game === 'tota') requestAnimationFrame(() => { if (!T.busy) totaBuild(); });
-  if (st.dataset.game === 'draw') kick();
-  $('#booth').scrollIntoView({ behavior: 'smooth', block: 'start' });
+const DONE = {};
+function openStall(g, scroll = true) {
+  ACTIVE = g; T.run++; D.vel = 0; D.drag = null; const f = FX(); if (f.stopAllLoops) f.stopAllLoops();
+  stalls.forEach(s => s.classList.toggle('on', s.dataset.game === g));
+  document.querySelectorAll('.game[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== g; });
+  if (g === 'gubbara') { if (DONE.gubbara) gubbaraResume(); else gubbaraReset(); }
+  if (g === 'chhalla' && !DONE.chhalla) chhallaReset();
+  if (g === 'tota' && (T.busy || !DONE.tota)) { T.busy = false; requestAnimationFrame(totaBuild); $('#tgo').hidden = false; $('#tsub').textContent = 'tap the deck to shuffle. the tota picks what next year holds for you.'; }
+  if (g === 'draw') { if (!D.done) drawReset(); kick(); }
+  if (scroll) $('#booth').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+stalls.forEach(st => st.addEventListener('click', () => { start(); snd('tap', { vol: .6 }); openStall(st.dataset.game); }));
+document.querySelectorAll('.next-btn').forEach(b => b.addEventListener('click', () => {
+  snd('tap', { vol: .6 });
+  if (b.dataset.next === 'haul') { $('#myhaul').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  openStall(b.dataset.next);
 }));
 
 /* ═════════ tota jyotish ═════════ */
@@ -168,7 +239,6 @@ const FORTUNES = [
   { img: 'bsfree', title: 'bullsh*t free zone', text: 'next year you cut the drama. no fake friends, no explaining yourself.' },
   { img: 'door', title: 'darwaaza khula hai', text: 'a new door opens next year: new home, new job, maybe a new city. walk in like you own it.' },
   { img: 'boss', title: 'boss nani era', text: 'next year you play your cards right, and everybody notices. shades on.' },
-  { img: 'patriarchy', title: 'scratch the patriarchy', text: 'next year you break something that’s been holding you back. no apologies.' },
   { img: 'baegum', title: 'baegum', text: 'you walk into next year like royalty. expect to be treated like one.' },
   { img: 'kaam', title: 'keep kaam se kaam', text: 'big work year. head down, kaam se kaam, and it pays off before next diwali.' },
   { img: 'chai', title: 'chai pe charcha', text: 'one long chai conversation next year changes your mind about something big.' },
@@ -176,7 +246,8 @@ const FORTUNES = [
 ];
 const HAS_TEXT = new Set(['nakhre', 'nazar', 'spicy', 'naacho', 'meethe', 'girlies', 'chugli', 'bsfree', 'door', 'patriarchy', 'baegum', 'kaam']);   // posters that already carry their words
 FORTUNES.forEach(f => { const i = new Image(); i.src = `assets/cards/${f.img}.webp`; });
-const T = { table: $('#ttable'), tota: $('#tota'), cards: [], busy: false, x: 0, y: 0, face: 1 };
+const T = { table: $('#ttable'), tota: $('#tota'), cards: [], busy: false, x: 0, y: 0, face: 1, run: 0 };
+const tsnd = (n, o) => { if (ACTIVE === 'tota') snd(n, o); };
 const cardT = (el, x, y, r, sc = 1, z) => { el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${sc})`; if (z != null) el.style.zIndex = z; };
 function totaPlace(x, y, face = T.face) { T.x = x; T.y = y; T.face = face; T.tota.style.transform = `translate(${x}px,${y}px) scaleX(${face})`; }
 function perchSpot() {          // waiting off to the side while the deck is shuffled
@@ -192,7 +263,7 @@ async function hop(x, y, { face, h = 34, ms = 360 } = {}) {   // a real hop: arc
     { transform: `translate(${x}px,${y}px) scaleX(${f}) scaleY(1)` },
   ], { duration: ms, easing: 'cubic-bezier(.3,.1,.4,1)' });
   totaPlace(x, y, f);
-  await a.finished.catch(() => {}); tick();
+  await a.finished.catch(() => {}); tsnd('hop', { vol: .35 });
 }
 async function bob(n = 2) {     // head-bob / curious look in place
   for (let i = 0; i < n; i++) {
@@ -215,20 +286,21 @@ function totaBuild() {
   T.cards.forEach((el, i) => { el.style.opacity = 1; el.classList.remove('flip'); cardT(el, (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); });
   T.tota.src = 'assets/game/parrot.webp';
   const p = perchSpot(); totaPlace(p.x, p.y, 1);
+  T.table.classList.add('can-shuffle');
 }
 async function riffle() {
   const w = T.cards[0].offsetWidth, half = Math.ceil(T.cards.length / 2);
   const L = T.cards.slice(0, half), R = T.cards.slice(half);
   L.forEach((el, i) => cardT(el, -w * .56, -i * 1.3, -9)); R.forEach((el, i) => cardT(el, w * .56, -i * 1.3, 9));
-  await sleep(360);
+  tsnd('riffle', { vol: .85 }); await sleep(360);
   const out = [];
   while (L.length || R.length) out.push(((Math.random() < .5 && L.length) || !R.length ? L : R).shift());
-  for (let i = 0; i < out.length; i++) { cardT(out[i], (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); tick(); await sleep(50); }
+  for (let i = 0; i < out.length; i++) { cardT(out[i], (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); await sleep(50); }
   T.cards = out; await sleep(260);
 }
 async function bridge() {
   T.cards.forEach((el, i) => cardT(el, (i - 4) * .5, -i * 1.3 - 24, rnd(-2, 2), 1.05)); await sleep(240);
-  for (let i = 0; i < T.cards.length; i++) { cardT(T.cards[i], (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); tick(); await sleep(28); }
+  for (let i = 0; i < T.cards.length; i++) { cardT(T.cards[i], (i - 4) * .5, -i * 1.3, rnd(-3, 3), 1, i); await sleep(28); }
   await sleep(240);
 }
 function fanPos(i) {
@@ -238,83 +310,110 @@ function fanPos(i) {
   return { x: Math.sin(rad(a)) * R, y: R - Math.cos(rad(a)) * R - 40, a };
 }
 const W_SCALE = () => (T.table.clientWidth < 420 ? 1.25 : 1.5);
+const SEEN_K = new Set();                  // don't hand the same kismat twice in one visit
 async function totaPlay() {
-  if (T.busy) return; T.busy = true; start();
-  $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true; hideShare('tota'); hidePin('tota');
-  totaBuild(); bob(2);
+  if (T.busy) return; T.busy = true; start(); const my = ++T.run;
+  const alive = () => T.run === my && ACTIVE === 'tota';
+  const bail = () => { if (T.run === my) T.busy = false; };
+  $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true; $('#tlabel').hidden = true; hideShare('tota'); hidePin('tota');
+  T.table.classList.remove('can-shuffle');
+  totaBuild(); bob(2); tsnd('parrot', { vol: .5 });
   $('#tsub').textContent = 'shuffling…';
-  await sleep(300); await riffle(); await riffle(); await bridge();
-  for (let i = 0; i < T.cards.length; i++) { const p = fanPos(i); cardT(T.cards[i], p.x, p.y, p.a, 1, i); tick(); await sleep(40); }
+  await sleep(300); if (!alive()) return bail();
+  await riffle(); if (!alive()) return bail();
+  await riffle(); if (!alive()) return bail();
+  tsnd('riffle', { vol: .6, rate: 1.1 }); await bridge(); if (!alive()) return bail();
+  for (let i = 0; i < T.cards.length; i++) { const p = fanPos(i); cardT(T.cards[i], p.x, p.y, p.a, 1, i); if (i % 3 === 0) tsnd('flip', { vol: .25, rate: 1.3 }); await sleep(40); }
   $('#tsub').textContent = 'tota ji is choosing…';
   const ch = T.cards[0].offsetHeight, tw = T.tota.offsetWidth, th = T.tota.offsetHeight;
   const spot = i => { const p = fanPos(i); return { x: p.x - tw * .7, y: p.y + ch * .32 - th * .5 }; };
-  // wander: hop on, look around, double back, consider, then commit
   const n = T.cards.length, choice = 1 + ((Math.random() * (n - 2)) | 0);
   const path = [1, 3, 5, Math.min(n - 2, 7), clamp(choice + (choice > 4 ? -2 : 2), 0, n - 1), choice];
   for (let k = 0; k < path.length; k++) {
     const s = spot(path[k]);
-    await hop(s.x, s.y, { h: rnd(22, 46), ms: rnd(300, 440) });
-    if (k === 2 || k === path.length - 2) await bob((rnd(1, 3)) | 0); else await sleep(rnd(80, 260));
+    await hop(s.x, s.y, { h: rnd(22, 46), ms: rnd(300, 440) }); if (!alive()) return bail();
+    if (k === 2 || k === path.length - 2) { await bob((rnd(1, 3)) | 0); if (Math.random() < .5) tsnd('parrot', { vol: .45 }); } else await sleep(rnd(80, 260));
   }
-  await bob(1);
-  const p = fanPos(choice), el = T.cards[choice], f = pick(FORTUNES);
+  await bob(1); if (!alive()) return bail();
+  let pool = FORTUNES.filter(f => !SEEN_K.has(f.img)); if (!pool.length) { SEEN_K.clear(); pool = FORTUNES; }
+  const f = pick(pool); SEEN_K.add(f.img);
+  const reading = Array.isArray(f.text) ? pick(f.text) : f.text;
+  const p = fanPos(choice), el = T.cards[choice];
   const front = el.querySelector('.kc-front'); front.style.backgroundImage = `url(assets/cards/${f.img}.webp)`;
   front.replaceChildren();
   if (!HAS_TEXT.has(f.img)) { const lab = document.createElement('span'); lab.className = 'kc-label'; lab.textContent = f.title; front.appendChild(lab); }
-  T.tota.src = 'assets/game/parrot_card.webp';
+  T.tota.src = 'assets/game/parrot_card.webp'; tsnd('parrot', { vol: .7 });
   cardT(el, p.x, p.y - 30, p.a, 1, 60); buzz(15);
-  await sleep(340);
+  await sleep(340); if (!alive()) return bail();
   T.cards.forEach(c => { if (c !== el) c.style.opacity = .14; });
   T.tota.src = 'assets/game/parrot.webp';
   const home = perchSpot();
   hop(home.x, home.y, { face: -1, h: 50, ms: 520 }).then(() => totaPlace(home.x, home.y, 1));
-  cardT(el, 0, -26, 0, W_SCALE(), 60); await sleep(440);
-  el.classList.add('flip'); ding(820, .55); buzz(20);
-  await sleep(520);
-  $('#ttext').textContent = f.text;
+  cardT(el, 0, -26, 0, W_SCALE(), 60); await sleep(440); if (!alive()) return bail();
+  $('#tlabel').hidden = false;
+  el.classList.add('flip'); tsnd('flip', { vol: .9 }); buzz(20);
+  await sleep(520); if (!alive()) return bail();
+  tsnd('win', { vol: .55 });
+  $('#ttext').textContent = reading;
   $('#tread').hidden = false; $('#tagain').hidden = false;
   $('#tsub').textContent = 'tota ji has spoken.';
-  SH.tota = { img: `assets/cards/${f.img}.webp`, title: f.title, text: f.text, kick: `${who()}’s kismat for next year` }; showShare('tota'); showPin('tota');
+  SH.tota = { img: `assets/cards/${f.img}.webp`, title: f.title, text: reading, kick: `${who()}’s kismat for 2027` }; showShare('tota'); showPin('tota');
+  haul('tota', f.title, reading, `assets/cards/${f.img}.webp`); DONE.tota = true;
   T.busy = false;
 }
 $('#tgo').addEventListener('click', totaPlay);
 $('#tagain').addEventListener('click', totaPlay);
+T.table.addEventListener('click', () => { if (!T.busy && T.table.classList.contains('can-shuffle')) { snd('tap', { vol: .5 }); totaPlay(); } });   // tap the deck itself to shuffle
 requestAnimationFrame(totaBuild);
-window.addEventListener('resize', () => { if (!T.busy) totaBuild(); });
+window.addEventListener('resize', () => { if (!T.busy && !DONE.tota) totaBuild(); });
 
 /* ═════════ gubbara phod — air rifle, drag to aim, release to fire ═════════ */
 const INAAMS = [
   'the last kaju katli in the dabba', 'a soan papdi box you can regift (again)', 'immunity from “beta, shaadi kab?”',
-  'first dibs on tonight’s chugli', 'a lifetime supply of nazar (with nimbu-mirchi)', 'one excuse to skip rangoli duty',
+  'first dibs on tonight’s chugli', 'a lifetime supply of nazar (with nimbu-mirchi)', 'one excuse to skip the family whatsapp call',
   'the aux cord, for exactly one song', 'a phuljhadi that actually lights', 'front-row seat at the family drama',
-  'one guilt-free extra gulab jamun', 'a compliment on your nails from a stranger', 'the window seat at the chai tapri',
+  'one guilt-free extra gulab jamun', 'a compliment from a total stranger', 'the window seat at the chai tapri',
   'unlimited unsolicited advice from mausi', 'a diya that refuses to go out', 'a thumka lesson from the aunties',
+  'one “i told you so”, valid all year', 'the good chair at the next family function', 'a free pass on one bad decision',
+  'the last plate of pani puri', 'the first slice of every cake this year', 'one day of no replies, no guilt',
+  'a perfectly timed entry at the next party', 'a photo where everyone looks good', 'a spot in the front row of the group pic',
+  'an aunty who finally gets your name right', 'a playlist the whole room actually likes', 'one cancelled plan you secretly wanted cancelled',
+  'a window seat on your next flight', 'a lehenga that fits on the first try', 'the right to choose the restaurant, once',
+  'a cab that arrives in 2 minutes', 'zero “you’ve gained weight” comments this diwali', 'one surprise refund',
+  'the last laddoo, unclaimed', 'a mirror selfie with perfect lighting',
 ];
-function addWin(text, img) {
+function addWin(list, text, img) {
   const c = document.createElement('div'); c.className = 'win-card';
   const i = document.createElement('img'); i.src = img; i.alt = '';
   const p = document.createElement('p'); p.textContent = text;
-  c.append(i, p); $('#glist').appendChild(c);
+  c.append(i, p); $(list).appendChild(c);
+  c.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
 }
-const MISS_LINES = ['chook gaye!', 'thoda left, beta', 'hawa mein!', 'almost!'];
-const G = { balloons: [], shots: 5, aiming: false, ax: 0, ay: 0, cx: 0, cy: 0, raf: 0, t0: 0 };
+const MISS_LINES = ['chook gaye!', 'thoda left, beta', 'hawa mein!', 'almost!', 'arre!', 'uncle is laughing', 'so close!', 'try again, champ'];
+const G = { balloons: [], shots: 10, aiming: false, ax: 0, ay: 0, cx: 0, cy: 0, raf: 0, t0: 0, pool: [], bi: 0 };
 const range = $('#range'), wall = $('#gwall'), cross = $('#cross'), rifle = $('#rifle');
+const SLOTS = [[.18, .3], [.47, .24], [.78, .3], [.3, .7], [.64, .66], [.86, .72]];
+const gsnd = (n, o) => { if (ACTIVE === 'gubbara') snd(n, o); };
+function spawnBalloon(slot) {
+  const el = document.createElement('div'); el.className = 'gub';
+  const img = document.createElement('img'); img.src = `assets/game/bal${G.bi++ % 8}.webp`; img.alt = '';
+  el.appendChild(img); wall.appendChild(el);
+  const [bx, by] = SLOTS[slot];
+  const b = { img: img.src, el, slot, bx, by, ph: rnd(0, 6.3), sp: rnd(.6, 1.1), amp: rnd(.025, .05), alive: true, prize: G.pool.shift() || pick(INAAMS) };
+  el.animate([{ opacity: 0, translate: '0 60px' }, { opacity: 1, translate: '0 0' }], { duration: 700, easing: 'cubic-bezier(.2,1.2,.4,1)' });
+  G.balloons.push(b); return b;
+}
 function gubbaraReset() {
-  wall.replaceChildren(); G.balloons = []; G.shots = 5; G.aiming = false;
-  const pool = [...INAAMS].sort(() => Math.random() - .5);
-  const cols = 5, rows = 3;
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-    const el = document.createElement('div'); el.className = 'gub';
-    const img = document.createElement('img'); img.src = `assets/game/bal${(r * cols + c) % 8}.webp`; img.alt = '';
-    el.appendChild(img); wall.appendChild(el);
-    G.balloons.push({ img: img.src, el, bx: (c + .5) / cols, by: .2 + r * .27, ph: rnd(0, 6.3), sp: rnd(.6, 1.1), amp: rnd(.022, .045), alive: true, prize: pool[(r * cols + c) % pool.length] });
-  }
-  $('#gshots').innerHTML = Array.from({ length: 5 }, () => '<i></i>').join('');
+  wall.replaceChildren(); G.balloons = []; G.shots = 10; G.aiming = false; G.bi = (Math.random() * 8) | 0; DONE.gubbara = false;
+  G.pool = [...INAAMS].sort(() => Math.random() - .5);
+  [...SLOTS.keys()].sort(() => Math.random() - .5).slice(0, 4).forEach(spawnBalloon);
+  $('#gshots').innerHTML = Array.from({ length: 10 }, () => '<i></i>').join('');
   $('#ghaul').hidden = true; $('#glist').replaceChildren(); $('#gagain').hidden = true; hideShare('gubbara'); hidePin('gubbara');
-  $('#gsub').textContent = 'drag to aim, let go to fire. 5 pellets.';
+  $('#gsub').textContent = 'drag to aim, let go to fire. 10 pellets.';
   requestAnimationFrame(() => { const r0 = range.getBoundingClientRect(); G.ax = r0.width / 2; G.ay = r0.height * .35; });
   cancelAnimationFrame(G.raf); G.t0 = performance.now(); G.raf = requestAnimationFrame(gubbaraLoop);
 }
+function gubbaraResume() { cancelAnimationFrame(G.raf); G.raf = requestAnimationFrame(gubbaraLoop); }
 function balloonPos(b, t) {
   const W = wall.clientWidth, H = wall.clientHeight;
   return { x: (b.bx + Math.sin(t * b.sp + b.ph) * b.amp) * W, y: (b.by + Math.cos(t * b.sp * 1.3 + b.ph) * b.amp * .8) * H };
@@ -342,8 +441,8 @@ range.addEventListener('pointerup', () => { if (!G.aiming) return; G.aiming = fa
 range.addEventListener('pointercancel', () => { G.aiming = false; range.classList.remove('aiming'); });
 async function fire() {
   if (G.shots <= 0) return;
-  G.shots--; $('#gshots').children[4 - G.shots].classList.add('used');
-  noise(.08, 'bandpass', 2400, 900, .9, 2); buzz(12);
+  G.shots--; $('#gshots').children[9 - G.shots].classList.add('used');
+  gsnd('rifle', { vol: .8 }); buzz(12);
   rifle.animate([{ translate: '0 0' }, { translate: '14px 10px' }, { translate: '0 0' }], { duration: 180 });
   const x = G.cx, y = G.cy; await sleep(90);
   const t = (performance.now() - G.t0) / 1000;
@@ -356,57 +455,84 @@ async function fire() {
   });
   const fx = document.createElement('i'); fx.className = hit ? 'gfx pop' : 'gfx puff'; fx.style.left = x + 'px'; fx.style.top = y + 'px'; range.appendChild(fx); setTimeout(() => fx.remove(), 700);
   if (hit) {
-    pop(); buzz(25); hit.alive = false; hit.el.classList.add('popped');
+    gsnd('bpop', { vol: .9 }); buzz(25); hit.alive = false; hit.el.classList.add('popped');
     hit.el.querySelector('img').src = 'assets/game/bal8.webp';
     const tag = document.createElement('span'); tag.className = 'gtag'; tag.textContent = hit.prize; hit.el.appendChild(tag);
-    addWin(hit.prize, hit.img); $('#ghaul').hidden = false;
+    addWin('#glist', hit.prize, hit.img); $('#ghaul').hidden = false;
+    setTimeout(() => {                                   // the popped one drifts off, a fresh balloon floats up in its place
+      hit.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: 'forwards' }).finished.then(() => hit.el.remove()).catch(() => {});
+      G.balloons = G.balloons.filter(b => b !== hit);
+      if (G.shots > 0) { const used = new Set(G.balloons.map(b => b.slot)); const free = [...SLOTS.keys()].filter(i => !used.has(i)); spawnBalloon(pick(free)); }
+    }, 1100);
   } else {
-    thup(); const m = document.createElement('span'); m.className = 'gmiss'; m.textContent = pick(MISS_LINES); m.style.left = x + 'px'; m.style.top = y + 'px'; range.appendChild(m); setTimeout(() => m.remove(), 900);
+    gsnd('tock', { vol: .6 }); const m = document.createElement('span'); m.className = 'gmiss'; m.textContent = pick(MISS_LINES); m.style.left = x + 'px'; m.style.top = y + 'px'; range.appendChild(m); setTimeout(() => m.remove(), 900);
   }
   if (G.shots === 0) {
     const n = $('#glist').children.length;
-    if (!n) { addWin('one pat on the head from the stall uncle', 'assets/game/bal8.webp'); $('#ghaul').hidden = false; }
-    $('#gsub').textContent = n ? `${n} of 5 popped! here’s what you got.` : 'all misses! uncle feels bad for you.';
-    showShare('gubbara'); showPin('gubbara');
-    $('#gagain').hidden = false; ding(700, .6);
+    if (!n) { addWin('#glist', 'one pat on the head from the stall uncle', 'assets/game/bal8.webp'); $('#ghaul').hidden = false; gsnd('fail', { vol: .6 }); }
+    else setTimeout(() => gsnd('win', { vol: .6 }), 300);
+    $('#gsub').textContent = n ? `${n} popped out of 10 pellets! here’s what you won.` : 'all misses! uncle feels bad for you.';
+    showShare('gubbara'); showPin('gubbara'); $('#gagain').hidden = false; DONE.gubbara = true;
+    const wins = [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent);
+    haul('gubbara', n ? `popped ${n} balloon${n > 1 ? 's' : ''}` : 'all misses', wins.join(' · '), 'assets/game/bal1.webp');
   } else $('#gsub').textContent = `${G.shots} pellet${G.shots > 1 ? 's' : ''} left.`;
 }
 $('#gagain').addEventListener('click', gubbaraReset);
 
-/* ═════════ chhalla — flick the bangle at a banta bottle (2 practice throws, then 3 for real) ═════════ */
+/* ═════════ ring toss — flick a ring onto one of two banta bottles. 10 rings, coaching on every miss ═════════ */
 const PRIZES = [
   ['aunty approval', 'she said “kitni sundar lag rahi hai”. frame it.'],
   ['gossip VIP pass', 'you hear the chugli first, before the group chat does.'],
   ['dance-floor immunity', 'nobody can drag you to dance. (you’ll go anyway.)'],
   ['the last samosa', 'it’s yours. nobody will fight you for it. probably.'],
   ['no-nazar shield', 'one nimbu-mirchi, personally assigned to you for the year.'],
+  ['the aux cord', 'one full hour of your songs. no skips allowed.'],
+  ['bouncer at the bar', 'you skip the queue tonight. walk like you know someone.'],
+  ['the good lighting spot', 'the best selfie corner is officially yours tonight.'],
+  ['a wingman/wingwoman', 'one friend is now contractually obliged to hype you up.'],
+  ['taxi-fare blessing', 'your ride home shows up in two minutes. surge-free.'],
+  ['extra mithai quota', 'double servings, zero questions asked.'],
+  ['DJ request token', 'one song, played on demand. choose wisely.'],
+  ['family-function escape card', 'leave any family function early, no explanations.'],
+  ['the boss blessing', 'one free “sorry, i was in a meeting” this year.'],
+  ['beta, kitni patli ho gayi', 'one aunty will say it. you will believe her.'],
+  ['the comeback of the year', 'you’ll think of the perfect reply in time. for once.'],
+  ['the group-chat crown', 'your memes land every single time this year.'],
+  ['a full night’s sleep', 'after diwali week. you’ve earned it.'],
+  ['VIP gossip seat', 'front-row seat for the best story of the night.'],
+  ['ex-proof armour', 'they will text. you will not reply. iconic.'],
+  ['dessert first', 'tonight you skip straight to the gulab jamun.'],
+  ['bindi of confidence', 'stick it on and walk in like you own the place.'],
+  ['the perfect diwali pic', 'one candid where you look unreal. trust.'],
+  ['a pocket of good luck', 'one small, lucky thing happens before new year.'],
 ];
-const R = { practice: 2, left: 3, busy: false, drag: null, won: [] };
+const R = { left: 10, busy: false, drag: null, won: [], pool: [], bi: 0 };
 const cstage = $('#cstage'), ring = $('#cring'), aimLine = $('#caimline');
+const csnd = (n, o) => { if (ACTIVE === 'chhalla') snd(n, o); };
 function ringHome() { ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 1; ring.style.transform = 'translate(-50%, 0)'; }
 function chhallaStatus() {
-  $('#csub').textContent = R.practice > 0
-    ? `practice throw ${3 - R.practice} of 2. flick the bangle up at a bottle.`
-    : R.left > 0 ? `for real now: ${R.left} bangle${R.left > 1 ? 's' : ''} left.` : 'all bangles thrown!';
-  cstage.classList.toggle('practice', R.practice > 0);
+  $('#csub').textContent = R.left > 0 ? `${R.left} ring${R.left > 1 ? 's' : ''} left. flick one up onto a bottle.` : 'all rings thrown!';
+  $('#crings').innerHTML = Array.from({ length: 10 }, (_, i) => `<i class="${i < 10 - R.left ? 'used' : ''}"></i>`).join('');
+}
+function makeBottle(i) {
+  const b = document.createElement('div'); b.className = 'bot';
+  b.dataset.p = R.pool.length ? R.pool.shift() : (Math.random() * PRIZES.length) | 0;
+  b.style.animationDelay = (-i * 1.1).toFixed(1) + 's';
+  const back = document.createElement('i'); back.className = 'hoop back';
+  const img = document.createElement('img'); img.src = `assets/game/bottle${R.bi++ % 5}.webp`; img.alt = '';
+  const front = document.createElement('i'); front.className = 'hoop front';
+  b.append(back, img, front); return b;
 }
 function chhallaReset() {
   const shelf = $('#cshelf'); shelf.replaceChildren();
-  const order = [0, 1, 2, 3, 4].sort(() => Math.random() - .5);
-  order.forEach((p, i) => {
-    const b = document.createElement('div'); b.className = 'bot'; b.dataset.p = p; b.style.animationDelay = (-i * .7).toFixed(1) + 's';
-    const back = document.createElement('i'); back.className = 'hoop back';
-    const img = document.createElement('img'); img.src = `assets/game/bottle${i}.webp`; img.alt = '';
-    const front = document.createElement('i'); front.className = 'hoop front';
-    const tag = document.createElement('span'); tag.className = 'btag'; tag.textContent = PRIZES[p][0];
-    b.append(back, img, front, tag); shelf.appendChild(b);
-  });
-  R.practice = 2; R.left = 3; R.busy = false; R.won = []; ringHome(); hideShare('chhalla'); hidePin('chhalla');
-  $('#cread').hidden = true; $('#cagain').hidden = true; $('#ccoach').hidden = true;
+  R.pool = [...PRIZES.keys()].sort(() => Math.random() - .5); R.bi = (Math.random() * 5) | 0;
+  shelf.append(makeBottle(0), makeBottle(1));
+  R.left = 10; R.busy = false; R.won = []; DONE.chhalla = false; ringHome(); hideShare('chhalla'); hidePin('chhalla');
+  $('#chaul').hidden = true; $('#clist').replaceChildren(); $('#cagain').hidden = true; $('#ccoach').hidden = true;
   chhallaStatus();
 }
 cstage.addEventListener('pointerdown', e => {
-  if (R.busy || (R.left <= 0 && R.practice <= 0)) return;
+  if (R.busy || R.left <= 0) return;
   const rr = ring.getBoundingClientRect();
   if (Math.hypot(e.clientX - (rr.left + rr.width / 2), e.clientY - (rr.top + rr.height / 2)) > rr.width * 1.6) return;
   start(); e.preventDefault(); try { cstage.setPointerCapture(e.pointerId); } catch (err) {}
@@ -428,21 +554,20 @@ cstage.addEventListener('pointerup', () => {
   const vx = (b.x - a.x) / dt, vy = (b.y - a.y) / dt;
   endDrag();
   if (vy > -.25) { ringHome(); coach('flick it upwards, a bit quicker.'); return; }
-  chhallaThrow(vx, vy);
+  csnd('whoosh', { vol: .6 }); chhallaThrow(vx, vy);
 });
 cstage.addEventListener('pointercancel', () => { endDrag(); ringHome(); });
 function coach(msg, good) { const c = $('#ccoach'); c.hidden = false; c.textContent = msg; c.classList.toggle('good', !!good); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
 async function chhallaThrow(vx, vy) {
   R.busy = true;
-  const practice = R.practice > 0;
   const s = cstage.getBoundingClientRect(), rr = ring.getBoundingClientRect();
   const cx = rr.left + rr.width / 2 - s.left, cy = rr.top + rr.height / 2 - s.top;
   const power = clamp(-vy, .25, 3.2), tx = cx + vx * 220 + rnd(-8, 8), ty = cy - power * 240;
   let hitB = null, near = null, nd = 1e9;
-  document.querySelectorAll('.bot').forEach(b => {
+  cstage.querySelectorAll('.bot').forEach(b => {
     const r = b.getBoundingClientRect(), nx = r.left + r.width / 2 - s.left, ny = r.top + r.height * .2 - s.top;
     const d = Math.hypot(tx - nx, ty - ny); if (d < nd) { nd = d; near = { el: b, x: nx, y: ny, w: r.width, h: r.height }; }
-    if (!b.classList.contains('ringed') && Math.abs(tx - nx) < r.width * .42 && Math.abs(ty - ny) < r.height * .2) hitB = { el: b, x: nx, y: ny };
+    if (!b.classList.contains('ringed') && Math.abs(tx - nx) < r.width * .4 && Math.abs(ty - ny) < r.height * .16) hitB = { el: b, x: nx, y: ny };
   });
   const endX = hitB ? hitB.x : tx, endY = hitB ? hitB.y : ty, arcH = 60 + power * 30;
   const anim = ring.animate([
@@ -451,63 +576,129 @@ async function chhallaThrow(vx, vy) {
     { transform: `translate(calc(-50% + ${endX - cx}px), ${endY - cy}px) scale(.5) rotateX(68deg) rotate(720deg)` },
   ], { duration: 650, easing: 'cubic-bezier(.3,.2,.4,1)', fill: 'forwards' });
   await anim.finished.catch(() => {});
-  if (practice) R.practice--; else R.left--;
+  R.left--;
   if (hitB) {
-    clink(); buzz(25);
-    ring.style.opacity = 0; ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 0;
-    hitB.el.classList.add('ringed');                     // the bangle now lives on the bottle neck and sways with it
-    if (practice) { coach('perfect! that’s exactly it. now for real.', true); hitB.el.classList.add('practice-hit'); setTimeout(() => hitB.el.classList.remove('ringed', 'practice-hit'), 1400); }
-    else {
-      const [name, text] = PRIZES[+hitB.el.dataset.p]; R.won.push(name);
-      $('#ctitle').textContent = name; $('#ctext').textContent = text; $('#cread').hidden = false; ding(880, .55);
-      SH.chhalla = { img: hitB.el.querySelector('img').src, title: name, text, kick: `${who()} ringed the banta` }; showShare('chhalla'); showPin('chhalla');
-      coach('ringed it!', true);
-    }
+    csnd('ringglass', { vol: .9 }); buzz(25);
+    ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 0;
+    hitB.el.classList.add('ringed');                     // the ring now lives on the bottle neck and sways with it
+    const [name, text] = PRIZES[+hitB.el.dataset.p]; R.won.push(name);
+    addWin('#clist', `${name}: ${text}`, hitB.el.querySelector('img').src); $('#chaul').hidden = false;
+    coach(pick(['ringed it!', 'shabaash!', 'ekdum perfect!', 'what a throw!']), true);
+    setTimeout(() => csnd('win', { vol: .45 }), 250);
+    const old = hitB.el;                                  // a fresh bottle (new prize) slides in
+    setTimeout(() => { if (!old.isConnected) return; const nb = makeBottle(0); nb.classList.add('enter'); old.replaceWith(nb); }, 1500);
   } else {
-    clink();
+    csnd('ringfloor', { vol: .7 });
     ring.animate([
       { transform: `translate(calc(-50% + ${endX - cx}px), ${endY - cy}px) scale(.5) rotateX(68deg)`, opacity: 1 },
       { transform: `translate(calc(-50% + ${endX - cx + rnd(-60, 60)}px), ${endY - cy + 140}px) scale(.45) rotateX(80deg) rotate(260deg)`, opacity: 0 },
     ], { duration: 520, easing: 'cubic-bezier(.5,0,1,1)', fill: 'forwards' });
-    // tell them what to change
     const dy = ty - near.y, dxn = tx - near.x, tips = [];
-    if (dy < -near.h * .2) tips.push('too far — less force');
-    else if (dy > near.h * .2) tips.push('too short — flick harder');
-    if (Math.abs(dxn) > near.w * .42) tips.push(dxn > 0 ? 'aim a little left' : 'aim a little right');
+    if (dy < -near.h * .16) tips.push('too far — less force');
+    else if (dy > near.h * .16) tips.push('too short — flick harder');
+    if (Math.abs(dxn) > near.w * .4) tips.push(dxn > 0 ? 'aim a little left' : 'aim a little right');
     coach(tips.length ? tips.join(', ') + '.' : 'so close! same again.');
   }
   await sleep(750);
-  if (R.practice > 0 || R.left > 0) ringHome(); else { ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 0; $('#cagain').hidden = false;
-    if (!R.won.length) { $('#ctitle').textContent = 'no rings this time'; $('#ctext').textContent = 'the banta stays undefeated. one more go?'; $('#cread').hidden = false; } }
-  chhallaStatus(); R.busy = false;
+  chhallaStatus();
+  if (R.left > 0) ringHome();
+  else {
+    ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 0; $('#cagain').hidden = false; DONE.chhalla = true;
+    const n = R.won.length;
+    if (!n) { addWin('#clist', 'the banta stays undefeated: one free nimbu soda, on the house.', 'assets/game/bottle0.webp'); $('#chaul').hidden = false; csnd('fail', { vol: .6 }); }
+    $('#csub').textContent = n ? `${n} ring${n > 1 ? 's' : ''} landed! here’s what you won.` : 'no rings this time. one more go?';
+    const wins = [...document.querySelectorAll('#clist .win-card p')].map(p => p.textContent);
+    SH.chhalla = { img: 'assets/game/bottle0.webp', title: n ? `ringed ${n} bottle${n > 1 ? 's' : ''}` : 'the banta won', text: wins.join(' · '), kick: `${who()}’s ring toss` };
+    showShare('chhalla'); showPin('chhalla');
+    haul('chhalla', SH.chhalla.title, wins.join(' · '), 'assets/game/bottle0.webp');
+  }
+  R.busy = false;
 }
 $('#cagain').addEventListener('click', chhallaReset);
 
-/* ═════════ lucky draw — a real crank ═════════ */
-const PERSONAS = [
-  { name: 'the chugli champion', text: "you'll know everything before it happens. use your powers wisely (or don't)." },
-  { name: 'main-character energy', text: 'every room you walk into this year is your entrance scene.' },
-  { name: 'the dance-floor auntie', text: 'first on the floor, last to leave. the DJ already fears you.' },
-  { name: 'the jugaad genius', text: "no plan? no problem. you'll fix everything with a safety pin and a smile." },
-  { name: 'the phuljhadi', text: 'small, sparkly, impossible to ignore. you light up every room.' },
-  { name: 'the rangoli perfectionist', text: 'everything has to be just right this year, and somehow it will be.' },
-  { name: 'the soan papdi re-gifter', text: 'resourceful, practical, slightly suspicious. a legend in the making.' },
-  { name: 'the glow-up of the year', text: 'new set, new vibe, new you. people will ask what changed.' },
-  { name: 'the soft-spoken savage', text: 'sweet voice, sharp comebacks. nobody sees it coming.' },
-  { name: 'the matchmaker', text: 'at least one wedding next year will be your fault. take the credit.' },
-  { name: 'the selfie director', text: "you'll get everyone's best angle. nobody will get yours." },
-  { name: 'the mohalla’s lucky charm', text: 'good things follow you around this year. keep your people close.' },
+/* ═════════ lucky draw — your mood for 2027. a real crank; mood × colour × snack × month = thousands of tickets ═════════ */
+const MOODS = [
+  ['i’m my own good luck charm', 'good things keep finding you. you stop acting surprised.'],
+  ['i’m the main character, no notes', 'every room you walk into is your entrance scene. walk slower.'],
+  ['soft life, strict boundaries', 'yes to rest, no to “bas 5 minute ka kaam hai”.'],
+  ['delulu, but i deliver', 'the plan sounds crazy out loud. it works anyway.'],
+  ['nothing rattles me', 'not even the family group chat. zen master.'],
+  ['i reply when i feel like it', 'nakhre on, notifications off. it suits you.'],
+  ['my life is a full filmy montage', 'slow-motion entries, dramatic exits, at least one rain scene.'],
+  ['unbothered, moisturised, thriving', 'let them talk. you’re busy glowing.'],
+  ['chaos, but make it cute', 'last-minute plans turn into the best memories of the year.'],
+  ['tired, but iconic', 'running on chai and charisma. still the best dressed in the room.'],
+  ['i’m in my budget era (on paper)', 'you’ll make a gorgeous budget in january. framing it counts.'],
+  ['i’m the plot twist', 'nobody saw your year coming. least of all you.'],
+  ['i fix everything', 'the wifi, the plan, the family drama. ghar ka hero.'],
+  ['passport out, always', 'at least one trip gets booked at 2am. zero regrets.'],
+  ['glow-up loading', 'new habits actually stick this time. people ask what changed.'],
+  ['i left the chat', 'you see the drama coming and simply… leave.'],
+  ['yes to every invite', 'your calendar needs its own calendar.'],
+  ['happily hermit', 'cancelled plans, cosy nights, zero guilt. bliss.'],
+  ['i asked, i got', 'the raise, the upgrade, the extra gulab jamun. just ask.'],
+  ['my side hustle is thriving', 'one small idea turns into real money. tell nobody till it works.'],
+  ['jugaad is my love language', 'no plan? a safety pin, a smile, and it all works.'],
+  ['first on the dance floor', 'last to leave. the DJ knows your name.'],
+  ['every outfit is a statement', 'the mohalla starts copying you by march.'],
+  ['sweet like kaju katli', 'everyone wants a piece of you next year. share wisely.'],
+  ['spicy like hari mirchi', 'sharp tongue, warm heart, zero tolerance for nonsense.'],
+  ['protecting my peace', 'you guard it like it’s the last samosa.'],
+  ['i say it like it is', 'you say what everyone’s thinking. they love you for it.'],
+  ['secretly a softie', 'you’ll cry at a wedding you didn’t even want to go to.'],
+  ['new city, who dis', 'a move, a new address, or at least a new favourite café.'],
+  ['healing, but make it fashion', 'therapy on tuesday, brunch on sunday, outfit on point.'],
+  ['chai over drama', 'you settle every fight with two cutting chais. diplomat.'],
+  ['on a lucky streak', 'parking spots, upgrades, the last piece of cake. all yours.'],
+  ['rich aunty in training', 'big sunglasses, bigger plans, a portfolio in progress.'],
+  ['unreachable (in a good way)', 'out living life. leave a voice note.'],
+  ['golden retriever energy', 'excited about everything, friends with everyone.'],
+  ['mysterious and selective', 'black-cat energy. annoyingly cool.'],
+  ['a morning person now (shock)', 'sunrise walks. nobody recognises you anymore.'],
+  ['night owl royalty', 'best ideas at 2am, best stories at 4am.'],
+  ['i colour-code my feelings', 'trips, birthdays, emotions. all in one spreadsheet.'],
+  ['going with the flow', 'no plans, all vibes, everything lands anyway.'],
+  ['no regrets, only stories', 'you say yes to the scary thing. it pays off big.'],
+  ['my friends’ loudest cheerleader', 'they win more because you’re in the front row.'],
+  ['quietly winning', 'no announcements. just results.'],
+  ['surviving shaadi season in style', 'six weddings, four sangeets, one perfectly repeated lehenga.'],
+  ['nani’s favourite, officially', 'family approval rating at an all-time high. use it.'],
+  ['someone has a crush on me', 'you’ll find out by holi. act natural.'],
+  ['manifesting, aggressively', 'the vision board goes up, and for once it listens.'],
+  ['touching grass, loving it', 'less scrolling, more sunsets. weirdly, it’s great.'],
+  ['ride or die for my people', 'they’ll need you next year. you show up every time.'],
+  ['slow start, big burst', 'anaar energy. you start quiet, then light up the whole sky.'],
+  ['small sparks everywhere', 'phuljhadi mood. impossible to ignore.'],
+  ['still glowing, thanks', 'things try to blow you out. you keep burning bright.'],
+  ['out of office, mentally and physically', 'you finally take the leave, and actually switch off.'],
+  ['gym era (for real this time)', 'three times a week. people notice. you mention it.'],
+  ['my dish is famous now', 'one recipe becomes legendary. everyone wants the secret.'],
+  ['i text first, no ego', 'you make the call. good things follow.'],
+  ['a compliment magnet', 'strangers stop you to ask where it’s from.'],
+  ['standards: sky high', 'only premium people get access next year.'],
+  ['bas, ho gaya', 'you finally close the chapter that kept dragging. lighter already.'],
+  ['full paisa vasool', 'every plan, every trip, every rupee: worth it.'],
+  ['i’m the vibe', 'parties start when you arrive. that’s just facts.'],
+  ['calm, rich and slightly smug', 'things work out. you knew they would.'],
 ];
-const D = { ang: 0, vel: 0, total: 0, need: 1080, busy: false, done: false, drag: null, raf: 0, last: 0, slips: [] };
-const body = $('#drBody'), crank = $('#drCrank'), slipBox = $('#drSlips');
+const LUCK = {
+  colour: ['rani pink', 'haldi yellow', 'peacock blue', 'sindoor red', 'mehendi green', 'marigold orange', 'royal purple', 'gold, obviously', 'silver', 'emerald', 'midnight black', 'ivory', 'teal', 'mirchi red'],
+  snack: ['samosa', 'jalebi', 'pani puri', 'vada pav', 'kaju katli', '2am maggi', 'gulab jamun', 'chai-biscuit', 'momos', 'bhel puri', 'soan papdi (regifted)', 'masala chips', 'rasmalai', 'chakli'],
+  month: ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'],
+};
+const D = { ang: 0, vel: 0, total: 0, need: 900, busy: false, done: false, drag: null, raf: 0, last: 0, slips: [], lastClick: 0 };
+const body = $('#drBody'), crank = $('#drCrank'), slipBox = $('#drSlips'), dstage = $('#dstage');
+const meter = [...document.querySelectorAll('#dmeter i')];
 (() => { const cols = ['#efbd0d', '#ec5a86', '#2f9790', '#1d8cc4', '#c4221a', '#f7e6c8'];
   for (let i = 0; i < 14; i++) { const s = document.createElement('i'); s.style.background = cols[i % cols.length]; slipBox.appendChild(s); D.slips.push({ el: s, a: rnd(0, 6.3), r: rnd(.15, .42), spin: rnd(0, 360) }); } })();
+function drawMeter() { const k = D.total / D.need; meter.forEach((m, i) => m.classList.toggle('on', k >= (i + 1) / 3)); }
 function drawLoop(now) {
   const dt = Math.min(.05, (now - (D.last || now)) / 1000); D.last = now;
-  if (!D.drag) D.vel *= Math.pow(.3, dt);                 // the drum coasts and slows down
-  D.ang += D.vel * dt; D.total += Math.abs(D.vel * dt);
+  const live = ACTIVE === 'draw';
+  if (!live) { D.vel = 0; D.drag = null; }
+  if (!D.drag) D.vel *= Math.pow(.25, dt);                 // the drum coasts and slows down
+  const step = D.vel * dt; D.ang += step; if (!D.done) D.total += Math.abs(step);
   crank.style.transform = `rotateX(${D.ang.toFixed(1)}deg)`;
-  // the cage rolls about its axle: a squash/bob in step with the crank, slips tumbling inside
   const ph = rad(D.ang);
   body.style.transform = `scaleY(${(.94 + .06 * Math.abs(Math.cos(ph * 3))).toFixed(3)}) translateY(${(Math.sin(ph * 3) * 3).toFixed(1)}px)`;
   const W = slipBox.clientWidth, H = slipBox.clientHeight, sp = Math.min(1, Math.abs(D.vel) / 500), rest = 1 - sp;
@@ -516,48 +707,62 @@ function drawLoop(now) {
     const x = W / 2 + Math.cos(s.a) * s.r * W * (1 - rest * .2), y = H / 2 + Math.sin(s.a) * s.r * H * sp + rest * H * (.12 + s.r * .45);
     s.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${s.spin.toFixed(0)}deg)`;
   });
-  if (Math.abs(D.vel) > 60 && Math.random() < dt * Math.abs(D.vel) / 40) noise(.03, 'bandpass', rnd(1800, 3200), 1400, .12, 2);
-  if (!D.done && D.total >= D.need && !D.drag && Math.abs(D.vel) < 220) drawDrop();
-  if (!$('[data-panel=draw]').hidden || Math.abs(D.vel) > 1) D.raf = requestAnimationFrame(drawLoop); else D.raf = 0;
+  // ratchet clicks every quarter turn
+  if (live && Math.floor(D.ang / 90) !== D.lastClick) { D.lastClick = Math.floor(D.ang / 90); snd('ratchet', { vol: .5, rate: rnd(.9, 1.1) }); }
+  loopVol('drum', live ? Math.min(1, Math.abs(D.vel) / 600) * .9 : 0);
+  drawMeter();
+  if (!D.done && D.total >= D.need) drawDrop();
+  if (live || Math.abs(D.vel) > 1) D.raf = requestAnimationFrame(drawLoop); else { D.raf = 0; loopVol('drum', 0); }
 }
 function kick() { if (!D.raf) { D.last = 0; D.raf = requestAnimationFrame(drawLoop); } }
-crank.addEventListener('pointerdown', e => {
-  if (D.done) return; start(); e.preventDefault(); try { crank.setPointerCapture(e.pointerId); } catch (err) {}
-  D.drag = { lastX: e.clientX, lastY: e.clientY, lastT: performance.now() };
-  $('#dsub').textContent = 'keep turning…'; kick();
+// the whole drum is the handle: drag in any circle-ish way; a plain tap gives it a shove
+dstage.addEventListener('pointerdown', e => {
+  if (D.done) return; start(); e.preventDefault(); try { dstage.setPointerCapture(e.pointerId); } catch (err) {}
+  D.drag = { lastX: e.clientX, lastY: e.clientY, lastT: performance.now(), moved: 0 };
+  $('#dsub').textContent = 'keep turning…'; dstage.classList.add('turning'); kick();
 });
-crank.addEventListener('pointermove', e => {
+dstage.addEventListener('pointermove', e => {
   if (!D.drag) return;
   const now = performance.now(), dt = Math.max(8, now - D.drag.lastT);
-  const w = (Math.abs(e.clientY - D.drag.lastY) + Math.abs(e.clientX - D.drag.lastX) * .5) * 2.2;   // any circular-ish motion turns it
-  D.ang += w; D.total += w; D.vel = clamp(w / dt * 1000, 0, 1400);
+  const dist = Math.hypot(e.clientX - D.drag.lastX, e.clientY - D.drag.lastY), w = dist * 2.4;
+  D.drag.moved += dist; D.ang += w; D.total += w; D.vel = clamp(w / dt * 1000, 0, 1400);
   D.drag.lastX = e.clientX; D.drag.lastY = e.clientY; D.drag.lastT = now;
 });
-const endCrank = () => { D.drag = null; };
-crank.addEventListener('pointerup', endCrank); crank.addEventListener('pointercancel', endCrank);
+const endCrank = () => {
+  if (!D.drag) return;
+  if (D.drag.moved < 8 && !D.done) { D.vel = Math.min(1100, D.vel + 520); }     // tap = a shove
+  D.drag = null; dstage.classList.remove('turning');
+  if (!D.done) $('#dsub').textContent = D.total > D.need * .6 ? 'almost… one more turn!' : 'keep going, it’s heavy!';
+};
+dstage.addEventListener('pointerup', endCrank); dstage.addEventListener('pointercancel', endCrank);
 $('#dspin').addEventListener('click', async () => {             // for anyone who'd rather tap
   if (D.done || D.busy) return; start(); D.busy = true; $('#dsub').textContent = 'ghuma ghuma ke…'; kick();
-  const t0 = performance.now();
-  while (performance.now() - t0 < 1700) { D.vel = Math.min(900, D.vel + 120); await sleep(60); }
+  while (!D.done && ACTIVE === 'draw') { D.vel = Math.min(900, D.vel + 140); await sleep(60); }
   D.busy = false;
 });
 async function drawDrop() {
   D.done = true; $('#dspin').hidden = true;
-  const p = pick(PERSONAS);
+  const [name, text] = pick(MOODS), extra = `lucky colour: ${pick(LUCK.colour)} · lucky snack: ${pick(LUCK.snack)} · best month: ${pick(LUCK.month)}`;
   $('#tno').textContent = String(1000 + ((Math.random() * 9000) | 0));
-  $('#tname').textContent = p.name; $('#ttext2').textContent = p.text;
-  const drop = $('#drDrop'); drop.classList.remove('go'); void drop.offsetWidth; drop.classList.add('go');   // folded ticket tumbles out
-  thup(); await sleep(700);
-  const t = $('#ticket'); t.hidden = false; t.classList.remove('open'); void t.offsetWidth; t.classList.add('open');  // …and unfolds
-  ding(700, .6); buzz(25);
-  $('#dsub').textContent = 'here you are, next year.';
+  $('#tname').textContent = `“${name}”`; $('#ttext2').textContent = text; $('#textra').textContent = extra;
+  $('#dsub').textContent = 'a ticket drops…';
+  const drop = $('#drDrop'); drop.classList.remove('go'); void drop.offsetWidth; drop.classList.add('go');
+  snd('tdrop'); await sleep(750);
+  if (ACTIVE !== 'draw') return;
+  dstage.classList.add('gone'); $('#dmeter').classList.add('gone'); $('.d-intro').classList.add('gone');   // the drum steps aside, the ticket takes the stage
+  await sleep(380);
+  const t = $('#ticket'); t.hidden = false; t.classList.remove('open'); void t.offsetWidth; t.classList.add('open');
+  snd('unfold'); setTimeout(() => snd('win', { vol: .7 }), 380); buzz(25);
+  $('#dsub').textContent = 'your 2027, sorted.';
   setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'center' }), 250);
-  SH.draw = { img: 'assets/game/ticket.webp', title: p.name, text: p.text, kick: `${who()}’s new-year personality` }; showShare('draw'); showPin('draw');
+  SH.draw = { img: 'assets/game/ticket.webp', title: `“${name}”`, text: text + ' ' + extra, kick: `${who()}’s mood for 2027` }; showShare('draw'); showPin('draw');
+  haul('draw', `“${name}”`, text + ' ' + extra, 'assets/game/ticket.webp'); DONE.draw = true;
   $('#dagain').hidden = false;
 }
-$('#dagain').addEventListener('click', () => {
-  D.done = false; D.total = 0; hideShare('draw'); hidePin('draw'); $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
-  $('#drDrop').classList.remove('go'); $('#dsub').textContent = 'turn the crank. drag it round, or tap the button.';
-  $('#dstage').scrollIntoView({ behavior: 'smooth', block: 'center' });
-});
+function drawReset() {
+  D.done = false; DONE.draw = false; D.total = 0; D.vel = 0; hideShare('draw'); hidePin('draw'); $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
+  dstage.classList.remove('gone'); $('#dmeter').classList.remove('gone'); $('.d-intro').classList.remove('gone');
+  $('#drDrop').classList.remove('go'); $('#dsub').textContent = 'drag the drum round (or tap the button).'; drawMeter();
+}
+$('#dagain').addEventListener('click', () => { drawReset(); snd('tap'); $('#dstage').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
 })();

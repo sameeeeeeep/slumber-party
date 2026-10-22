@@ -102,7 +102,7 @@ function layout() {
 
   // envelope
   const ew = wide ? Math.min(vw * .44, 640, vh * .42 * ENV_AR) : Math.min(vw * .9, 600, vh * .27 * ENV_AR);
-  Object.assign(EB, { w: ew, h: ew / ENV_AR, cx: wide ? vw * .4 : vw / 2, cy: wide ? vh * .52 : vh * .39 });
+  Object.assign(EB, { w: ew, h: ew / ENV_AR, cx: wide ? vw * .58 : vw / 2, cy: wide ? vh * .52 : vh * .39 });
   // once the match is lit, the envelope comes forward and fills the frame
   const zw = wide ? Math.min(vw * .66, vh * .64 * ENV_AR, 1100) : Math.min(vw * .97, vh * .4 * ENV_AR);
   Object.assign(EZ, { w: zw, cx: vw / 2, cy: wide ? vh * .5 : vh * .42 });
@@ -118,10 +118,10 @@ function layout() {
   css(nameEl, '--ny', (C2.fy + C2.fh / 2 + 20) + 'px');
 
   // matchbox
-  const bw = wide ? Math.min(vw * .24, 360) : Math.min(vw * .64, 330), bh = bw / SLEEVE_AR;
+  const bw = wide ? Math.min(vw * .24, 360) : Math.min(vw * .56, 300), bh = bw / SLEEVE_AR;
   Object.assign(B, wide
-    ? { w: bw, h: bh, cx: Math.min(vw - bw * .75 - 24, EB.cx + EB.w / 2 + bw * .7), cy: EB.cy + EB.h * .25 }
-    : { w: bw, h: bh, cx: vw / 2 - bw * DRAWER * .5, cy: Math.min(vh - bh / 2 - 150, EB.cy + EB.h / 2 + (vh - EB.cy - EB.h / 2) * .42) });
+    ? { w: bw, h: bh, cx: Math.max(bw * .6 + 24, EB.cx - EB.w / 2 - bw * .62), cy: EB.cy + EB.h * .42 }   // left of the envelope, by the corner that burns
+    : { w: bw, h: bh, cx: Math.max(bw * .5 + 14, EB.cx - EB.w / 2 + bw * .5 - 4), cy: Math.min(vh - bh / 2 - 150, EB.cy + EB.h / 2 + (vh - EB.cy - EB.h / 2) * .42) });
   css(boxEl, '--bw', bw + 'px'); css(boxEl, '--bh', bh + 'px');
 
   M.L = bw * .82; M.mh = M.L / 10.6; M.st = Math.max(6, M.mh); M.h = M.L * .455;   // head centre sits ~45% of the length from the middle
@@ -300,6 +300,7 @@ function initAudio() {
       const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
       const g = ac.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(master); s.start(); return g;
     };
+    setTimeout(loadSamples, 0);
     Object.assign(A, { ac, master, buf, fg: loop('lowpass', 650, .7), sg: loop('bandpass', 2600, 1.4) });
   } catch (e) {}
 }
@@ -330,6 +331,34 @@ const sfx = {
     });
   },
 };
+/* real foley samples (assets/sfx/<name><n>.mp3) layered over the synth; synth is the fallback until they load */
+const SFX_N = { strike: 2, slide: 2, sputter: 2, flame: 1, catch: 2, burn: 1, reveal: 2, poppers: 1, riffle: 2, flip: 2, parrot: 4, hop: 2,
+  rifle: 2, bpop: 3, tock: 2, ringglass: 2, ringfloor: 2, whoosh: 1, drum: 1, tdrop: 1, unfold: 2, win: 2, tap: 2, pin: 1, fail: 2 };
+const BUF = {}, LOOPS = {};
+function loadSamples() {
+  if (A.loading || !A.ac) return; A.loading = true;
+  Object.entries(SFX_N).forEach(([k, n]) => { BUF[k] = [];
+    for (let i = 1; i <= n; i++) fetch(`assets/sfx/${k}${i}.mp3`).then(r => r.arrayBuffer()).then(b => new Promise((res, rej) => A.ac.decodeAudioData(b, res, rej))).then(d => BUF[k].push(d)).catch(() => {}); });
+}
+const SYN = { slide: () => sfx.slide(), sputter: () => sfx.sputter(), strike: () => sfx.ignite(), catch: () => sfx.catch(), poppers: () => sfx.pop(), reveal: () => sfx.bell(660, .9),
+  ratchet: () => noiseHit(.025, 'highpass', 4200, 3000, .22), tap: () => noiseHit(.03, 'bandpass', 1800, 1200, .3, 3), win: () => sfx.bell(760, .6) };
+function play(name, o = {}) {
+  if (!A.ac || !A.on) return;
+  const list = BUF[name];
+  if (!list || !list.length) { if (SYN[name]) SYN[name](); return; }
+  const s = A.ac.createBufferSource(); s.buffer = list[(Math.random() * list.length) | 0];
+  s.playbackRate.value = o.rate || (1 + (Math.random() - .5) * .08);
+  const g = A.ac.createGain(); g.gain.value = o.vol ?? .8; s.connect(g); g.connect(A.master); s.start(A.ac.currentTime + (o.delay || 0));
+}
+function loop(name, v) {                 // continuous beds (flame, burn, drum): fade to v
+  if (!A.ac) return;
+  let L = LOOPS[name];
+  if (!L) { if (!v || !BUF[name] || !BUF[name].length) return;
+    const s = A.ac.createBufferSource(); s.buffer = BUF[name][0]; s.loop = true;
+    const g = A.ac.createGain(); g.gain.value = 0; s.connect(g); g.connect(A.master); s.start(); L = LOOPS[name] = g; }
+  L.gain.setTargetAtTime(Math.max(0, v), A.ac.currentTime, .12);
+}
+function stopAllLoops(except) { Object.keys(LOOPS).forEach(k => { if (k !== except) loop(k, 0); }); }
 const sndBtn = $('#snd');
 sndBtn.addEventListener('click', () => {
   A.on = !A.on; store.set('mkd:snd', A.on ? '1' : '0');
@@ -472,7 +501,7 @@ function holdPose() { return wide ? { x: B.x0 - B.w * .2, y: E.cy - E.h * .1 } :
 
 function ignite() {
   mt.lit = 1; S.fails = 0; S.flash = 1;
-  sfx.ignite(); buzz(30);
+  play('strike', { vol: .95 }); buzz(30);
   const d = rad(box.rot - 10);
   sparks(mt.x, mt.y, box.rot - 20, reduced ? 14 : 60, 50);
   setPhase('carry');
@@ -521,7 +550,7 @@ function pup(e) {
   if (A.sg) A.sg.gain.setTargetAtTime(0, A.ac.currentTime, .05);
   if (S.ph === 'strike' && ptr.moved < 10) { S.tapStrike = true; S.tapT = 0; return; }
   if (S.ph === 'strike') {
-    if (strike.travel > 6) { S.fails++; sfx.sputter(); sparks(mt.x, mt.y, box.rot + 180, 6, 40, 40, 160);
+    if (strike.travel > 6) { S.fails++; play('sputter'); sparks(mt.x, mt.y, box.rot + 180, 6, 40, 40, 160);
       say(S.fails >= 2 ? 'a little faster, or just tap' : 'strike it harder!', 1.8); }
     strike.hx = strikeL();
   }
@@ -550,7 +579,7 @@ function local(x, y) {
   const c = Math.cos(rad(-box.rot)), s = Math.sin(rad(-box.rot)), dx = x - box.x, dy = y - box.y;
   return { x: dx * c - dy * s, y: dx * s + dy * c };
 }
-function openBox() { if (S.ph !== 'closed') return; sfx.slide(); setPhase('opening'); }
+function openBox() { if (S.ph !== 'closed') return; play('slide', { vol: .9 }); setPhase('opening'); }
 function runAuto() {
   initAudio();
   S.auto = true; autoBtn.classList.add('on');
@@ -581,7 +610,7 @@ function showRsvp(ans) {
 function answer(ans) {
   const k = 'mkd:rsvp:' + (INV || (NAME || '').toLowerCase());
   store.set(k, ans); showRsvp(ans); track('rsvp', { rsvp: ans });
-  if (ans === 'yes') { sfx.bell(660, .7); buzz(30); }
+  if (ans === 'yes') { play('win', { vol: .8 }); buzz(30); } else play('tap');
 }
 $('#yes').addEventListener('click', () => { initAudio(); answer('yes'); });
 $('#no').addEventListener('click', () => answer('no'));
@@ -667,21 +696,21 @@ function frame(nowMs) {
   }
   if (ph === 'carry') {
     const tg = target();
-    if (Math.hypot(mt.x - tg.x, mt.y - tg.y) < Math.max(34, E.w * .1)) { sfx.catch(); buzz(20); setPhase('touch'); }
+    if (Math.hypot(mt.x - tg.x, mt.y - tg.y) < Math.max(34, E.w * .1)) { play('catch', { vol: .9 }); buzz(20); setPhase('touch'); }
     else if (!ptr.down && (S.auto || S.autoCarry || S.t > 1.1)) S.autoCarry = true;     // goes on its own; dragging is optional
   }
   if (ph === 'touch' && S.t > .7) setPhase('burn');
   if (ph === 'burn') {
-    const k = clamp(S.t / 3.4);
+    const k = clamp(S.t / 5.6);                // slow enough to watch the paper go
     burnP = .02 + .98 * (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
-    if (k >= 1) { setPhase('reveal'); confettiCannons(); sfx.pop(); setTimeout(() => sfx.bell(660, .9), 120); buzz(40); }
+    if (k >= 1) { setPhase('reveal'); confettiCannons(); play('poppers', { vol: .8 }); play('reveal', { vol: .9, delay: .12 }); loop('burn', 0); buzz(40); }
   }
   if (ph === 'reveal') { cardT = clamp(S.t / 1.3); if (S.t > 1.6) { setPhase('done'); finish(); } }
 
   /* ── matchbox pose ── */
   const leaving = ['carry', 'touch', 'burn', 'reveal', 'done'].includes(S.ph);
   const exitK = leaving ? clamp((S.ph === 'carry' ? S.t - .3 : 2) / .7) : 0;
-  box.x = B.cx + (wide ? exitK * vw * .4 : 0);
+  box.x = B.cx - (wide ? exitK * vw * .4 : 0);
   box.y = B.cy + box.off * vh * .7 + (wide ? 0 : exitK * vh * .6);
   box.rot = lerp(-16, -5, 1 - box.off) + Math.sin(now * 1.3) * .4;
   if (S.ph === 'gate') box.off = 1;
@@ -842,7 +871,8 @@ function frame(nowMs) {
   if (S.ph === 'done' || S.ph === 'reveal') petalRain(dt);
   stepParticles(ctx, dt, now);
   drawFlame(ctx, mt.x, mt.y, M.st * 1.5, fk, now, mt.lean + Math.sin(now * 3.1) * M.st * .18);
-  if (A.ac) A.fg.gain.setTargetAtTime(Math.max(fk * .3, burning) * .3, A.ac.currentTime, .12);
+  if (A.ac) { const hasS = BUF.flame && BUF.flame.length; A.fg.gain.setTargetAtTime((hasS ? .25 : 1) * Math.max(fk * .3, burning) * .3, A.ac.currentTime, .12);
+    loop('flame', fk * .7 * (1 - burning)); loop('burn', burning * 1.1); }
 }
 
 function stepParticles(ctx, dt, now) {
@@ -923,7 +953,7 @@ function finish() {
   store.set('mkd:done', '1');
 }
 
-window.MKDFX = { sfx, initAudio, noiseHit, buzz, get audio() { return A.ac; } };
+window.MKDFX = { sfx, initAudio, noiseHit, buzz, play, loop, stopAllLoops, get audio() { return A.ac; } };
 
 /* ───────────── section entrances ───────────── */
 (() => {

@@ -919,3 +919,78 @@ body:not(.lit) .decor .kandil .lamp img:not(.bloom) { filter: brightness(.55) sa
 .coach { bottom: 8px; top: auto; }
 .ring-stage.practice::before { top: auto; bottom: 18px; left: 12px; right: auto; }
 .ring-stage.practice:has(.coach:not([hidden]))::before { display: none; }
+
+/* wall: one JS-driven row (drag to scrub), sits above the games */
+.wall2 .w-row { animation: none !important; will-change: transform; }
+.wall2 .w-track { touch-action: pan-y; cursor: grab; padding: 18px 0 22px; }
+.wall2 { padding-bottom: 30px !important; }
+
+/* stickers out (for now): no floating confetti pieces / sit-ons around sections */
+.deco-float, .deco-sit, .games::before, .games::after { display: none !important; }
+
+/* ═════════ round 6: result labels, guided flow, haul, 4-balloon range, 2-bottle ring toss, mood draw ═════════ */
+.res-label { font: 600 12px/1.2 var(--sans); letter-spacing: .24em; text-transform: uppercase; color: var(--yellow); text-align: center; margin: 10px 0 8px; }
+.res-label[hidden] { display: none; }
+.res-label::before, .res-label::after { content: '✦'; color: var(--pink); margin: 0 .6em; letter-spacing: 0; }
+.next-btn { --bg: var(--teal); }
+.next-btn[hidden] { display: none !important; }
+.tota-table.can-shuffle { cursor: pointer; }
+.tota-table.can-shuffle .kc:last-of-type { animation: deckHint 2.4s ease-in-out infinite; }
+@keyframes deckHint { 0%, 70%, 100% { translate: 0 0; } 80% { translate: 0 -8px; } 90% { translate: 0 0; } }
+.stall.done b::after { content: ' ✓'; color: var(--teal); }
+
+/* haul — everything you got, pin/share later */
+.my-haul { max-width: 760px; margin: 34px auto 0; text-align: center; }
+.my-haul[hidden] { display: none; }
+.mh-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 16px; margin-top: 14px; }
+.mh-card { position: relative; padding: 14px 14px 16px; border-radius: 4px; color: var(--ink); text-align: center;
+  background: var(--cream); box-shadow: inset 0 0 0 3px var(--maroon), inset 0 0 0 5px var(--cream), inset 0 0 0 6.5px var(--pink), 0 12px 22px rgba(20,2,1,.5);
+  animation: dealIn .5s cubic-bezier(.2,1.4,.4,1) both; }
+.mh-card:nth-child(odd) { rotate: -1deg; } .mh-card:nth-child(even) { rotate: 1deg; }
+.mh-card .res-label { color: var(--red); margin-top: 0; font-size: 10px; }
+.mh-card .res-label::before, .mh-card .res-label::after { display: none; }
+.mh-card img { height: 92px; width: auto; max-width: 80%; object-fit: contain; margin: 2px auto 8px; display: block; filter: drop-shadow(0 6px 8px rgba(20,2,1,.3)); }
+.mh-title { font: 400 21px/1.08 var(--display); text-shadow: 1.5px 1.5px 0 var(--red); }
+.mh-text { font: 500 13px/1.4 var(--sans); color: var(--maroon-d); margin-top: 6px; }
+.mh-acts { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+.sign.small { font-size: 15px !important; padding: 11px 16px 9px !important; }
+.sign.small:disabled { opacity: .6; }
+
+/* gubbara: four big balloons, room to aim */
+.range .gub { width: 21% !important; }
+.pellets { gap: 4px !important; }
+.pellets i { width: 8px !important; height: 15px !important; }
+
+/* ring toss: two bottles, nothing written underneath */
+.btag { display: none !important; }
+.shelf { justify-content: space-evenly !important; }
+.bot { width: 19% !important; }
+.bot.enter { animation: botIn .6s cubic-bezier(.2,1.3,.4,1) both, botSway 3.2s ease-in-out .6s infinite !important; }
+@keyframes botIn { from { opacity: 0; transform: translateX(60px) rotate(8deg); } to { opacity: 1; transform: none; } }
+.pellets.rings { position: absolute; left: 12px; right: auto; bottom: 18px; z-index: 6; flex-wrap: wrap; width: 90px; }
+.pellets.rings i { width: 13px !important; height: 13px !important; border-radius: 50%; background: none; box-shadow: inset 0 0 0 3px var(--yellow), 0 0 0 1px var(--maroon-d); }
+.pellets.rings i.used { opacity: .2; }
+.ring-stage.practice::before { display: none !important; }
+
+/* lucky draw: explain it, show progress, step the drum aside for the ticket */
+.d-intro { max-width: 34ch; margin-left: auto; margin-right: auto; }
+.d-intro b { color: var(--yellow); font-weight: 600; }
+.d-intro.gone { display: none; }
+.drum-stage { cursor: grab; touch-action: none; transition: opacity .35s, transform .45s cubic-bezier(.5,0,.7,.4), max-height .45s .2s, margin .45s .2s; max-height: 600px; }
+.drum-stage.turning { cursor: grabbing; }
+.drum-stage.gone { opacity: 0; transform: translateY(40px) scale(.7); max-height: 0; margin: 0 auto !important; pointer-events: none; animation: none !important; }
+.d-meter { display: flex; gap: 8px; justify-content: center; margin: 12px 0 0; }
+.d-meter i { width: 34px; height: 8px; border-radius: 4px; background: rgba(247,230,200,.18); transition: background .3s, box-shadow .3s; }
+.d-meter i.on { background: var(--yellow); box-shadow: 0 0 10px rgba(239,189,13,.7); }
+.d-meter.gone { display: none; }
+.tix .t-extra { font: 600 2.4cqw/1.35 var(--sans); color: var(--red); margin-top: 1.6cqw; letter-spacing: .02em; }
+.tix .t-name { font-size: 5.6cqw !important; }
+.tix .t-text { font-size: 3cqw !important; }
+
+/* wall now sits before the games */
+.wall2 { padding-top: 40px !important; }
+.tix .t2 { top: 12% !important; bottom: 11% !important; }
+.tix .t-name { font-size: 5cqw !important; margin: 1cqw 0 !important; }
+.tix .t-text { font-size: 2.7cqw !important; line-height: 1.3 !important; }
+.tix .t-extra { font-size: 2.15cqw !important; margin-top: 1cqw !important; line-height: 1.3; }
+.tix .t-kick { font-size: 2.1cqw !important; }
