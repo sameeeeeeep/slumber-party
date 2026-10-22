@@ -935,6 +935,69 @@ $('#kagain').addEventListener('click', kShuffle);
 K.table.addEventListener('click', e => { if (K.state === 'stack' && !K.busy) kShuffle(); });
 kBuild();
 
+/* ───────────── games: tabs + lucky draw ───────────── */
+document.querySelectorAll('.g-tabs [data-game]').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.g-tabs [data-game]').forEach(b => { const on = b === btn; b.classList.toggle('on', on); b.classList.toggle('red', on); b.classList.toggle('blue', !on); });
+  document.querySelectorAll('.game[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== btn.dataset.game; });
+  if (btn.dataset.game === 'draw' && !D.busy) D.settle();
+}));
+const PERSONAS = [
+  { name: 'the chugli champion', text: "you'll know everything before it happens. use your powers wisely (or don't)." },
+  { name: 'main-character energy', text: 'every room you walk into this year is your entrance scene.' },
+  { name: 'the dance-floor auntie', text: 'first on the floor, last to leave. the DJ already fears you.' },
+  { name: 'the jugaad genius', text: "no plan? no problem. you'll fix everything with a safety pin and a smile." },
+  { name: 'the chai-tapri philosopher', text: 'deep thoughts, cutting chai, zero conclusions. iconic.' },
+  { name: 'the glow-up of the year', text: 'new set, new vibe, new you. people will ask what changed.' },
+  { name: 'the soft-spoken savage', text: 'sweet voice, sharp comebacks. nobody sees it coming.' },
+  { name: 'the matchmaker', text: 'at least one wedding next year will be your fault. take the credit.' },
+  { name: 'the selfie director', text: "you'll get everyone's best angle. nobody will get yours." },
+  { name: 'the plan-maker', text: "you'll organise every outing. at least half will actually happen." },
+  { name: 'the chaat-stall regular', text: 'you know every chaatwala by name, and they know your order.' },
+  { name: 'the lucky charm', text: 'good things follow you around this year. keep your people close.' },
+];
+const D = { slips: [], busy: false, turns: 0 };
+(() => {
+  const box = $('#drumSlips'), cols = ['#efbd0d', '#ec5a86', '#2f9790', '#1d8cc4', '#c4221a', '#f7e6c8'];
+  for (let i = 0; i < 16; i++) {
+    const el = document.createElement('i'); el.className = 'slip'; el.style.background = cols[i % cols.length];
+    box.appendChild(el); D.slips.push(el);
+  }
+  const settle = () => D.slips.forEach((el, i) => {      // slips rest in a heap at the bottom of the drum
+    const a = rnd(-55, 55), r = rnd(.25, .42) * box.clientWidth;
+    el.style.transform = `translate(${(Math.sin(rad(a)) * r).toFixed(1)}px,${(Math.cos(rad(a)) * r * .9).toFixed(1)}px) rotate(${rnd(-50, 50).toFixed(0)}deg)`;
+  });
+  D.settle = settle; settle();
+})();
+async function draw() {
+  if (D.busy) return; D.busy = true; initAudio();
+  $('#ticket').hidden = true; $('#dagain').hidden = true; $('#dspin').hidden = true;
+  D.turns += 1;
+  $('#drumWheel').style.transform = `rotate(${D.turns * 900 + rnd(0, 120)}deg)`;
+  $('#crank').style.transform = `rotate(${D.turns * 1080}deg)`;
+  const box = $('#drumSlips'), t0 = performance.now();
+  while (performance.now() - t0 < 2400) {                 // tumble: slips fly around the drum
+    D.slips.forEach(el => {
+      const a = rnd(0, 360), r = rnd(0, .42) * box.clientWidth;
+      el.style.transform = `translate(${(Math.cos(rad(a)) * r).toFixed(1)}px,${(Math.sin(rad(a)) * r).toFixed(1)}px) rotate(${rnd(0, 360).toFixed(0)}deg)`;
+    });
+    if (A.ac) noiseHit(.03, 'bandpass', rnd(1800, 3200), 1400, .12, 2);
+    await sleep(90);
+  }
+  D.settle();
+  await sleep(350);
+  const p = PERSONAS[(Math.random() * PERSONAS.length) | 0];
+  $('#tno').textContent = String(1000 + ((Math.random() * 9000) | 0));
+  $('#tname').textContent = p.name; $('#ttext').textContent = p.text;
+  $('#ticket').hidden = false; void $('#ticket').offsetWidth;
+  sfx.bell(700, .6); buzz(25);
+  $('#dsub').textContent = 'here you are, next year.';
+  $('#dagain').hidden = false;
+  D.busy = false;
+}
+$('#dspin').addEventListener('click', draw);
+$('#crank').addEventListener('click', draw);
+$('#dagain').addEventListener('click', draw);
+
 /* ───────────── boot ───────────── */
 let rz;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layout, 120); });

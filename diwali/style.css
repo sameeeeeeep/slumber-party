@@ -450,3 +450,52 @@ body:not(.open) .bottom, body:not(.open) .snd { opacity: 0; }
 .k-text { font: 500 18px/1.45 var(--sans); color: var(--cream); margin-top: 8px; }
 .k-actions { margin-top: 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .k-actions [hidden] { display: none; }
+
+/* ═════════ mohalla games ═════════ */
+.games { text-align: center; max-width: none !important; overflow: hidden; }
+.games > h2 { font: 400 clamp(30px, 8vw, 50px)/1.05 var(--display); color: var(--cream); text-shadow: 2px 2px 0 var(--red); }
+.g-tabs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 18px 0 8px; }
+.g-tabs .sign { --n: 8px; font-size: 16px; padding: 12px 18px 10px; opacity: .65; }
+.g-tabs .sign.on { opacity: 1; }
+.game[hidden] { display: none; }
+.g-head { font: 400 clamp(22px, 5.6vw, 30px)/1.1 var(--display); color: var(--yellow); text-shadow: 2px 2px 0 var(--red); margin-top: 18px; }
+
+/* lucky draw: a raffle drum with tumbling slips, a crank, and a printed ticket */
+.d-stage { position: relative; width: min(300px, 78vw); height: min(300px, 78vw); margin: 18px auto 6px; }
+.drum { position: absolute; inset: 0 0 18% 0; }
+.drum-wheel { position: absolute; inset: 0; border-radius: 50%;
+  border: 10px solid var(--yellow);
+  box-shadow: inset 0 0 0 3px var(--maroon-d), inset 0 0 0 6px var(--pink), 0 0 0 3px var(--maroon-d), 0 16px 30px rgba(30,3,2,.5);
+  background:
+    repeating-linear-gradient(45deg, rgba(239,189,13,.22) 0 2px, transparent 2px 14px),
+    repeating-linear-gradient(-45deg, rgba(239,189,13,.22) 0 2px, transparent 2px 14px),
+    radial-gradient(circle, rgba(117,21,15,.35), rgba(40,4,2,.55));
+  transition: transform 2.6s cubic-bezier(.2,.7,.2,1); }
+.drum-wheel::before, .drum-wheel::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 6px; margin-left: -3px; background: var(--yellow); box-shadow: 0 0 0 2px var(--maroon-d); }
+.drum-wheel::after { transform: rotate(90deg); }
+.drum-hub { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 4px var(--yellow), 0 0 0 6px var(--maroon-d); }
+.drum-slips { position: absolute; inset: 14%; border-radius: 50%; overflow: hidden; pointer-events: none; }
+.slip { position: absolute; left: 50%; top: 50%; width: 30px; height: 16px; margin: -8px 0 0 -15px; border-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,.35); transition: transform .09s linear; }
+.drum-stand { position: absolute; left: 22%; right: 22%; bottom: 0; height: 26%; background: linear-gradient(var(--maroon-d), #3a0906);
+  clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
+.drum-stand::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: var(--yellow); }
+.crank { position: absolute; right: -6%; top: 34%; width: 64px; height: 64px; border: 0; background: none; cursor: pointer; transform-origin: 12px 12px; transition: transform 2.6s cubic-bezier(.2,.7,.2,1); }
+.crank::before { content: ''; position: absolute; left: 6px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 0 2px var(--maroon-d); }
+.crank i { position: absolute; left: 10px; top: 9px; width: 46px; height: 6px; background: var(--yellow); box-shadow: 0 0 0 2px var(--maroon-d); border-radius: 3px; }
+.crank i::after { content: ''; position: absolute; right: -6px; top: -7px; width: 12px; height: 20px; border-radius: 6px; background: var(--red); box-shadow: 0 0 0 2px var(--maroon-d); }
+
+.ticket { display: flex; width: min(420px, 92vw); margin: 18px auto 0; text-align: left; color: var(--ink);
+  background: var(--cream) url(assets/paper_yellow.webp) center / cover; background-blend-mode: soft-light;
+  box-shadow: inset 0 0 0 3px var(--maroon), inset 0 0 0 6px var(--cream), inset 0 0 0 7.5px var(--pink), inset 0 0 0 10px var(--cream), inset 0 0 0 11.5px var(--teal), 0 18px 34px rgba(30,3,2,.55);
+  -webkit-mask: radial-gradient(circle at 0 50%, #0000 12px, #000 12.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, #0000 12px, #000 12.5px) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle at 0 50%, #0000 12px, #000 12.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, #0000 12px, #000 12.5px) right / 51% 100% no-repeat;
+  animation: ticketOut .7s cubic-bezier(.2,1.4,.4,1); }
+.ticket[hidden] { display: none; }
+@keyframes ticketOut { from { opacity: 0; transform: translateY(-120px) scale(.3) rotate(-14deg); } to { opacity: 1; transform: none; } }
+.t-stub { flex: none; width: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 2px dashed var(--maroon); padding: 18px 6px; }
+.t-stub span { font: 600 11px/1 var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--maroon); }
+.t-stub b { font: 400 22px/1 var(--display); color: var(--red); margin-top: 4px; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .1em; }
+.t-main { padding: 20px 20px 20px 16px; }
+.t-kick { font: 600 11px/1.2 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--maroon); }
+.t-name { font: 400 clamp(24px, 6vw, 32px)/1.05 var(--display); color: var(--ink); text-shadow: 2px 2px 0 var(--red); margin: 8px 0 8px; }
+.t-text { font: 500 16px/1.45 var(--sans); color: var(--maroon-d); }

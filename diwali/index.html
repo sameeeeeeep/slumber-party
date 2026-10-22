@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792698248">
+<link rel="stylesheet" href="style.css?v=1792699168">
 </head>
 <body class="locked">
 
@@ -114,8 +114,14 @@
     <p class="by" data-c="rsvpBy"></p>
   </section>
 
-  <section class="kismat" id="kismat">
-    <h2>pick your kismat</h2>
+  <section class="games" id="games">
+    <h2>mohalla games</h2>
+    <div class="g-tabs" role="tablist">
+      <button class="sign red on" role="tab" data-game="kismat" type="button">kismat cards</button>
+      <button class="sign blue" role="tab" data-game="draw" type="button">lucky draw</button>
+    </div>
+    <div class="game kismat" id="kismat" data-panel="kismat">
+    <h3 class="g-head">pick your kismat</h3>
     <p class="k-sub">shuffle the deck, then pick a card.</p>
     <div class="k-table" id="ktable" aria-live="polite"></div>
     <div class="k-read" id="kread" hidden>
@@ -126,19 +132,34 @@
       <button class="sign red" id="kshuffle" type="button">shuffle the deck</button>
       <button class="linkish" id="kagain" type="button" hidden>shuffle again</button>
     </div>
-  </section>
-
-  <section class="wall">
-    <h2>mohalle ki deewar</h2>
-    <div class="posters">
-      <figure class="p p1"><img src="assets/nakhre.webp" alt=""><figcaption>khoonkhaar <b>cutie</b></figcaption></figure>
-      <figure class="p p2"><img src="assets/hand_chilli.webp" alt=""><figcaption>spicy <b>par pyaari</b></figcaption></figure>
-      <figure class="p p3"><img src="assets/gossip.webp" alt=""><figcaption>aao sis, <b>let's chugli</b></figcaption></figure>
-      <figure class="p p4"><img src="assets/tiger.webp" alt=""><figcaption>untamed &amp; <b>unhinged</b></figcaption></figure>
-      <figure class="p p5"><img src="assets/hand_nimbu.webp" alt=""><figcaption>no buri <b>nazar</b></figcaption></figure>
-      <figure class="p p6"><img src="assets/door.webp" alt=""><figcaption>made in <b>india</b></figcaption></figure>
+  </div>
+    <div class="game draw" id="draw" data-panel="draw" hidden>
+      <h3 class="g-head">your new-year personality</h3>
+      <p class="k-sub" id="dsub">turn the crank. one ticket, one you.</p>
+      <div class="d-stage">
+        <div class="drum" id="drum">
+          <div class="drum-wheel" id="drumWheel"></div>
+          <div class="drum-slips" id="drumSlips"></div>
+          <div class="drum-hub"></div>
+        </div>
+        <div class="drum-stand"></div>
+        <button class="crank" id="crank" type="button" aria-label="Turn the crank"><i></i></button>
+      </div>
+      <div class="ticket" id="ticket" hidden>
+        <div class="t-stub"><span>no.</span><b id="tno">0026</b></div>
+        <div class="t-main">
+          <p class="t-kick">nailinit lucky draw · diwali 2026</p>
+          <p class="t-name" id="tname"></p>
+          <p class="t-text" id="ttext"></p>
+        </div>
+      </div>
+      <div class="k-actions">
+        <button class="sign red" id="dspin" type="button">turn the crank</button>
+        <button class="linkish" id="dagain" type="button" hidden>draw again</button>
+      </div>
     </div>
   </section>
+
 
 
   <footer class="foot">
@@ -177,8 +198,8 @@
   <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
 </button>
 
-<script src="config.js?v=1792698248"></script>
-<script src="lib.js?v=1792698248"></script>
-<script src="app.js?v=1792698248"></script>
+<script src="config.js?v=1792699168"></script>
+<script src="lib.js?v=1792699168"></script>
+<script src="app.js?v=1792699168"></script>
 </body>
 </html>
