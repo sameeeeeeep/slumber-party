@@ -506,6 +506,34 @@ function runAuto() {
 }
 autoBtn.addEventListener('click', runAuto);
 
+/* ───────────── RSVP → Google Sheet (apps-script/rsvp.gs) ───────────── */
+let PHONE = '';
+function track(event, extra = {}) {
+  const url = C.rsvp.endpoint;
+  if (!url) return;
+  const key = INV ? 'inv:' + INV : 'name:' + (NAME || C.defaultName).toLowerCase();
+  const body = JSON.stringify({ event, key, name: NAME, phone: PHONE, link: INV ? 'inv' : (qs.get('name') ? 'name' : 'typed'), ua: navigator.userAgent, ...extra });
+  try { fetch(url, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body }); } catch (e) {}
+}
+const rsvpAsk = $('#rsvpAsk'), rsvpDone = $('#rsvpDone');
+function showRsvp(ans) {
+  rsvpAsk.hidden = !!ans; rsvpDone.hidden = !ans;
+  if (!ans) return;
+  $('#stamp').textContent = ans === 'yes' ? 'pakka ✓' : 'koi nahi 💔';
+  $('#stamp').classList.toggle('no', ans === 'no');
+  $('#doneMsg').textContent = ans === 'yes' ? `milte hain ${C.event.dateLong} ko, ${C.event.venue} pe!` : 'agli baar pakka. mohalla yaad karega!';
+  $('#ics').hidden = ans !== 'yes';
+}
+function answer(ans) {
+  const k = 'mkd:rsvp:' + (INV || (NAME || '').toLowerCase());
+  store.set(k, ans); showRsvp(ans); track('rsvp', { rsvp: ans });
+  if (ans === 'yes') { sfx.bell(660, .7); buzz(30); }
+}
+$('#yes').addEventListener('click', () => { initAudio(); answer('yes'); });
+$('#no').addEventListener('click', () => answer('no'));
+$('#change').addEventListener('click', () => showRsvp(''));
+showRsvp(store.get('mkd:rsvp:' + (INV || (NAME || '').toLowerCase())) || '');
+
 /* ───────────── gate ───────────── */
 const gate = $('#gate'), gform = $('#gform'), gopen = $('#gopen'), gerr = $('#gerr');
 const ERRS = ['Arre, ye number nahi chalega.', 'Wahi number daalo jis pe invite aaya tha.', 'Nazar lag gayi kya? Ek baar aur try karo.'];
@@ -522,6 +550,7 @@ function open() {
   sndBtn.hidden = false;
   document.activeElement && document.activeElement.blur();
   S.openedAt = performance.now();
+  track('open');
   setPhase('enter');
 }
 gopen.addEventListener('click', open);
@@ -535,7 +564,7 @@ gform.addEventListener('submit', e => {
   if (!needPhone) { gerr.textContent = ''; open(); return; }
   const v = $('#phone').value;
   if (L.digits(v).length < 10) { gerr.textContent = 'poore 10 digit daalo.'; return; }
-  if (L.keyFor(v, C.salt) === KEY) { gerr.textContent = ''; open(); return; }
+  if (L.keyFor(v, C.salt) === KEY) { gerr.textContent = ''; PHONE = L.digits(v); open(); return; }
   gerr.textContent = ERRS[errN++ % ERRS.length];
   gate.classList.remove('shake'); void gate.offsetWidth; gate.classList.add('shake');
 });

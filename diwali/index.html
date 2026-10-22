@@ -118,9 +118,18 @@
     <img class="rsvp-star s2" src="assets/star_pale.webp" alt="">
     <p class="kicker">आ रहे हो ना?</p>
     <h2>aa rahe ho na, <span data-name>dost</span>?</h2>
-    <a class="cta" id="wa" href="#" target="_blank" rel="noopener">Haan ji, pakka! <span>→</span></a>
-    <button class="cta ghost" id="ics" type="button">Calendar mein daalo</button>
+    <div id="rsvpAsk" class="rsvp-ask">
+      <button class="cta" id="yes" type="button">haan ji, pakka!</button>
+      <button class="cta ghost" id="no" type="button">nahi aa paunga</button>
+    </div>
+    <div id="rsvpDone" class="rsvp-done" hidden>
+      <p class="stamp" id="stamp">pakka ✓</p>
+      <p class="done-msg" id="doneMsg"></p>
+      <button class="cta ghost" id="ics" type="button">calendar mein daalo</button>
+      <button class="linkish" id="change" type="button">jawab badalna hai?</button>
+    </div>
     <p class="by" data-c="rsvpBy"></p>
+    <a class="linkish" id="wa" href="#" target="_blank" rel="noopener">host ko WhatsApp karo →</a>
   </section>
 
   <footer class="foot">

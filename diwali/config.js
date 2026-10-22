@@ -24,6 +24,8 @@ window.MKD = {
   },
 
   rsvp: {
+    // Apps Script web-app /exec URL (apps-script/rsvp.gs). Empty = RSVPs only stay on the guest's phone.
+    endpoint: '',
     whatsapp: '919999999999',                // PLACEHOLDER — country code, no +
     text: 'Haan ji! {name} pakka aa rahi/raha hai Mohalle ki Diwali pe 🪔',
   },

@@ -392,3 +392,15 @@ body.open .gate .gate-card { transform: translateY(-30px) scale(.96); transition
 .g-field .g-row input { font-size: 20px; }
 #env { opacity: 0; }
 body:not(.open) .bottom, body:not(.open) .snd { opacity: 0; }
+
+/* RSVP: answers submit on tap, then a rubber-stamp confirmation */
+.rsvp-ask { display: grid; gap: 14px; justify-items: center; }
+.rsvp-done { display: grid; gap: 12px; justify-items: center; }
+.rsvp-done[hidden], .rsvp-ask[hidden] { display: none; }
+.stamp { display: inline-block; padding: 10px 22px 8px; border: 4px double var(--yellow); color: var(--yellow); font: 400 clamp(34px, 9vw, 48px)/1 var(--display);
+  transform: rotate(-6deg); text-shadow: 2px 2px 0 var(--red); animation: stampIn .5s cubic-bezier(.2,1.6,.4,1); }
+.stamp.no { border-color: var(--pink); color: var(--pink); text-shadow: 2px 2px 0 var(--maroon-d); }
+@keyframes stampIn { from { opacity: 0; transform: rotate(-6deg) scale(1.8); } to { opacity: 1; transform: rotate(-6deg) scale(1); } }
+.done-msg { font: 500 18px/1.4 var(--sans); color: var(--cream); max-width: 30ch; }
+.linkish { border: 0; background: none; cursor: pointer; color: var(--cream); opacity: .75; font: 600 14px/1 var(--sans); text-decoration: underline; text-underline-offset: 4px; display: inline-block; margin-top: 14px; }
+.rsvp .cta.ghost { margin-top: 0; }
