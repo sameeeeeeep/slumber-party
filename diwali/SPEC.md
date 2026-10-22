@@ -32,8 +32,8 @@ Each game ends in a **result card** with a **score** where it makes sense:
 Every result card has two actions: **share** (story image with name) and **pin to the wall**.
 
 ## 4. Mohalla ki deewar (the wall)
-- A shared, live wall of everyone's results: moving tickers of cards (two rows, opposite directions), plus a **top scores** strip (gubbara + chhalla).
-- Entries: name (first name + initial), game, result, score, time. No free text → nothing to moderate.
+- A shared, live wall of everyone's results: moving tickers of cards (two rows, opposite directions). No high scores.
+- Entries: name (first name + initial), game, result, time. No free text → nothing to moderate.
 - Storage: posts go to the existing Google Form (event = `wall`); a **published-to-web** CSV of the sheet feeds the wall (read-only, public). Refresh every 60s.
 
 ## 5. Share

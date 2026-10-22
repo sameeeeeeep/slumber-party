@@ -911,3 +911,11 @@ body:not(.lit) .decor .kandil .lamp img:not(.bloom) { filter: brightness(.55) sa
 .w-tota { background: var(--cream); } .w-gubbara { background: #fde6ee; } .w-chhalla { background: #e3f2ee; } .w-draw { background: #fff3c4; }
 .w-empty { font: 500 15px/1.4 var(--sans); color: var(--cream); opacity: .75; }
 .w-empty[hidden] { display: none; }
+
+/* chhalla: coach + practice tag get their own strip under the bangle, never over bottles/labels */
+.ring-stage { padding-bottom: 0; height: clamp(420px, 110vw, 500px) !important; }
+.ring { bottom: 54px !important; }
+.ring-stage::after { bottom: 136px !important; }
+.coach { bottom: 8px; top: auto; }
+.ring-stage.practice::before { top: auto; bottom: 18px; left: 12px; right: auto; }
+.ring-stage.practice:has(.coach:not([hidden]))::before { display: none; }
