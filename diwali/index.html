@@ -17,14 +17,14 @@
 </head>
 <body class="locked">
 
-<!-- ═════════════ Scroll sequence: maachis → teeli → aag → chitthi ═════════════ -->
+<!-- ═════════════ The story: maachis → teeli → aag → chitthi ═════════════ -->
 <section id="seq">
   <div id="stage">
     <div class="ground"></div>
-    <svg id="bulbs" class="bulbs" aria-hidden="true"></svg>
+    <div id="decor" class="decor" aria-hidden="true"></div>
 
     <header class="mast">
-      <img class="mast-nl" src="assets/nailinit_light.webp" alt="nailinit">
+      <img class="mast-dot" src="assets/dot_white.webp" alt="DOT Media">
       <span class="mast-pre">presents</span>
     </header>
 
@@ -39,17 +39,28 @@
       <img class="sleeve" src="assets/mb_sleeve.webp" alt="">
     </div>
 
-    <div id="match" class="match" aria-hidden="true"><i class="head"><i class="char"></i></i></div>
+    <div id="match" class="match" aria-hidden="true"><i class="char"></i></div>
 
     <canvas id="fx" aria-hidden="true"></canvas>
     <div id="glow" aria-hidden="true"></div>
-    <div id="shade" aria-hidden="true"></div>
 
-    <div id="caption" class="caption" aria-live="polite"><span>Chitthi aayi hai!</span></div>
-    <div id="play" class="play">
-      <button id="playbtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>जलाओ · Jalao</button>
-      <span>ya khud scroll karo ↓</span>
+    <div id="ghost" class="ghost" aria-hidden="true">
+      <svg viewBox="0 0 48 56"><path d="M18 30V9a4 4 0 0 1 8 0v15l2-.6a4 4 0 0 1 4.6 2.3l.4-.1a4 4 0 0 1 5 2.6l.2-.1a4 4 0 0 1 5 3.2c1 6 .4 12-2.6 16.6A12 12 0 0 1 30.6 54H25a12 12 0 0 1-9.6-4.8L7.6 38.6a4 4 0 0 1 6.2-5z" fill="#f7e6c8" stroke="#1c1410" stroke-width="2.2" stroke-linejoin="round"/></svg>
+      <i class="ring"></i>
     </div>
+
+    <div class="bottom">
+      <ol id="steps" class="steps" aria-hidden="true"><li data-n="१">Kholo</li><li data-n="२">Ragdo</li><li data-n="३">Lagao</li><li data-n="४">Padho</li></ol>
+      <div id="caption" class="caption" aria-live="polite"><span>Chitthi aayi hai!</span></div>
+      <button id="autobtn" class="autobtn" type="button" hidden>Mushkil lag raha? <b>Aap kar do ▸</b></button>
+    </div>
+
+    <div id="after" class="after">
+      <button id="seeDetails" class="cta small" type="button">Details dekho ↓</button>
+      <button id="replay" class="replay" type="button">↺ Phir se jalao</button>
+    </div>
+
+    <p class="powered">powered by <b>BASTIAN</b></p>
   </div>
 </section>
 
@@ -115,7 +126,8 @@
   <footer class="foot">
     <div class="foot-tick"><div class="row" id="row3"></div></div>
     <img src="assets/nailinit_light.webp" alt="nailinit" class="foot-nl">
-    <p>मेड इन इंडिया · Made in India · No buri nazar</p>
+    <p>DOT Media presents · nailinit Diwali Party · powered by Bastian</p>
+    <p>मेड इन इंडिया · No buri nazar</p>
   </footer>
 </main>
 
