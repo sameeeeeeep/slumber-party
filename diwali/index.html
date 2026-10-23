@@ -18,9 +18,48 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792738633">
+<link rel="stylesheet" href="style.css?v=1792739855">
+<style>
+/* loader: inline so it paints before anything else arrives */
+#ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
+#ldr.out { opacity: 0; visibility: hidden; }
+#ldr .l-in { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 0 24px; text-align: center; }
+#ldr .diya { position: relative; width: 74px; height: 64px; }
+#ldr .bowl { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; border-radius: 0 0 40px 40px / 0 0 30px 30px; background: linear-gradient(#f3c45a, #b8741c 60%, #7a4210); box-shadow: inset 0 3px 0 rgba(255,240,190,.5), 0 6px 14px rgba(0,0,0,.5); }
+#ldr .bowl::before { content: ''; position: absolute; left: 6px; right: 6px; top: -4px; height: 9px; border-radius: 50%; background: #5a2a08; box-shadow: inset 0 2px 3px rgba(0,0,0,.6); }
+#ldr .flm { position: absolute; left: 50%; bottom: 25px; width: 22px; height: 46px; margin-left: -11px; border-radius: 50% 50% 46% 46% / 66% 66% 34% 34%; transform-origin: 50% 92%;
+  background: radial-gradient(ellipse 50% 60% at 50% 74%, #fffef2 0, #fff1b0 28%, #ffc94d 52%, #ff8a1e 78%, #e8500f 100%); box-shadow: 0 0 18px 4px rgba(255,160,50,.55); animation: lflk 1.1s ease-in-out infinite alternate; }
+#ldr .flm::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 8px; height: 10px; margin-left: -4px; border-radius: 50%; background: radial-gradient(circle, rgba(120,160,255,.85), rgba(80,110,255,0) 70%); }
+#ldr .halo { position: absolute; left: 50%; bottom: 20px; width: 220px; height: 220px; margin-left: -110px; border-radius: 50%; background: radial-gradient(circle, rgba(255,160,60,.28), transparent 65%); animation: lglow 1.6s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes lflk { 0% { transform: scale(1, 1) rotate(-2deg); } 50% { transform: scale(.94, 1.08) rotate(2deg); } 100% { transform: scale(1.04, .95) rotate(-1deg); } }
+@keyframes lglow { from { opacity: .7; } to { opacity: 1; } }
+#ldr .l-t { font: 400 clamp(22px, 6vw, 30px)/1.15 "Bakbak One", "Arial Black", system-ui, sans-serif; color: #efbd0d; text-shadow: 2px 2px 0 #c4221a; max-width: 16ch; }
+#ldr .l-s { font: 500 13px/1.4 system-ui, sans-serif; letter-spacing: .18em; text-transform: uppercase; opacity: .7; }
+#ldr .genda { display: flex; gap: 7px; margin-top: 4px; }
+#ldr .genda i { width: 13px; height: 13px; border-radius: 50%; background: rgba(247,230,200,.13); transition: background .35s, box-shadow .35s, transform .35s; }
+#ldr .genda i.on { background: radial-gradient(circle at 35% 35%, #ffd76a, #f08a12 60%, #c4560a); box-shadow: 0 0 8px rgba(255,170,40,.7); transform: scale(1.12); }
+#ldr .genda i.on:nth-child(3n+2) { background: radial-gradient(circle at 35% 35%, #ffe9a0, #efbd0d 60%, #b8860b); }
+@media (prefers-reduced-motion: reduce) { #ldr .flm, #ldr .halo { animation: none; } }
+</style>
+
 </head>
 <body class="locked">
+<div id="ldr" role="status" aria-live="polite">
+  <div class="l-in">
+    <div class="diya"><i class="halo"></i><i class="flm"></i><i class="bowl"></i></div>
+    <p class="l-t" id="ldrT">your chitthi is on its way</p>
+    <div class="genda" id="ldrG"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="l-s">lighting the diyas…</p>
+  </div>
+</div>
+<script>
+  // greet by first name immediately; progress is driven by app.js via window.__ldr(0..1)
+  (function () {
+    try { var n = new URLSearchParams(location.search).get('name'); if (n) { n = n.trim().split(/\s+/)[0]; if (n) document.getElementById('ldrT').textContent = n.charAt(0).toUpperCase() + n.slice(1) + ', your chitthi is on its way'; } } catch (e) {}
+    var dots = document.getElementById('ldrG').children;
+    window.__ldr = function (p) { var k = Math.round(p * dots.length); for (var i = 0; i < dots.length; i++) dots[i].className = i < k ? 'on' : ''; };
+  })();
+</script>
 
 <!-- ═════════════ The story: maachis → teeli → aag → chitthi ═════════════ -->
 <section id="seq">
@@ -234,9 +273,9 @@
   <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
 </button>
 
-<script src="config.js?v=1792738633"></script>
-<script src="lib.js?v=1792738633"></script>
-<script src="app.js?v=1792738633"></script>
-<script src="games.js?v=1792738633"></script>
+<script src="config.js?v=1792739855"></script>
+<script src="lib.js?v=1792739855"></script>
+<script src="app.js?v=1792739855"></script>
+<script src="games.js?v=1792739855"></script>
 </body>
 </html>

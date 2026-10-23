@@ -66,12 +66,19 @@ $('#row3').innerHTML = CHATPATI.map(t => `<span>${t}</span>`).join('').repeat(2)
 const IMG = {};
 const loadImg = (k, src) => new Promise(res => { const i = new Image(); i.onload = () => { IMG[k] = i; res(); }; i.onerror = res; i.src = src; });
 const CONF = Array.from({ length: 32 }, (_, i) => 'c' + String(i + 1).padStart(2, '0'));
+// loader: everything the opening needs is fetched AND decoded before the scene starts, so the first tap never waits on the network
+let ldDone = 0, ldTotal = 0;
+const ldTick = () => { ldDone++; if (window.__ldr) window.__ldr(ldDone / ldTotal); };
+const counted = p => { ldTotal++; return Promise.resolve(p).catch(() => {}).then(ldTick); };
+const warmImg = src => new Promise(res => { const i = new Image(); i.onload = () => (i.decode ? i.decode().catch(() => {}) : Promise.resolve()).then(res); i.onerror = res; i.src = src; });
 const assetsReady = Promise.all([
-  loadImg('env', 'assets/envelope.webp'), loadImg('nl', 'assets/nailinit.webp'), loadImg('dot', 'assets/dot_dark.webp'), loadImg('diwali', 'assets/diwali_blue.webp'),
-  ...CONF.map(k => loadImg(k, `assets/conf/${k}.webp`)),
+  counted(loadImg('env', 'assets/envelope.webp')), counted(loadImg('nl', 'assets/nailinit.webp')), counted(loadImg('dot', 'assets/dot_dark.webp')), counted(loadImg('diwali', 'assets/diwali_blue.webp')),
+  ...['mb_sleeve', 'mb_tray', 'match', 'invite_card', 'swag', 'k1', 'k2', 'k3', 'k4', 'foil_gold', 'foil_blue', 'foil_ink', 'paper_yellow'].map(n => counted(warmImg(`assets/${n}.webp`))),
+  ...['slide1', 'strike1', 'strike2', 'flame1', 'catch1', 'burn1', 'reveal1', 'poppers1'].map(n => counted(fetch(`assets/sfx/${n}.mp3`))),   // into the HTTP cache; decoded on first tap
 ]);
+CONF.forEach(k => loadImg(k, `assets/conf/${k}.webp`));                          // confetti isn't needed until the reveal: never block on it
 const fontsReady = Promise.all(['700 20px "Palanquin Dark"', '600 20px "Palanquin Dark"', '20px "Bakbak One"', '600 20px "Clash Display"']
-  .map(f => document.fonts ? document.fonts.load(f, 'सेवा में Aa') : 0)).catch(() => {});
+  .map(f => counted(document.fonts ? document.fonts.load(f, 'सेवा में Aa') : 0))).catch(() => {});
 
 /* ───────────── elements & layout ───────────── */
 const stage = $('#stage'), envC = $('#env'), card = $('#card');
@@ -982,12 +989,20 @@ window.MKDFX = { sfx, initAudio, noiseHit, buzz, play, loop, stopAllLoops, get a
 let rz;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layout, 120); });
 layout();
-Promise.all([assetsReady, fontsReady]).then(() => {
-  uploadEnvelope(); renderBurn(0, 0);
-  ready = true;
-  document.body.classList.add('ready');
-  document.body.dataset.ph = 'gate';
-  open();                                   // no popup: the envelope greets them straight away
-});
+const T0 = performance.now();
+Promise.race([Promise.all([assetsReady, fontsReady]), new Promise(r => setTimeout(r, 9000))])   // slow network: never trap them on the loader
+  .then(() => {
+    uploadEnvelope(); renderBurn(0, 0);     // texture upload + shader compile happen behind the loader, not on the first strike
+    if (window.__ldr) window.__ldr(1);
+    return new Promise(r => setTimeout(r, Math.max(0, 700 - (performance.now() - T0))));   // no flash of loader on fast connections
+  })
+  .then(() => {
+    ready = true;
+    document.body.classList.add('ready');
+    document.body.dataset.ph = 'gate';
+    const L = document.getElementById('ldr');
+    if (L) { L.classList.add('out'); setTimeout(() => L.remove(), 800); }
+    setTimeout(open, 250);                  // no popup: the envelope greets them straight away, as the loader fades
+  });
 requestAnimationFrame(frame);
 })();
