@@ -806,6 +806,7 @@ function frame(nowMs) {
   const ctx3 = cardT > 0 ? tilt.x * (.6 + cardT * .5) : 0, cty3 = cardT > 0 ? tilt.y * (.6 + cardT * .5) : 0;
   card.style.transform = `translate(${ccx - C2.w / 2}px,${ccy - C2.h / 2}px) perspective(1200px) rotateX(${ctx3.toFixed(2)}deg) rotateY(${cty3.toFixed(2)}deg) scale(${lerp(E.s, C2.fs, rv).toFixed(4)}) rotate(${lerp(-4, 0, eo(cardT)).toFixed(2)}deg)`;
   css(card, '--sheen', (50 + cty3 * 7).toFixed(1) + '%');
+  css(card, '--fx', (50 + cty3 * 9 + Math.sin(now * .45) * 14).toFixed(1) + '%'); css(card, '--fy', (50 + ctx3 * 9 + Math.cos(now * .35) * 10).toFixed(1) + '%');   // foil catches the light as the card moves
   card.style.filter = `drop-shadow(${(-cty3 * 2.4).toFixed(1)}px ${(22 + ctx3 * 2).toFixed(1)}px 36px rgba(40,4,2,.6))`;
   nameEl.style.transform = nameEl.classList.contains('on') ? `translateY(${(bob * .5).toFixed(1)}px)` : '';
 

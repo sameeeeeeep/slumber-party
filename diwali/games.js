@@ -140,14 +140,26 @@ function parseCSV(t) {
   return rows;
 }
 const shortName = n => { const p = String(n || 'dost').trim().split(/\s+/); return p[0] + (p[1] ? ' ' + p[1][0].toUpperCase() + '.' : ''); };
+const hashN = (t, n) => { let h = 0; for (const ch of String(t)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h) % n; };
+function wallArt(e) {                          // the illustration that goes with the result
+  if (e.game === 'tota') { const f = FORTUNES.find(x => x.title === e.title); return { src: f ? `assets/cards/${f.img}.webp` : GAME_ICON.tota, kind: 'poster' }; }
+  if (e.game === 'gubbara') return { src: `assets/game/bal${hashN(e.name + e.title, 8)}.webp`, kind: 'balloon', n: Math.min(4, +((e.title.match(/\d+/) || [1])[0])) };
+  if (e.game === 'chhalla') return { src: `assets/game/bottle${hashN(e.name + e.title, 5)}.webp`, kind: 'bottle' };
+  return { src: 'assets/game/ticket.webp', kind: 'ticket' };
+}
 function wallCard(e) {
   const c = document.createElement('div'); c.className = 'wcard w-' + (GAME_ICON[e.game] ? e.game : 'tota');
-  const i = document.createElement('img'); i.src = GAME_ICON[e.game] || GAME_ICON.tota; i.alt = '';
+  const art = document.createElement('div'); const A = wallArt(e); art.className = 'wc-art a-' + A.kind;
+  const reps = A.kind === 'balloon' ? A.n : 1;
+  for (let k = 0; k < reps; k++) { const i = document.createElement('img'); i.src = A.kind === 'balloon' ? `assets/game/bal${(hashN(e.name, 8) + k * 3) % 8}.webp` : A.src; i.alt = ''; i.loading = 'lazy'; i.style.setProperty('--k', k); art.appendChild(i); }
+  if (A.kind === 'bottle') { const h = document.createElement('i'); h.className = 'wc-hoop'; art.appendChild(h); }
+  if (A.kind === 'ticket') { const t = document.createElement('b'); t.className = 'wc-tix'; t.textContent = e.title.replace(/[“”]/g, ''); art.appendChild(t); }
+  const body = document.createElement('div'); body.className = 'wc-body';
   const g = document.createElement('span'); g.className = 'wc-game'; g.textContent = GAME_NAME[e.game] || e.game;
   const n = document.createElement('b'); n.className = 'wc-name'; n.textContent = shortName(e.name);
   const t = document.createElement('p'); t.className = 'wc-title'; t.textContent = e.title;
   const x = document.createElement('p'); x.className = 'wc-text'; x.textContent = e.text;
-  c.append(i, g, n, t, x); return c;
+  body.append(g, n, t, x); c.append(art, body); return c;
 }
 let WALL = [], MINE = [];
 const WALL_FROM = new Date('2026-10-23T03:16:01+05:30');            // test pins before launch stay off the wall
@@ -162,6 +174,8 @@ const SEED = [
   { name: 'Tara D', game: 'tota', title: 'naacho gaao', text: 'a year of baraats, sangeets and dance floors.' },
   { name: 'Vikram R', game: 'chhalla', title: 'ringed 1 bottle', text: 'dance-floor immunity' },
   { name: 'Naina B', game: 'draw', title: '“first on the dance floor”', text: 'last to leave. the DJ knows your name.' },
+  { name: 'Kiara V', game: 'tota', title: 'kuch nahi seekhoge', text: 'some old mistakes will be made again. with full confidence.' },
+  { name: 'Dev S', game: 'draw', title: '“monday se pakka”', text: 'diet, gym, journaling. all starting monday. every monday.' },
   { name: 'Aarav J', game: 'gubbara', title: 'popped 2 balloons', text: 'the last laddoo, unclaimed · a cab that arrives in 2 minutes' },
 ];
 const parseWhen = t => { const m = String(t).match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)/); return m ? new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5]) : new Date(0); };
@@ -182,6 +196,7 @@ function renderWall() {          // one row, every game remixed, drifting foreve
 }
 function wallLoop(now) {
   const r = $('#wrow1'), dt = Math.min(.05, (now - (WS.t || now)) / 1000); WS.t = now;
+  if (!WS.vis) { WS.raf = requestAnimationFrame(wallLoop); return; }
   if (!WS.drag) WS.x -= WS.v * dt;
   if (WS.w) { WS.x %= WS.w; if (WS.x > 0) WS.x -= WS.w; }
   r.style.transform = `translate3d(${WS.x.toFixed(1)}px,0,0)`;
@@ -202,7 +217,6 @@ async function loadWall() {
     renderWall();
   } catch (e) {}
 }
-renderWall(); loadWall(); setInterval(loadWall, 60000);
 
 document.querySelectorAll('.share-btn').forEach(b => b.addEventListener('click', () => shareCard(b.dataset.share)));
 
@@ -285,6 +299,43 @@ const FORTUNES = [
   { img: 'ghanti', title: 'shubh aarambh', text: ['a big new beginning starts next year. ring the bell.', 'next year opens with good news and keeps going.'] },
   { img: 'chess', title: 'rani ki chaal', text: ['next year you play it smart. three moves ahead, always.', 'next year every move you make is the right one. checkmate.'] },
   { img: 'sher', title: 'sherni saal', text: ['fearless year ahead. you roar, they listen.', 'next year you’re calm, confident and not to be messed with.'] },
+  // roast twins: same art, the other side of the kismat
+  { img: 'seekho', title: 'kuch nahi seekhoge', text: ['some old mistakes will be made again. with full confidence.', 'you’ll download duolingo again. the owl will give up on you.'] },
+  { img: 'fit', title: 'gym fees, zero visits', text: ['you’ll pay for the gym all year. your shoes stay brand new.', '“monday se pakka.” every single monday.'] },
+  { img: 'neend', title: 'neend kya hoti hai', text: ['next year you scroll till 3am and blame the mattress.', 'you’ll sleep eight hours… across the whole week.'] },
+  { img: 'paisa', title: 'paisa aaya, paisa gaya', text: ['money comes in. a sale takes it out. same day.', 'next year your salary visits your account like a guest. briefly.'] },
+  { img: 'safar', title: 'trip plan, trip cancel', text: ['the group trip gets planned for the 47th time. and cancelled for the 47th time.', 'you’ll book the trip, then spend it answering work emails.'] },
+  { img: 'excall', title: 'ex ko reply karoge', text: ['you’ll reply to the ex “just to be polite”. we all know.', 'one 2am “hey” next year. you will type, delete, type.'] },
+  { img: 'single', title: 'situationship season 2', text: ['your situationship gets a sequel next year. nobody asked.', 'still single, still “talking to someone”. it’s complicated (it isn’t).'] },
+  { img: 'shaadi', title: 'shaadi kab? ×100', text: ['every aunty asks “shaadi kab?” next year. start charging per question.', 'you’ll attend nine weddings next year. and be asked about yours at all nine.'] },
+  { img: 'detox', title: 'screen time: 11 hours', text: ['you’ll delete instagram next year. and reinstall it by dinner.', 'your phone sends you a weekly screen-time report. you’ll stop opening it.'] },
+  { img: 'glow', title: 'glow up postponed', text: ['the skincare routine lasts four days. the products last forever.', 'you’ll buy every serum next year. use none of them.'] },
+  { img: 'swaad', title: 'maggi master', text: ['your signature dish next year is still maggi. extra masala, fine.', 'you’ll burn something at the family lunch. everyone will remember.'] },
+  { img: 'mummy', title: 'sharma ji ki beti', text: ['“sharma ji ki beti ko dekho” plays on repeat next year.', 'mummy will forward you three “inspirational” reels a day. reply with a thumbs up.'] },
+  { img: 'startup', title: 'idea hi idea', text: ['twelve business ideas next year. zero started. great pitch deck though.', 'you’ll buy a domain name for every idea. and renew none.'] },
+  { img: 'stage', title: 'karaoke ka kehar', text: ['you grab the mic at every party next year. nobody can stop you.', 'one very confident, very off-key performance goes on everyone’s stories.'] },
+  { img: 'viral', title: 'viral, galat wajah se', text: ['you go viral next year. for the wrong reason. own it.', 'a very unflattering photo of you becomes the family whatsapp dp.'] },
+  { img: 'party', title: 'bas aakhri party', text: ['every party next year you swear is your last. it isn’t.', 'you’ll leave “early” at 4am, every time.'] },
+  { img: 'shopping', title: 'cart mein hi rahega', text: ['next year your cart is full and your account is empty.', 'you’ll return more things than you keep. the delivery guy knows you by name.'] },
+  { img: 'kursi', title: 'yeh email ho sakta tha', text: ['next year you sit through 400 meetings that could’ve been emails.', 'promotion comes with a fancier title and the same salary.'] },
+  { img: 'drama', title: 'drama ki dukaan', text: ['next year *you* are the drama. the family group has thoughts.', 'one argument next year starts over who finished the mithai. it lasts a month.'] },
+  { img: 'raaz', title: 'pet mein baat nahi tikegi', text: ['you’ll spill a secret by accident. in front of the person.', 'someone tells you “don’t tell anyone”. you last eleven minutes.'] },
+  { img: 'chess', title: 'overthinking queen', text: ['three moves ahead, ten hours overthinking each one.', 'you’ll draft a text for 40 minutes next year. and send “ok”.'] },
+  { img: 'doggo', title: 'kutta bhi bhaav nahi dega', text: ['every pet next year likes your friend more. it’s personal.', 'you’ll adopt a dog. the dog will run the house by march.'] },
+  { img: 'dosti', title: 'group chat on mute', text: ['the gang’s group chat hits 999+ unread. you reply with one sticker.', 'four friends, one plan, nineteen polls. nobody comes.'] },
+  { img: 'birthday', title: 'birthday bhool jaoge', text: ['you’ll forget someone important’s birthday. set reminders. set five.', 'the cake falls, the candles won’t light, the photos are blurry. still the best night.'] },
+  { img: 'roadtrip', title: 'gaadi kharab hogi', text: ['the road trip happens. the car breaks down twice. best story of the year.', 'eight hours of driving, six hours of arguing about the playlist.'] },
+  { img: 'lucky', title: 'kismat late chal rahi hai', text: ['luck shows up next year… right after you stop needing it.', 'you’ll win a lucky draw. the prize is a pressure cooker.'] },
+  { img: 'ghar', title: 'rent badhega', text: ['new home next year. new landlord. same leaking tap.', 'you’ll finally decorate your room. in december.'] },
+  { img: 'taare', title: 'sign ka intezaar', text: ['you’ll wait for a sign all year. it was the notification you ignored.', 'mercury retrograde will be blamed for at least four of your decisions.'] },
+  { img: 'comeback', title: 'comeback, phir setback', text: ['you announce your comeback three times next year. the third one sticks. probably.', 'peacock energy, pigeon follow-through.'] },
+  { img: 'boundary', title: 'haan bolne ki bimaari', text: ['you’ll say yes to everything next year, then hide in the washroom.', 'boundaries? you’ll set them. everyone will walk right through.'] },
+  { img: 'baarish', title: 'chhatri bhool jaoge', text: ['every rainy day next year: no umbrella, white kurta.', 'one monsoon date, one flooded road, one very wet auto ride. romantic? debatable.'] },
+  { img: 'chakka', title: 'duck pe out', text: ['big swing, big miss. at least you looked good doing it.', 'you’ll try something bold next year. it flops. you try again. it lands.'] },
+  { img: 'sher', title: 'sherni on whatsapp only', text: ['roar in the group chat, meow in person.', 'next year you’ll rehearse a confrontation in the shower. 300 times.'] },
+  { img: 'rani', title: 'challan pakka', text: ['queen of the gali, collector of traffic challans.', 'next year you’ll get lost using the same route you take daily.'] },
+  { img: 'filmy', title: 'overacting ka award', text: ['next year you react to everything like a daily soap. dhan dhan dhan.', 'your stories next year are 40% plot, 60% background music.'] },
+  { img: 'khushkhabri', title: 'tumhari baari kab?', text: ['good news in the family next year. you get asked “and you?” forty times.', 'everyone’s announcing something next year. you announce a new phone.'] },
 ];
 const HAS_TEXT = new Set(['nakhre', 'nazar', 'spicy', 'naacho', 'meethe', 'girlies', 'chugli', 'bsfree', 'baegum', 'kaam']);   // posters that already carry their words
 const T = { table: $('#ttable'), tota: $('#tota'), cards: [], busy: false, x: 0, y: 0, face: 1, run: 0 };
@@ -422,6 +473,9 @@ const INAAMS = [
   'a window seat on your next flight', 'a lehenga that fits on the first try', 'the right to choose the restaurant, once',
   'a cab that arrives in 2 minutes', 'zero “you’ve gained weight” comments this diwali', 'one surprise refund',
   'the last laddoo, unclaimed', 'a mirror selfie with perfect lighting',
+  'a free “beta, weight badh gaya” from mausi', 'a 6am good-morning forward, every day', 'the seat next to the uncle who explains crypto',
+  'one more soan papdi (fifth this week)', 'a guilt trip from mummy, valid all year', 'the job of clicking everyone’s photos (you’re in none)',
+  'a 7am wedding muhurat invite', 'one more “so what are you doing in life?”', 'the plus-one nobody asked for',
 ];
 function addWin(list, text, img) {
   const c = document.createElement('div'); c.className = 'win-card';
@@ -433,7 +487,9 @@ function addWin(list, text, img) {
 const MISS_LINES = ['chook gaye!', 'thoda left, beta', 'hawa mein!', 'almost!', 'arre!', 'uncle is laughing', 'so close!', 'try again, champ'];
 const G = { balloons: [], shots: 10, aiming: false, ax: 0, ay: 0, cx: 0, cy: 0, raf: 0, t0: 0, pool: [], bi: 0 };
 const range = $('#range'), wall = $('#gwall'), cross = $('#cross'), rifle = $('#rifle');
-const SLOTS = [[.18, .3], [.47, .24], [.78, .3], [.3, .7], [.64, .66], [.86, .72]];
+const MAX_POP = 4;                                   // you can win at most four balloons; 10 pellets to do it
+const SLOTS = [];
+for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) SLOTS.push([(c + .5) / 5, .2 + r * .27]);
 const gsnd = (n, o) => { if (ACTIVE === 'gubbara') snd(n, o); };
 function spawnBalloon(slot) {
   const el = document.createElement('div'); el.className = 'gub';
@@ -447,10 +503,10 @@ function spawnBalloon(slot) {
 function gubbaraReset() {
   wall.replaceChildren(); G.balloons = []; G.shots = 10; G.aiming = false; G.bi = (Math.random() * 8) | 0; DONE.gubbara = false;
   G.pool = [...INAAMS].sort(() => Math.random() - .5);
-  [...SLOTS.keys()].sort(() => Math.random() - .5).slice(0, 4).forEach(spawnBalloon);
+  SLOTS.forEach((_, i) => spawnBalloon(i));
   $('#gshots').innerHTML = Array.from({ length: 10 }, () => '<i></i>').join('');
   $('#ghaul').hidden = true; $('#glist').replaceChildren(); $('#gagain').hidden = true; hideShare('gubbara'); hidePin('gubbara');
-  $('#gsub').textContent = 'drag to aim, let go to fire. 10 pellets.';
+  $('#gsub').textContent = `drag to aim, let go to fire. pop up to ${MAX_POP}, 10 pellets.`;
   requestAnimationFrame(() => { const r0 = range.getBoundingClientRect(); G.ax = r0.width / 2; G.ay = r0.height * .35; });
   cancelAnimationFrame(G.raf); G.t0 = performance.now(); G.raf = requestAnimationFrame(gubbaraLoop);
 }
@@ -500,23 +556,20 @@ async function fire() {
     hit.el.querySelector('img').src = 'assets/game/bal8.webp';
     const tag = document.createElement('span'); tag.className = 'gtag'; tag.textContent = hit.prize; hit.el.appendChild(tag);
     addWin('#glist', hit.prize, hit.img); $('#ghaul').hidden = false;
-    setTimeout(() => {                                   // the popped one drifts off, a fresh balloon floats up in its place
-      hit.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: 'forwards' }).finished.then(() => hit.el.remove()).catch(() => {});
-      G.balloons = G.balloons.filter(b => b !== hit);
-      if (G.shots > 0) { const used = new Set(G.balloons.map(b => b.slot)); const free = [...SLOTS.keys()].filter(i => !used.has(i)); spawnBalloon(pick(free)); }
-    }, 1100);
   } else {
     gsnd('tock', { vol: .6 }); const m = document.createElement('span'); m.className = 'gmiss'; m.textContent = pick(MISS_LINES); m.style.left = x + 'px'; m.style.top = y + 'px'; range.appendChild(m); setTimeout(() => m.remove(), 900);
   }
-  if (G.shots === 0) {
+  const popped = G.balloons.filter(b => !b.alive).length;
+  if (G.shots === 0 || popped >= MAX_POP) {
+    G.shots = 0; [...$('#gshots').children].forEach(i => i.classList.add('used'));
     const n = $('#glist').children.length;
     if (!n) { addWin('#glist', 'one pat on the head from the stall uncle', 'assets/game/bal8.webp'); $('#ghaul').hidden = false; gsnd('fail', { vol: .6 }); }
     else setTimeout(() => gsnd('win', { vol: .6 }), 300);
-    $('#gsub').textContent = n ? `${n} popped out of 10 pellets! here’s what you won.` : 'all misses! uncle feels bad for you.';
+    $('#gsub').textContent = n >= MAX_POP ? `all ${MAX_POP} popped! maximum loot. here’s what you won.` : n ? `${n} popped! here’s what you won.` : 'all misses! uncle feels bad for you.';
     showShare('gubbara'); showPin('gubbara'); $('#gagain').hidden = false; DONE.gubbara = true;
     const wins = [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent);
     haul('gubbara', n ? `popped ${n} balloon${n > 1 ? 's' : ''}` : 'all misses', wins.join(' · '), 'assets/game/bal1.webp');
-  } else $('#gsub').textContent = `${G.shots} pellet${G.shots > 1 ? 's' : ''} left.`;
+  } else $('#gsub').textContent = `${popped}/${MAX_POP} popped · ${G.shots} pellet${G.shots > 1 ? 's' : ''} left.`;
 }
 $('#gagain').addEventListener('click', gubbaraReset);
 
@@ -546,13 +599,21 @@ const PRIZES = [
   ['bindi of confidence', 'stick it on and walk in like you own the place.'],
   ['the perfect diwali pic', 'one candid where you look unreal. trust.'],
   ['a pocket of good luck', 'one small, lucky thing happens before new year.'],
+  ['dishwashing duty', 'after every party this year. sorry, those are the rules.'],
+  ['family photographer', 'you’ll take 400 photos. you’ll be in zero.'],
+  ['sharma ji comparison pass', 'one free comparison with sharma ji’s kid, every month.'],
+  ['the middle seat', 'every flight, every car ride, all year.'],
+  ['the bill', 'tonight’s chai is on you. all of it.'],
+  ['group-trip planner', 'you plan it. they cancel it. repeat.'],
+  ['aunty’s cooking feedback', '“thoda namak kam tha.” every. single. time.'],
 ];
+const MAX_RING = 2;                                  // win at most two bottles; 10 rings to do it
 const R = { left: 10, busy: false, drag: null, won: [], pool: [], bi: 0 };
 const cstage = $('#cstage'), ring = $('#cring'), aimLine = $('#caimline');
 const csnd = (n, o) => { if (ACTIVE === 'chhalla') snd(n, o); };
 function ringHome() { ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 1; ring.style.transform = 'translate(-50%, 0)'; }
 function chhallaStatus() {
-  $('#csub').textContent = R.left > 0 ? `${R.left} ring${R.left > 1 ? 's' : ''} left. flick one up onto a bottle.` : 'all rings thrown!';
+  $('#csub').textContent = R.left > 0 ? `${R.won.length}/${MAX_RING} ringed · ${R.left} ring${R.left > 1 ? 's' : ''} left. flick one up onto a bottle.` : 'all rings thrown!';
   $('#crings').innerHTML = Array.from({ length: 10 }, (_, i) => `<i class="${i < 10 - R.left ? 'used' : ''}"></i>`).join('');
 }
 function makeBottle(i) {
@@ -567,7 +628,7 @@ function makeBottle(i) {
 function chhallaReset() {
   const shelf = $('#cshelf'); shelf.replaceChildren();
   R.pool = [...PRIZES.keys()].sort(() => Math.random() - .5); R.bi = (Math.random() * 5) | 0;
-  shelf.append(makeBottle(0), makeBottle(1));
+  for (let i = 0; i < 5; i++) shelf.append(makeBottle(i));
   R.left = 10; R.busy = false; R.won = []; DONE.chhalla = false; ringHome(); hideShare('chhalla'); hidePin('chhalla');
   $('#chaul').hidden = true; $('#clist').replaceChildren(); $('#cagain').hidden = true; $('#ccoach').hidden = true;
   chhallaStatus();
@@ -626,8 +687,6 @@ async function chhallaThrow(vx, vy) {
     addWin('#clist', `${name}: ${text}`, hitB.el.querySelector('img').src); $('#chaul').hidden = false;
     coach(pick(['ringed it!', 'shabaash!', 'ekdum perfect!', 'what a throw!']), true);
     setTimeout(() => csnd('win', { vol: .45 }), 250);
-    const old = hitB.el;                                  // a fresh bottle (new prize) slides in
-    setTimeout(() => { if (!old.isConnected) return; const nb = makeBottle(0); nb.classList.add('enter'); old.replaceWith(nb); }, 1500);
   } else {
     csnd('ringfloor', { vol: .7 });
     ring.animate([
@@ -642,12 +701,14 @@ async function chhallaThrow(vx, vy) {
   }
   await sleep(750);
   chhallaStatus();
+  if (R.won.length >= MAX_RING) R.left = 0;
+  chhallaStatus();
   if (R.left > 0) ringHome();
   else {
     ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 0; $('#cagain').hidden = false; DONE.chhalla = true;
     const n = R.won.length;
     if (!n) { addWin('#clist', 'the banta stays undefeated: one free nimbu soda, on the house.', 'assets/game/bottle0.webp'); $('#chaul').hidden = false; csnd('fail', { vol: .6 }); }
-    $('#csub').textContent = n ? `${n} ring${n > 1 ? 's' : ''} landed! here’s what you won.` : 'no rings this time. one more go?';
+    $('#csub').textContent = n >= MAX_RING ? `both bottles ringed! maximum loot.` : n ? `${n} ring landed! here’s what you won.` : 'no rings this time. one more go?';
     const wins = [...document.querySelectorAll('#clist .win-card p')].map(p => p.textContent);
     SH.chhalla = { img: 'assets/game/bottle0.webp', title: n ? `ringed ${n} bottle${n > 1 ? 's' : ''}` : 'the banta won', text: wins.join(' · '), kick: `${who()}’s ring toss` };
     showShare('chhalla'); showPin('chhalla');
@@ -721,6 +782,24 @@ const MOODS = [
   ['full paisa vasool', 'every plan, every trip, every rupee: worth it.'],
   ['i’m the vibe', 'parties start when you arrive. that’s just facts.'],
   ['calm, rich and slightly smug', 'things work out. you knew they would.'],
+  ['monday se pakka', 'diet, gym, journaling. all starting monday. every monday.'],
+  ['seen at 2:14am', 'you read it. you’ll reply in 3–5 business days.'],
+  ['just one more episode', 'it’s 4am. it’s always 4am.'],
+  ['my budget is a suggestion', 'the sale said 70% off. your bank said 100% gone.'],
+  ['overthinking, professionally', 'every text gets three drafts and a group-chat review.'],
+  ['cancelling plans is my cardio', 'you’ll RSVP yes to everything and show up to half.'],
+  ['i said i’m fine (i’m not fine)', 'but the outfit is fine. the outfit is great.'],
+  ['running on 2% battery', 'phone and person. both need a charger.'],
+  ['i’ll leave by 10 (left at 4)', 'the last one to leave every party. again.'],
+  ['iced coffee in december', 'you’re a little unhinged and it’s working for you.'],
+  ['“in my time…” (aunty in denial)', 'you’ll say it twice a week and mean it every time.'],
+  ['i peaked at the sangeet', 'one dance performance, a lifetime of reminiscing.'],
+  ['professional excuse-maker', 'traffic, network, “mummy needed me”. all on rotation.'],
+  ['emotionally available, physically asleep', 'deep talks scheduled. you nap through them.'],
+  ['chaotic, but on time (for once)', 'just kidding. ten minutes late, glowing.'],
+  ['i don’t gossip, i share updates', 'you’re the mohalla’s most reliable news channel.'],
+  ['soft heart, sharp tongue, zero filter', 'you say it. they think about it for a week.'],
+  ['my hobbies are hobbies i want to have', 'pottery, piano, running. all on the wishlist.'],
 ];
 const LUCK = {
   colour: ['rani pink', 'haldi yellow', 'peacock blue', 'sindoor red', 'mehendi green', 'marigold orange', 'royal purple', 'gold, obviously', 'silver', 'emerald', 'midnight black', 'ivory', 'teal', 'mirchi red'],
@@ -806,4 +885,10 @@ function drawReset() {
   $('#drDrop').classList.remove('go'); $('#dsub').textContent = 'drag the drum round (or tap the button).'; drawMeter();
 }
 $('#dagain').addEventListener('click', () => { drawReset(); snd('tap'); $('#dstage').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+// the wall only wakes up when it's near the screen (saves the first load), and sleeps when it's scrolled away
+(() => { const el = $('#wall'); let started = false;
+  new IntersectionObserver(es => es.forEach(e => {
+    WS.vis = e.isIntersecting;
+    if (e.isIntersecting && !started) { started = true; renderWall(); loadWall(); setInterval(loadWall, 60000); }
+  }), { rootMargin: '600px 0px' }).observe(el); })();
 })();
