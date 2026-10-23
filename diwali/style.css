@@ -1072,3 +1072,22 @@ body:not(.lit) .decor .kandil .lamp img:not(.bloom) { filter: brightness(.55) sa
 .t-intro, .games .d-intro { max-width: 36ch; margin-left: auto; margin-right: auto; }
 .games .d-intro b { color: var(--yellow); font-weight: 600; }
 .k-status { font: 600 12px/1.3 var(--sans) !important; letter-spacing: .14em; text-transform: uppercase; color: var(--yellow) !important; opacity: .9; margin-top: 4px; }
+
+/* ═════════ the wall lives inside the mela: a wooden notice board in the same gold frame as the booth ═════════ */
+.games .mela-board { position: relative; max-width: 900px; margin: 34px auto 0; padding: 58px 0 14px; border-radius: 8px; overflow: visible;
+  background: radial-gradient(120% 70% at 50% 0%, rgba(255,214,120,.16), transparent 60%), repeating-linear-gradient(90deg, #6b3b1c 0 58px, #5a3015 58px 61px);
+  box-shadow: inset 0 0 0 3px var(--yellow), inset 0 0 0 6px #3d0a07, inset 0 0 0 7.5px var(--pink), inset 0 18px 30px rgba(20,2,1,.35), 0 20px 40px rgba(20,2,1,.5); }
+.games .mela-board .w-track { overflow: hidden; margin: 0 9px; padding: 14px 0 16px; }
+.mb-sign { position: absolute; left: 50%; top: -18px; transform: translateX(-50%) rotate(-1.5deg); padding: 10px 22px 8px; white-space: nowrap; text-align: center;
+  background: var(--yellow) url(assets/paper_yellow.webp) center / cover; color: var(--ink); box-shadow: 0 0 0 3px var(--maroon), 0 0 0 5px var(--pink), 0 10px 18px rgba(20,2,1,.45); }
+.mb-sign::before, .mb-sign::after { content: ''; position: absolute; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe7a3, #8a5d12); }
+.mb-sign::before { left: 7px; } .mb-sign::after { right: 7px; }
+.mb-sign b { display: block; font: 400 clamp(20px, 5.4vw, 28px)/1 var(--display); text-shadow: 1.5px 1.5px 0 var(--red); }
+.mb-sign small { display: block; margin-top: 4px; font: 600 10.5px/1.2 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--maroon); }
+.mb-foot { font: 600 12px/1.2 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--yellow); opacity: .85; margin: 2px 0 0; }
+.games .mela-board .w-empty { color: var(--cream); padding: 10px 0; }
+.games .stalls-row { margin-top: 30px; }
+.games .wall2.mela-board { padding: 58px 0 14px !important; overflow: visible !important; max-width: 900px !important; }
+.sgn.s-pink .o-k { font-family: var(--sans) !important; letter-spacing: .32em !important; font-size: 4.6cqw !important; }
+.mb-sign { white-space: normal !important; width: max-content; max-width: calc(100% - 56px); padding: 9px 26px 7px !important; }
+.mb-sign small { font-size: 9.5px !important; letter-spacing: .12em !important; }
