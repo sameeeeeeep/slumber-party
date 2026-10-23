@@ -1044,6 +1044,22 @@ window.MKDFX = { sfx, initAudio, noiseHit, buzz, play, loop, stopAllLoops, get a
   document.querySelectorAll('.reveal-up, .reveal-pop, .reveal-text').forEach(el => io.observe(el));
 })();
 
+/* ───────────── toran: spaced marigolds on a string, mango leaves hanging between, each swaying a little ───────────── */
+(() => {
+  const el = document.querySelector('.bunting'); if (!el) return;
+  const build = () => {
+    const n = Math.ceil(el.clientWidth / 66) + 1; let h = '<i class="tr-string"></i>';
+    for (let i = 0; i < n; i++) {
+      const fl = i % 2 ? 'c02' : 'c01', d = (-(i * 0.37) % 3).toFixed(2), sw = (2.6 + (i * 0.53) % 1.6).toFixed(2);
+      h += `<span class="tr-g" style="left:${i * 66}px;--d:${d}s;--sw:${sw}s"><img src="assets/conf/${fl}.webp" alt=""></span>`;
+      h += `<span class="tr-l" style="left:${i * 66 + 33}px;--d:${(d * 1.3).toFixed(2)}s;--sw:${(+sw + .7).toFixed(2)}s"><img src="assets/conf/c16.webp" alt=""></span>`;
+    }
+    el.innerHTML = h;
+  };
+  let w0 = -1; const rb = () => { const w = el.clientWidth; if (w && Math.abs(w - w0) > 20) { w0 = w; build(); } };
+  rb(); if (window.ResizeObserver) new ResizeObserver(rb).observe(el); else window.addEventListener('resize', rb);
+})();
+
 /* ───────────── boot ───────────── */
 let rz;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layout, 120); });
