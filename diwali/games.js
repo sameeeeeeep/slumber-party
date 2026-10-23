@@ -142,7 +142,7 @@ function parseCSV(t) {
 const shortName = n => { const p = String(n || 'dost').trim().split(/\s+/); return p[0] + (p[1] ? ' ' + p[1][0].toUpperCase() + '.' : ''); };
 const hashN = (t, n) => { let h = 0; for (const ch of String(t)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h) % n; };
 function wallArt(e) {                          // the illustration that goes with the result
-  if (e.game === 'tota') { const f = FORTUNES.find(x => x.title === e.title), im = f ? f.img : LEGACY_K[e.title]; return { src: im ? `assets/cards/${im}.webp` : GAME_ICON.tota, kind: 'poster' }; }
+  if (e.game === 'tota') { const f = FORTUNES.find(x => x.title === e.title), im = f ? f.img : LEGACY_K[e.title]; return { src: im ? `assets/cards/${im}.webp?v=2` : GAME_ICON.tota, kind: 'poster' }; }
   if (e.game === 'gubbara') return { src: `assets/game/bal${hashN(e.name + e.title, 8)}.webp`, kind: 'balloon', n: Math.min(4, +((e.title.match(/\d+/) || [1])[0])) };
   if (e.game === 'chhalla') return { src: `assets/game/bottle${hashN(e.name + e.title, 5)}.webp`, kind: 'bottle' };
   return { src: 'assets/game/ticket.webp', kind: 'ticket' };
@@ -435,7 +435,7 @@ async function totaPlay() {
   $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true; $('#tlabel').hidden = true; hideShare('tota'); hidePin('tota');
   T.table.classList.remove('can-shuffle');
   let pool = FORTUNES.filter(f => !SEEN_K.has(f.img)); if (!pool.length) { SEEN_K.clear(); pool = FORTUNES; }
-  const f = pick(pool); SEEN_K.add(f.img); new Image().src = `assets/cards/${f.img}.webp`;   // load just this one while the deck shuffles
+  const f = pick(pool); SEEN_K.add(f.img); new Image().src = `assets/cards/${f.img}.webp?v=2`;   // load just this one while the deck shuffles
   totaBuild(); bob(2); tsnd('parrot', { vol: .5 });
   $('#tsub').textContent = 'shuffling…';
   await sleep(300); if (!alive()) return bail();
@@ -474,8 +474,8 @@ async function totaPlay() {
   $('#ttext').textContent = reading;
   $('#tread').hidden = false; $('#tagain').hidden = false;
   $('#tsub').textContent = 'tota ji has spoken.';
-  SH.tota = { img: `assets/cards/${f.img}.webp`, title: f.title, text: reading, kick: `${who()}’s kismat for 2027` }; showShare('tota'); showPin('tota');
-  haul('tota', f.title, reading, `assets/cards/${f.img}.webp`); DONE.tota = true;
+  SH.tota = { img: `assets/cards/${f.img}.webp?v=2`, title: f.title, text: reading, kick: `${who()}’s kismat for 2027` }; showShare('tota'); showPin('tota');
+  haul('tota', f.title, reading, `assets/cards/${f.img}.webp?v=2`); DONE.tota = true;
   T.busy = false;
 }
 $('#tgo').addEventListener('click', totaPlay);
