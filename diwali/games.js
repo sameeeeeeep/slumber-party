@@ -536,10 +536,11 @@ function gubbaraLoop(now) {
   rifle.style.transform = `translate(0, -50%) rotate(${ang.toFixed(2)}deg) scaleY(${Math.abs(ang) > 90 ? -1 : 1})`;
   G.raf = requestAnimationFrame(gubbaraLoop);
 }
-function aimAt(e) { const p = local(range, e); G.ax = clamp(p.x, 6, p.w - 6); G.ay = clamp(p.y - (e.pointerType === 'touch' ? 60 : 0), 6, p.h * .78); }
+function aimAt(e) { const p = local(range, e); G.ax = clamp(p.x, 6, p.w - 6); G.ay = clamp(p.y - (e.pointerType === 'touch' && G.pad ? 70 : 0), 6, p.h * .78); }   // drag from the pad: crosshair sits above the finger; tap a balloon: fire right there
 range.addEventListener('pointerdown', e => {
   if (G.shots <= 0) return; start(); e.preventDefault();
-  G.aiming = true; try { range.setPointerCapture(e.pointerId); } catch (err) {} aimAt(e); range.classList.add('aiming');
+  G.pad = !!e.target.closest('.aimpad');
+  G.aiming = true; if (G.pad) { try { range.setPointerCapture(e.pointerId); } catch (err) {} } aimAt(e); range.classList.add('aiming');
 });
 range.addEventListener('pointermove', e => { if (G.aiming || e.pointerType === 'mouse') aimAt(e); });
 range.addEventListener('pointerup', () => { if (!G.aiming) return; G.aiming = false; range.classList.remove('aiming'); fire(); });

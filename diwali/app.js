@@ -128,7 +128,7 @@ function layout() {
   const bw = wide ? Math.min(vw * .24, 360) : Math.min(vw * .56, 300), bh = bw / SLEEVE_AR;
   Object.assign(B, wide
     ? { w: bw, h: bh, cx: Math.max(bw * .6 + 24, EB.cx - EB.w / 2 - bw * .62), cy: EB.cy + EB.h * .42 }   // left of the envelope, by the corner that burns
-    : { w: bw, h: bh, cx: Math.max(bw * .5 + 14, EB.cx - EB.w / 2 + bw * .5 - 4), cy: Math.min(vh - bh / 2 - 150, EB.cy + EB.h / 2 + (vh - EB.cy - EB.h / 2) * .42) });
+    : { w: bw, h: bh, cx: vw * .5 - bw * .1, cy: Math.min(vh - bh / 2 - 150, EB.cy + EB.h / 2 + (vh - EB.cy - EB.h / 2) * .42) });
   css(boxEl, '--bw', bw + 'px'); css(boxEl, '--bh', bh + 'px');
 
   M.L = bw * .82; M.mh = M.L / 10.6; M.st = Math.max(6, M.mh); M.h = M.L * .455;   // head centre sits ~45% of the length from the middle

@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792745305">
+<link rel="stylesheet" href="style.css?v=1792748090">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -187,6 +187,7 @@
           <div class="range" id="range">
             <div class="range-wall" id="gwall"></div>
             <i class="cross" id="cross"></i>
+            <i class="aimpad" aria-hidden="true"></i>
             <img loading="lazy" decoding="async" class="rifle" id="rifle" src="assets/game/rifle.webp" alt="air rifle">
             <div class="pellets" id="gshots"></div>
           </div>
@@ -199,6 +200,7 @@
           <p class="k-sub k-status" id="csub">0/2 ringed · 10 rings left</p>
           <div class="ring-stage" id="cstage">
             <div class="shelf" id="cshelf"></div>
+            <i class="launchpad" aria-hidden="true"></i>
             <i class="ring" id="cring"></i>
             <div class="pellets rings" id="crings"></div>
             <svg class="aim" id="caim" aria-hidden="true"><line id="caimline" x1="0" y1="0" x2="0" y2="0"/></svg>
@@ -281,9 +283,9 @@
   <button class="mx-pill" id="mxPlay" type="button" aria-label="Pause music"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b><span class="mx-ic" id="mxIc">❚❚</span></button>
   <a class="mx-link" id="mxLink" href="#" target="_blank" rel="noopener" aria-label="Open the playlist on YouTube">↗</a>
 </div>
-<script src="config.js?v=1792745305"></script>
-<script src="lib.js?v=1792745305"></script>
-<script src="app.js?v=1792745305"></script>
-<script src="games.js?v=1792745305"></script>
+<script src="config.js?v=1792748090"></script>
+<script src="lib.js?v=1792748090"></script>
+<script src="app.js?v=1792748090"></script>
+<script src="games.js?v=1792748090"></script>
 </body>
 </html>
