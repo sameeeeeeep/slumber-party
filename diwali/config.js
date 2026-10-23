@@ -23,6 +23,9 @@ window.MKD = {
     end: '2026-11-03T01:00:00+05:30',          // end time assumed
   },
 
+  // background music after the reveal: any embeddable YouTube video id (shown as a small player, bottom-right)
+  music: { youtube: 'YCq7kYUJrHM', title: 'mohalla diwali mix', volume: 45 },
+
   rsvp: {
     // Opens + RSVPs post to a Google Form (sameep@nailin.it) → sheet "Untitled form (Responses)".
     wall: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSOz57GoCcYtf5P_uLFsGA47RaG94OYH8CUPdhqPPPT2hWbUeiUVKd8czXGoW0tLYCwJEMNcCddr6lD/pub?gid=1314439309&single=true&output=csv',

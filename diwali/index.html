@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792743096">
+<link rel="stylesheet" href="style.css?v=1792743949">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -98,7 +98,7 @@
     </div>
 
     <div id="after" class="after">
-      <button id="seeDetails" class="cta small" type="button">scroll 4 something स्पेशल ↓</button>
+      <button id="seeDetails" class="cta small" type="button">scroll 4 जानकारी ↓</button>
       <button class="sign blue share-btn small" data-share="invite" type="button">share the invite</button>
       <button id="replay" class="replay" type="button">↺ light it again</button>
     </div>
@@ -131,7 +131,11 @@
   <section class="rsvp">
     <img loading="lazy" decoding="async" class="rsvp-star s1" src="assets/star_pink.webp" alt="">
     <img loading="lazy" decoding="async" class="rsvp-star s2" src="assets/star_pale.webp" alt="">
-    <div class="board b-yellow rsvp-card">
+    <div class="board b-yellow rsvp-card postcard">
+      <div class="pc-head"><span>post card</span><span class="pc-hi">जवाबी पत्र</span></div>
+      <div class="pc-stamp" aria-hidden="true"><img src="assets/k1.webp" alt=""><b>₹26</b></div>
+      <div class="pc-mark" aria-hidden="true"><span>bastian · juhu</span><b>2 NOV 26</b><span>mohalla post</span></div>
+      <i class="pc-clip" aria-hidden="true"></i>
       <div id="rsvpAsk" class="rsvp-ask">
         <h2>coming, <span class="foil" data-name>dost</span>?</h2>
         <p class="b-note"><span data-c="dateLong"></span> · <span data-c="time"></span> · <span data-c="venue"></span></p>
@@ -273,9 +277,14 @@
   <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
 </button>
 
-<script src="config.js?v=1792743096"></script>
-<script src="lib.js?v=1792743096"></script>
-<script src="app.js?v=1792743096"></script>
-<script src="games.js?v=1792743096"></script>
+<div id="mix" class="mix" hidden>
+  <div class="mx-tv"><div id="mxPlayer"></div><button class="mx-tap" id="mxTap" type="button" hidden>▶ tap to play</button></div>
+  <div class="mx-bar"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b>
+    <button class="mx-btn" id="mxPlay" type="button" aria-label="Pause music">❚❚</button><button class="mx-btn" id="mxMin" type="button" aria-label="Minimise player">–</button></div>
+</div>
+<script src="config.js?v=1792743949"></script>
+<script src="lib.js?v=1792743949"></script>
+<script src="app.js?v=1792743949"></script>
+<script src="games.js?v=1792743949"></script>
 </body>
 </html>

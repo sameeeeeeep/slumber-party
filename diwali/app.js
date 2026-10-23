@@ -378,6 +378,7 @@ sndBtn.addEventListener('click', () => {
   A.on = !A.on; store.set('mkd:snd', A.on ? '1' : '0');
   sndBtn.classList.toggle('off', !A.on); sndBtn.setAttribute('aria-label', A.on ? 'Sound on' : 'Sound off');
   if (A.master) A.master.gain.setTargetAtTime(A.on ? .9 : 0, A.ac.currentTime, .05);
+  MIX.sync();
 });
 sndBtn.classList.toggle('off', !A.on);
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
@@ -967,11 +968,46 @@ function updateGhost(now) {
 }
 
 function finish() {
+  MIX.start();                              // the party starts when the invite is revealed
   document.body.classList.remove('locked');
   afterEl.classList.add('on');
   nameEl.classList.add('on');
   store.set('mkd:done', '1');
 }
+
+/* ───────────── mohalla diwali mix: a YouTube set, visible bottom-right (YouTube needs the player on screen) ───────────── */
+const MIX = (() => {
+  const cfg = (window.MKD && window.MKD.music) || {}, el = $('#mix');
+  let player = null, ready = false, wanted = false, userPaused = false;
+  if (!cfg.youtube || !el) return { start() {}, sync() {} };
+  $('#mxTitle').textContent = cfg.title || 'mohalla diwali mix';
+  const playing = () => ready && player.getPlayerState && player.getPlayerState() === 1;
+  const ui = () => { const p = playing(); el.classList.toggle('on', p); $('#mxPlay').textContent = p ? '❚❚' : '▶'; $('#mxPlay').setAttribute('aria-label', p ? 'Pause music' : 'Play music'); };
+  function load() {                         // load the API early (behind the burn) so the reveal can start instantly
+    if (window.YT && window.YT.Player) return make();
+    window.onYouTubeIframeAPIReady = make;
+    const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
+  }
+  function make() {
+    if (player) return;
+    player = new YT.Player('mxPlayer', { videoId: cfg.youtube, width: '100%', height: '100%',
+      playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3, loop: 1, playlist: cfg.youtube },
+      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (wanted) go(); }, onStateChange: () => { ui(); if (playing()) $('#mxTap').hidden = true; } } });
+  }
+  function go() {
+    if (!ready || !A.on || userPaused) { ui(); return; }
+    player.playVideo();
+    setTimeout(() => { if (!playing() && A.on && !userPaused) $('#mxTap').hidden = false; ui(); }, 2500);   // iPhone may need a tap inside the player
+  }
+  $('#mxTap').addEventListener('click', () => { userPaused = false; $('#mxTap').hidden = true; if (ready) player.playVideo(); });
+  $('#mxPlay').addEventListener('click', () => { if (!ready) return; if (playing()) { userPaused = true; player.pauseVideo(); } else { userPaused = false; if (!A.on) sndBtn.click(); else player.playVideo(); } });
+  $('#mxMin').addEventListener('click', () => { el.classList.toggle('mini'); $('#mxMin').textContent = el.classList.contains('mini') ? '+' : '–'; });
+  setTimeout(load, 1500);
+  return {
+    start() { wanted = true; el.hidden = false; requestAnimationFrame(() => el.classList.add('in')); go(); },
+    sync() { if (!wanted || !ready) return; if (A.on && !userPaused) player.playVideo(); else player.pauseVideo(); },
+  };
+})();
 
 window.MKDFX = { sfx, initAudio, noiseHit, buzz, play, loop, stopAllLoops, get audio() { return A.ac; } };
 

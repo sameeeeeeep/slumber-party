@@ -1093,8 +1093,73 @@ body:not(.lit) .decor .kandil .lamp img:not(.bloom) { filter: brightness(.55) sa
 .mb-sign small { font-size: 9.5px !important; letter-spacing: .12em !important; }
 
 /* CTAs: tall condensed caps (Barlow Condensed) — painted-signboard / mela-ticket lettering, distinct from the chunky headings */
-:root { --cta: 'Barlow Condensed', 'Clash Display', system-ui, sans-serif; }
+:root { --cta: 'Barlow Condensed', 'Palanquin Dark', 'Clash Display', system-ui, sans-serif; }
 .sign, .cta, .g-btn, .b-btn, #seeDetails, .autobtn, .next-btn, .sign.small { font-family: var(--cta) !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: .06em; }
 .sign, .cta, .g-btn, #seeDetails, .next-btn { font-size: 22px; }
 .mh-acts .sign.small { font-size: 15px !important; }
 .autobtn b { font-weight: 700; }
+
+/* gubbara: balloons up top, shooter stands well back */
+.range { height: clamp(430px, 122vw, 580px) !important; }
+.range-wall { height: 56% !important; }
+
+/* ═════════ RSVP: a reply postcard, clipped to a string, with stamp + postmark ═════════ */
+.rsvp-card.postcard { position: relative; max-width: 500px; margin: 30px auto 0; padding: 70px 26px 30px !important; border-radius: 4px;
+  background: #f1dfae url(assets/paper_yellow.webp) center / cover !important; background-blend-mode: multiply;
+  box-shadow: inset 0 0 0 10px #f1dfae, inset 0 0 0 11.5px var(--red), inset 0 0 0 14px #f1dfae, inset 0 0 0 15px var(--teal), 0 22px 36px rgba(20,2,1,.55), 0 2px 0 rgba(255,255,255,.4) !important;
+  transform-origin: 50% -40px; animation: pcSway 6s ease-in-out infinite; }
+.rsvp-card.postcard::before { content: ''; position: absolute; left: 50%; top: -46px; width: 2px; height: 50px; margin-left: -1px; background: linear-gradient(#c9a46a, #8a6a3a); }
+@keyframes pcSway { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.2deg); } }
+.pc-clip { position: absolute; left: 50%; top: -14px; width: 16px; height: 34px; margin-left: -8px; border-radius: 3px; z-index: 3;
+  background: linear-gradient(90deg, #b07a3a, #e2b277 45%, #a06a2e); box-shadow: 0 3px 4px rgba(0,0,0,.35), inset 0 -3px 0 rgba(0,0,0,.15); }
+.pc-clip::after { content: ''; position: absolute; left: 3px; right: 3px; top: 12px; height: 4px; border-radius: 2px; background: #8a8f96; }
+.pc-head { position: absolute; left: 22px; top: 22px; display: flex; gap: 10px; align-items: baseline; font: 700 15px/1 var(--cta); letter-spacing: .18em; text-transform: uppercase; color: var(--red); }
+.pc-head .pc-hi { font: 700 13px/1 var(--deva); letter-spacing: .04em; color: var(--maroon); opacity: .8; text-transform: none; }
+.pc-stamp { position: absolute; right: 22px; top: 18px; width: 58px; height: 68px; display: grid; place-items: center; padding: 5px; rotate: 4deg;
+  background: var(--pink); box-shadow: 0 2px 3px rgba(0,0,0,.3);
+  -webkit-mask: radial-gradient(circle 3px at 3px 3px, transparent 98%, #000) -3px -3px / 8px 8px; mask: radial-gradient(circle 3px at 3px 3px, transparent 98%, #000) -3px -3px / 8px 8px; }
+.pc-stamp img { width: 30px; height: auto; filter: drop-shadow(0 2px 2px rgba(0,0,0,.3)); }
+.pc-stamp b { font: 700 12px/1 var(--cta); color: var(--yellow); }
+.pc-mark { position: absolute; right: 54px; top: 46px; width: 74px; height: 74px; border-radius: 50%; border: 2px solid rgba(117,21,15,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; rotate: -14deg; pointer-events: none;
+  color: rgba(117,21,15,.6); font: 700 7.5px/1.2 var(--cta); letter-spacing: .12em; text-transform: uppercase; }
+.pc-mark b { font-size: 12px; letter-spacing: .06em; padding: 2px 0; border-top: 1.5px solid rgba(117,21,15,.5); border-bottom: 1.5px solid rgba(117,21,15,.5); margin: 2px 0; }
+.rsvp-card.postcard h2 { margin-top: 6px !important; }
+@media (prefers-reduced-motion: reduce) { .rsvp-card.postcard { animation: none; } }
+
+/* wall cards hang off a twine and sway; nothing clips the pin */
+.games .mela-board .w-track { position: relative; padding-top: 34px !important; }
+.games .mela-board .w-track::before { content: ''; position: absolute; left: 0; right: 0; top: 12px; height: 2px; z-index: 2; pointer-events: none;
+  background: repeating-linear-gradient(90deg, #d9b98a 0 6px, #b8925e 6px 9px); box-shadow: 0 2px 2px rgba(0,0,0,.35); }
+.wcard { overflow: visible !important; transform-origin: 50% -22px; animation: wcSway 4.2s ease-in-out infinite; }
+.wcard:nth-child(3n+1) { animation-duration: 3.7s; animation-delay: -1.1s; } .wcard:nth-child(3n+2) { animation-duration: 4.6s; animation-delay: -2.3s; }
+@keyframes wcSway { 0%, 100% { transform: rotate(-2.2deg); } 50% { transform: rotate(2.2deg); } }
+.wcard::after { content: ''; position: absolute; left: 50%; top: -22px; width: 1.5px; height: 18px; margin-left: -.75px; background: #c9a46a; z-index: 3; }
+.wcard::before { top: -9px !important; z-index: 4 !important; }
+.wcard .wc-art { border-radius: 3px 3px 0 0; }
+.wcard .wc-body { border-radius: 0 0 4px 4px; }
+@media (prefers-reduced-motion: reduce) { .wcard { animation: none; } }
+.pc-stamp { -webkit-mask: none !important; mask: none !important; outline: 3px dotted #f1dfae; outline-offset: -2px; border: 3px solid var(--pink); background: var(--pink) !important; }
+.pc-mark { right: 66px !important; top: 26px !important; width: 64px !important; height: 64px !important; }
+.rsvp-card.postcard { padding-top: 104px !important; }
+.range-wall { height: 52% !important; }
+
+/* ═════════ mohalla diwali mix: a little mela TV, bottom-right ═════════ */
+.mix { position: fixed; right: 60px; bottom: calc(env(safe-area-inset-bottom) + 16px); z-index: 40; width: 208px; border-radius: 8px; padding: 6px;
+  background: var(--yellow) url(assets/paper_yellow.webp) center / cover; box-shadow: 0 0 0 2px var(--maroon), 0 0 0 4px var(--pink), 0 14px 28px rgba(20,2,1,.55);
+  transform: translateY(140%); transition: transform .7s cubic-bezier(.2,1.2,.4,1), width .35s; }
+.mix[hidden] { display: none; }
+.mix.in { transform: none; }
+.mx-tv { position: relative; aspect-ratio: 16 / 9; border-radius: 5px; overflow: hidden; background: #1a0503; box-shadow: inset 0 0 0 2px var(--maroon); }
+.mx-tv iframe, .mx-tv #mxPlayer { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.mx-tap { position: absolute; inset: 0; border: 0; cursor: pointer; background: rgba(26,5,3,.72); color: var(--yellow); font: 700 16px/1 var(--cta); letter-spacing: .08em; text-transform: uppercase; animation: mxPulse 1.4s ease-in-out infinite; }
+.mx-tap[hidden] { display: none; }
+@keyframes mxPulse { 50% { color: #fff3c4; } }
+.mx-bar { display: flex; align-items: center; gap: 6px; padding: 6px 2px 1px; }
+.mx-bar b { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 700 14px/1 var(--cta); letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+.mx-btn { flex: none; width: 26px; height: 26px; border: 0; border-radius: 50%; cursor: pointer; background: var(--maroon); color: var(--yellow); font: 700 12px/1 var(--sans); display: grid; place-items: center; }
+.mx-eq { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
+.mx-eq i { width: 3px; height: 4px; background: var(--red); border-radius: 1px; }
+.mix.on .mx-eq i { animation: mxEq .8s ease-in-out infinite alternate; } .mix.on .mx-eq i:nth-child(2) { animation-delay: -.3s; } .mix.on .mx-eq i:nth-child(3) { animation-delay: -.55s; }
+@keyframes mxEq { from { height: 3px; } to { height: 14px; } }
+.mix.mini { width: 156px; }
+@media (max-width: 420px) { .mix { width: 176px; right: 58px; } .mix.mini { width: 132px; } .mx-bar b { font-size: 12.5px; } }

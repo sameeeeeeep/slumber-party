@@ -497,7 +497,7 @@ const G = { balloons: [], shots: 10, aiming: false, ax: 0, ay: 0, cx: 0, cy: 0, 
 const range = $('#range'), wall = $('#gwall'), cross = $('#cross'), rifle = $('#rifle');
 const MAX_POP = 4;                                   // you can win at most four balloons; 10 pellets to do it
 const SLOTS = [];
-for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) SLOTS.push([(c + .5) / 5, .2 + r * .27]);
+for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) SLOTS.push([(c + .5) / 5, .15 + r * .22]);
 const gsnd = (n, o) => { if (ACTIVE === 'gubbara') snd(n, o); };
 function spawnBalloon(slot) {
   const el = document.createElement('div'); el.className = 'gub';
@@ -530,9 +530,9 @@ function gubbaraLoop(now) {
   const sway = G.aiming ? 1 : .4;                       // a little hand sway — skill still wins
   G.cx = G.ax + Math.sin(t * 2.1) * 4 * sway; G.cy = G.ay + Math.cos(t * 1.7) * 3 * sway;
   cross.style.transform = `translate(${G.cx}px,${G.cy}px)`;
-  const W = range.clientWidth, H = range.clientHeight, bx = W * .5, by = H * 1.04;   // the shooter stands back from the counter
+  const W = range.clientWidth, H = range.clientHeight, bx = W * .5, by = H * 1.1;   // the shooter stands back from the counter
   const ang = Math.atan2(G.cy - by, G.cx - bx) * 180 / Math.PI;
-  rifle.style.left = bx + 'px'; rifle.style.top = by + 'px'; rifle.style.width = (H * .36) + 'px';
+  rifle.style.left = bx + 'px'; rifle.style.top = by + 'px'; rifle.style.width = (H * .25) + 'px';
   rifle.style.transform = `translate(0, -50%) rotate(${ang.toFixed(2)}deg) scaleY(${Math.abs(ang) > 90 ? -1 : 1})`;
   G.raf = requestAnimationFrame(gubbaraLoop);
 }
@@ -672,12 +672,12 @@ async function chhallaThrow(vx, vy) {
   R.busy = true;
   const s = cstage.getBoundingClientRect(), rr = ring.getBoundingClientRect();
   const cx = rr.left + rr.width / 2 - s.left, cy = rr.top + rr.height / 2 - s.top;
-  const power = clamp(-vy, .25, 3.2), tx = cx + vx * 220 + rnd(-8, 8), ty = cy - power * 240;
+  const power = clamp(-vy, .25, 3.2), tx = cx + vx * 220 + rnd(-4, 4), ty = cy - power * 240;
   let hitB = null, near = null, nd = 1e9;
   cstage.querySelectorAll('.bot').forEach(b => {
     const r = b.getBoundingClientRect(), nx = r.left + r.width / 2 - s.left, ny = r.top + r.height * .2 - s.top;
     const d = Math.hypot(tx - nx, ty - ny); if (d < nd) { nd = d; near = { el: b, x: nx, y: ny, w: r.width, h: r.height }; }
-    if (!b.classList.contains('ringed') && Math.abs(tx - nx) < r.width * .4 && Math.abs(ty - ny) < r.height * .16) hitB = { el: b, x: nx, y: ny };
+    if (!b.classList.contains('ringed') && Math.abs(tx - nx) < r.width * .62 && Math.abs(ty - ny) < r.height * .3) hitB = { el: b, x: nx, y: ny };   // forgiving: near enough counts
   });
   const endX = hitB ? hitB.x : tx, endY = hitB ? hitB.y : ty, arcH = 60 + power * 30;
   const anim = ring.animate([
@@ -702,9 +702,9 @@ async function chhallaThrow(vx, vy) {
       { transform: `translate(calc(-50% + ${endX - cx + rnd(-60, 60)}px), ${endY - cy + 140}px) scale(.45) rotateX(80deg) rotate(260deg)`, opacity: 0 },
     ], { duration: 520, easing: 'cubic-bezier(.5,0,1,1)', fill: 'forwards' });
     const dy = ty - near.y, dxn = tx - near.x, tips = [];
-    if (dy < -near.h * .16) tips.push('too far — less force');
-    else if (dy > near.h * .16) tips.push('too short — flick harder');
-    if (Math.abs(dxn) > near.w * .4) tips.push(dxn > 0 ? 'aim a little left' : 'aim a little right');
+    if (dy < -near.h * .3) tips.push('too far — less force');
+    else if (dy > near.h * .3) tips.push('too short — flick harder');
+    if (Math.abs(dxn) > near.w * .62) tips.push(dxn > 0 ? 'aim a little left' : 'aim a little right');
     coach(tips.length ? tips.join(', ') + '.' : 'so close! same again.');
   }
   await sleep(750);
