@@ -1231,3 +1231,53 @@ html, body { overscroll-behavior-x: none; }
 /* ring toss: the ring itself must capture the flick too (it sat above the throw zone and let the page scroll) */
 .ring-stage .ring, .ring-stage .launchpad, .ring-stage .ring * { touch-action: none !important; }
 .ring-stage .launchpad { height: 46% !important; }
+
+/* ═════════ readable results: bigger opened card, chunky labels, readable body type ═════════ */
+.tota-table { height: clamp(440px, 118vw, 640px) !important; }
+.kc-label { font-family: 'Bakbak One', var(--display) !important; font-weight: 400 !important; font-size: calc(var(--w) * .085) !important; line-height: 1.1 !important; letter-spacing: 0 !important; }
+.reading { max-width: 480px !important; padding: 18px 20px !important; }
+.reading .r-kick { font: 700 13px/1 'Barlow Condensed', var(--sans) !important; letter-spacing: .22em !important; }
+.reading .r-text { font: 600 19px/1.45 'Barlow', var(--sans) !important; }
+.reading .r-title, .tix .t-name, .mh-title, .wc-name, .wc-title { font-family: 'Bakbak One', var(--display) !important; font-weight: 400 !important; letter-spacing: 0 !important; }
+.tix .t-text, .tix .t-extra, .mh-text, .wc-text, .win-card p { font-family: 'Barlow', var(--sans) !important; }
+.hc-row { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important; gap: 14px !important; }
+.win-card { padding: 14px 12px !important; }
+.win-card img { height: 70px !important; }
+.win-card p { font-size: 15.5px !important; font-weight: 600 !important; line-height: 1.3 !important; }
+.mh-title { font-size: 22px !important; }
+.mh-text { font-size: 15px !important; line-height: 1.4 !important; }
+.mh-card img { height: 120px !important; }
+.wc-name { font-size: 16px !important; line-height: 1.15 !important; }
+.wc-title { font-size: 14.5px !important; }
+.wc-text { font-size: 13px !important; line-height: 1.35 !important; }
+.tix .t-name { font-size: 5cqw !important; }
+
+/* footer without the logo + credit line */
+.foot { padding-bottom: 56px !important; }
+
+/* bottom-right: music pill, link and sound button share one baseline and height */
+.snd { width: 40px !important; height: 40px !important; bottom: calc(env(safe-area-inset-bottom) + 20px) !important; right: 14px !important; }
+.mix { bottom: calc(env(safe-area-inset-bottom) + 20px) !important; right: 64px !important; height: 40px; align-items: center; }
+.mx-pill, .mx-link { height: 40px !important; box-sizing: border-box; }
+.mx-pill { padding: 0 16px 0 14px !important; gap: 10px !important; }
+.mx-ic { width: 12px; text-align: center; }
+
+/* how-to-play guides: one line + an animated finger, gone on first touch */
+.guide { position: absolute; left: 50%; z-index: 8; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; white-space: nowrap; pointer-events: none;
+  padding: 8px 14px 7px; border-radius: 99px; background: rgba(26,5,3,.82); box-shadow: inset 0 0 0 1.5px var(--yellow), 0 8px 18px rgba(0,0,0,.4);
+  font: 700 14px/1 'Barlow Condensed', var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--yellow); transition: opacity .35s; }
+.guide.gone { opacity: 0; }
+.guide .hand { display: inline-block; font-style: normal; font-size: 20px; line-height: 1; }
+.g-tap { top: 10px; } .g-tap .hand { animation: gTap 1.1s ease-in-out infinite; }
+.g-aim { bottom: 46%; } .g-aim .hand { animation: gUp 1.6s ease-in-out infinite; }
+.g-flick { bottom: 44%; } .g-flick .hand { animation: gUp 1.1s cubic-bezier(.3,0,.2,1) infinite; }
+.g-spin { top: -6px; } .g-spin .hand { animation: gSpin 1.6s linear infinite; }
+@keyframes gTap { 0%, 100% { transform: translateY(0) scale(1); } 45% { transform: translateY(5px) scale(.88); } }
+@keyframes gUp { 0% { transform: translateY(8px); opacity: .4; } 60% { transform: translateY(-8px); opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
+@keyframes gSpin { from { transform: rotate(0deg) translateX(5px) rotate(0deg); } to { transform: rotate(360deg) translateX(5px) rotate(-360deg); } }
+@media (max-width: 420px) { .guide { font-size: 12.5px; padding: 7px 12px 6px; } }
+.guide .hand { width: 18px; height: 22px; font-size: 0 !important;
+  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 30'%3E%3Cpath d='M9 2.5a2 2 0 0 1 4 0V13l1-.2a2 2 0 0 1 2.4 1.6l.1.6 1-.1a2 2 0 0 1 2.2 1.8l1-.1a2 2 0 0 1 2.2 2V23c0 3.6-2.9 6.5-6.5 6.5h-2.6a6.5 6.5 0 0 1-5.4-2.9l-4-6a1.9 1.9 0 0 1 2.9-2.4L9 19.6z' fill='%23efbd0d' stroke='%231a0503' stroke-width='1.2'/%3E%3C/svg%3E"); }
+.ring-stage::after { display: none !important; }
+.range .aimpad::after { display: none !important; }
+.guide { max-width: calc(100% - 24px); white-space: normal; text-align: center; line-height: 1.15; }

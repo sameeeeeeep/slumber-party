@@ -15,6 +15,7 @@ const pop = () => { noise(.12, 'lowpass', 1600, 200, .9, 1); noise(.3, 'highpass
 const thup = () => noise(.06, 'bandpass', 900, 500, .5, 3);
 const clink = () => { noise(.05, 'bandpass', 4800, 4200, .5, 8); noise(.4, 'bandpass', 3100, 3000, .2, 14, .03); };
 const start = () => FX().initAudio();
+const guide = (id, show) => { const g = document.getElementById(id); if (g) g.classList.toggle('gone', !show); };
 let ACTIVE = 'tota';                                   // only the open stall may make noise
 const snd = (n, o) => { const f = FX(); if (f.play) f.play(n, o); };
 const loopVol = (n, v) => { const f = FX(); if (f.loop) f.loop(n, v); };
@@ -873,10 +874,10 @@ function fanPos(i) {
   const a = -spread + 2 * spread * i / (n - 1);
   return { x: Math.sin(rad(a)) * R, y: R - Math.cos(rad(a)) * R - 40, a };
 }
-const W_SCALE = () => (T.table.clientWidth < 420 ? 1.25 : 1.5);
+const W_SCALE = () => (T.table.clientWidth < 420 ? 1.72 : 2);   // the picked card opens big
 const SEEN_K = new Set();                  // don't hand the same kismat twice in one visit
 async function totaPlay() {
-  if (T.busy) return; T.busy = true; start(); const my = ++T.run;
+  if (T.busy) return; T.busy = true; start(); guide('gTota', false); const my = ++T.run;
   const alive = () => T.run === my && ACTIVE === 'tota';
   const bail = () => { if (T.run === my) T.busy = false; };
   $('#tread').hidden = true; $('#tagain').hidden = true; $('#tgo').hidden = true; $('#tlabel').hidden = true; hideShare('tota'); hidePin('tota');
@@ -926,6 +927,7 @@ async function totaPlay() {
   T.busy = false;
 }
 $('#tgo').addEventListener('click', totaPlay);
+$('#tagain').addEventListener('click', () => guide('gTota', false));
 $('#tagain').addEventListener('click', totaPlay);
 T.table.addEventListener('click', () => { if (!T.busy && T.table.classList.contains('can-shuffle')) { snd('tap', { vol: .5 }); totaPlay(); } });   // tap the deck itself to shuffle
 requestAnimationFrame(totaBuild);
@@ -973,7 +975,7 @@ function spawnBalloon(slot) {
   G.balloons.push(b); return b;
 }
 function gubbaraReset() {
-  wall.replaceChildren(); G.balloons = []; G.shots = 10; G.aiming = false; G.bi = (Math.random() * 8) | 0; DONE.gubbara = false;
+  guide('gGub', true); wall.replaceChildren(); G.balloons = []; G.shots = 10; G.aiming = false; G.bi = (Math.random() * 8) | 0; DONE.gubbara = false;
   G.pool = [...INAAMS].sort(() => Math.random() - .5);
   SLOTS.forEach((_, i) => spawnBalloon(i));
   $('#gshots').innerHTML = Array.from({ length: 10 }, () => '<i></i>').join('');
@@ -1003,7 +1005,7 @@ function gubbaraLoop(now) {
 function aimAt(e) { const p = local(range, e); G.ax = clamp(p.x, 6, p.w - 6); G.ay = clamp(p.y - (e.pointerType === 'touch' && G.pad ? 70 : 0), 6, p.h * .78); }   // drag from the pad: crosshair sits above the finger; tap a balloon: fire right there
 range.addEventListener('pointerdown', e => {
   if (G.shots <= 0) return; start(); e.preventDefault();
-  G.pad = !!e.target.closest('.aimpad');
+  G.pad = !!e.target.closest('.aimpad'); guide('gGub', false);
   G.aiming = true; if (G.pad) { try { range.setPointerCapture(e.pointerId); } catch (err) {} } aimAt(e); range.classList.add('aiming');
 });
 range.addEventListener('pointermove', e => { if (G.aiming || e.pointerType === 'mouse') aimAt(e); });
@@ -1102,7 +1104,7 @@ function chhallaReset() {
   const shelf = $('#cshelf'); shelf.replaceChildren();
   R.pool = [...PRIZES.keys()].sort(() => Math.random() - .5); R.bi = (Math.random() * 5) | 0;
   for (let i = 0; i < 5; i++) shelf.append(makeBottle(i));
-  R.left = 10; R.busy = false; R.won = []; DONE.chhalla = false; ringHome(); hideShare('chhalla'); hidePin('chhalla');
+  guide('gRing', true); R.left = 10; R.busy = false; R.won = []; DONE.chhalla = false; ringHome(); hideShare('chhalla'); hidePin('chhalla');
   $('#chaul').hidden = true; $('#clist').replaceChildren(); $('#cagain').hidden = true; $('#ccoach').hidden = true;
   chhallaStatus();
 }
@@ -1111,7 +1113,7 @@ cstage.addEventListener('pointerdown', e => {
   const rr = ring.getBoundingClientRect();
   const onPad = !!e.target.closest('.launchpad, .ring');
   if (!onPad && Math.hypot(e.clientX - (rr.left + rr.width / 2), e.clientY - (rr.top + rr.height / 2)) > rr.width * 1.6) return;   // anywhere in the throw zone works
-  start(); e.preventDefault(); try { cstage.setPointerCapture(e.pointerId); } catch (err) {}
+  start(); guide('gRing', false); e.preventDefault(); try { cstage.setPointerCapture(e.pointerId); } catch (err) {}
   R.drag = { x0: e.clientX, y0: e.clientY, hist: [{ x: e.clientX, y: e.clientY, t: performance.now() }] };
   cstage.classList.add('aiming');
 });
@@ -1305,7 +1307,7 @@ function drawLoop(now) {
 function kick() { if (!D.raf) { D.last = 0; D.raf = requestAnimationFrame(drawLoop); } }
 // the whole drum is the handle: drag in any circle-ish way; a plain tap gives it a shove
 dstage.addEventListener('pointerdown', e => {
-  if (D.done) return; start(); e.preventDefault(); try { dstage.setPointerCapture(e.pointerId); } catch (err) {}
+  if (D.done) return; start(); guide('gDrum', false); e.preventDefault(); try { dstage.setPointerCapture(e.pointerId); } catch (err) {}
   D.drag = { lastX: e.clientX, lastY: e.clientY, lastT: performance.now(), moved: 0 };
   $('#dsub').textContent = 'keep turning…'; dstage.classList.add('turning'); kick();
 });
@@ -1324,7 +1326,7 @@ const endCrank = () => {
 };
 dstage.addEventListener('pointerup', endCrank); dstage.addEventListener('pointercancel', endCrank);
 $('#dspin').addEventListener('click', async () => {             // for anyone who'd rather tap
-  if (D.done || D.busy) return; start(); D.busy = true; $('#dsub').textContent = 'ghuma ghuma ke…'; kick();
+  if (D.done || D.busy) return; guide('gDrum', false); start(); D.busy = true; $('#dsub').textContent = 'ghuma ghuma ke…'; kick();
   while (!D.done && ACTIVE === 'draw') { D.vel = Math.min(900, D.vel + 140); await sleep(60); }
   D.busy = false;
 });
@@ -1348,7 +1350,7 @@ async function drawDrop() {
   $('#dagain').hidden = false;
 }
 function drawReset() {
-  D.done = false; DONE.draw = false; D.total = 0; D.vel = 0; hideShare('draw'); hidePin('draw'); $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
+  guide('gDrum', true); D.done = false; DONE.draw = false; D.total = 0; D.vel = 0; hideShare('draw'); hidePin('draw'); $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
   dstage.classList.remove('gone'); $('#dmeter').classList.remove('gone'); $('[data-panel=draw] .d-intro').classList.remove('gone');
   $('#drDrop').classList.remove('go'); $('#dsub').textContent = 'drag the drum round (or tap the button).'; drawMeter();
 }

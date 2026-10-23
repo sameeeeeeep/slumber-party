@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Teko:wght@400;500;600&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792768230">
+<link rel="stylesheet" href="style.css?v=1792769490">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -38,6 +38,14 @@
 #ldr .genda i { width: 13px; height: 13px; border-radius: 50%; background: rgba(247,230,200,.13); transition: background .35s, box-shadow .35s, transform .35s; }
 #ldr .genda i.on { background: radial-gradient(circle at 35% 35%, #ffd76a, #f08a12 60%, #c4560a); box-shadow: 0 0 8px rgba(255,170,40,.7); transform: scale(1.12); }
 #ldr .genda i.on:nth-child(3n+2) { background: radial-gradient(circle at 35% 35%, #ffe9a0, #efbd0d 60%, #b8860b); }
+#ldr .diyas { gap: 14px; margin-top: 8px; align-items: flex-end; }
+#ldr .diyas i { position: relative; width: 26px; height: 12px; border-radius: 0 0 14px 14px / 0 0 12px 12px; background: linear-gradient(#7a5530, #4a2c12) !important; box-shadow: none !important; transform: none !important; transition: background .4s; }
+#ldr .diyas i::before { content: ''; position: absolute; left: 3px; right: 3px; top: -2px; height: 4px; border-radius: 50%; background: #2a1406; }
+#ldr .diyas i b { position: absolute; left: 50%; bottom: 8px; width: 12px; height: 22px; margin-left: -6px; border-radius: 50% 50% 46% 46% / 66% 66% 34% 34%; transform-origin: 50% 92%;
+  background: radial-gradient(ellipse 50% 60% at 50% 74%, #fffef2 0, #fff1b0 30%, #ffc94d 55%, #ff8a1e 82%, #e8500f 100%); opacity: 0; transform: scale(.2); transition: opacity .35s, transform .45s cubic-bezier(.2,1.6,.4,1); }
+#ldr .diyas i.on { background: linear-gradient(#f3c45a, #b8741c 60%, #7a4210) !important; }
+#ldr .diyas i.on b { opacity: 1; transform: scale(1); animation: lflk 1s ease-in-out infinite alternate; box-shadow: 0 0 16px 5px rgba(255,170,60,.7); filter: brightness(1.15); }
+#ldr .diyas i:nth-child(2n) b { animation-duration: 1.3s; } #ldr .diyas i:nth-child(3n) b { animation-delay: -.4s; }
 @media (prefers-reduced-motion: reduce) { #ldr .flm, #ldr .halo { animation: none; } }
 </style>
 
@@ -47,7 +55,7 @@
   <div class="l-in">
     <div class="diya"><i class="halo"></i><i class="flm"></i><i class="bowl"></i></div>
     <p class="l-t" id="ldrT">your chitthi is on its way</p>
-    <div class="genda" id="ldrG"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="genda diyas" id="ldrG"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
     <p class="l-s">lighting the diyas…</p>
   </div>
 </div>
@@ -176,7 +184,7 @@
           <p class="k-sub d-intro t-intro">what does next year hold for you? the <b>tota jyotish</b> (fortune-telling parrot) knows. <b>tap the deck</b> to shuffle, the tota picks one card, and it tells your kismat for 2027. could be sweet, could be a roast.</p>
           <p class="k-sub k-status" id="tsub">the deck is ready.</p>
           <p class="res-label" id="tlabel" hidden>your kismat for 2027</p>
-          <div class="tota-table" id="ttable"><img loading="lazy" decoding="async" class="tota" id="tota" src="assets/game/parrot.webp" alt="the fortune-teller parrot"></div>
+          <div class="tota-table" id="ttable"><div class="guide g-tap" id="gTota"><i class="hand"></i><span>tap the deck to shuffle</span></div><img loading="lazy" decoding="async" class="tota" id="tota" src="assets/game/parrot.webp" alt="the fortune-teller parrot"></div>
           <div class="reading" id="tread" hidden><p class="r-kick">tota ji kehte hain…</p><p class="r-text" id="ttext"></p></div>
           <div class="k-actions"><button class="sign red" id="tgo" type="button">shuffle the deck</button><button class="sign red pin-btn" data-pin="tota" type="button" hidden>pin to the wall</button><button class="sign blue share-btn" data-share="tota" type="button" hidden>share my kismat</button><button class="sign next-btn" data-next="gubbara" type="button" hidden>next stall: gubbara →</button><button class="linkish" id="tagain" type="button" hidden>ask the tota again</button></div>
         </div>
@@ -184,7 +192,7 @@
           <h3 class="g-head"><span class="foil" data-name>dost</span>’s balloon shoot</h3>
           <p class="k-sub d-intro">every balloon on the wall hides a prize. <b>drag to aim</b> the air rifle, let go to fire. you get 10 pellets and can pop up to 4 balloons. whatever’s inside is yours.</p>
           <p class="k-sub k-status" id="gsub">0/4 popped · 10 pellets left</p>
-          <div class="range" id="range">
+          <div class="range" id="range"><div class="guide g-aim" id="gGub"><i class="hand"></i><span>drag up to aim · let go to fire</span></div>
             <div class="range-wall" id="gwall"></div>
             <i class="cross" id="cross"></i>
             <i class="aimpad" aria-hidden="true"></i>
@@ -198,7 +206,7 @@
           <h3 class="g-head"><span class="foil" data-name>dost</span>’s ring toss</h3>
           <p class="k-sub d-intro">every banta bottle has a secret prize. <b>flick a ring upwards</b> to land it on a bottle’s neck and win that prize. you get 10 rings and can win up to 2. the stall uncle will tell you how to aim.</p>
           <p class="k-sub k-status" id="csub">0/2 ringed · 10 rings left</p>
-          <div class="ring-stage" id="cstage">
+          <div class="ring-stage" id="cstage"><div class="guide g-flick" id="gRing"><i class="hand"></i><span>flick the ring up at a bottle</span></div>
             <div class="shelf" id="cshelf"></div>
             <i class="launchpad" aria-hidden="true"></i>
             <i class="ring" id="cring"></i>
@@ -213,7 +221,7 @@
           <h3 class="g-head"><span class="foil" data-name>dost</span>’s 2027 mood draw</h3>
           <p class="k-sub d-intro">what mood is next year putting you in? the drum knows. <b>turn the crank</b> and a ticket drops with your mood for 2027 (the vibe you’ll be living in), plus your lucky colour, snack and month.</p>
           <p class="k-sub k-status" id="dsub">drag the drum round (or tap the button).</p>
-          <div class="drum-stage" id="dstage">
+          <div class="drum-stage" id="dstage"><div class="guide g-spin" id="gDrum"><i class="hand"></i><span>drag the drum round</span></div>
             <img loading="lazy" decoding="async" class="dr-body" id="drBody" src="assets/game/drum_body.webp" alt="">
             <div class="dr-slips" id="drSlips"></div>
             <img loading="lazy" decoding="async" class="dr-stand" src="assets/game/drum_stand.webp" alt="">
@@ -246,8 +254,6 @@
     <div class="foot-tick"><div class="row" id="row3"></div></div>
     <figure class="foot-poster"><img loading="lazy" decoding="async" src="assets/poster.webp" alt="AAO: nailinit Diwali Party poster"><i class="fp-sheen"></i></figure>
     <p class="foot-see">see you there, <span class="foot-name" data-name>dost</span>.</p>
-    <img loading="lazy" decoding="async" src="assets/nailinit_light.webp" alt="nailinit" class="foot-nl">
-    <p>DOT Media presents · nailinit Diwali Party · powered by Bastian</p>
   </footer>
 </main>
 
@@ -285,9 +291,9 @@
   <button class="mx-pill" id="mxPlay" type="button" aria-label="Pause music"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b><span class="mx-ic" id="mxIc">❚❚</span></button>
   <a class="mx-link" id="mxLink" href="#" target="_blank" rel="noopener" aria-label="Open the playlist on YouTube">↗</a>
 </div>
-<script src="config.js?v=1792768230"></script>
-<script src="lib.js?v=1792768230"></script>
-<script src="app.js?v=1792768230"></script>
-<script src="games.js?v=1792768230"></script>
+<script src="config.js?v=1792769490"></script>
+<script src="lib.js?v=1792769490"></script>
+<script src="app.js?v=1792769490"></script>
+<script src="games.js?v=1792769490"></script>
 </body>
 </html>

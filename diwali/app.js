@@ -832,8 +832,10 @@ function frame(nowMs) {
   const lq = (Math.round(light * 40) / 40).toFixed(3);                          // only the kandils read this; scoped + rounded so it rarely restyles
   if (lq !== S.litQ) { S.litQ = lq; css(decorEl || document.documentElement, '--lit', lq); }
   // night from the first frame; the match (then the burning paper) is the only real light
-  const dark = ['reveal', 'done'].includes(S.ph) ? 0 : 1;
-  S.dark = lerp(S.dark ?? 1, dark, dark ? .08 : .045);
+  // the room only ever gets brighter once the paper catches: darkness lifts with the burn, never dips before the reveal
+  const lift = ['reveal', 'done'].includes(S.ph) ? 1 : burnP > 0 ? clamp((burnP - .45) / .5) : 0;
+  const dark = 1 - lift;
+  S.dark = dark < (S.dark ?? 1) ? lerp(S.dark ?? 1, dark, .06) : (lift > 0 ? S.dark : lerp(S.dark ?? 1, dark, .08));
   S.flash = Math.max(0, (S.flash || 0) - dt * 3.2);
   const flick = .86 + .1 * Math.sin(now * 23) + .07 * Math.sin(now * 37 + 1.3) + .05 * Math.sin(now * 11.7 + .4);
   const lights = [];
