@@ -166,12 +166,7 @@ function drawEnvelope() {
   x.setTransform(RS, 0, 0, RS, 0, 0);
   x.clearRect(0, 0, W, H);
   if (IMG.env) x.drawImage(IMG.env, 0, 0, W, H);
-  // deck lockup on the top flap: nailinit / DIWALI / P A R T Y
   x.textBaseline = 'alphabetic';
-  let ly = H * .085;
-  if (IMG.dot) { const h = u * 3.4, w = h * IMG.dot.width / IMG.dot.height; x.drawImage(IMG.dot, W / 2 - w / 2, H * .085, w, h); }
-  x.fillStyle = '#1c1410'; x.font = `600 ${u * 1.2}px "Barlow", sans-serif`; x.textAlign = 'center'; x.fillText('P R E S E N T S', W / 2, H * .085 + u * 5);
-  if (IMG.nl) { const h = u * 3.8, w = h * IMG.nl.width / IMG.nl.height; x.drawImage(IMG.nl, W / 2 - w / 2, H * .085 + u * 6.2, w, h); }
 
   // the pasted label: सेवा में, + the guest's name in Bakbak with the deck's red drop shadow
   const L0 = { x: W * .263, y: H * .659, w: W * .473, h: H * .228 };
