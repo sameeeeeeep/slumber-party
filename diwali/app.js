@@ -977,14 +977,21 @@ function finish() {
 
 /* ───────────── mohalla diwali mix: a YouTube set, visible bottom-right (YouTube needs the player on screen) ───────────── */
 const MIX = (() => {
+  // audio-only: the YouTube player is mounted at zero height and driven through its API; the pill is the only UI
   const cfg = (window.MKD && window.MKD.music) || {}, el = $('#mix');
-  let player = null, ready = false, wanted = false, userPaused = false;
   const songs = cfg.songs || (cfg.youtube ? [cfg.youtube] : []);
   if ((!songs.length && !cfg.playlist) || !el) return { start() {}, sync() {} };
-  $('#mxTitle').textContent = cfg.title || 'mohalla diwali mix';
+  let player = null, ready = false, wanted = false, userPaused = false;
+  const pill = $('#mxPlay'), ic = $('#mxIc'), title = cfg.title || 'mohalla diwali mix';
+  $('#mxTitle').textContent = title;
+  $('#mxLink').href = cfg.playlist ? `https://www.youtube.com/playlist?list=${cfg.playlist}` : `https://www.youtube.com/watch?v=${songs[0]}`;
   const playing = () => ready && player.getPlayerState && player.getPlayerState() === 1;
-  const ui = () => { const p = playing(); el.classList.toggle('on', p); $('#mxPlay').textContent = p ? '❚❚' : '▶'; $('#mxPlay').setAttribute('aria-label', p ? 'Pause music' : 'Play music'); };
-  function load() {                         // load the API early (behind the burn) so the reveal can start instantly
+  const ui = (needTap) => {
+    const p = playing(); el.classList.toggle('on', p); el.classList.toggle('tap', !p && !!needTap);
+    ic.textContent = p ? '❚❚' : '▶'; $('#mxTitle').textContent = !p && needTap ? 'tap to play the mix' : title;
+    pill.setAttribute('aria-label', p ? 'Pause music' : 'Play music');
+  };
+  function load() {
     if (window.YT && window.YT.Player) return make();
     window.onYouTubeIframeAPIReady = make;
     const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
@@ -992,19 +999,21 @@ const MIX = (() => {
   function make() {
     if (player) return;
     const pv = { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3, loop: 1 };
-    if (cfg.playlist) Object.assign(pv, { listType: 'playlist', list: cfg.playlist });   // a real YouTube playlist
-    else pv.playlist = songs.join(',');                                                    // our own queue (loops back to the first song)
-    player = new YT.Player('mxPlayer', { ...(cfg.playlist ? {} : { videoId: songs[0] }), width: '100%', height: '100%', playerVars: pv,
-      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (wanted) go(); }, onStateChange: () => { ui(); if (playing()) $('#mxTap').hidden = true; } } });
+    if (cfg.playlist) Object.assign(pv, { listType: 'playlist', list: cfg.playlist });
+    else pv.playlist = songs.join(',');
+    player = new YT.Player('mxPlayer', { ...(cfg.playlist ? {} : { videoId: songs[0] }), width: '300', height: '0', playerVars: pv,
+      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (wanted) go(); }, onStateChange: () => ui() } });
   }
   function go() {
     if (!ready || !A.on || userPaused) { ui(); return; }
     player.playVideo();
-    setTimeout(() => { if (!playing() && A.on && !userPaused) $('#mxTap').hidden = false; ui(); }, 2500);   // iPhone may need a tap inside the player
+    setTimeout(() => ui(!playing() && A.on && !userPaused), 2500);   // some phones refuse to start on their own: the pill asks for a tap
   }
-  $('#mxTap').addEventListener('click', () => { userPaused = false; $('#mxTap').hidden = true; if (ready) player.playVideo(); });
-  $('#mxPlay').addEventListener('click', () => { if (!ready) return; if (playing()) { userPaused = true; player.pauseVideo(); } else { userPaused = false; if (!A.on) sndBtn.click(); else player.playVideo(); } });
-  $('#mxMin').addEventListener('click', () => { el.classList.toggle('mini'); $('#mxMin').textContent = el.classList.contains('mini') ? '+' : '–'; });
+  pill.addEventListener('click', () => {
+    if (!ready) return;
+    if (playing()) { userPaused = true; player.pauseVideo(); }
+    else { userPaused = false; if (!A.on) sndBtn.click(); player.playVideo(); setTimeout(() => ui(!playing()), 1500); }
+  });
   setTimeout(load, 1500);
   return {
     start() { wanted = true; el.hidden = false; requestAnimationFrame(() => el.classList.add('in')); go(); },
