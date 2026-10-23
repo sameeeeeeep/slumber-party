@@ -25,7 +25,7 @@ const local = (el, e) => { const r = el.getBoundingClientRect(); return { x: e.c
 /* ═════════ share: every result becomes a story-sized card ═════════ */
 const SH = {};
 const who = () => (window.MKDGuest ? window.MKDGuest.first : 'dost');
-const SHARE_URL = 'https://diwaliparty.live/';
+const SHARE_URL = 'https://party.nailin.it/';
 const showShare = k => { const b = document.querySelector(`.share-btn[data-share="${k}"]`); if (b) b.hidden = false; };
 const hideShare = k => { const b = document.querySelector(`.share-btn[data-share="${k}"]`); if (b) b.hidden = true; };
 const loadI = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -65,7 +65,7 @@ async function renderShare(k) {
   c.font = '500 46px "Teko Text", sans-serif'; c.fillStyle = '#f7e6c8'; yy = wrap(c, d.text, W / 2, yy + 80, 900, 58);
   if (nl) c.drawImage(nl, W / 2 - 150, H - 230, 300, 300 * nl.height / nl.width);
   c.font = '600 34px "Teko Text", sans-serif'; c.fillStyle = '#efbd0d'; c.fillText('DIWALI PARTY · MOHALLA GAME CENTER', W / 2, H - 120);
-  c.fillStyle = '#f7e6c8'; c.font = '500 32px "Teko Text", sans-serif'; c.fillText('diwaliparty.live', W / 2, H - 76);
+  c.fillStyle = '#f7e6c8'; c.font = '500 32px "Teko Text", sans-serif'; c.fillText('party.nailin.it', W / 2, H - 76);
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
   return { blob, d };
 }
