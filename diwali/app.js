@@ -290,10 +290,23 @@ function renderBurn(b, t) {
 
 /* ───────────── audio (synthesised; unlocked by the first tap) ───────────── */
 const A = { on: store.get('mkd:snd') !== '0' };
+// iPhones mute Web Audio when the ringer switch is on silent; declaring the page as a media 'playback' session
+// (and nudging it with a silent <audio>) routes our sound effects like music, so they play either way.
+function unlockIOS() {
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  if (A.silentEl) return;
+  try {
+    const a = document.createElement('audio'); a.setAttribute('playsinline', ''); a.loop = true; a.volume = 0.01;
+    a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+    a.play().catch(() => {}); A.silentEl = a;
+  } catch (e) {}
+}
 function initAudio() {
-  if (A.ac) { if (A.ac.state === 'suspended') A.ac.resume(); return; }
+  unlockIOS();
+  if (A.ac) { if (A.ac.state !== 'running') A.ac.resume().catch(() => {}); return; }
   try {
     const ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state !== 'running') ac.resume().catch(() => {});
     const master = ac.createGain(); master.gain.value = A.on ? .9 : 0; master.connect(ac.destination);
     const len = ac.sampleRate * 2, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
@@ -577,7 +590,8 @@ function pup(e) {
   }
 }
 stage.addEventListener('pointerdown', pdown);
-stage.addEventListener('dragstart', e => e.preventDefault());   // no native image drag mid-swipe
+stage.addEventListener('dragstart', e => e.preventDefault());
+['touchend', 'click'].forEach(t => document.addEventListener(t, () => initAudio(), { passive: true, capture: true }));   // no native image drag mid-swipe
 stage.querySelectorAll('img').forEach(i => { i.draggable = false; });
 stage.addEventListener('pointermove', pmove);
 stage.addEventListener('pointermove', e => {
