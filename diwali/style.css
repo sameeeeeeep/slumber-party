@@ -1294,3 +1294,31 @@ html, body { overscroll-behavior-x: none; }
 .bunting .tr-l img { width: 26px !important; }
 .bunting .tr-l { top: 15px !important; }
 .bunting { height: 82px !important; }
+
+/* ═════════ one fold per game: sticky switcher + stages sized to the screen ═════════ */
+.gbar { position: fixed; left: 50%; top: 0; z-index: 45; transform: translate(-50%, -110%); transition: transform .35s cubic-bezier(.2,1,.3,1);
+  display: flex; gap: 4px; padding: 6px; margin-top: calc(env(safe-area-inset-top) + 6px); border-radius: 14px; width: min(560px, calc(100% - 16px));
+  background: rgba(42,6,4,.92); box-shadow: inset 0 0 0 1.5px var(--yellow), 0 10px 24px rgba(0,0,0,.45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.gbar.on { transform: translate(-50%, 0); }
+.gbar button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 10px; padding: 6px 4px; cursor: pointer; background: transparent; color: var(--cream); }
+.gbar button img { height: 26px; width: auto; }
+.gbar button b { font: 700 13px/1 'Barlow Condensed', var(--sans); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.gbar button.cur { background: var(--yellow); color: var(--ink); }
+@media (max-width: 420px) { .gbar button { flex-direction: column; gap: 2px; padding: 5px 2px; } .gbar button img { height: 22px; } .gbar button b { font-size: 11px; } }
+#booth { scroll-margin-top: 70px; }
+.booth { padding-top: 44px !important; }
+.booth .g-head { font-size: clamp(24px, 6vw, 34px) !important; margin-bottom: 2px !important; }
+.games .d-intro { font-size: 15px !important; line-height: 1.3 !important; margin-top: 2px !important; }
+.k-status { margin-bottom: 4px !important; }
+/* stages take what the screen allows, leaving room for the result underneath */
+.tota-table { height: min(118vw, 640px, 56svh) !important; min-height: 330px; }
+.range { height: min(122vw, 580px, 54svh) !important; min-height: 330px; }
+.ring-stage { height: min(110vw, 500px, 52svh) !important; min-height: 320px; }
+.drum-stage { width: min(360px, 84vw, 46svh) !important; }
+.reading { margin-top: 6px !important; }
+.k-actions { margin-top: 10px !important; flex-direction: row !important; flex-wrap: wrap; justify-content: center; gap: 8px !important; }
+.k-actions .sign { font-size: 16px !important; padding: 11px 16px 9px !important; }
+.k-actions .linkish { width: 100%; margin-top: 2px; }
+.game.playing .d-intro { display: none !important; }
+#tlabel { scroll-margin-top: 74px; }
+.tix { scroll-margin-top: 74px; }

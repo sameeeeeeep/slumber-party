@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Teko:wght@400;500;600&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792780073">
+<link rel="stylesheet" href="style.css?v=1792780957">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -286,14 +286,20 @@
   <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
 </button>
 
+<nav class="gbar" id="gbar" aria-label="switch game" hidden>
+  <button type="button" data-game="tota"><img src="assets/game/parrot_card.webp" alt=""><b>tota</b></button>
+  <button type="button" data-game="gubbara"><img src="assets/game/bal1.webp" alt=""><b>balloons</b></button>
+  <button type="button" data-game="chhalla"><img src="assets/game/bottle0.webp" alt=""><b>ring toss</b></button>
+  <button type="button" data-game="draw"><img src="assets/game/drum.webp" alt=""><b>lucky draw</b></button>
+</nav>
 <div id="mix" class="mix" hidden>
   <div class="mx-tv" aria-hidden="true"><div id="mxPlayer"></div></div>
   <button class="mx-pill" id="mxPlay" type="button" aria-label="Pause music"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b><span class="mx-ic" id="mxIc">❚❚</span></button>
   <a class="mx-link" id="mxLink" href="#" target="_blank" rel="noopener" aria-label="Open the playlist on YouTube">↗</a>
 </div>
-<script src="config.js?v=1792780073"></script>
-<script src="lib.js?v=1792780073"></script>
-<script src="app.js?v=1792780073"></script>
-<script src="games.js?v=1792780073"></script>
+<script src="config.js?v=1792780957"></script>
+<script src="lib.js?v=1792780957"></script>
+<script src="app.js?v=1792780957"></script>
+<script src="games.js?v=1792780957"></script>
 </body>
 </html>

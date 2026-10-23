@@ -15,7 +15,7 @@ const pop = () => { noise(.12, 'lowpass', 1600, 200, .9, 1); noise(.3, 'highpass
 const thup = () => noise(.06, 'bandpass', 900, 500, .5, 3);
 const clink = () => { noise(.05, 'bandpass', 4800, 4200, .5, 8); noise(.4, 'bandpass', 3100, 3000, .2, 14, .03); };
 const start = () => FX().initAudio();
-const guide = (id, show) => { const g = document.getElementById(id); if (g) g.classList.toggle('gone', !show); };
+const guide = (id, show) => { const g = document.getElementById(id); if (!g) return; g.classList.toggle('gone', !show); const p = g.closest('.game'); if (p) p.classList.toggle('playing', !show); };   // playing = intro folds away so the result fits
 let ACTIVE = 'tota';                                   // only the open stall may make noise
 const snd = (n, o) => { const f = FX(); if (f.play) f.play(n, o); };
 const loopVol = (n, v) => { const f = FX(); if (f.loop) f.loop(n, v); };
@@ -114,6 +114,7 @@ document.addEventListener('click', e => {
 /* the haul: every result of the night, pin or share any of it later */
 const HAUL = {};
 function haul(k, title, text, img) {
+  if (!HAUL[k] || HAUL[k].title !== title) { if (window.MKDTrack) window.MKDTrack('play', { rsvp: k, link: String(title).slice(0, 80), device: String(text).slice(0, 140) }); }
   HAUL[k] = { title, text, img };
   const row = $('#mhrow'); row.replaceChildren();
   ['tota', 'gubbara', 'chhalla', 'draw'].forEach(g => { const h = HAUL[g]; if (!h) return;
@@ -178,33 +179,24 @@ function wallCard(e) {
   c.append(art, body); return c;
 }
 let WALL = [], MINE = [];
-const WALL_FROM = new Date('2026-10-23T03:16:01+05:30');            // test pins before launch stay off the wall
 // placeholder pins (generic names) so the wall never looks empty; real pins push them out
-const SEED = [
+const SEED = [   // 5 sample cards so the wall never looks empty; real pins come first
   { name: 'Ananya K', game: 'tota', title: 'chai pe charcha', text: 'one long chai conversation in 2027 will change your mind about something big.' },
   { name: 'Kabir M', game: 'draw', title: '“i’m my own good luck charm”', text: 'good things keep finding you all year. you stop acting surprised.' },
   { name: 'Zoya S', game: 'gubbara', title: 'popped 3 balloons', text: 'the aux cord, for exactly one song · the last plate of pani puri · a free pass on one bad decision' },
   { name: 'Rohan P', game: 'chhalla', title: 'ringed 2 bottles', text: 'gossip VIP pass · the good lighting spot' },
   { name: 'Meher A', game: 'tota', title: 'nakhre unlimited', text: '2027 will put up with every one of your nakhre.' },
-  { name: 'Ishaan T', game: 'draw', title: '“delulu, but it works”', text: 'your wildest plan sounds crazy out loud, and it actually works.' },
-  { name: 'Tara D', game: 'tota', title: 'naacho gaao', text: '2027 will be full of baraats, sangeets and dance floors.' },
-  { name: 'Vikram R', game: 'chhalla', title: 'ringed 1 bottle', text: 'dance-floor immunity' },
-  { name: 'Naina B', game: 'draw', title: '“first on the dance floor”', text: 'last to leave too. every DJ will know your name.' },
-  { name: 'Kiara V', game: 'tota', title: 'kuch nahi seekhoge', text: 'in 2027 some old mistakes will be made again. with full confidence.' },
-  { name: 'Dev S', game: 'draw', title: '“my diet starts monday (every monday)”', text: 'diet, gym, journaling: all starting monday, all year long.' },
-  { name: 'Aarav J', game: 'gubbara', title: 'popped 2 balloons', text: 'the last laddoo, unclaimed · a cab that arrives in 2 minutes' },
 ];
-const parseWhen = t => { const m = String(t).match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)/); return m ? new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5]) : new Date(0); };
 const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const WS = { x: 0, w: 0, t: 0, v: 38, drag: null, raf: 0 };
 function renderWall() {          // one row, every game remixed, drifting forever (drag to scrub)
   const r = $('#wrow1'); if (!r) return;
-  const seen = new Set(MINE.map(e => e.name + '|' + e.title)), real = WALL.filter(e => !seen.has(e.name + '|' + e.title));
-  const rest = real.length + MINE.length >= 8 ? real : [...real, ...SEED];
+  const seen = new Set(MINE.map(e => shortName(e.name) + '|' + e.title)), real = WALL.filter(e => !seen.has(shortName(e.name) + '|' + e.title));
+  const rest = [...real, ...SEED];
   const all = [...MINE, ...rest];
   $('#wempty').hidden = all.length > 0;
   r.replaceChildren(); WS.w = 0; if (!all.length) return;
-  let items = [...MINE, ...shuffle(rest)];
+  let items = [...MINE, ...real, ...shuffle(SEED)];
   while (items.length < 10) items = items.concat(shuffle(all));
   [...items, ...items].forEach(e => r.appendChild(wallCard(e)));
   requestAnimationFrame(() => { WS.w = r.scrollWidth / 2; });
@@ -234,11 +226,9 @@ setInterval(() => {
 }, 2600);
 function addWallCard(e) { MINE = [e, ...MINE]; WS.x = 0; renderWall(); }
 async function loadWall() {
-  const url = window.MKD && window.MKD.rsvp && window.MKD.rsvp.wall; if (!url) return;
   try {
-    const t = await (await fetch(url + '&t=' + Date.now())).text();
-    const rows = parseCSV(t).slice(1).filter(r => r.length >= 4 && r[1]);
-    WALL = rows.map(r => ({ time: r[0], name: r[1], game: r[2], title: r[3], text: r[4] || '' })).filter(e => parseWhen(e.time) >= WALL_FROM);
+    const rows = await (await fetch((window.MKD_API || '') + '/api/wall?t=' + Date.now())).json();
+    WALL = rows.map(r => ({ time: r.ts, name: r.name, game: r.game, title: r.title, text: r.text || '' }));
     renderWall();
   } catch (e) {}
 }
@@ -259,6 +249,17 @@ function openStall(g, scroll = true) {
   if (scroll) $('#booth').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 stalls.forEach(st => st.addEventListener('click', () => { start(); snd('tap', { vol: .6 }); openStall(st.dataset.game); }));
+/* sticky mini switcher: shows while you're inside the booth and the big stall row is off-screen */
+(() => {
+  const bar = $('#gbar'), booth = $('#booth'), row = document.querySelector('.stalls-row'); if (!bar || !booth || !row) return;
+  let inBooth = false, rowVis = true;
+  const sync = () => { const on = inBooth && !rowVis; bar.hidden = false; bar.classList.toggle('on', on); };
+  new IntersectionObserver(es => es.forEach(e => { inBooth = e.isIntersecting; sync(); }), { rootMargin: '-60px 0px -40% 0px' }).observe(booth);
+  new IntersectionObserver(es => es.forEach(e => { rowVis = e.isIntersecting; sync(); }), { threshold: .15 }).observe(row);
+  bar.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { start(); snd('tap', { vol: .6 }); openStall(b.dataset.game); }));
+  const mark = () => bar.querySelectorAll('button').forEach(b => b.classList.toggle('cur', b.dataset.game === ACTIVE));
+  setInterval(mark, 400); mark();
+})();
 document.querySelectorAll('.next-btn').forEach(b => b.addEventListener('click', () => {
   snd('tap', { vol: .6 });
   if (b.dataset.next === 'haul') { $('#myhaul').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
@@ -922,6 +923,7 @@ async function totaPlay() {
   $('#ttext').textContent = reading;
   $('#tread').hidden = false; $('#tagain').hidden = false;
   $('#tsub').textContent = 'tota ji has spoken.';
+  setTimeout(() => $('#tlabel').scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);   // card + reading in one view
   SH.tota = { img: `assets/cards/${f.img}.webp?v=2`, title: f.title, text: reading, kick: `${who()}’s kismat for 2027` }; showShare('tota'); showPin('tota');
   haul('tota', f.title, reading, `assets/cards/${f.img}.webp?v=2`); DONE.tota = true;
   T.busy = false;
@@ -956,7 +958,6 @@ function addWin(list, text, img) {
   const i = document.createElement('img'); i.src = img; i.alt = '';
   const p = document.createElement('p'); p.textContent = text;
   c.append(i, p); $(list).appendChild(c);
-  c.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
 }
 const MISS_LINES = ['chook gaye!', 'thoda left, beta', 'hawa mein!', 'almost!', 'arre!', 'uncle is laughing', 'so close!', 'try again, champ'];
 const G = { balloons: [], shots: 10, aiming: false, ax: 0, ay: 0, cx: 0, cy: 0, raf: 0, t0: 0, pool: [], bi: 0 };

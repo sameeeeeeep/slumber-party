@@ -613,7 +613,13 @@ function track(event, extra = {}) {
   const body = new URLSearchParams();
   Object.entries(R.fields).forEach(([k, entry]) => body.append(entry, data[k] || ''));
   try { fetch(R.form, { method: 'POST', mode: 'no-cors', keepalive: true, body }); } catch (e) {}
+  // our own database (admin dashboard + wall): plain-text beacon, no CORS preflight
+  const api = { event, name: NAME || '', rsvp: event === 'rsvp' ? extra.rsvp : '',
+    game: (event === 'wall' || event === 'play') ? extra.rsvp : '', title: extra.link || '', text: extra.device || '' };
+  try { const b = new Blob([JSON.stringify(api)], { type: 'text/plain' }); navigator.sendBeacon ? navigator.sendBeacon(API_BASE + '/api/track', b) : fetch(API_BASE + '/api/track', { method: 'POST', body: b, keepalive: true }); } catch (e) {}
 }
+const API_BASE = /nailin\.it$|pages\.dev$/.test(location.hostname) ? '' : 'https://diwali.nailin.it';
+window.MKD_API = API_BASE;
 window.MKDTrack = (ev, extra) => track(ev, extra);
 const rsvpAsk = $('#rsvpAsk'), rsvpDone = $('#rsvpDone');
 function showRsvp(ans) {

@@ -30,7 +30,7 @@ window.MKD = {
     songs: ['4dsFQFCvVGU'],          // Kajra Re (YRF) — placeholder until the real playlist
     playlist: '',
     volume: 45,
-    start: 30,                       // seconds into the first song
+    start: 34,                       // seconds into the first song
   },
 
   rsvp: {
