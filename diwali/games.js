@@ -166,7 +166,14 @@ function wallCard(e) {
   const n = document.createElement('b'); n.className = 'wc-name'; n.textContent = W.head;
   body.append(g, n);
   if (W.title) { const t = document.createElement('p'); t.className = 'wc-title'; t.textContent = W.title; body.appendChild(t); }
-  const x = document.createElement('p'); x.className = 'wc-text'; x.textContent = W.text; body.appendChild(x);
+  const prizes = (e.game === 'gubbara' || e.game === 'chhalla') ? W.text.split(' · ').map(t => t.trim()).filter(Boolean) : [];
+  if (prizes.length > 1) {                      // several prizes: show them one at a time instead of a cramped list
+    const rot = document.createElement('div'); rot.className = 'wc-rot'; rot.dataset.n = prizes.length; rot.dataset.i = 0;
+    prizes.forEach((t, k) => { const q = document.createElement('p'); q.className = 'wc-text wc-pr' + (k ? '' : ' on'); q.textContent = t; rot.appendChild(q); });
+    const dots = document.createElement('span'); dots.className = 'wc-dots'; dots.innerHTML = prizes.map((_, k) => `<i class="${k ? '' : 'on'}"></i>`).join('');
+    rot.appendChild(dots); body.appendChild(rot);
+    art.querySelectorAll('img')[0]?.classList.add('hl');
+  } else { const x = document.createElement('p'); x.className = 'wc-text'; x.textContent = W.text; body.appendChild(x); }
   c.append(art, body); return c;
 }
 let WALL = [], MINE = [];
@@ -215,6 +222,15 @@ function wallLoop(now) {
   tr.addEventListener('pointermove', e => { if (WS.drag) WS.x = WS.drag.x0 + (e.clientX - WS.drag.x); });
   const up = () => { WS.drag = null; }; tr.addEventListener('pointerup', up); tr.addEventListener('pointercancel', up); tr.addEventListener('pointerleave', up);
 })();
+setInterval(() => {
+  if (!WS.vis) return;
+  document.querySelectorAll('#wrow1 .wc-rot').forEach(r => {
+    const n = +r.dataset.n, i = (+r.dataset.i + 1) % n; r.dataset.i = i;
+    r.querySelectorAll('.wc-pr').forEach((q, k) => q.classList.toggle('on', k === i));
+    r.querySelectorAll('.wc-dots i').forEach((d, k) => d.classList.toggle('on', k === i));
+    const imgs = r.closest('.wcard').querySelectorAll('.wc-art img'); imgs.forEach((im, k) => im.classList.toggle('hl', k === i % imgs.length));
+  });
+}, 2600);
 function addWallCard(e) { MINE = [e, ...MINE]; WS.x = 0; renderWall(); }
 async function loadWall() {
   const url = window.MKD && window.MKD.rsvp && window.MKD.rsvp.wall; if (!url) return;
@@ -530,9 +546,9 @@ function gubbaraLoop(now) {
   const sway = G.aiming ? 1 : .4;                       // a little hand sway — skill still wins
   G.cx = G.ax + Math.sin(t * 2.1) * 4 * sway; G.cy = G.ay + Math.cos(t * 1.7) * 3 * sway;
   cross.style.transform = `translate(${G.cx}px,${G.cy}px)`;
-  const W = range.clientWidth, H = range.clientHeight, bx = W * .5, by = H * 1.1;   // the shooter stands back from the counter
+  const W = range.clientWidth, H = range.clientHeight, bx = W * .5, by = H * 1.02;   // the shooter stands back from the counter
   const ang = Math.atan2(G.cy - by, G.cx - bx) * 180 / Math.PI;
-  rifle.style.left = bx + 'px'; rifle.style.top = by + 'px'; rifle.style.width = (H * .25) + 'px';
+  rifle.style.left = bx + 'px'; rifle.style.top = by + 'px'; rifle.style.setProperty('--rw', Math.min(H * .34, W * .5) + 'px');
   rifle.style.transform = `translate(0, -50%) rotate(${ang.toFixed(2)}deg) scaleY(${Math.abs(ang) > 90 ? -1 : 1})`;
   G.raf = requestAnimationFrame(gubbaraLoop);
 }

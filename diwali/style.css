@@ -1,3 +1,10 @@
+@font-face { font-family: 'Teko Text'; font-style: normal; font-weight: 100 449; font-display: swap; size-adjust: 120%; src: url(https://fonts.gstatic.com/s/teko/v23/LYjYdG7kmE0gV69VVPPdFl06VN8XG4S11zOmu1CET6g.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Teko Text'; font-style: normal; font-weight: 450 549; font-display: swap; size-adjust: 120%; src: url(https://fonts.gstatic.com/s/teko/v23/LYjYdG7kmE0gV69VVPPdFl06VN8lG4S11zOmu1CET6g.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Teko Text'; font-style: normal; font-weight: 550 900; font-display: swap; size-adjust: 120%; src: url(https://fonts.gstatic.com/s/teko/v23/LYjYdG7kmE0gV69VVPPdFl06VN_JHIS11zOmu1CET6g.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+/* Teko everywhere: titles map to Teko's bold cut whatever weight a rule asks for (title rules were written for Bakbak One's single 400) */
+@font-face { font-family: 'Teko Display'; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url(https://fonts.gstatic.com/s/teko/v23/LYjYdG7kmE0gV69VVPPdFl06VN_JHIS11zOmu1CET6g.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 /* Palette + type are lifted from the "everything diwali '26" deck — don't freestyle. */
 :root {
   --maroon: #75150f;
@@ -13,9 +20,9 @@
   --green: #2e7a3c;
   --cream: #f7e6c8;
   --ink: #1c1410;
-  --display: 'Bakbak One', 'Palanquin Dark', system-ui, sans-serif;
+  --display: 'Teko Display', 'Palanquin Dark', system-ui, sans-serif;
   --deva: 'Palanquin Dark', 'Bakbak One', system-ui, sans-serif;
-  --sans: 'Barlow', 'Palanquin Dark', system-ui, sans-serif;
+  --sans: 'Teko Text', 'Palanquin Dark', system-ui, sans-serif;
   --cond: 'Barlow Condensed', system-ui, sans-serif;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -1192,3 +1199,17 @@ html, body { overscroll-behavior-x: none; }
 .signs .sgn { position: relative; }
 .signs .sgn:nth-child(1) { z-index: 3; } .signs .sgn:nth-child(2) { z-index: 2; } .signs .sgn:nth-child(3) { z-index: 1; }
 .range .aimpad::after { left: 12px !important; right: auto !important; width: 34%; bottom: 14px !important; text-align: left !important; line-height: 1.35 !important; }
+.range .rifle { width: var(--rw, 140px) !important; max-width: none !important; }
+@media (min-width: 700px) { .range .gub { width: 13% !important; } }
+
+/* multi-prize wall cards: one prize at a time */
+.wc-rot { position: relative; min-height: 58px; }
+.wc-rot .wc-pr { position: absolute; left: 0; right: 0; top: 0; margin: 0 !important; opacity: 0; transform: translateY(8px); transition: opacity .45s, transform .45s; -webkit-line-clamp: 3; }
+.wc-rot .wc-pr.on { opacity: 1; transform: none; }
+.wc-dots { position: absolute; left: 0; bottom: -2px; display: flex; gap: 4px; }
+.wc-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(117,21,15,.25); transition: background .3s; }
+.wc-dots i.on { background: var(--red); }
+.a-balloon img { transition: transform .4s, filter .4s; filter: saturate(.75) brightness(.85); }
+.a-balloon img.hl { transform: scale(1.18) translateY(-4px); filter: none; z-index: 1; position: relative !important; }
+/* Teko's lowercase is short: size every text block by x-height so it reads like the old body size */
+.k-sub, .gc-sub, .b-note, .r-text, .mh-text, .wc-text, .t-text, .win-card p, .aao .lede, .by { letter-spacing: .01em; }
