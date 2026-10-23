@@ -77,7 +77,7 @@ const assetsReady = Promise.all([
   ...['slide1', 'strike1', 'strike2', 'flame1', 'catch1', 'burn1', 'reveal1', 'poppers1'].map(n => counted(fetch(`assets/sfx/${n}.mp3`))),   // into the HTTP cache; decoded on first tap
 ]);
 CONF.forEach(k => loadImg(k, `assets/conf/${k}.webp`));                          // confetti isn't needed until the reveal: never block on it
-const fontsReady = Promise.all(['700 20px "Palanquin Dark"', '600 20px "Palanquin Dark"', '20px "Bakbak One"', '600 20px "Clash Display"']
+const fontsReady = Promise.all(['700 20px "Palanquin Dark"', '600 20px "Palanquin Dark"', '20px "Bakbak One"', '600 20px "Clash Display"', '700 20px "Barlow Condensed"']
   .map(f => counted(document.fonts ? document.fonts.load(f, 'सेवा में Aa') : 0))).catch(() => {});
 
 /* ───────────── elements & layout ───────────── */

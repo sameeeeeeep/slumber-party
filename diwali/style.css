@@ -1091,3 +1091,10 @@ body:not(.lit) .decor .kandil .lamp img:not(.bloom) { filter: brightness(.55) sa
 .sgn.s-pink .o-k { font-family: var(--sans) !important; letter-spacing: .32em !important; font-size: 4.6cqw !important; }
 .mb-sign { white-space: normal !important; width: max-content; max-width: calc(100% - 56px); padding: 9px 26px 7px !important; }
 .mb-sign small { font-size: 9.5px !important; letter-spacing: .12em !important; }
+
+/* CTAs: tall condensed caps (Barlow Condensed) — painted-signboard / mela-ticket lettering, distinct from the chunky headings */
+:root { --cta: 'Barlow Condensed', 'Clash Display', system-ui, sans-serif; }
+.sign, .cta, .g-btn, .b-btn, #seeDetails, .autobtn, .next-btn, .sign.small { font-family: var(--cta) !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: .06em; }
+.sign, .cta, .g-btn, #seeDetails, .next-btn { font-size: 22px; }
+.mh-acts .sign.small { font-size: 15px !important; }
+.autobtn b { font-weight: 700; }
