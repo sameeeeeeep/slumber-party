@@ -1109,7 +1109,8 @@ function chhallaReset() {
 cstage.addEventListener('pointerdown', e => {
   if (R.busy || R.left <= 0) return;
   const rr = ring.getBoundingClientRect();
-  if (Math.hypot(e.clientX - (rr.left + rr.width / 2), e.clientY - (rr.top + rr.height / 2)) > rr.width * 1.6) return;
+  const onPad = !!e.target.closest('.launchpad, .ring');
+  if (!onPad && Math.hypot(e.clientX - (rr.left + rr.width / 2), e.clientY - (rr.top + rr.height / 2)) > rr.width * 1.6) return;   // anywhere in the throw zone works
   start(); e.preventDefault(); try { cstage.setPointerCapture(e.pointerId); } catch (err) {}
   R.drag = { x0: e.clientX, y0: e.clientY, hist: [{ x: e.clientX, y: e.clientY, t: performance.now() }] };
   cstage.classList.add('aiming');

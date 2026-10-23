@@ -526,7 +526,7 @@ function ignite() {
 /* pointer handling — one surface, phone and desktop */
 function pdown(e) {
   if (S.ph === 'gate' || e.target.closest('button, a, input')) return;
-  initAudio();
+  initAudio(); MIX.prime();
   ptr.down = true; ptr.id = e.pointerId; ptr.type = e.pointerType;
   ptr.x = ptr.sx = e.clientX; ptr.y = ptr.sy = e.clientY; ptr.moved = 0; ptr.hist = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
   S.idle = 0;
@@ -600,7 +600,7 @@ function runAuto() {
   S.auto = true; autoBtn.classList.add('on');
   if (S.ph === 'closed') openBox();
 }
-autoBtn.addEventListener('click', runAuto);
+autoBtn.addEventListener('click', () => { MIX.prime(); runAuto(); });
 
 /* ───────────── RSVP → Google Sheet (apps-script/rsvp.gs) ───────────── */
 let PHONE = '';
@@ -680,6 +680,7 @@ $('#seeDetails').addEventListener('click', () => $('#details').scrollIntoView({ 
 let last = performance.now(), ready = false, envShown = true;
 B.x0 = 0; B.y0 = 0;
 function frame(nowMs) {
+  if (!EB.w || vw < 50) { layout(); if (!EB.w) { requestAnimationFrame(frame); return; } envDirty = true; }   // first layout happened at zero size: retry
   requestAnimationFrame(frame);
   const dt = Math.min(.05, (nowMs - last) / 1000); last = nowMs;
   const now = nowMs / 1000;
@@ -846,6 +847,7 @@ function frame(nowMs) {
     nctx.fillStyle = `rgba(9,2,3,${(.93 * S.dark).toFixed(3)})`; nctx.fillRect(0, 0, nw, nh);
     nctx.globalCompositeOperation = 'destination-out';
     for (const L of lights) {
+      if (!(isFinite(L.x) && isFinite(L.y) && L.r > 0)) continue;   // never let one bad light kill the frame
       const g = nctx.createRadialGradient(L.x * ns, L.y * ns, 0, L.x * ns, L.y * ns, L.r * ns);
       g.addColorStop(0, `rgba(0,0,0,${L.a})`); g.addColorStop(.45, `rgba(0,0,0,${L.a * .7})`); g.addColorStop(1, 'rgba(0,0,0,0)');
       nctx.fillStyle = g; nctx.beginPath(); nctx.arc(L.x * ns, L.y * ns, L.r * ns, 0, 7); nctx.fill();
@@ -972,19 +974,22 @@ function finish() {
 
 /* ───────────── mohalla diwali mix: a YouTube set, visible bottom-right (YouTube needs the player on screen) ───────────── */
 const MIX = (() => {
-  // audio-only: the YouTube player is mounted at zero height and driven through its API; the pill is the only UI
+  // audio-only: the YouTube player is mounted invisibly and driven through its API; the pill is the only UI.
+  // phones only allow sound inside a tap, so: start MUTED on the first tap of the opening, unmute at the reveal,
+  // and if a phone still refuses, the next tap anywhere turns the sound on.
   const cfg = (window.MKD && window.MKD.music) || {}, el = $('#mix');
   const songs = cfg.songs || (cfg.youtube ? [cfg.youtube] : []);
-  if ((!songs.length && !cfg.playlist) || !el) return { start() {}, sync() {} };
-  let player = null, ready = false, wanted = false, userPaused = false;
-  const pill = $('#mxPlay'), ic = $('#mxIc'), title = cfg.title || 'mohalla diwali mix';
+  if ((!songs.length && !cfg.playlist) || !el) return { start() {}, sync() {}, prime() {} };
+  let player = null, ready = false, primed = false, revealed = false, userPaused = false, needTap = false;
+  const pill = $('#mxPlay'), ic = $('#mxIc'), title = cfg.title || 'mohalla diwali mix', START = cfg.start || 0;
   $('#mxTitle').textContent = title;
-  $('#mxLink').href = cfg.playlist ? `https://www.youtube.com/playlist?list=${cfg.playlist}` : `https://www.youtube.com/watch?v=${songs[0]}`;
+  $('#mxLink').href = cfg.playlist ? `https://www.youtube.com/playlist?list=${cfg.playlist}` : `https://www.youtube.com/watch?v=${songs[0]}&t=${START}s`;
   const playing = () => ready && player.getPlayerState && player.getPlayerState() === 1;
-  const ui = (needTap) => {
-    const p = playing(); el.classList.toggle('on', p); el.classList.toggle('tap', !p && !!needTap);
-    ic.textContent = p ? '❚❚' : '▶'; $('#mxTitle').textContent = !p && needTap ? 'tap to play the mix' : title;
-    pill.setAttribute('aria-label', p ? 'Pause music' : 'Play music');
+  const audible = () => playing() && !player.isMuted();
+  const ui = () => {
+    const on = audible(); el.classList.toggle('on', on); el.classList.toggle('tap', needTap && !on);
+    ic.textContent = on ? '❚❚' : '▶'; $('#mxTitle').textContent = needTap && !on ? 'tap for sound 🔊' : title;
+    pill.setAttribute('aria-label', on ? 'Pause music' : 'Play music');
   };
   function load() {
     if (window.YT && window.YT.Player) return make();
@@ -993,26 +998,35 @@ const MIX = (() => {
   }
   function make() {
     if (player) return;
-    const pv = { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3, loop: 1 };
+    const pv = { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3, loop: 1, start: START };
     if (cfg.playlist) Object.assign(pv, { listType: 'playlist', list: cfg.playlist });
     else pv.playlist = songs.join(',');
-    player = new YT.Player('mxPlayer', { ...(cfg.playlist ? {} : { videoId: songs[0] }), width: '300', height: '0', playerVars: pv,
-      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (wanted) go(); }, onStateChange: () => ui() } });
+    player = new YT.Player('mxPlayer', { ...(cfg.playlist ? {} : { videoId: songs[0] }), width: '200', height: '200', playerVars: pv,
+      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (primed) warm(); if (revealed) loud(); ui(); },
+        onStateChange: e => { if (e.data === 1 && hush && !revealed) player.mute(); ui(); } } });
   }
-  function go() {
-    if (!ready || !A.on || userPaused) { ui(); return; }
-    player.playVideo();
-    setTimeout(() => ui(!playing() && A.on && !userPaused), 2500);   // some phones refuse to start on their own: the pill asks for a tap
+  // inside the opening tap: start UNMUTED (that tap is what unlocks sound on phones), silence it the moment it plays
+  function warm() { if (!ready || userPaused) return; hush = true; player.setVolume(0); player.unMute(); player.seekTo(START, true); player.playVideo(); }
+  let hush = false;
+  function loud() {                         // at the reveal: same song, sound up
+    if (!ready || userPaused || !A.on) { ui(); return; }
+    hush = false; player.seekTo(START, true); player.unMute(); player.setVolume(cfg.volume || 45);   // the song starts at 0:30 on the reveal
+    if (!playing()) player.playVideo();
+    setTimeout(() => { needTap = !audible() && A.on && !userPaused; ui(); }, 1600);
   }
+  // any tap after the reveal counts as permission on strict phones
+  document.addEventListener('pointerdown', e => { if (needTap && !e.target.closest('#mix')) { needTap = false; loud(); } }, true);
   pill.addEventListener('click', () => {
     if (!ready) return;
-    if (playing()) { userPaused = true; player.pauseVideo(); }
-    else { userPaused = false; if (!A.on) sndBtn.click(); player.playVideo(); setTimeout(() => ui(!playing()), 1500); }
+    if (audible()) { userPaused = true; player.pauseVideo(); }
+    else { userPaused = false; needTap = false; if (!A.on) sndBtn.click(); player.unMute(); player.playVideo(); setTimeout(() => { needTap = !audible(); ui(); }, 1500); }
+    ui();
   });
-  setTimeout(load, 1500);
+  setTimeout(load, 600);
   return {
-    start() { wanted = true; el.hidden = false; requestAnimationFrame(() => el.classList.add('in')); go(); },
-    sync() { if (!wanted || !ready) return; if (A.on && !userPaused) player.playVideo(); else player.pauseVideo(); },
+    prime() { if (primed) return; primed = true; warm(); },                       // first tap of the opening (a real gesture)
+    start() { revealed = true; el.hidden = false; requestAnimationFrame(() => el.classList.add('in')); if (!primed) { primed = true; warm(); } loud(); },
+    sync() { if (!ready || !revealed) return; if (A.on && !userPaused) { player.unMute(); player.playVideo(); } else player.pauseVideo(); },
   };
 })();
 

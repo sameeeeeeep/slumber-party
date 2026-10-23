@@ -1224,3 +1224,10 @@ html, body { overscroll-behavior-x: none; }
 .foot-see { font: 400 clamp(26px, 7vw, 36px)/1.05 var(--display) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--yellow) !important; opacity: 1 !important; text-shadow: 2px 2px 0 var(--red); margin: 26px 0 18px; }
 .foot-see .foot-name { color: var(--cream); }
 @media (prefers-reduced-motion: reduce) { .foot-poster { animation: none; } }
+
+/* invisible player: real size (phones won't play a 0-px video), parked under the pill, fully transparent */
+.mix .mx-tv { width: 200px !important; height: 200px !important; left: 0; bottom: 0; opacity: .001 !important; pointer-events: none; z-index: -1; }
+
+/* ring toss: the ring itself must capture the flick too (it sat above the throw zone and let the page scroll) */
+.ring-stage .ring, .ring-stage .launchpad, .ring-stage .ring * { touch-action: none !important; }
+.ring-stage .launchpad { height: 46% !important; }
