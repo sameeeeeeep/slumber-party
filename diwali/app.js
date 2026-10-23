@@ -607,7 +607,8 @@ let PHONE = '';
 function track(event, extra = {}) {
   const R = C.rsvp;
   if (!R.form) return;
-  const data = { event, name: NAME || C.defaultName, phone: PHONE, rsvp: '', link: INV ? 'inv' : (qs.get('name') ? 'name' : 'typed'),
+  const parts = (NAME || '').trim().split(/\s+/).filter(Boolean);
+  const data = { event, name: NAME || C.defaultName, first: parts[0] || '', last: parts.slice(1).join(' '), phone: PHONE, rsvp: '', link: INV ? 'inv' : (qs.get('name') ? 'name' : 'typed'),
     key: INV ? 'inv:' + INV : 'name:' + (NAME || C.defaultName).toLowerCase(), device: navigator.userAgent.slice(0, 140), ...extra };
   const body = new URLSearchParams();
   Object.entries(R.fields).forEach(([k, entry]) => body.append(entry, data[k] || ''));

@@ -58,13 +58,13 @@
     <table id="tbl" hidden><thead><tr><th>Name</th><th>Link</th><th></th></tr></thead><tbody></tbody></table>
   </section>
 </main>
-<script src="config.js?v=1792779600"></script>
-<script src="lib.js?v=1792779600"></script>
+<script src="config.js?v=1792780073"></script>
+<script src="lib.js?v=1792780073"></script>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
   $('#base').value = location.href.replace(/make\.html.*$/, '');
-  const url = n => `${$('#base').value.trim()}?name=${encodeURIComponent(n.trim().toLowerCase())}`;
+  const url = n => `${$('#base').value.trim()}?name=${n.trim().toLowerCase().split(/\s+/).map(encodeURIComponent).join('+')}`;   // ?name=sameep+rehlan
   const copy = t => navigator.clipboard && navigator.clipboard.writeText(t);
   let rows = [];
   $('#bulkgo').onclick = () => {
