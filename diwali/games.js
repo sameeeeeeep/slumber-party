@@ -15,7 +15,7 @@ const pop = () => { noise(.12, 'lowpass', 1600, 200, .9, 1); noise(.3, 'highpass
 const thup = () => noise(.06, 'bandpass', 900, 500, .5, 3);
 const clink = () => { noise(.05, 'bandpass', 4800, 4200, .5, 8); noise(.4, 'bandpass', 3100, 3000, .2, 14, .03); };
 const start = () => FX().initAudio();
-const guide = (id, show) => { const g = document.getElementById(id); if (!g) return; g.classList.toggle('gone', !show); const p = g.closest('.game'); if (p) p.classList.toggle('playing', !show); };   // playing = intro folds away so the result fits
+const guide = (id, show) => { const g = document.getElementById(id); if (!g) return; g.classList.toggle('gone', !show); };
 let ACTIVE = 'tota';                                   // only the open stall may make noise
 const snd = (n, o) => { const f = FX(); if (f.play) f.play(n, o); };
 const loopVol = (n, v) => { const f = FX(); if (f.loop) f.loop(n, v); };
@@ -875,7 +875,10 @@ function fanPos(i) {
   const a = -spread + 2 * spread * i / (n - 1);
   return { x: Math.sin(rad(a)) * R, y: R - Math.cos(rad(a)) * R - 40, a };
 }
-const W_SCALE = () => (T.table.clientWidth < 420 ? 1.72 : 2);   // the picked card opens big
+const W_SCALE = () => {                     // the picked card opens big, but never bigger than the table can show
+  const want = T.table.clientWidth < 420 ? 1.72 : 2, ch = T.cards[0] ? T.cards[0].offsetHeight : 1;
+  return Math.min(want, (T.table.clientHeight - 40) / ch);
+};
 const SEEN_K = new Set();                  // don't hand the same kismat twice in one visit
 async function totaPlay() {
   if (T.busy) return; T.busy = true; start(); guide('gTota', false); const my = ++T.run;
@@ -1299,10 +1302,12 @@ function drawLoop(now) {
     s.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${s.spin.toFixed(0)}deg)`;
   });
   // ratchet clicks every quarter turn
-  if (live && Math.floor(D.ang / 90) !== D.lastClick) { D.lastClick = Math.floor(D.ang / 90); snd('ratchet', { vol: .5, rate: rnd(.9, 1.1) }); }
-  loopVol('drum', live ? Math.min(1, Math.abs(D.vel) / 600) * .9 : 0);
+  if (live && !D.done && Math.floor(D.ang / 90) !== D.lastClick) { D.lastClick = Math.floor(D.ang / 90); snd('ratchet', { vol: .5, rate: rnd(.9, 1.1) }); }
+  const dv = live && !D.done ? Math.min(1, Math.abs(D.vel) / 600) * .9 : 0;
+  loopVol('drum', dv < .03 ? 0 : dv);
   drawMeter();
   if (!D.done && D.total >= D.need) drawDrop();
+  if (D.done && Math.abs(D.vel) < 5) { D.vel = 0; D.raf = 0; loopVol('drum', 0); return; }   // ticket out: drum rests, sound off
   if (live || Math.abs(D.vel) > 1) D.raf = requestAnimationFrame(drawLoop); else { D.raf = 0; loopVol('drum', 0); }
 }
 function kick() { if (!D.raf) { D.last = 0; D.raf = requestAnimationFrame(drawLoop); } }
@@ -1332,7 +1337,7 @@ $('#dspin').addEventListener('click', async () => {             // for anyone wh
   D.busy = false;
 });
 async function drawDrop() {
-  D.done = true; $('#dspin').hidden = true;
+  D.done = true; loopVol('drum', 0); D.vel = Math.min(D.vel, 200); $('#dspin').hidden = true;
   const [name, text] = pick(MOODS), extra = `lucky colour: ${pick(LUCK.colour)} · lucky snack: ${pick(LUCK.snack)} · best month: ${pick(LUCK.month)}`;
   $('#tno').textContent = String(1000 + ((Math.random() * 9000) | 0));
   $('#tname').textContent = `“${name}”`; $('#ttext2').textContent = text; $('#textra').textContent = extra;
