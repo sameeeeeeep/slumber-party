@@ -1213,3 +1213,14 @@ html, body { overscroll-behavior-x: none; }
 .a-balloon img.hl { transform: scale(1.18) translateY(-4px); filter: none; z-index: 1; position: relative !important; }
 /* Teko's lowercase is short: size every text block by x-height so it reads like the old body size */
 .k-sub, .gc-sub, .b-note, .r-text, .mh-text, .wc-text, .t-text, .win-card p, .aao .lede, .by { letter-spacing: .01em; }
+
+/* footer: the deck's AAO poster, framed and hung */
+.foot-poster { position: relative; width: min(320px, 74vw); margin: 34px auto 18px; transform-origin: 50% -30px; animation: pcSway 6.5s ease-in-out infinite; }
+.foot-poster::before { content: ''; position: absolute; left: 50%; top: -30px; width: 2px; height: 30px; margin-left: -1px; background: linear-gradient(#c9a46a, #8a6a3a); }
+.foot-poster::after { content: ''; position: absolute; left: 50%; top: -36px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe7a3, #8a5d12); }
+.foot-poster img { display: block; width: 100%; height: auto; border-radius: 3px; box-shadow: 0 0 0 5px var(--cream), 0 0 0 7px var(--pink), 0 22px 36px rgba(20,2,1,.6); }
+.foot-poster .fp-sheen { position: absolute; inset: 0; overflow: hidden; border-radius: 3px; pointer-events: none; }
+.foot-poster .fp-sheen::before { content: ''; position: absolute; inset: 0 -100%; background: linear-gradient(115deg, transparent 42%, rgba(255,250,225,.35) 49%, transparent 56%); animation: sheenSlide 5s ease-in-out infinite; }
+.foot-see { font: 400 clamp(26px, 7vw, 36px)/1.05 var(--display) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--yellow) !important; opacity: 1 !important; text-shadow: 2px 2px 0 var(--red); margin: 26px 0 18px; }
+.foot-see .foot-name { color: var(--cream); }
+@media (prefers-reduced-motion: reduce) { .foot-poster { animation: none; } }
