@@ -1322,3 +1322,7 @@ html, body { overscroll-behavior-x: none; }
 .game.playing .d-intro { display: none !important; }
 #tlabel { scroll-margin-top: 74px; }
 .tix { scroll-margin-top: 74px; }
+
+/* opening scene: images are never draggable/selectable (the browser's image-drag was hijacking the match swipe) */
+#stage img, #stage canvas { -webkit-user-drag: none; user-drag: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#stage .box img, #stage .match img, #stage .drawer img { pointer-events: none; }

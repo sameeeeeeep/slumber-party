@@ -577,6 +577,8 @@ function pup(e) {
   }
 }
 stage.addEventListener('pointerdown', pdown);
+stage.addEventListener('dragstart', e => e.preventDefault());   // no native image drag mid-swipe
+stage.querySelectorAll('img').forEach(i => { i.draggable = false; });
 stage.addEventListener('pointermove', pmove);
 stage.addEventListener('pointermove', e => {
   if (e.pointerType !== 'mouse') return;
