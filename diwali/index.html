@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792733450">
+<link rel="stylesheet" href="style.css?v=1792738633">
 </head>
 <body class="locked">
 
@@ -113,33 +113,35 @@
 
   <section class="wall2" id="wall">
     <h2>mohalle ki deewar</h2>
-    <p class="gc-sub">what the mohalla got so far. play below, pin yours.</p>
+    <p class="gc-sub">what everyone got at the mela games below: 2027 kismats, balloon and ring-toss prizes, 2027 moods. play yours, then pin it here.</p>
     <div class="w-track"><div class="w-row" id="wrow1"></div></div>
     <p class="w-empty" id="wempty">deewar khaali hai. be the first to pin.</p>
   </section>
   <section class="games" id="games">
     <h2>mohalla game center</h2>
-    <p class="gc-sub">khelo. pata chalega.</p>
+    <p class="gc-sub">four mela stalls. each one tells you something about your 2027. play them in order, then pin or share what you get.</p>
     <div class="stalls-row" role="tablist">
-      <button class="stall on" data-game="tota" type="button"><span class="aw"></span><img loading="lazy" decoding="async" src="assets/game/parrot_card.webp" alt=""><b>tota jyotish</b><small>the parrot picks your kismat</small></button>
-      <button class="stall" data-game="gubbara" type="button"><span class="aw"></span><img loading="lazy" decoding="async" src="assets/game/bal1.webp" alt=""><b>gubbara</b><small>pop up to 4 · 10 pellets</small></button>
-      <button class="stall" data-game="chhalla" type="button"><span class="aw"></span><img loading="lazy" decoding="async" src="assets/game/bottle0.webp" alt=""><b>ring toss</b><small>ring up to 2 · 10 rings</small></button>
+      <button class="stall on" data-game="tota" type="button"><span class="aw"></span><img loading="lazy" decoding="async" src="assets/game/parrot_card.webp" alt=""><b>tota jyotish</b><small>your 2027 kismat</small></button>
+      <button class="stall" data-game="gubbara" type="button"><span class="aw"></span><img loading="lazy" decoding="async" src="assets/game/bal1.webp" alt=""><b>gubbara</b><small>shoot for prizes</small></button>
+      <button class="stall" data-game="chhalla" type="button"><span class="aw"></span><img loading="lazy" decoding="async" src="assets/game/bottle0.webp" alt=""><b>ring toss</b><small>ring a prize</small></button>
       <button class="stall" data-game="draw" type="button"><span class="aw"></span><img loading="lazy" decoding="async" src="assets/game/drum.webp" alt=""><b>lucky draw</b><small>your 2027 mood</small></button>
     </div>
     <div class="booth" id="booth">
       <div class="booth-aw"></div>
       <div class="booth-in">
         <div class="game" data-panel="tota">
-          <h3 class="g-head"><span class="foil" data-name>dost</span> ki kismat</h3>
-          <p class="k-sub" id="tsub">tap the deck to shuffle. the tota picks what next year holds for you.</p>
+          <h3 class="g-head"><span class="foil" data-name>dost</span>’s 2027 kismat</h3>
+          <p class="k-sub d-intro t-intro">what does next year hold for you? the <b>tota jyotish</b> (fortune-telling parrot) knows. <b>tap the deck</b> to shuffle, the tota picks one card, and it tells your kismat for 2027. could be sweet, could be a roast.</p>
+          <p class="k-sub k-status" id="tsub">the deck is ready.</p>
           <p class="res-label" id="tlabel" hidden>your kismat for 2027</p>
           <div class="tota-table" id="ttable"><img loading="lazy" decoding="async" class="tota" id="tota" src="assets/game/parrot.webp" alt="the fortune-teller parrot"></div>
           <div class="reading" id="tread" hidden><p class="r-kick">tota ji kehte hain…</p><p class="r-text" id="ttext"></p></div>
           <div class="k-actions"><button class="sign red" id="tgo" type="button">shuffle the deck</button><button class="sign red pin-btn" data-pin="tota" type="button" hidden>pin to the wall</button><button class="sign blue share-btn" data-share="tota" type="button" hidden>share my kismat</button><button class="sign next-btn" data-next="gubbara" type="button" hidden>next stall: gubbara →</button><button class="linkish" id="tagain" type="button" hidden>ask the tota again</button></div>
         </div>
         <div class="game" data-panel="gubbara" hidden>
-          <h3 class="g-head">gubbara phod, <span class="foil" data-name>dost</span></h3>
-          <p class="k-sub" id="gsub">drag to aim, let go to fire. pop up to 4, 10 pellets.</p>
+          <h3 class="g-head"><span class="foil" data-name>dost</span>’s balloon shoot</h3>
+          <p class="k-sub d-intro">every balloon on the wall hides a prize. <b>drag to aim</b> the air rifle, let go to fire. you get 10 pellets and can pop up to 4 balloons. whatever’s inside is yours.</p>
+          <p class="k-sub k-status" id="gsub">0/4 popped · 10 pellets left</p>
           <div class="range" id="range">
             <div class="range-wall" id="gwall"></div>
             <i class="cross" id="cross"></i>
@@ -151,7 +153,8 @@
         </div>
         <div class="game" data-panel="chhalla" hidden>
           <h3 class="g-head"><span class="foil" data-name>dost</span>’s ring toss</h3>
-          <p class="k-sub" id="csub">flick a ring onto a bottle. ring up to 2, 10 rings.</p>
+          <p class="k-sub d-intro">every banta bottle has a secret prize. <b>flick a ring upwards</b> to land it on a bottle’s neck and win that prize. you get 10 rings and can win up to 2. the stall uncle will tell you how to aim.</p>
+          <p class="k-sub k-status" id="csub">0/2 ringed · 10 rings left</p>
           <div class="ring-stage" id="cstage">
             <div class="shelf" id="cshelf"></div>
             <i class="ring" id="cring"></i>
@@ -164,8 +167,8 @@
         </div>
         <div class="game" data-panel="draw" hidden>
           <h3 class="g-head"><span class="foil" data-name>dost</span>’s 2027 mood draw</h3>
-          <p class="k-sub d-intro">what mood is next year putting you in? the drum knows. <b>turn the crank</b> and a ticket drops with your mood for 2027, your lucky colour, snack and month.</p>
-          <p class="k-sub" id="dsub">drag the drum round (or tap the button).</p>
+          <p class="k-sub d-intro">what mood is next year putting you in? the drum knows. <b>turn the crank</b> and a ticket drops with your mood for 2027 (the vibe you’ll be living in), plus your lucky colour, snack and month.</p>
+          <p class="k-sub k-status" id="dsub">drag the drum round (or tap the button).</p>
           <div class="drum-stage" id="dstage">
             <img loading="lazy" decoding="async" class="dr-body" id="drBody" src="assets/game/drum_body.webp" alt="">
             <div class="dr-slips" id="drSlips"></div>
@@ -231,9 +234,9 @@
   <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="w" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
 </button>
 
-<script src="config.js?v=1792733450"></script>
-<script src="lib.js?v=1792733450"></script>
-<script src="app.js?v=1792733450"></script>
-<script src="games.js?v=1792733450"></script>
+<script src="config.js?v=1792738633"></script>
+<script src="lib.js?v=1792738633"></script>
+<script src="app.js?v=1792738633"></script>
+<script src="games.js?v=1792738633"></script>
 </body>
 </html>

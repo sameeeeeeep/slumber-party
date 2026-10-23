@@ -37,7 +37,7 @@ async function renderShare(k) {
   const d = k === 'invite'
     ? { img: 'assets/invite_card.webp', title: `${who()} is invited!`, text: 'nailinit diwali party · dress loud, gossip louder.', kick: 'chitthi aayi hai' }
     : k === 'gubbara'
-      ? { img: 'assets/game/bal1.webp', title: `${who()} popped ${document.querySelectorAll('#glist .win-card').length} balloons`, text: [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent).join(' · '), kick: 'gubbara phod' }
+      ? { img: 'assets/game/bal1.webp', title: `${who()} popped ${document.querySelectorAll('#glist .win-card').length} balloons and won`, text: [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent).join(' · '), kick: 'mela balloon shoot' }
       : SH[k];
   if (!d) return null;
   const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
@@ -147,35 +147,43 @@ function wallArt(e) {                          // the illustration that goes wit
   if (e.game === 'chhalla') return { src: `assets/game/bottle${hashN(e.name + e.title, 5)}.webp`, kind: 'bottle' };
   return { src: 'assets/game/ticket.webp', kind: 'ticket' };
 }
+function wallWords(e) {                         // every card says, in plain words, what this result is
+  const nm = shortName(e.name), n = +((e.title.match(/\d+/) || [0])[0]);
+  if (e.game === 'tota') return { tag: 'tota jyotish', head: `${nm}’s kismat for 2027`, title: e.title, text: e.text };
+  if (e.game === 'draw') return { tag: 'lucky draw', head: `${nm}’s mood for 2027`, title: e.title, text: e.text };
+  if (e.game === 'gubbara') return { tag: 'balloon shoot', head: n ? `${nm} popped ${n} balloon${n > 1 ? 's' : ''} and won` : `${nm} missed every balloon`, title: '', text: e.text };
+  return { tag: 'ring toss', head: n ? `${nm} ringed ${n} bottle${n > 1 ? 's' : ''} and won` : `${nm} vs the banta: the banta won`, title: '', text: e.text };
+}
 function wallCard(e) {
   const c = document.createElement('div'); c.className = 'wcard w-' + (GAME_ICON[e.game] ? e.game : 'tota');
   const art = document.createElement('div'); const A = wallArt(e); art.className = 'wc-art a-' + A.kind;
-  const reps = A.kind === 'balloon' ? A.n : 1;
+  const reps = A.kind === 'balloon' ? Math.max(1, A.n) : 1;
   for (let k = 0; k < reps; k++) { const i = document.createElement('img'); i.src = A.kind === 'balloon' ? `assets/game/bal${(hashN(e.name, 8) + k * 3) % 8}.webp` : A.src; i.alt = ''; i.loading = 'lazy'; i.style.setProperty('--k', k); art.appendChild(i); }
   if (A.kind === 'bottle') { const h = document.createElement('i'); h.className = 'wc-hoop'; art.appendChild(h); }
-  if (A.kind === 'ticket') { const t = document.createElement('b'); t.className = 'wc-tix'; t.textContent = e.title.replace(/[“”]/g, ''); art.appendChild(t); }
-  const body = document.createElement('div'); body.className = 'wc-body';
-  const g = document.createElement('span'); g.className = 'wc-game'; g.textContent = GAME_NAME[e.game] || e.game;
-  const n = document.createElement('b'); n.className = 'wc-name'; n.textContent = shortName(e.name);
-  const t = document.createElement('p'); t.className = 'wc-title'; t.textContent = e.title;
-  const x = document.createElement('p'); x.className = 'wc-text'; x.textContent = e.text;
-  body.append(g, n, t, x); c.append(art, body); return c;
+  if (A.kind === 'ticket') { const t = document.createElement('b'); t.className = 'wc-tix'; const k = document.createElement('small'); k.textContent = 'my mood for 2027'; t.append(k, document.createTextNode(e.title.replace(/[“”]/g, ''))); art.appendChild(t); }
+  const W = wallWords(e), body = document.createElement('div'); body.className = 'wc-body';
+  const g = document.createElement('span'); g.className = 'wc-game'; g.textContent = W.tag;
+  const n = document.createElement('b'); n.className = 'wc-name'; n.textContent = W.head;
+  body.append(g, n);
+  if (W.title) { const t = document.createElement('p'); t.className = 'wc-title'; t.textContent = W.title; body.appendChild(t); }
+  const x = document.createElement('p'); x.className = 'wc-text'; x.textContent = W.text; body.appendChild(x);
+  c.append(art, body); return c;
 }
 let WALL = [], MINE = [];
 const WALL_FROM = new Date('2026-10-23T03:16:01+05:30');            // test pins before launch stay off the wall
 // placeholder pins (generic names) so the wall never looks empty; real pins push them out
 const SEED = [
   { name: 'Ananya K', game: 'tota', title: 'chai pe charcha', text: 'one long chai conversation next year changes your mind about something big.' },
-  { name: 'Kabir M', game: 'draw', title: '“i’m my own good luck charm”', text: 'good things keep finding you. lucky snack: jalebi.' },
+  { name: 'Kabir M', game: 'draw', title: '“i’m my own good luck charm”', text: 'good things keep finding you all year. you stop acting surprised.' },
   { name: 'Zoya S', game: 'gubbara', title: 'popped 3 balloons', text: 'the aux cord, for exactly one song · the last plate of pani puri · a free pass on one bad decision' },
   { name: 'Rohan P', game: 'chhalla', title: 'ringed 2 bottles', text: 'gossip VIP pass · the good lighting spot' },
   { name: 'Meher A', game: 'tota', title: 'nakhre unlimited', text: 'next year, your nakhre get accepted without question.' },
-  { name: 'Ishaan T', game: 'draw', title: '“delulu, but i deliver”', text: 'the plan sounds crazy out loud. it works anyway.' },
+  { name: 'Ishaan T', game: 'draw', title: '“delulu, but it works”', text: 'your wildest plan sounds crazy out loud, and it actually works.' },
   { name: 'Tara D', game: 'tota', title: 'naacho gaao', text: 'a year of baraats, sangeets and dance floors.' },
   { name: 'Vikram R', game: 'chhalla', title: 'ringed 1 bottle', text: 'dance-floor immunity' },
-  { name: 'Naina B', game: 'draw', title: '“first on the dance floor”', text: 'last to leave. the DJ knows your name.' },
+  { name: 'Naina B', game: 'draw', title: '“first on the dance floor”', text: 'last to leave too. every DJ will know your name.' },
   { name: 'Kiara V', game: 'tota', title: 'kuch nahi seekhoge', text: 'some old mistakes will be made again. with full confidence.' },
-  { name: 'Dev S', game: 'draw', title: '“monday se pakka”', text: 'diet, gym, journaling. all starting monday. every monday.' },
+  { name: 'Dev S', game: 'draw', title: '“my diet starts monday (every monday)”', text: 'diet, gym, journaling: all starting monday, all year long.' },
   { name: 'Aarav J', game: 'gubbara', title: 'popped 2 balloons', text: 'the last laddoo, unclaimed · a cab that arrives in 2 minutes' },
 ];
 const parseWhen = t => { const m = String(t).match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)/); return m ? new Date(+m[3], m[2] - 1, +m[1], +m[4], +m[5]) : new Date(0); };
@@ -229,7 +237,7 @@ function openStall(g, scroll = true) {
   document.querySelectorAll('.game[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== g; });
   if (g === 'gubbara') { if (DONE.gubbara) gubbaraResume(); else gubbaraReset(); }
   if (g === 'chhalla' && !DONE.chhalla) chhallaReset();
-  if (g === 'tota' && (T.busy || !DONE.tota)) { T.busy = false; requestAnimationFrame(totaBuild); $('#tgo').hidden = false; $('#tsub').textContent = 'tap the deck to shuffle. the tota picks what next year holds for you.'; }
+  if (g === 'tota' && (T.busy || !DONE.tota)) { T.busy = false; requestAnimationFrame(totaBuild); $('#tgo').hidden = false; $('#tsub').textContent = 'the deck is ready.'; }
   if (g === 'draw') { if (!D.done) drawReset(); kick(); }
   if (scroll) $('#booth').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -506,7 +514,7 @@ function gubbaraReset() {
   SLOTS.forEach((_, i) => spawnBalloon(i));
   $('#gshots').innerHTML = Array.from({ length: 10 }, () => '<i></i>').join('');
   $('#ghaul').hidden = true; $('#glist').replaceChildren(); $('#gagain').hidden = true; hideShare('gubbara'); hidePin('gubbara');
-  $('#gsub').textContent = `drag to aim, let go to fire. pop up to ${MAX_POP}, 10 pellets.`;
+  $('#gsub').textContent = `0/${MAX_POP} popped · 10 pellets left`;
   requestAnimationFrame(() => { const r0 = range.getBoundingClientRect(); G.ax = r0.width / 2; G.ay = r0.height * .35; });
   cancelAnimationFrame(G.raf); G.t0 = performance.now(); G.raf = requestAnimationFrame(gubbaraLoop);
 }
@@ -613,7 +621,7 @@ const cstage = $('#cstage'), ring = $('#cring'), aimLine = $('#caimline');
 const csnd = (n, o) => { if (ACTIVE === 'chhalla') snd(n, o); };
 function ringHome() { ring.getAnimations().forEach(a => a.cancel()); ring.style.opacity = 1; ring.style.transform = 'translate(-50%, 0)'; }
 function chhallaStatus() {
-  $('#csub').textContent = R.left > 0 ? `${R.won.length}/${MAX_RING} ringed · ${R.left} ring${R.left > 1 ? 's' : ''} left. flick one up onto a bottle.` : 'all rings thrown!';
+  $('#csub').textContent = R.left > 0 ? `${R.won.length}/${MAX_RING} ringed · ${R.left} ring${R.left > 1 ? 's' : ''} left` : 'all rings thrown!';
   $('#crings').innerHTML = Array.from({ length: 10 }, (_, i) => `<i class="${i < 10 - R.left ? 'used' : ''}"></i>`).join('');
 }
 function makeBottle(i) {
@@ -710,7 +718,7 @@ async function chhallaThrow(vx, vy) {
     if (!n) { addWin('#clist', 'the banta stays undefeated: one free nimbu soda, on the house.', 'assets/game/bottle0.webp'); $('#chaul').hidden = false; csnd('fail', { vol: .6 }); }
     $('#csub').textContent = n >= MAX_RING ? `both bottles ringed! maximum loot.` : n ? `${n} ring landed! here’s what you won.` : 'no rings this time. one more go?';
     const wins = [...document.querySelectorAll('#clist .win-card p')].map(p => p.textContent);
-    SH.chhalla = { img: 'assets/game/bottle0.webp', title: n ? `ringed ${n} bottle${n > 1 ? 's' : ''}` : 'the banta won', text: wins.join(' · '), kick: `${who()}’s ring toss` };
+    SH.chhalla = { img: 'assets/game/bottle0.webp', title: n ? `ringed ${n} bottle${n > 1 ? 's' : ''} and won` : 'the banta won', text: wins.join(' · '), kick: `${who()}’s ring toss prizes` };
     showShare('chhalla'); showPin('chhalla');
     haul('chhalla', SH.chhalla.title, wins.join(' · '), 'assets/game/bottle0.webp');
   }
@@ -719,87 +727,81 @@ async function chhallaThrow(vx, vy) {
 $('#cagain').addEventListener('click', chhallaReset);
 
 /* ═════════ lucky draw — your mood for 2027. a real crank; mood × colour × snack × month = thousands of tickets ═════════ */
-const MOODS = [
-  ['i’m my own good luck charm', 'good things keep finding you. you stop acting surprised.'],
-  ['i’m the main character, no notes', 'every room you walk into is your entrance scene. walk slower.'],
-  ['soft life, strict boundaries', 'yes to rest, no to “bas 5 minute ka kaam hai”.'],
-  ['delulu, but i deliver', 'the plan sounds crazy out loud. it works anyway.'],
-  ['nothing rattles me', 'not even the family group chat. zen master.'],
-  ['i reply when i feel like it', 'nakhre on, notifications off. it suits you.'],
-  ['my life is a full filmy montage', 'slow-motion entries, dramatic exits, at least one rain scene.'],
-  ['unbothered, moisturised, thriving', 'let them talk. you’re busy glowing.'],
-  ['chaos, but make it cute', 'last-minute plans turn into the best memories of the year.'],
-  ['tired, but iconic', 'running on chai and charisma. still the best dressed in the room.'],
-  ['i’m in my budget era (on paper)', 'you’ll make a gorgeous budget in january. framing it counts.'],
-  ['i’m the plot twist', 'nobody saw your year coming. least of all you.'],
-  ['i fix everything', 'the wifi, the plan, the family drama. ghar ka hero.'],
-  ['passport out, always', 'at least one trip gets booked at 2am. zero regrets.'],
-  ['glow-up loading', 'new habits actually stick this time. people ask what changed.'],
-  ['i left the chat', 'you see the drama coming and simply… leave.'],
-  ['yes to every invite', 'your calendar needs its own calendar.'],
-  ['happily hermit', 'cancelled plans, cosy nights, zero guilt. bliss.'],
-  ['i asked, i got', 'the raise, the upgrade, the extra gulab jamun. just ask.'],
-  ['my side hustle is thriving', 'one small idea turns into real money. tell nobody till it works.'],
-  ['jugaad is my love language', 'no plan? a safety pin, a smile, and it all works.'],
-  ['first on the dance floor', 'last to leave. the DJ knows your name.'],
-  ['every outfit is a statement', 'the mohalla starts copying you by march.'],
-  ['sweet like kaju katli', 'everyone wants a piece of you next year. share wisely.'],
-  ['spicy like hari mirchi', 'sharp tongue, warm heart, zero tolerance for nonsense.'],
-  ['protecting my peace', 'you guard it like it’s the last samosa.'],
-  ['i say it like it is', 'you say what everyone’s thinking. they love you for it.'],
+const MOODS = [   // each title must make sense on its own after "my mood for 2027:"; the line under it says what that year looks like
+  // sweet
+  ['i’m my own good luck charm', 'good things keep finding you all year. you stop acting surprised.'],
+  ['main character, no notes', 'every room you walk into next year is your entrance scene.'],
+  ['soft life, strict boundaries', 'more rest, fewer favours. “bas 5 minute ka kaam hai” gets a no.'],
+  ['delulu, but it works', 'your wildest plan sounds crazy out loud, and it actually works.'],
+  ['calm. nothing rattles me', 'not even the family group chat. full zen all year.'],
+  ['unbothered and glowing', 'people talk, you glow. that’s the whole year.'],
+  ['chaotic, but cute', 'last-minute plans that turn into the best memories of the year.'],
+  ['tired, but iconic', 'running on chai and charisma, still the best dressed in the room.'],
+  ['passport ready, always', 'at least one trip gets booked at 2am. zero regrets.'],
+  ['glow-up in progress', 'new habits finally stick. people ask what changed.'],
+  ['saying yes to every invite', 'your calendar needs its own calendar.'],
+  ['happily staying in', 'cancelled plans, cosy nights, zero guilt. bliss.'],
+  ['ask for it, get it', 'the raise, the upgrade, the extra gulab jamun. you just ask.'],
+  ['side-hustle mode', 'one small idea turns into real money. tell nobody till it works.'],
+  ['jugaad queen', 'no plan? a safety pin and a smile, and somehow it all works.'],
+  ['first on the dance floor', 'last to leave too. every DJ will know your name.'],
+  ['dressed to be copied', 'every outfit is a statement. the mohalla copies you by march.'],
+  ['sweet as kaju katli', 'everyone wants a bit of your time next year. share wisely.'],
+  ['spicy as hari mirchi', 'sharp tongue, warm heart, zero tolerance for nonsense.'],
+  ['protecting my peace', 'you guard it like it’s the last samosa on the plate.'],
+  ['saying it like it is', 'you say what everyone’s thinking. they love you for it.'],
   ['secretly a softie', 'you’ll cry at a wedding you didn’t even want to go to.'],
-  ['new city, who dis', 'a move, a new address, or at least a new favourite café.'],
-  ['healing, but make it fashion', 'therapy on tuesday, brunch on sunday, outfit on point.'],
-  ['chai over drama', 'you settle every fight with two cutting chais. diplomat.'],
+  ['new city, new me', 'a move, a new address, or at least a new favourite café.'],
+  ['healing, but stylish', 'therapy on tuesday, brunch on sunday, outfit on point.'],
+  ['peacemaker over chai', 'you settle every fight with two cutting chais.'],
   ['on a lucky streak', 'parking spots, upgrades, the last piece of cake. all yours.'],
-  ['rich aunty in training', 'big sunglasses, bigger plans, a portfolio in progress.'],
-  ['unreachable (in a good way)', 'out living life. leave a voice note.'],
-  ['golden retriever energy', 'excited about everything, friends with everyone.'],
-  ['mysterious and selective', 'black-cat energy. annoyingly cool.'],
+  ['rich aunty in training', 'big sunglasses, bigger plans, a savings account that grows.'],
+  ['unreachable (in a good way)', 'you’re out living life. leave a voice note.'],
+  ['excited about everything', 'golden-retriever energy: friends with everyone, tail wagging.'],
+  ['mysterious and selective', 'black-cat energy. annoyingly cool, hard to impress.'],
   ['a morning person now (shock)', 'sunrise walks. nobody recognises you anymore.'],
   ['night owl royalty', 'best ideas at 2am, best stories at 4am.'],
-  ['i colour-code my feelings', 'trips, birthdays, emotions. all in one spreadsheet.'],
-  ['going with the flow', 'no plans, all vibes, everything lands anyway.'],
-  ['no regrets, only stories', 'you say yes to the scary thing. it pays off big.'],
-  ['my friends’ loudest cheerleader', 'they win more because you’re in the front row.'],
-  ['quietly winning', 'no announcements. just results.'],
-  ['surviving shaadi season in style', 'six weddings, four sangeets, one perfectly repeated lehenga.'],
-  ['nani’s favourite, officially', 'family approval rating at an all-time high. use it.'],
-  ['someone has a crush on me', 'you’ll find out by holi. act natural.'],
-  ['manifesting, aggressively', 'the vision board goes up, and for once it listens.'],
-  ['touching grass, loving it', 'less scrolling, more sunsets. weirdly, it’s great.'],
-  ['ride or die for my people', 'they’ll need you next year. you show up every time.'],
-  ['slow start, big burst', 'anaar energy. you start quiet, then light up the whole sky.'],
-  ['small sparks everywhere', 'phuljhadi mood. impossible to ignore.'],
-  ['still glowing, thanks', 'things try to blow you out. you keep burning bright.'],
-  ['out of office, mentally and physically', 'you finally take the leave, and actually switch off.'],
-  ['gym era (for real this time)', 'three times a week. people notice. you mention it.'],
-  ['my dish is famous now', 'one recipe becomes legendary. everyone wants the secret.'],
-  ['i text first, no ego', 'you make the call. good things follow.'],
+  ['going with the flow', 'no plans, all vibes, and it all lands anyway.'],
+  ['brave enough to try', 'you say yes to the scary thing, and it pays off.'],
+  ['my friends’ biggest cheerleader', 'they win more next year because you’re in the front row.'],
+  ['quietly winning', 'no announcements, no posts. just results.'],
+  ['shaadi-season ready', 'six weddings, four sangeets, one perfectly repeated lehenga.'],
+  ['family favourite', 'your approval rating at home hits an all-time high.'],
+  ['someone’s crushing on me', 'you’ll find out who by holi. act natural.'],
+  ['manifesting, hard', 'the vision board goes up, and for once it listens.'],
+  ['offline and loving it', 'less scrolling, more sunsets. weirdly, it’s great.'],
+  ['ride or die for my people', 'they’ll need you next year, and you’ll show up every time.'],
+  ['slow start, big finish', 'like an anaar: quiet at first, then you light up the whole sky.'],
+  ['sparkling, like a phuljhadi', 'small sparks of fun wherever you go.'],
+  ['still glowing, thanks', 'things try to dim you next year. you keep shining.'],
+  ['fully on leave', 'you finally take the holiday, and actually switch off.'],
+  ['gym era (for real)', 'three times a week. people notice. you mention it.'],
+  ['famous for one dish', 'one recipe becomes legendary. everyone wants the secret.'],
+  ['texting first, no ego', 'you make the call, and good things follow.'],
   ['a compliment magnet', 'strangers stop you to ask where it’s from.'],
-  ['standards: sky high', 'only premium people get access next year.'],
-  ['bas, ho gaya', 'you finally close the chapter that kept dragging. lighter already.'],
-  ['full paisa vasool', 'every plan, every trip, every rupee: worth it.'],
-  ['i’m the vibe', 'parties start when you arrive. that’s just facts.'],
-  ['calm, rich and slightly smug', 'things work out. you knew they would.'],
-  ['monday se pakka', 'diet, gym, journaling. all starting monday. every monday.'],
-  ['seen at 2:14am', 'you read it. you’ll reply in 3–5 business days.'],
-  ['just one more episode', 'it’s 4am. it’s always 4am.'],
-  ['my budget is a suggestion', 'the sale said 70% off. your bank said 100% gone.'],
+  ['standards: sky high', 'only premium people get your time next year.'],
+  ['finally letting go', 'you close the chapter that kept dragging. lighter already.'],
+  ['worth every rupee', 'every plan, every trip, every splurge: full paisa vasool.'],
+  ['i’m the vibe', 'parties start when you walk in. that’s just facts.'],
+  ['calm, rich and slightly smug', 'things work out, and you knew they would.'],
+  // roasts
+  ['my diet starts monday (every monday)', 'diet, gym, journaling: all starting monday, all year long.'],
+  ['seen, will reply in 3–5 days', 'you read every message instantly and answer a week later.'],
+  ['“just one more episode”', 'it’s 4am. it’s always 4am.'],
+  ['my budget is a suggestion', 'the sale said 70% off. your bank account said 100% gone.'],
   ['overthinking, professionally', 'every text gets three drafts and a group-chat review.'],
-  ['cancelling plans is my cardio', 'you’ll RSVP yes to everything and show up to half.'],
-  ['i said i’m fine (i’m not fine)', 'but the outfit is fine. the outfit is great.'],
-  ['running on 2% battery', 'phone and person. both need a charger.'],
-  ['i’ll leave by 10 (left at 4)', 'the last one to leave every party. again.'],
-  ['iced coffee in december', 'you’re a little unhinged and it’s working for you.'],
-  ['“in my time…” (aunty in denial)', 'you’ll say it twice a week and mean it every time.'],
-  ['i peaked at the sangeet', 'one dance performance, a lifetime of reminiscing.'],
+  ['cancelling plans is my cardio', 'you’ll say yes to everything and show up to half.'],
+  ['“i’m fine” (i’m not fine)', 'but the outfit is fine. the outfit is great.'],
+  ['running on 2% battery', 'your phone and you, both always looking for a charger.'],
+  ['leaving by 10 (left at 4)', 'last one out of every party. again.'],
+  ['slightly unhinged, it’s working', 'iced coffee in december energy. nobody gets it, everyone wants in.'],
+  ['full aunty mode', 'you’ll say “in my time…” at least twice a week.'],
+  ['still talking about my sangeet dance', 'one performance, a whole year of reminiscing.'],
   ['professional excuse-maker', 'traffic, network, “mummy needed me”. all on rotation.'],
-  ['emotionally available, physically asleep', 'deep talks scheduled. you nap through them.'],
-  ['chaotic, but on time (for once)', 'just kidding. ten minutes late, glowing.'],
-  ['i don’t gossip, i share updates', 'you’re the mohalla’s most reliable news channel.'],
-  ['soft heart, sharp tongue, zero filter', 'you say it. they think about it for a week.'],
-  ['my hobbies are hobbies i want to have', 'pottery, piano, running. all on the wishlist.'],
+  ['emotionally available, physically asleep', 'deep talks get scheduled. you nap through them.'],
+  ['ten minutes late, glowing', 'never on time, always worth the wait.'],
+  ['i don’t gossip, i share updates', 'the mohalla’s most reliable news channel, that’s you.'],
+  ['hobbies i plan to start', 'pottery, piano, running: all firmly on the wishlist.'],
 ];
 const LUCK = {
   colour: ['rani pink', 'haldi yellow', 'peacock blue', 'sindoor red', 'mehendi green', 'marigold orange', 'royal purple', 'gold, obviously', 'silver', 'emerald', 'midnight black', 'ivory', 'teal', 'mirchi red'],
@@ -869,7 +871,7 @@ async function drawDrop() {
   const drop = $('#drDrop'); drop.classList.remove('go'); void drop.offsetWidth; drop.classList.add('go');
   snd('tdrop'); await sleep(750);
   if (ACTIVE !== 'draw') return;
-  dstage.classList.add('gone'); $('#dmeter').classList.add('gone'); $('.d-intro').classList.add('gone');   // the drum steps aside, the ticket takes the stage
+  dstage.classList.add('gone'); $('#dmeter').classList.add('gone'); $('[data-panel=draw] .d-intro').classList.add('gone');   // the drum steps aside, the ticket takes the stage
   await sleep(380);
   const t = $('#ticket'); t.hidden = false; t.classList.remove('open'); void t.offsetWidth; t.classList.add('open');
   snd('unfold'); setTimeout(() => snd('win', { vol: .7 }), 380); buzz(25);
@@ -881,7 +883,7 @@ async function drawDrop() {
 }
 function drawReset() {
   D.done = false; DONE.draw = false; D.total = 0; D.vel = 0; hideShare('draw'); hidePin('draw'); $('#ticket').hidden = true; $('#ticket').classList.remove('open'); $('#dagain').hidden = true; $('#dspin').hidden = false;
-  dstage.classList.remove('gone'); $('#dmeter').classList.remove('gone'); $('.d-intro').classList.remove('gone');
+  dstage.classList.remove('gone'); $('#dmeter').classList.remove('gone'); $('[data-panel=draw] .d-intro').classList.remove('gone');
   $('#drDrop').classList.remove('go'); $('#dsub').textContent = 'drag the drum round (or tap the button).'; drawMeter();
 }
 $('#dagain').addEventListener('click', () => { drawReset(); snd('tap'); $('#dstage').scrollIntoView({ behavior: 'smooth', block: 'center' }); });

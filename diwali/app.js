@@ -77,7 +77,7 @@ const fontsReady = Promise.all(['700 20px "Palanquin Dark"', '600 20px "Palanqui
 const stage = $('#stage'), envC = $('#env'), card = $('#card');
 const boxEl = $('#box'), drawer = boxEl.querySelector('.drawer');
 const matchEl = $('#match'), fxC = $('#fx'), fx = fxC.getContext('2d');
-const nightEl = $('#night'), nctx = nightEl.getContext('2d'), glowEl = $('#glow'), capEl = $('#caption'), nameEl = $('#cardname'), ghost = $('#ghost');
+const decorEl = $('#decor'), nightEl = $('#night'), nctx = nightEl.getContext('2d'), glowEl = $('#glow'), capEl = $('#caption'), nameEl = $('#cardname'), ghost = $('#ghost');
 const autoBtn = $('#autobtn'), afterEl = $('#after'), stepsEl = [...document.querySelectorAll('#steps li')];
 const css = (el, k, v) => el.style.setProperty(k, v);
 
@@ -106,7 +106,7 @@ function layout() {
   // once the match is lit, the envelope comes forward and fills the frame
   const zw = wide ? Math.min(vw * .66, vh * .64 * ENV_AR, 1100) : Math.min(vw * .97, vh * .4 * ENV_AR);
   Object.assign(EZ, { w: zw, cx: vw / 2, cy: wide ? vh * .5 : vh * .42 });
-  RS = Math.min(3.2, dpr * Math.max(1, EZ.w / EB.w));
+  RS = Math.min(2.2, dpr * Math.max(1, EZ.w / EB.w));
   setE();
   css(envC, '--ew', EB.w + 'px'); css(envC, '--eh', EB.h + 'px');
 
@@ -335,10 +335,17 @@ const sfx = {
 const SFX_N = { strike: 2, slide: 2, sputter: 2, flame: 1, catch: 2, burn: 1, reveal: 2, poppers: 1, riffle: 2, flip: 2, parrot: 4, hop: 2,
   rifle: 2, bpop: 3, tock: 2, ringglass: 2, ringfloor: 2, whoosh: 1, drum: 1, tdrop: 1, unfold: 2, win: 2, tap: 2, pin: 1, fail: 2 };
 const BUF = {}, LOOPS = {};
+const SFX_FIRST = ['slide', 'strike', 'sputter', 'flame', 'catch', 'burn', 'reveal', 'poppers'];   // the opening needs these; game sounds can wait
+function loadGroup(keys) {
+  keys.forEach(k => { const n = SFX_N[k]; BUF[k] = BUF[k] || [];
+    for (let i = 1; i <= n; i++) fetch(`assets/sfx/${k}${i}.mp3`).then(r => r.arrayBuffer()).then(b => new Promise((res, rej) => A.ac.decodeAudioData(b, res, rej))).then(d => BUF[k].push(d)).catch(() => {}); });
+}
 function loadSamples() {
   if (A.loading || !A.ac) return; A.loading = true;
-  Object.entries(SFX_N).forEach(([k, n]) => { BUF[k] = [];
-    for (let i = 1; i <= n; i++) fetch(`assets/sfx/${k}${i}.mp3`).then(r => r.arrayBuffer()).then(b => new Promise((res, rej) => A.ac.decodeAudioData(b, res, rej))).then(d => BUF[k].push(d)).catch(() => {}); });
+  loadGroup(SFX_FIRST);
+  const rest = Object.keys(SFX_N).filter(k => !SFX_FIRST.includes(k));
+  const later = () => loadGroup(rest);                                     // decoding 30+ files mid-animation was a visible hitch
+  setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(later, { timeout: 6000 }) : later()), 9000);
 }
 const SYN = { slide: () => sfx.slide(), sputter: () => sfx.sputter(), strike: () => sfx.ignite(), catch: () => sfx.catch(), poppers: () => sfx.pop(), reveal: () => sfx.bell(660, .9),
   ratchet: () => noiseHit(.025, 'highpass', 4200, 3000, .22), tap: () => noiseHit(.03, 'bandpass', 1800, 1200, .3, 3), win: () => sfx.bell(760, .6) };
@@ -370,7 +377,8 @@ const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (
 
 /* ───────────── particles, flame, confetti ───────────── */
 const parts = [];
-const spawn = o => { if (parts.length < 1400) parts.push(o); };
+const PMAX = matchMedia('(pointer: coarse)').matches ? 320 : 600;            // hard cap so bursts can't snowball on phones
+const spawn = o => { if (parts.length < PMAX) parts.push(o); };
 function sparks(x, y, dir, n, spread = 55, sp0 = 120, sp1 = 620) {
   for (let i = 0; i < n; i++) {
     const a = rad(dir + rnd(-spread, spread)), sp = rnd(sp0, sp1);
@@ -424,6 +432,7 @@ function flameShape(c, x, by, w, h, lx, t, seed) {
   c.bezierCurveTo(midR + lx * .25, by - h * .38, x + w * 1.25, by + w * .35, x, by + w * .55);
   c.closePath();
 }
+const FLAME_C = document.createElement('canvas'), FLAME_X = FLAME_C.getContext('2d');
 function drawFlame(c, x, y, s, k, t, lean) {
   if (k <= .01) return;
   const fl = .9 + .1 * Math.sin(t * 23) + .07 * Math.sin(t * 37 + 1.3) + .06 * (_nz(t * 8) - .5);
@@ -434,7 +443,11 @@ function drawFlame(c, x, y, s, k, t, lean) {
   g.addColorStop(0, `rgba(255,180,70,${.42 * Math.min(1, k)})`); g.addColorStop(.35, `rgba(255,120,30,${.16 * Math.min(1, k)})`); g.addColorStop(1, 'rgba(255,90,20,0)');
   c.fillStyle = g; c.beginPath(); c.arc(x, y - h * .4, h * 3, 0, 7); c.fill();
   const by = y + w * .2;
-  c.filter = 'blur(' + Math.max(1, s * .12).toFixed(1) + 'px)';
+  // body layers go to a low-res sprite; drawing it back up-scaled gives the soft edge a blur filter used to (filters are slow, and Safari ignores them)
+  const bw = w * 3.2 + Math.abs(lean) * 2, bh = h * 1.35 + w * 1.6, x0 = x - bw / 2 + lean * .5, y0 = by - h * 1.2;
+  const q = .5, fc = FLAME_C, sw = Math.max(8, Math.ceil(bw * q)), sh = Math.max(8, Math.ceil(bh * q));
+  if (fc.width < sw || fc.height < sh) { fc.width = Math.max(fc.width, sw); fc.height = Math.max(fc.height, sh); }
+  const r0 = c; c = FLAME_X; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, sw + 2, sh + 2); c.globalCompositeOperation = 'lighter'; c.setTransform(q, 0, 0, q, -x0 * q, -y0 * q);
   // outer body: deep orange → red tips
   g = c.createLinearGradient(x, by + w, x + lean, by - h * 1.1);
   g.addColorStop(0, 'rgba(255,120,30,.0)'); g.addColorStop(.12, 'rgba(255,110,25,.85)'); g.addColorStop(.55, 'rgba(255,80,15,.7)'); g.addColorStop(1, 'rgba(200,30,10,0)');
@@ -444,7 +457,6 @@ function drawFlame(c, x, y, s, k, t, lean) {
   g.addColorStop(0, 'rgba(255,200,90,.2)'); g.addColorStop(.2, 'rgba(255,215,110,.95)'); g.addColorStop(.7, 'rgba(255,160,50,.6)'); g.addColorStop(1, 'rgba(255,120,30,0)');
   c.fillStyle = g; flameShape(c, x, by, w * .78, h * .8, lean * .8, t, 4.2); c.fill();
   // core: near-white
-  c.filter = 'blur(' + Math.max(.6, s * .08).toFixed(1) + 'px)';
   g = c.createLinearGradient(x, by + w * .4, x, by - h * .45);
   g.addColorStop(0, 'rgba(255,255,240,.95)'); g.addColorStop(.6, 'rgba(255,245,200,.8)'); g.addColorStop(1, 'rgba(255,230,160,0)');
   c.fillStyle = g; flameShape(c, x, by, w * .45, h * .48, lean * .5, t, 9.1); c.fill();
@@ -452,7 +464,7 @@ function drawFlame(c, x, y, s, k, t, lean) {
   g = c.createRadialGradient(x, by + w * .25, 0, x, by + w * .25, w * 1.1);
   g.addColorStop(0, 'rgba(120,160,255,.75)'); g.addColorStop(1, 'rgba(80,110,255,0)');
   c.fillStyle = g; c.beginPath(); c.ellipse(x, by + w * .2, w * .9, w * .65, 0, 0, 7); c.fill();
-  c.filter = 'none';
+  c = r0; c.imageSmoothingEnabled = true; c.drawImage(FLAME_C, 0, 0, sw, sh, x0, y0, sw / q, sh / q);
   c.restore();
   // a thin smoke wisp off the tip
   if (Math.random() < .35) spawn({ k: 'smoke', x: x + lean + rnd(-2, 2), y: y - h * 1.05, vx: rnd(-8, 8) + lean * .3, vy: rnd(-55, -35), life: 0, max: rnd(.8, 1.4), r: rnd(3, 6) });
@@ -796,28 +808,25 @@ function frame(nowMs) {
     const inK = S.openedAt ? eob(clamp((nowMs - S.openedAt) / 900)) : 0, drop = (1 - inK) * -vh * .75;
     envC.style.opacity = S.openedAt ? 1 : 0;
     envC.style.transform = `translate(${E.cx - EB.w / 2}px,${E.cy - EB.h / 2 + bob + drop}px) perspective(1100px) rotateX(${tilt.x.toFixed(2)}deg) rotateY(${tilt.y.toFixed(2)}deg) rotate(${((1 - inK) * -14).toFixed(2)}deg) scale(${E.s.toFixed(4)})`;
-    const sx = (-tilt.y * 2.2).toFixed(1), sy = (16 + tilt.x * 2 + zoom * 10).toFixed(1);
-    envC.style.filter = `drop-shadow(${sx}px ${sy}px ${(22 + zoom * 18).toFixed(0)}px rgba(40,4,2,.55)) drop-shadow(0 2px 3px rgba(40,4,2,.4))`;
-    css(document.documentElement, '--sheen', (50 + tilt.y * 6).toFixed(1) + '%');
+    // a fixed shadow: rewriting drop-shadow every frame re-blurs the whole envelope layer (was the main lag)
+    if (!envC.dataset.sh) { envC.dataset.sh = 1; envC.style.filter = 'drop-shadow(0 20px 26px rgba(40,4,2,.5)) drop-shadow(0 2px 3px rgba(40,4,2,.4))'; }
   }
   card.style.visibility = burnP > 0 ? 'visible' : 'hidden';
   const rv = eob(cardT);
   const ccx = lerp(E.cx, vw / 2, eo(cardT)), ccy = lerp(E.cy, C2.fy, eo(cardT)) + bob * (.4 + cardT * .6);
   const ctx3 = cardT > 0 ? tilt.x * (.6 + cardT * .5) : 0, cty3 = cardT > 0 ? tilt.y * (.6 + cardT * .5) : 0;
   card.style.transform = `translate(${ccx - C2.w / 2}px,${ccy - C2.h / 2}px) perspective(1200px) rotateX(${ctx3.toFixed(2)}deg) rotateY(${cty3.toFixed(2)}deg) scale(${lerp(E.s, C2.fs, rv).toFixed(4)}) rotate(${lerp(-4, 0, eo(cardT)).toFixed(2)}deg)`;
-  css(card, '--sheen', (50 + cty3 * 7).toFixed(1) + '%');
-  css(card, '--fx', (50 + cty3 * 9 + Math.sin(now * .45) * 14).toFixed(1) + '%'); css(card, '--fy', (50 + ctx3 * 9 + Math.cos(now * .35) * 10).toFixed(1) + '%');   // foil catches the light as the card moves
-  card.style.filter = `drop-shadow(${(-cty3 * 2.4).toFixed(1)}px ${(22 + ctx3 * 2).toFixed(1)}px 36px rgba(40,4,2,.6))`;
+  if (!card.dataset.sh) { card.dataset.sh = 1; card.style.filter = 'drop-shadow(0 22px 30px rgba(40,4,2,.55))'; }
   nameEl.style.transform = nameEl.classList.contains('on') ? `translateY(${(bob * .5).toFixed(1)}px)` : '';
 
   /* ── light ── */
   const burning = burnP > 0 && burnP < 1 ? Math.sin(Math.PI * burnP) : 0;
   light = lerp(light, Math.min(1, fk * .7 + burning + cardT * .6), .1);
   const gx = burning > .05 ? E.cx : mt.x, gy = burning > .05 ? E.cy : mt.y;
-  css(glowEl, '--gx', gx + 'px'); css(glowEl, '--gy', gy + 'px');
-  css(glowEl, '--gr', (14 + 22 * burning + 10 * fk) + 'vmax');
-  glowEl.style.opacity = Math.min(1, fk * .5 + burning * .85).toFixed(3);
-  css(document.documentElement, '--lit', light.toFixed(3));
+  glowEl.style.transform = `translate(${gx.toFixed(0)}px,${gy.toFixed(0)}px) translate(-50%,-50%) scale(${(.7 + .5 * burning + .25 * fk).toFixed(3)})`;   // compositor only
+  const go = Math.min(1, fk * .5 + burning * .85).toFixed(2); if (go !== glowEl._o) { glowEl._o = go; glowEl.style.opacity = go; }
+  const lq = (Math.round(light * 40) / 40).toFixed(3);                          // only the kandils read this; scoped + rounded so it rarely restyles
+  if (lq !== S.litQ) { S.litQ = lq; css(decorEl || document.documentElement, '--lit', lq); }
   // night from the first frame; the match (then the burning paper) is the only real light
   const dark = ['reveal', 'done'].includes(S.ph) ? 0 : 1;
   S.dark = lerp(S.dark ?? 1, dark, dark ? .08 : .045);
@@ -864,9 +873,11 @@ function frame(nowMs) {
   if (S.ph === 'carry' && !S.autoCarry) { const tg = target(); drawTarget(ctx, tg.x, tg.y, now, clamp(S.t / .4)); }
   if (burnP > 0 && burnP < .985) {
     const rate = reduced ? .3 : 1;
-    for (let i = 0; i < 5 * rate; i++) if (Math.random() < .75) { const q = burnFront(burnP); if (q) spawn({ k: 'ember', x: q.x, y: q.y, vx: rnd(-30, 30), vy: rnd(-150, -40), life: 0, max: rnd(.7, 2), r: rnd(.8, 2.6), ph: rnd(0, 9) }); }
-    if (Math.random() < .5 * rate) { const q = burnFront(burnP); if (q) spawn({ k: 'smoke', x: q.x, y: q.y, vx: rnd(-10, 10), vy: rnd(-60, -25), life: 0, max: rnd(1.6, 3), r: rnd(10, 18) }); }
-    if (Math.random() < .3 * rate) { const q = burnFront(burnP); if (q) spawn({ k: 'ash', x: q.x, y: q.y, vx: rnd(-20, 20), vy: rnd(-50, 10), life: 0, max: rnd(1.8, 3.2), r: rnd(1.2, 3), a: rnd(0, 6), va: rnd(-5, 5) }); }
+    // per-second rates (not per-frame), so 120Hz phones don't double the particle load
+    const nE = poisson(110 * rate * dt), nS = poisson(14 * rate * dt), nA = poisson(12 * rate * dt);
+    for (let i = 0; i < nE; i++) { const q = burnFront(burnP); if (q) spawn({ k: 'ember', x: q.x, y: q.y, vx: rnd(-30, 30), vy: rnd(-150, -40), life: 0, max: rnd(.7, 1.8), r: rnd(.9, 2.6), ph: rnd(0, 9) }); }
+    for (let i = 0; i < nS; i++) { const q = burnFront(burnP); if (q) spawn({ k: 'smoke', x: q.x, y: q.y, vx: rnd(-10, 10), vy: rnd(-60, -25), life: 0, max: rnd(1.4, 2.4), r: rnd(11, 19) }); }
+    for (let i = 0; i < nA; i++) { const q = burnFront(burnP); if (q) spawn({ k: 'ash', x: q.x, y: q.y, vx: rnd(-20, 20), vy: rnd(-50, 10), life: 0, max: rnd(1.8, 3), r: rnd(1.2, 3), a: rnd(0, 6), va: rnd(-5, 5) }); }
     if (A.ac && Math.random() < dt * 30) sfx.crackle();
   }
   if (S.ph === 'done' || S.ph === 'reveal') petalRain(dt);
@@ -876,6 +887,7 @@ function frame(nowMs) {
     loop('flame', fk * .7 * (1 - burning)); loop('burn', burning * 1.1); }
 }
 
+const poisson = m => { let n = Math.floor(m); if (Math.random() < m - n) n++; return n; };
 function stepParticles(ctx, dt, now) {
   for (let i = parts.length - 1; i >= 0; i--) {
     const o = parts[i]; o.life += dt;

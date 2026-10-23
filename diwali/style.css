@@ -1050,3 +1050,25 @@ body:not(.lit) .decor .kandil .lamp img:not(.bloom) { filter: brightness(.55) sa
 @keyframes gtagLife { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.7); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -16px) scale(.95); } }
 .gub.popped img { animation: popGone 1.6s ease forwards; }
 @keyframes popGone { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ═════════ perf: everything that moves in the hero moves on the compositor ═════════ */
+#night { filter: none !important; }                                   /* half-res canvas is already soft; a CSS blur here re-ran on the whole screen every frame */
+#glow { inset: auto !important; left: 0 !important; top: 0 !important; width: 96vmax !important; height: 96vmax !important; will-change: transform, opacity;
+  background: radial-gradient(circle closest-side, rgba(255,170,60,.95) 0, rgba(255,120,30,.45) 46%, transparent 100%) !important; }
+#env, #card, .box { will-change: transform; }
+.kandil .lamp .bloom { opacity: calc(.35 + var(--lit, 0) * .6); }
+/* foil + sheen: the gradient lives on a pseudo-element that slides (transform), the masked/blended parent never repaints */
+.card-foil { overflow: hidden; background: none !important; }
+.card-foil::before { content: ''; position: absolute; top: -40%; bottom: -40%; left: 0; width: 300%; background-image: inherit; will-change: transform; animation: foilSlide 9s ease-in-out infinite alternate; }
+.f-gold::before { background-image: repeating-linear-gradient(92deg, rgba(255,255,255,.08) 0 1px, transparent 1px 3px), linear-gradient(115deg, #5c3a05 0%, #ffe695 6%, #9c6c14 12%, #fff7d0 18%, #8f6210 24%, #f8d870 30%, #6a460a 37%, #ffefb0 44%, #8a5e10 50%, #ffe695 56%, #9c6c14 62%, #fff7d0 68%, #8f6210 74%, #f8d870 80%, #6a460a 87%, #ffefb0 94%, #8a5e10 100%); }
+.f-blue::before { background-image: linear-gradient(125deg, #3f7bff 0%, #b98cff 9%, #ffffff 16%, #6ff2d6 23%, #5aa0ff 30%, #ffd1f0 38%, #3f7bff 50%, #b98cff 59%, #ffffff 66%, #6ff2d6 73%, #5aa0ff 80%, #ffd1f0 88%, #3f7bff 100%); animation-duration: 6s; }
+.f-ink::before { background-image: linear-gradient(115deg, transparent 10%, rgba(255,250,235,.85) 16%, rgba(255,255,255,.2) 18%, transparent 24%, transparent 60%, rgba(255,250,235,.7) 66%, transparent 72%); animation-duration: 5s; }
+@keyframes foilSlide { from { transform: translateX(0); } to { transform: translateX(-66.66%); } }
+.card .card-sheen { background: none !important; animation: none !important; overflow: hidden; }
+.card .card-sheen::before { content: ''; position: absolute; inset: 0 -100% 0 -100%; background: linear-gradient(115deg, transparent 40%, rgba(255,250,225,.6) 48%, rgba(255,255,255,.12) 51%, transparent 58%); will-change: transform; animation: sheenSlide 4.2s ease-in-out infinite; }
+@keyframes sheenSlide { 0% { transform: translateX(-30%); } 60%, 100% { transform: translateX(30%); } }
+.wc-tix small { display: block; font: 600 7.5px/1.2 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--maroon); text-shadow: none; margin-bottom: 3px; }
+.wc-name { font-size: 17px !important; line-height: 1.15 !important; }
+.t-intro, .games .d-intro { max-width: 36ch; margin-left: auto; margin-right: auto; }
+.games .d-intro b { color: var(--yellow); font-weight: 600; }
+.k-status { font: 600 12px/1.3 var(--sans) !important; letter-spacing: .14em; text-transform: uppercase; color: var(--yellow) !important; opacity: .9; margin-top: 4px; }
