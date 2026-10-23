@@ -979,7 +979,8 @@ function finish() {
 const MIX = (() => {
   const cfg = (window.MKD && window.MKD.music) || {}, el = $('#mix');
   let player = null, ready = false, wanted = false, userPaused = false;
-  if (!cfg.youtube || !el) return { start() {}, sync() {} };
+  const songs = cfg.songs || (cfg.youtube ? [cfg.youtube] : []);
+  if ((!songs.length && !cfg.playlist) || !el) return { start() {}, sync() {} };
   $('#mxTitle').textContent = cfg.title || 'mohalla diwali mix';
   const playing = () => ready && player.getPlayerState && player.getPlayerState() === 1;
   const ui = () => { const p = playing(); el.classList.toggle('on', p); $('#mxPlay').textContent = p ? '❚❚' : '▶'; $('#mxPlay').setAttribute('aria-label', p ? 'Pause music' : 'Play music'); };
@@ -990,8 +991,10 @@ const MIX = (() => {
   }
   function make() {
     if (player) return;
-    player = new YT.Player('mxPlayer', { videoId: cfg.youtube, width: '100%', height: '100%',
-      playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3, loop: 1, playlist: cfg.youtube },
+    const pv = { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1, rel: 0, iv_load_policy: 3, loop: 1 };
+    if (cfg.playlist) Object.assign(pv, { listType: 'playlist', list: cfg.playlist });   // a real YouTube playlist
+    else pv.playlist = songs.join(',');                                                    // our own queue (loops back to the first song)
+    player = new YT.Player('mxPlayer', { ...(cfg.playlist ? {} : { videoId: songs[0] }), width: '100%', height: '100%', playerVars: pv,
       events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (wanted) go(); }, onStateChange: () => { ui(); if (playing()) $('#mxTap').hidden = true; } } });
   }
   function go() {

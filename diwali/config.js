@@ -23,8 +23,14 @@ window.MKD = {
     end: '2026-11-03T01:00:00+05:30',          // end time assumed
   },
 
-  // background music after the reveal: any embeddable YouTube video id (shown as a small player, bottom-right)
-  music: { youtube: 'YCq7kYUJrHM', title: 'mohalla diwali mix', volume: 45 },
+  // background music after the reveal (small player, bottom-right).
+  // songs: YouTube video ids, played in order then looped. playlist: a YouTube playlist id (PL…) — if set, it's used instead.
+  music: {
+    title: 'mohalla diwali mix',
+    songs: ['4dsFQFCvVGU'],          // Kajra Re (YRF) — placeholder until the real playlist
+    playlist: '',
+    volume: 45,
+  },
 
   rsvp: {
     // Opens + RSVPs post to a Google Form (sameep@nailin.it) → sheet "Untitled form (Responses)".
