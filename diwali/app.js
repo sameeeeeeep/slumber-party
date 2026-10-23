@@ -77,7 +77,7 @@ const assetsReady = Promise.all([
   ...['slide1', 'strike1', 'strike2', 'flame1', 'catch1', 'burn1', 'reveal1', 'poppers1'].map(n => counted(fetch(`assets/sfx/${n}.mp3`))),   // into the HTTP cache; decoded on first tap
 ]);
 CONF.forEach(k => loadImg(k, `assets/conf/${k}.webp`));                          // confetti isn't needed until the reveal: never block on it
-const fontsReady = Promise.all(['700 20px "Palanquin Dark"', '600 20px "Palanquin Dark"', '20px "Bakbak One"', '600 20px "Clash Display"', '700 20px "Barlow Condensed"']
+const fontsReady = Promise.all(['700 20px "Palanquin Dark"', '600 20px "Palanquin Dark"', '20px "Bakbak One"', '500 20px "Barlow"', '600 20px "Barlow"', '700 20px "Barlow Condensed"']
   .map(f => counted(document.fonts ? document.fonts.load(f, 'सेवा में Aa') : 0))).catch(() => {});
 
 /* ───────────── elements & layout ───────────── */
@@ -170,7 +170,7 @@ function drawEnvelope() {
   x.textBaseline = 'alphabetic';
   let ly = H * .085;
   if (IMG.dot) { const h = u * 3.4, w = h * IMG.dot.width / IMG.dot.height; x.drawImage(IMG.dot, W / 2 - w / 2, H * .085, w, h); }
-  x.fillStyle = '#1c1410'; x.font = `600 ${u * 1.2}px "Clash Display", sans-serif`; x.textAlign = 'center'; x.fillText('P R E S E N T S', W / 2, H * .085 + u * 5);
+  x.fillStyle = '#1c1410'; x.font = `600 ${u * 1.2}px "Barlow", sans-serif`; x.textAlign = 'center'; x.fillText('P R E S E N T S', W / 2, H * .085 + u * 5);
   if (IMG.nl) { const h = u * 3.8, w = h * IMG.nl.width / IMG.nl.height; x.drawImage(IMG.nl, W / 2 - w / 2, H * .085 + u * 6.2, w, h); }
 
   // the pasted label: सेवा में, + the guest's name in Bakbak with the deck's red drop shadow

@@ -49,7 +49,7 @@ async function renderShare(k) {
   if (k1) c.drawImage(k1, 40, 200, 150, 150 * k1.height / k1.width);
   if (k2) c.drawImage(k2, W - 190, 230, 150, 150 * k2.height / k2.width);
   c.textAlign = 'center';
-  c.font = '600 34px "Clash Display", sans-serif'; c.fillStyle = '#f7e6c8'; c.fillText(d.kick.toUpperCase().split('').join(' '), W / 2, 470);
+  c.font = '600 34px "Barlow", sans-serif'; c.fillStyle = '#f7e6c8'; c.fillText(d.kick.toUpperCase().split('').join(' '), W / 2, 470);
   let y = 520;
   if (art && art.width > art.height * 1.4) y = 640;
   if (art) {
@@ -61,10 +61,10 @@ async function renderShare(k) {
   }
   c.font = '84px "Bakbak One", sans-serif'; c.fillStyle = '#c4221a'; let yy = wrap(c, d.title, W / 2 + 5, y + 6, 940, 92);
   c.fillStyle = '#efbd0d'; wrap(c, d.title, W / 2, y, 940, 92);
-  c.font = '500 42px "Clash Display", sans-serif'; c.fillStyle = '#f7e6c8'; yy = wrap(c, d.text, W / 2, yy + 80, 900, 58);
+  c.font = '500 42px "Barlow", sans-serif'; c.fillStyle = '#f7e6c8'; yy = wrap(c, d.text, W / 2, yy + 80, 900, 58);
   if (nl) c.drawImage(nl, W / 2 - 150, H - 230, 300, 300 * nl.height / nl.width);
-  c.font = '600 30px "Clash Display", sans-serif'; c.fillStyle = '#efbd0d'; c.fillText('DIWALI PARTY · MOHALLA GAME CENTER', W / 2, H - 120);
-  c.fillStyle = '#f7e6c8'; c.font = '500 28px "Clash Display", sans-serif'; c.fillText('secretslumberparty.com/diwali', W / 2, H - 76);
+  c.font = '600 30px "Barlow", sans-serif'; c.fillStyle = '#efbd0d'; c.fillText('DIWALI PARTY · MOHALLA GAME CENTER', W / 2, H - 120);
+  c.fillStyle = '#f7e6c8'; c.font = '500 28px "Barlow", sans-serif'; c.fillText('secretslumberparty.com/diwali', W / 2, H - 76);
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
   return { blob, d };
 }

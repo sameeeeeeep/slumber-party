@@ -7,14 +7,13 @@
 <title>Invite Link Maker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Palanquin+Dark:wght@600;700&display=swap" rel="stylesheet">
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Barlow:wght@500;600&family=Palanquin+Dark:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root { --maroon:#75150f; --maroon-d:#4f0d09; --yellow:#efbd0d; --red:#c4221a; --pink:#ec5a86; --teal:#2f9790; --blue:#1d8cc4; --cream:#f7e6c8; --ink:#1c1410; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --maroon:#75150f; } }
   :root[data-theme="dark"] { --maroon:#75150f; }
   * { box-sizing: border-box; margin: 0; }
-  body { background: var(--maroon); color: var(--cream); font: 500 15px/1.4 'Clash Display', system-ui, sans-serif; padding: 28px 16px 60px; }
+  body { background: var(--maroon); color: var(--cream); font: 500 15px/1.4 'Barlow', system-ui, sans-serif; padding: 28px 16px 60px; }
   main { max-width: 760px; margin: 0 auto; }
   h1 { font: 400 clamp(28px, 6vw, 40px)/1.05 'Bakbak One', sans-serif; text-shadow: 2px 2px 0 var(--red); }
   .sub { opacity: .8; margin: 8px 0 26px; }
@@ -22,7 +21,7 @@
     box-shadow: inset 0 0 0 3px var(--maroon), inset 0 0 0 6px var(--yellow), inset 0 0 0 7.5px var(--pink), inset 0 0 0 10px var(--yellow), inset 0 0 0 11.5px var(--teal); }
   h2 { font: 400 22px/1 'Bakbak One', sans-serif; margin-bottom: 14px; color: var(--ink); text-shadow: 1.5px 1.5px 0 var(--red); }
   label { display: block; font: 700 13px/1 'Palanquin Dark', sans-serif; color: var(--maroon); margin: 12px 0 6px; }
-  input, textarea { width: 100%; border: 2px solid var(--maroon); border-radius: 3px; background: #fff6dc; padding: 10px 12px; font: 600 17px/1.3 'Clash Display', sans-serif; color: var(--ink); }
+  input, textarea { width: 100%; border: 2px solid var(--maroon); border-radius: 3px; background: #fff6dc; padding: 10px 12px; font: 600 17px/1.3 'Barlow', sans-serif; color: var(--ink); }
   textarea { min-height: 150px; font-size: 15px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
@@ -59,8 +58,8 @@
     <table id="tbl" hidden><thead><tr><th>Name</th><th>Link</th><th></th></tr></thead><tbody></tbody></table>
   </section>
 </main>
-<script src="config.js?v=1792743949"></script>
-<script src="lib.js?v=1792743949"></script>
+<script src="config.js?v=1792744160"></script>
+<script src="lib.js?v=1792744160"></script>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
