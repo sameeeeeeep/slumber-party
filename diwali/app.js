@@ -68,7 +68,8 @@ const loadImg = (k, src) => new Promise(res => { const i = new Image(); i.onload
 const CONF = Array.from({ length: 32 }, (_, i) => 'c' + String(i + 1).padStart(2, '0'));
 // loader: everything the opening needs is fetched AND decoded before the scene starts, so the first tap never waits on the network
 let ldDone = 0, ldTotal = 0;
-const ldTick = () => { ldDone++; if (window.__ldr) window.__ldr(ldDone / ldTotal); };
+let ldMax = 0;
+const ldTick = () => { ldDone++; ldMax = Math.max(ldMax, ldDone / ldTotal); if (window.__ldr) window.__ldr(ldMax); };   // never un-light a diya
 const counted = p => { ldTotal++; return Promise.resolve(p).catch(() => {}).then(ldTick); };
 const warmImg = src => new Promise(res => { const i = new Image(); i.onload = () => (i.decode ? i.decode().catch(() => {}) : Promise.resolve()).then(res); i.onerror = res; i.src = src; });
 const assetsReady = Promise.all([
@@ -77,7 +78,7 @@ const assetsReady = Promise.all([
   ...['slide1', 'strike1', 'strike2', 'flame1', 'catch1', 'burn1', 'reveal1', 'poppers1'].map(n => counted(fetch(`assets/sfx/${n}.mp3`))),   // into the HTTP cache; decoded on first tap
 ]);
 CONF.forEach(k => loadImg(k, `assets/conf/${k}.webp`));                          // confetti isn't needed until the reveal: never block on it
-const fontsReady = Promise.all(['600 20px "Teko Display"', '500 20px "Teko Text"', '600 20px "Teko Text"', '700 20px "Palanquin Dark"', '20px "Bakbak One"', '700 20px "Barlow Condensed"', '500 20px "Barlow"']
+const fontsReady = Promise.all(['600 20px "Teko Display"', '500 20px "Teko Text"', '600 20px "Teko Text"', '700 20px "Palanquin Dark"', '20px "Bakbak One"', '700 20px "Barlow Condensed"', '500 20px "Barlow"', '20px "Bungee Shade"']
   .map(f => counted(document.fonts ? document.fonts.load(f, 'सेवा में Aa') : 0))).catch(() => {});
 
 /* ───────────── elements & layout ───────────── */
@@ -1028,8 +1029,8 @@ const MIX = (() => {
     if (cfg.playlist) Object.assign(pv, { listType: 'playlist', list: cfg.playlist });
     else pv.playlist = songs.join(',');
     player = new YT.Player('mxPlayer', { ...(cfg.playlist ? {} : { videoId: songs[0] }), width: '200', height: '200', playerVars: pv,
-      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (primed) warm(); if (revealed) loud(); ui(); },
-        onStateChange: e => { if (e.data === 1 && hush && !revealed) player.mute(); ui(); } } });
+      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (revealed) loud(); else { player.mute(); player.seekTo(START, true); player.playVideo(); } if (window.__mixReady) window.__mixReady(); ui(); },   // buffered + silently rolling before the enter tap
+        onStateChange: e => { if (!revealed && e.data === 1) { player.mute(); if (player.getCurrentTime() > START + 8) player.seekTo(START, true); } ui(); } } });
   }
   // inside the opening tap: start UNMUTED (that tap is what unlocks sound on phones), silence it the moment it plays
   function warm() { if (!ready || userPaused) return; hush = true; player.setVolume(0); player.unMute(); player.seekTo(START, true); player.playVideo(); }
@@ -1048,7 +1049,7 @@ const MIX = (() => {
     else { userPaused = false; needTap = false; if (!A.on) sndBtn.click(); player.unMute(); player.playVideo(); setTimeout(() => { needTap = !audible(); ui(); }, 1500); }
     ui();
   });
-  setTimeout(load, 600);
+  load();                                   // start loading right away, alongside the loader
   return {
     prime() { if (primed) return; primed = true; warm(); },                       // first tap of the opening (a real gesture)
     start() { if (revealed) return; revealed = true; el.hidden = false; requestAnimationFrame(() => el.classList.add('in')); if (!primed) { primed = true; warm(); } loud(); },
@@ -1088,11 +1089,12 @@ window.MKDFX = { sfx, initAudio, noiseHit, buzz, play, loop, stopAllLoops, get a
 let rz;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layout, 120); });
 layout();
+const mixReady = new Promise(r => { window.__mixReady = r; setTimeout(r, 6000); });   // song buffered, or give up after 6s
 const T0 = performance.now();
-Promise.race([Promise.all([assetsReady, fontsReady]), new Promise(r => setTimeout(r, 9000))])   // slow network: never trap them on the loader
+Promise.race([Promise.all([assetsReady, fontsReady, counted(mixReady)]), new Promise(r => setTimeout(r, 9000))])   // slow network: never trap them on the loader
   .then(() => {
     uploadEnvelope(); renderBurn(0, 0);     // texture upload + shader compile happen behind the loader, not on the first strike
-    if (window.__ldr) window.__ldr(1);
+    ldMax = 1; if (window.__ldr) window.__ldr(1);
     return new Promise(r => setTimeout(r, Math.max(0, 700 - (performance.now() - T0))));   // no flash of loader on fast connections
   })
   .then(() => {

@@ -1144,12 +1144,16 @@ async function chhallaThrow(vx, vy) {
   R.busy = true;
   const s = cstage.getBoundingClientRect(), rr = ring.getBoundingClientRect();
   const cx = rr.left + rr.width / 2 - s.left, cy = rr.top + rr.height / 2 - s.top;
-  const power = clamp(-vy, .25, 3.2), tx = cx + vx * 220 + rnd(-4, 4), ty = cy - power * 240;
+  const power = clamp(-vy, .25, 3.2);
+  const b0 = cstage.querySelector('.bot').getBoundingClientRect(), reach = cy - (b0.top + b0.height * .2 - s.top);   // distance up to the bottle necks
+  const tx = cx + vx * 220 * .8, ty = cy - reach * clamp(.8 + (power - 1) * .22, .62, 1.3);   // an average flick lands at neck height
   let hitB = null, near = null, nd = 1e9;
   cstage.querySelectorAll('.bot').forEach(b => {
     const r = b.getBoundingClientRect(), nx = r.left + r.width / 2 - s.left, ny = r.top + r.height * .2 - s.top;
     const d = Math.hypot(tx - nx, ty - ny); if (d < nd) { nd = d; near = { el: b, x: nx, y: ny, w: r.width, h: r.height }; }
-    if (!b.classList.contains('ringed') && Math.abs(tx - nx) < r.width * .62 && Math.abs(ty - ny) < r.height * .3) hitB = { el: b, x: nx, y: ny };   // forgiving: near enough counts
+    // very forgiving: anything roughly in the bottle's area counts, and the closest open bottle wins
+    const dd = Math.hypot((tx - nx) / (r.width * 1.25), (ty - ny) / (r.height * .7));
+    if (!b.classList.contains('ringed') && dd < 1 && (!hitB || dd < hitB.dd)) hitB = { el: b, x: nx, y: ny, dd };
   });
   const endX = hitB ? hitB.x : tx, endY = hitB ? hitB.y : ty, arcH = 60 + power * 30;
   const anim = ring.animate([
@@ -1174,9 +1178,9 @@ async function chhallaThrow(vx, vy) {
       { transform: `translate(calc(-50% + ${endX - cx + rnd(-60, 60)}px), ${endY - cy + 140}px) scale(.45) rotateX(80deg) rotate(260deg)`, opacity: 0 },
     ], { duration: 520, easing: 'cubic-bezier(.5,0,1,1)', fill: 'forwards' });
     const dy = ty - near.y, dxn = tx - near.x, tips = [];
-    if (dy < -near.h * .3) tips.push('too far — less force');
-    else if (dy > near.h * .3) tips.push('too short — flick harder');
-    if (Math.abs(dxn) > near.w * .62) tips.push(dxn > 0 ? 'aim a little left' : 'aim a little right');
+    if (dy < -near.h * .7) tips.push('too far — less force');
+    else if (dy > near.h * .7) tips.push('too short — flick harder');
+    if (Math.abs(dxn) > near.w * 1.25) tips.push(dxn > 0 ? 'aim a little left' : 'aim a little right');
     coach(tips.length ? tips.join(', ') + '.' : 'so close! same again.');
   }
   await sleep(750);
