@@ -622,13 +622,13 @@ autoBtn.addEventListener('click', () => { MIX.prime(); runAuto(); });
 let PHONE = '';
 function track(event, extra = {}) {
   const R = C.rsvp;
-  if (!R.form) return;
-  const parts = (NAME || '').trim().split(/\s+/).filter(Boolean);
-  const data = { event, name: NAME || C.defaultName, first: parts[0] || '', last: parts.slice(1).join(' '), phone: PHONE, rsvp: '', link: INV ? 'inv' : (qs.get('name') ? 'name' : 'typed'),
-    key: INV ? 'inv:' + INV : 'name:' + (NAME || C.defaultName).toLowerCase(), device: navigator.userAgent.slice(0, 140), ...extra };
-  const body = new URLSearchParams();
-  Object.entries(R.fields).forEach(([k, entry]) => body.append(entry, data[k] || ''));
-  try { fetch(R.form, { method: 'POST', mode: 'no-cors', keepalive: true, body }); } catch (e) {}
+  const parts = (NAME || '').trim().split(/\s+/).filter(Boolean), dev = /mobile|iphone|android/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+  const post = (url, fields, data) => { if (!url) return; const body = new URLSearchParams(); Object.entries(fields).forEach(([k, entry]) => body.append(entry, data[k] || ''));
+    try { fetch(url, { method: 'POST', mode: 'no-cors', keepalive: true, body }); } catch (e) {} };
+  const who = { name: NAME || C.defaultName, first: parts[0] || '', last: parts.slice(1).join(' ') };
+  if (event === 'open' || event === 'rsvp') post(R.form, R.fields, { ...who, event, rsvp: extra.rsvp || '', device: dev });
+  if (event === 'play' || event === 'wall') post(R.gamesForm, R.gamesFields, { ...who, type: event === 'wall' ? 'pinned to wall' : 'played',
+    game: ({ tota: 'tota jyotish', gubbara: 'balloon shoot', chhalla: 'ring toss', draw: 'lucky draw' })[extra.rsvp] || extra.rsvp || '', result: extra.link || '', details: extra.device || '' });
   // our own database (admin dashboard + wall): plain-text beacon, no CORS preflight
   const api = { event, name: NAME || '', rsvp: event === 'rsvp' ? extra.rsvp : '',
     game: (event === 'wall' || event === 'play') ? extra.rsvp : '', title: extra.link || '', text: extra.device || '' };
@@ -649,6 +649,7 @@ function answer(ans) {
   const k = 'mkd:rsvp:' + (INV || (NAME || '').toLowerCase());
   store.set(k, ans); showRsvp(ans); track('rsvp', { rsvp: ans });
   if (ans === 'yes') { play('win', { vol: .8 }); buzz(30); } else play('tap');
+  if (C.partiful) window.open(C.partiful, '_blank', 'noopener');   // RSVP on Partiful too; the invite stays open here
 }
 $('#yes').addEventListener('click', () => { initAudio(); answer('yes'); });
 $('#no').addEventListener('click', () => answer('no'));
@@ -1050,7 +1051,7 @@ const MIX = (() => {
   setTimeout(load, 600);
   return {
     prime() { if (primed) return; primed = true; warm(); },                       // first tap of the opening (a real gesture)
-    start() { revealed = true; el.hidden = false; requestAnimationFrame(() => el.classList.add('in')); if (!primed) { primed = true; warm(); } loud(); },
+    start() { if (revealed) return; revealed = true; el.hidden = false; requestAnimationFrame(() => el.classList.add('in')); if (!primed) { primed = true; warm(); } loud(); },
     sync() { if (!ready || !revealed) return; if (A.on && !userPaused) { player.unMute(); player.playVideo(); } else player.pauseVideo(); },
   };
 })();
@@ -1098,9 +1099,14 @@ Promise.race([Promise.all([assetsReady, fontsReady]), new Promise(r => setTimeou
     ready = true;
     document.body.classList.add('ready');
     document.body.dataset.ph = 'gate';
-    const L = document.getElementById('ldr');
-    if (L) { L.classList.add('out'); setTimeout(() => L.remove(), 800); }
-    setTimeout(open, 250);                  // no popup: the envelope greets them straight away, as the loader fades
+    const L = document.getElementById('ldr'), go = document.getElementById('ldrGo');
+    const enter = () => {                   // a real tap: unlocks sound on every phone, warms the music, then the scene
+      initAudio(); MIX.start(); play('tap', { vol: .7 });   // the mix begins with this tap
+      if (L) { L.classList.add('out'); setTimeout(() => L.remove(), 800); }
+      setTimeout(open, 250);
+    };
+    if (L && go) { L.classList.add('done'); go.hidden = false; go.focus({ preventScroll: true }); go.addEventListener('click', enter, { once: true }); }
+    else enter();
   });
 requestAnimationFrame(frame);
 })();

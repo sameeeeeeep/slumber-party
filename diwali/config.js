@@ -33,13 +33,18 @@ window.MKD = {
     start: 34,                       // seconds into the first song
   },
 
+  // RSVP yes/no also opens the Partiful event in a new tab (our tracking still records the answer)
+  partiful: '',                      // ← paste the Partiful event link here
+
   rsvp: {
     // Opens + RSVPs post to a Google Form (sameep@nailin.it) → sheet "Untitled form (Responses)".
     wall: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSOz57GoCcYtf5P_uLFsGA47RaG94OYH8CUPdhqPPPT2hWbUeiUVKd8czXGoW0tLYCwJEMNcCddr6lD/pub?gid=1314439309&single=true&output=csv',
-    form: 'https://docs.google.com/forms/d/e/1FAIpQLScVPd2rjBp13xfeLVU6ErMwKoqwCkv0xhqlg-vfh7Twq_0yWg/formResponse',
-    fields: { event: 'entry.1726605616', name: 'entry.1618333562', phone: 'entry.1862265163', rsvp: 'entry.944684585',
-              link: 'entry.1147065896', key: 'entry.736821260', device: 'entry.671865426',
-              first: 'entry.1453709278', last: 'entry.940109719' },
+    // opens + RSVPs → sheet "nailinit Diwali — RSVPs"
+    form: 'https://docs.google.com/forms/d/e/1FAIpQLSd1XwogiofckkCIX1EAr-hTbB5fGqOPvPvFiOsnjeVyMI7CLA/formResponse',
+    fields: { name: 'entry.1294724695', first: 'entry.1514502624', last: 'entry.1345009509', event: 'entry.1747407084', rsvp: 'entry.1817300681', device: 'entry.2086148125' },
+    // game results + wall pins → sheet "nailinit Diwali — game results"
+    gamesForm: 'https://docs.google.com/forms/d/e/1FAIpQLScxSQamGzDPGesxIbLmVgj80BjOHGq7VAHRzZFPsh89N0hUxQ/formResponse',
+    gamesFields: { name: 'entry.919816937', first: 'entry.804019991', last: 'entry.2054692726', type: 'entry.254283166', game: 'entry.1513823772', result: 'entry.1437142101', details: 'entry.1572634584' },
     whatsapp: '919999999999',                // PLACEHOLDER — country code, no +
     text: 'Haan ji! {name} pakka aa rahi/raha hai Mohalle ki Diwali pe 🪔',
   },

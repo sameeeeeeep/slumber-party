@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Teko:wght@400;500;600&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792782428">
+<link rel="stylesheet" href="style.css?v=1792840586">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -46,6 +46,13 @@
 #ldr .diyas i.on { background: linear-gradient(#f3c45a, #b8741c 60%, #7a4210) !important; }
 #ldr .diyas i.on b { opacity: 1; transform: scale(1); animation: lflk 1s ease-in-out infinite alternate; box-shadow: 0 0 16px 5px rgba(255,170,60,.7); filter: brightness(1.15); }
 #ldr .diyas i:nth-child(2n) b { animation-duration: 1.3s; } #ldr .diyas i:nth-child(3n) b { animation-delay: -.4s; }
+#ldr .l-go { margin-top: 6px; border: 0; cursor: pointer; padding: 15px 26px 13px; border-radius: 4px; background: #efbd0d; color: #1c1410;
+  font: 700 20px/1 'Barlow Condensed', system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase;
+  box-shadow: 0 0 0 3px #75150f, 0 0 0 5px #ec5a86, 0 10px 24px rgba(0,0,0,.45), 0 0 30px rgba(239,189,13,.35); animation: lgoIn .5s cubic-bezier(.2,1.4,.4,1) both, lgoPulse 2s ease-in-out .6s infinite; }
+#ldr .l-go[hidden] { display: none; }
+#ldr.done .l-s { display: none; }
+@keyframes lgoIn { from { opacity: 0; transform: translateY(10px) scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes lgoPulse { 50% { box-shadow: 0 0 0 3px #75150f, 0 0 0 5px #ec5a86, 0 10px 24px rgba(0,0,0,.45), 0 0 46px rgba(239,189,13,.6); } }
 @media (prefers-reduced-motion: reduce) { #ldr .flm, #ldr .halo { animation: none; } }
 </style>
 
@@ -57,6 +64,7 @@
     <p class="l-t" id="ldrT">your chitthi is on its way</p>
     <div class="genda diyas" id="ldrG"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
     <p class="l-s">lighting the diyas…</p>
+    <button class="l-go" id="ldrGo" type="button" hidden>open your chitthi ✉</button>
   </div>
 </div>
 <script>
@@ -297,9 +305,9 @@
   <button class="mx-pill" id="mxPlay" type="button" aria-label="Pause music"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b><span class="mx-ic" id="mxIc">❚❚</span></button>
   <a class="mx-link" id="mxLink" href="#" target="_blank" rel="noopener" aria-label="Open the playlist on YouTube">↗</a>
 </div>
-<script src="config.js?v=1792782428"></script>
-<script src="lib.js?v=1792782428"></script>
-<script src="app.js?v=1792782428"></script>
-<script src="games.js?v=1792782428"></script>
+<script src="config.js?v=1792840586"></script>
+<script src="lib.js?v=1792840586"></script>
+<script src="app.js?v=1792840586"></script>
+<script src="games.js?v=1792840586"></script>
 </body>
 </html>
