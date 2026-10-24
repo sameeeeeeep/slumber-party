@@ -1027,6 +1027,9 @@ function updateGhost(now) {
   if (show) ghost.style.transform = `translate(${x}px,${y}px)`;
 }
 
+// scroll-locked until the reveal: anything that nudges the page down (restored position, anchoring) snaps back to the envelope
+addEventListener('scroll', () => { if (document.body.classList.contains('locked') && scrollY > 0) scrollTo(0, 0); }, { passive: true });
+
 function finish() {
   MIX.start();                              // the party starts when the invite is revealed
   document.body.classList.remove('locked');
