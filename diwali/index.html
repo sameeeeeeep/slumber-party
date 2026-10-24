@@ -13,11 +13,14 @@
 <link rel="preload" as="image" href="assets/mb_sleeve.webp?v=3">
 <link rel="preload" as="image" href="assets/mb_tray.webp">
 <link rel="preload" as="image" href="assets/match.webp">
-<link rel="preload" as="image" href="assets/invite_card.webp">
+<script>/* two invites, one site: party.nailin.it = hosted by Tanishq, Khushi & Shubham; everywhere else = DOT presents */
+window.SITE = /^party\./.test(location.hostname) ? 'party' : 'dot'; document.documentElement.dataset.site = SITE;
+window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp' : 'assets/invite_card.webp';
+(l => { l.rel = 'preload'; l.as = 'image'; l.href = CARD; document.head.append(l); })(document.createElement('link'));</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Bungee&family=Teko:wght@400;500;600&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1792843366">
+<link rel="stylesheet" href="style.css?v=1792872021">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -85,7 +88,7 @@
 
 
     <!-- the invite inside the envelope: the deck's AAO poster -->
-    <div id="card" class="card" aria-hidden="true"><img src="assets/invite_card.webp" alt="DOT Media presents nailinit Diwali Party, powered by Bastian"><span class="card-pb">powered by <b>bastian</b></span><i class="card-foil f-gold"></i><i class="card-foil f-blue"></i><i class="card-foil f-ink"></i><i class="card-sheen"></i></div>
+    <div id="card" class="card" aria-hidden="true"><img id="cardImg" alt="DOT presents nailinit Diwali Party"><script>document.getElementById('cardImg').src = CARD; if (SITE === 'party') document.getElementById('cardImg').alt = 'nailinit Diwali Party, hosted by Tanishq, Khushi and Shubham';</script><span class="card-pb card-host" aria-hidden="true">hosted by<b>Tanishq, Khushi &amp; Shubham</b></span><i class="card-foil f-gold"></i><i class="card-foil f-blue"></i><i class="card-foil f-ink"></i><i class="card-sheen"></i></div>
     <div id="cardname" class="cardname"><span class="foil" data-name>dost</span>... swagat <small>(with swag)</small></div>
 
     <canvas id="env" aria-label="Your envelope"></canvas>
@@ -149,16 +152,26 @@
     <div class="board b-yellow rsvp-card postcard">
       <div class="pc-head"><span>post card</span><span class="pc-hi">जवाबी पत्र</span></div>
       <div class="pc-stamp" aria-hidden="true"><img src="assets/k1.webp" alt=""><b>₹26</b></div>
-      <div class="pc-mark" aria-hidden="true"><span>bastian · juhu</span><b>2 NOV 26</b><span>mohalla post</span></div>
+      <div class="pc-mark" aria-hidden="true"><span>mumbai</span><b>2 NOV 26</b><span>mohalla post</span></div>
       <i class="pc-clip" aria-hidden="true"></i>
       <div id="rsvpAsk" class="rsvp-ask">
         <h2>coming, <span class="foil" data-name>dost</span>?</h2>
-        <p class="b-note"><span data-c="dateLong"></span> · <span data-c="time"></span> · <span data-c="venue"></span></p>
+        <p class="b-note"><span data-c="dateLong"></span> · <span data-c="time"></span></p>
         <div class="rsvp-btns">
           <button class="sign red" id="yes" type="button">yes, pakka!</button>
           <button class="sign blue" id="no" type="button">can't make it</button>
         </div>
       </div>
+      <form id="rsvpForm" class="rsvp-form" hidden novalidate>
+        <h2>pakka? <span class="foil">bas</span> two things.</h2>
+        <p class="b-note">the hosts confirm every guest. once you're in, your entry pass (with a QR) comes to your email.</p>
+        <label class="pc-field"><span>name</span><input id="apName" name="name" autocomplete="name" required maxlength="60"></label>
+        <label class="pc-field"><span>phone</span><input id="apPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="98xxxxxxxx" required maxlength="18"></label>
+        <label class="pc-field"><span>email</span><input id="apEmail" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" required maxlength="120"></label>
+        <p class="pc-err" id="apErr" role="alert"></p>
+        <button class="sign red" id="apSend" type="submit">send my request</button>
+        <button class="linkish" id="apBack" type="button">back</button>
+      </form>
       <div id="rsvpDone" class="rsvp-done" hidden>
         <h2 id="doneHead">pakka!</h2>
         <p class="b-note" id="doneMsg"></p>
@@ -260,7 +273,7 @@
 
   <footer class="foot">
     <div class="foot-tick"><div class="row" id="row3"></div></div>
-    <figure class="foot-poster"><img loading="lazy" decoding="async" src="assets/poster.webp" alt="AAO: nailinit Diwali Party poster"><i class="fp-sheen"></i></figure>
+    <figure class="foot-poster"><img loading="lazy" decoding="async" alt="AAO: nailinit Diwali Party poster"><script>document.currentScript.previousElementSibling.src = SITE === 'party' ? 'assets/poster_host.webp' : 'assets/poster.webp';</script><i class="fp-sheen"></i></figure>
     <p class="foot-see">see you there, <span class="foot-name" data-name>dost</span>.</p>
   </footer>
 </main>
@@ -305,9 +318,9 @@
   <button class="mx-pill" id="mxPlay" type="button" aria-label="Pause music"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b><span class="mx-ic" id="mxIc">❚❚</span></button>
   <a class="mx-link" id="mxLink" href="#" target="_blank" rel="noopener" aria-label="Open the playlist on YouTube">↗</a>
 </div>
-<script src="config.js?v=1792843366"></script>
-<script src="lib.js?v=1792843366"></script>
-<script src="app.js?v=1792843366"></script>
-<script src="games.js?v=1792843366"></script>
+<script src="config.js?v=1792872021"></script>
+<script src="lib.js?v=1792872021"></script>
+<script src="app.js?v=1792872021"></script>
+<script src="games.js?v=1792872021"></script>
 </body>
 </html>

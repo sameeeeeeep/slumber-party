@@ -44,7 +44,7 @@ $('#ics').addEventListener('click', () => {
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//nailinit//Diwali Party//EN', 'BEGIN:VEVENT',
     'UID:nailinit-diwali-party-2026@nailinit', 'DTSTAMP:' + f(new Date().toISOString()),
     'DTSTART:' + f(ev.start), 'DTEND:' + f(ev.end),
-    'SUMMARY:nailinit Diwali Party', `LOCATION:${ev.venue}, ${ev.area}`,
+    'SUMMARY:nailinit Diwali Party', `LOCATION:${ev.area} (venue shared on confirmation)`,
     `DESCRIPTION:Dress code: ${ev.dress}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
@@ -73,8 +73,9 @@ const ldTick = () => { ldDone++; ldMax = Math.max(ldMax, ldDone / ldTotal); if (
 const counted = p => { ldTotal++; return Promise.resolve(p).catch(() => {}).then(ldTick); };
 const warmImg = src => new Promise(res => { const i = new Image(); i.onload = () => (i.decode ? i.decode().catch(() => {}) : Promise.resolve()).then(res); i.onerror = res; i.src = src; });
 const assetsReady = Promise.all([
-  counted(loadImg('env', 'assets/envelope.webp')), counted(loadImg('nl', 'assets/nailinit.webp')), counted(loadImg('dot', 'assets/dot_dark.webp')), counted(loadImg('diwali', 'assets/diwali_blue.webp')),
-  ...['mb_sleeve', 'mb_tray', 'match', 'invite_card', 'swag', 'k1', 'k2', 'k3', 'k4', 'foil_gold', 'foil_blue', 'foil_ink', 'paper_yellow'].map(n => counted(warmImg(`assets/${n}.webp`))),
+  counted(loadImg('env', 'assets/envelope.webp')), counted(loadImg('nl', 'assets/nailinit.webp')), counted(loadImg('diwali', 'assets/diwali_blue.webp')),
+  counted(warmImg(window.CARD || 'assets/invite_card.webp')),
+  ...['mb_sleeve', 'mb_tray', 'match', 'swag', 'k1', 'k2', 'k3', 'k4', 'foil_gold', 'foil_blue', 'foil_ink', 'paper_yellow'].map(n => counted(warmImg(`assets/${n}.webp`))),
   ...['slide1', 'strike1', 'strike2', 'flame1', 'catch1', 'burn1', 'reveal1', 'poppers1'].map(n => counted(fetch(`assets/sfx/${n}.mp3`))),   // into the HTTP cache; decoded on first tap
 ]);
 CONF.forEach(k => loadImg(k, `assets/conf/${k}.webp`));                          // confetti isn't needed until the reveal: never block on it
@@ -635,27 +636,62 @@ function track(event, extra = {}) {
     game: (event === 'wall' || event === 'play') ? extra.rsvp : '', title: extra.link || '', text: extra.device || '' };
   try { const b = new Blob([JSON.stringify(api)], { type: 'text/plain' }); navigator.sendBeacon ? navigator.sendBeacon(API_BASE + '/api/track', b) : fetch(API_BASE + '/api/track', { method: 'POST', body: b, keepalive: true }); } catch (e) {}
 }
-const API_BASE = /nailin\.it$|pages\.dev$/.test(location.hostname) ? '' : 'https://diwali.nailin.it';
+const API_BASE = /nailin\.it$|pages\.dev$|localhost$|^127\./.test(location.hostname) ? '' : 'https://diwali.nailin.it';
 window.MKD_API = API_BASE;
 window.MKDTrack = (ev, extra) => track(ev, extra);
-const rsvpAsk = $('#rsvpAsk'), rsvpDone = $('#rsvpDone');
-function showRsvp(ans) {
-  rsvpAsk.hidden = !!ans; rsvpDone.hidden = !ans;
-  if (!ans) return;
-  $('#doneHead').textContent = ans === 'yes' ? 'pakka!' : 'next time then.';
-  $('#doneMsg').textContent = ans === 'yes' ? `see you ${C.event.dateLong}, ${C.event.time} · ${C.event.venue}` : "we'll miss you at the mohalla.";
-  $('#ics').hidden = ans !== 'yes';
+/* RSVP: "yes" = apply (name + phone + email) → hosts approve in /admin → entry pass with QR by email */
+const rsvpAsk = $('#rsvpAsk'), rsvpDone = $('#rsvpDone'), rsvpForm = $('#rsvpForm');
+const RKEY = 'mkd:rsvp:' + (INV || (NAME || '').toLowerCase());
+const DONE = {
+  applied: ['request sent!', e => `the hosts will confirm soon. your entry pass (with a QR) will come to ${e || 'your email'}.`],
+  approved: ["you're in!", e => `your entry pass is in ${e || 'your email'}. venue + QR are all there. see you ${C.event.dateLong}!`],
+  declined: ['thank you!', () => "the list is full this time, but we're so glad you wanted to come."],
+  no: ['next time then.', () => "we'll miss you at the mohalla."],
+};
+function showRsvp(st) {
+  const [head, msg] = DONE[st] || [];
+  rsvpAsk.hidden = !!st || !rsvpForm.hidden; rsvpDone.hidden = !st;
+  if (st) rsvpForm.hidden = true;
+  if (!st) return;
+  $('#doneHead').textContent = head;
+  $('#doneMsg').textContent = msg(store.get(RKEY + ':email'));
+  $('#ics').hidden = st !== 'applied' && st !== 'approved';
+  $('#change').hidden = st === 'approved';
 }
-function answer(ans) {
-  const k = 'mkd:rsvp:' + (INV || (NAME || '').toLowerCase());
-  store.set(k, ans); showRsvp(ans); track('rsvp', { rsvp: ans });
-  if (ans === 'yes') { play('win', { vol: .8 }); buzz(30); } else play('tap');
-  if (C.partiful) window.open(C.partiful, '_blank', 'noopener');   // RSVP on Partiful too; the invite stays open here
+function openForm(on) {
+  rsvpForm.hidden = !on; rsvpAsk.hidden = on; rsvpDone.hidden = true; $('#apErr').textContent = '';
+  if (!on) return;
+  if (!$('#apName').value) $('#apName').value = NAME || '';
+  $('#apPhone').value = $('#apPhone').value || store.get(RKEY + ':phone') || PHONE || '';
+  $('#apEmail').value = $('#apEmail').value || store.get(RKEY + ':email') || '';
+  rsvpForm.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
-$('#yes').addEventListener('click', () => { initAudio(); answer('yes'); });
-$('#no').addEventListener('click', () => answer('no'));
-$('#change').addEventListener('click', () => showRsvp(''));
-showRsvp(store.get('mkd:rsvp:' + (INV || (NAME || '').toLowerCase())) || '');
+$('#yes').addEventListener('click', () => { initAudio(); play('tap'); openForm(true); });
+$('#apBack').addEventListener('click', () => openForm(false));
+$('#no').addEventListener('click', () => { store.set(RKEY, 'no'); showRsvp('no'); track('rsvp', { rsvp: 'no' }); play('tap'); });
+$('#change').addEventListener('click', () => { rsvpDone.hidden = true; rsvpAsk.hidden = false; });
+rsvpForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#apName').value.trim(), phone = $('#apPhone').value.trim(), email = $('#apEmail').value.trim();
+  const err = !name ? 'add your name' : phone.replace(/\D/g, '').length < 10 ? 'add your phone number (10 digits)' : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? "that email doesn't look right" : '';
+  if (err) { $('#apErr').textContent = err; buzz(20); return; }
+  const btn = $('#apSend'); btn.disabled = true; btn.textContent = 'sending…'; $('#apErr').textContent = '';
+  try {
+    const r = await fetch(API_BASE + '/api/apply', { method: 'POST', body: JSON.stringify({ name, phone, email }) });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'x');
+    store.set(RKEY, d.status); store.set(RKEY + ':email', email); store.set(RKEY + ':phone', phone);
+    showRsvp(d.status); play('win', { vol: .8 }); buzz(30);
+    track('rsvp', { rsvp: 'yes' });
+  } catch (x) {
+    $('#apErr').textContent = x.message === 'email' ? "that email doesn't look right" : x.message === 'phone' ? 'add your phone number (10 digits)' : "couldn't send. check your internet and try again?";
+  } finally { btn.disabled = false; btn.textContent = 'send my request'; }
+});
+showRsvp(({ yes: 'applied' })[store.get(RKEY)] || store.get(RKEY) || '');
+// the hosts may have approved since the last visit
+if (NAME) fetch(API_BASE + '/api/apply?name=' + encodeURIComponent(NAME)).then(r => r.json()).then(d => {
+  if (d.status && d.status !== store.get(RKEY) && (DONE[d.status])) { store.set(RKEY, d.status); showRsvp(d.status); }
+}).catch(() => {});
 
 /* ───────────── gate ───────────── */
 const gate = $('#gate'), gform = $('#gform'), gopen = $('#gopen'), gerr = $('#gerr');
@@ -1064,7 +1100,7 @@ window.MKDFX = { sfx, initAudio, noiseHit, buzz, play, loop, stopAllLoops, get a
 /* ───────────── section entrances ───────────── */
 (() => {
   const mark = (sel, cls) => document.querySelectorAll(sel).forEach(el => el.classList.add(cls));
-  mark('.aao h1, .aao .lede, .games > h2, .games .gc-sub, .wall2 h2, .wall2 .gc-sub, .rsvp h2', 'reveal-text');
+  mark('.aao h1, .aao .lede, .games > h2, .games .gc-sub, .wall2 h2, .wall2 .gc-sub, .rsvp-ask h2', 'reveal-text');
   mark('.rsvp-card, .booth', 'reveal-pop');
   mark('.stall', 'reveal-up');
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .2 });

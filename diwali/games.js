@@ -36,7 +36,7 @@ function wrap(c, text, x, y, maxW, lh) {
 }
 async function renderShare(k) {
   const d = k === 'invite'
-    ? { img: 'assets/invite_card.webp', title: `${who()} is invited!`, text: 'nailinit diwali party · dress loud, gossip louder.', kick: 'chitthi aayi hai' }
+    ? { img: window.CARD || 'assets/invite_card.webp', title: `${who()} is invited!`, text: 'nailinit diwali party · dress loud, gossip louder.', kick: 'chitthi aayi hai' }
     : k === 'gubbara'
       ? { img: 'assets/game/bal1.webp', title: `${who()} popped ${document.querySelectorAll('#glist .win-card').length} balloons and won`, text: [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent).join(' · '), kick: 'mela balloon shoot' }
       : SH[k];

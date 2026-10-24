@@ -12,9 +12,9 @@ window.MKD = {
     dateHi: 'रविवार, २ नवंबर',
     dateShort: '02·11·26',
     time: '7pm onwards',
-    venue: 'bastian beach club, juhu',
+    venue: 'will be shared',            // the real venue goes out in the confirmation email (set it in /admin)
     area: 'Mumbai',
-    mapUrl: 'https://www.google.com/maps/search/?api=1&query=Bastian+Beach+Club+Juhu+Mumbai',
+    mapUrl: '',
     dress: 'desi maximalist',
     dressNote: '(be loud, basically)',
     rsvpBy: 'RSVP by 1 November',            // PLACEHOLDER
@@ -32,9 +32,6 @@ window.MKD = {
     volume: 45,
     start: 34,                       // seconds into the first song
   },
-
-  // RSVP yes/no also opens the Partiful event in a new tab (our tracking still records the answer)
-  partiful: '',                      // ← paste the Partiful event link here
 
   rsvp: {
     // Opens + RSVPs post to a Google Form (sameep@nailin.it) → sheet "Untitled form (Responses)".

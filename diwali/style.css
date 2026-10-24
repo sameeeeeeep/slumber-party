@@ -1380,3 +1380,27 @@ html, body { overscroll-behavior-x: none; }
   font-family: 'Barlow Condensed', var(--sans) !important; font-weight: 700 !important; letter-spacing: .12em !important; }
 .k-status { font-size: 12px !important; } .guide { font-size: 13px !important; } .by { text-transform: none !important; font-family: var(--sans) !important; font-weight: 500 !important; letter-spacing: 0 !important; font-size: 16px !important; }
 @media (max-width: 420px) { .stall b { font-size: 8.5px !important; letter-spacing: 0 !important; } .mb-foot { font-size: 10.5px !important; } }
+
+/* ═════════ two invites: DOT presents (diwali.nailin.it) / hosted by (party.nailin.it) ═════════ */
+.card-host { display: none; }
+[data-site="party"] .card-host { display: flex; flex-direction: column; align-items: center; gap: .9cqw; top: 9.5% !important; font: 600 1.9cqw/1 var(--sans) !important; letter-spacing: .42em !important; text-transform: uppercase; color: var(--ink); }
+[data-site="party"] .card-host b { font: 400 3.5cqw/1 var(--title), var(--display) !important; letter-spacing: .02em !important; color: var(--red) !important; text-transform: none; }
+
+/* ═════════ postcard: apply for a pass ═════════ */
+.rsvp-form { display: block; text-align: center; }
+.rsvp-form[hidden] { display: none; }
+.rsvp-form .b-note { margin-bottom: 14px !important; }
+.pc-field { display: grid; grid-template-columns: 64px 1fr; align-items: end; gap: 10px; margin: 0 0 12px; text-align: left; }
+.pc-field span { font: 700 13px/1 'Barlow Condensed', var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--maroon); padding-bottom: 9px; }
+.pc-field input { width: 100%; min-width: 0; border: 0; border-bottom: 2px dotted rgba(117,21,15,.55); background: transparent; padding: 6px 2px 6px; border-radius: 0;
+  font: 600 19px/1.2 var(--sans); color: var(--ink); outline: none; -webkit-appearance: none; appearance: none; }
+.pc-field input::placeholder { color: rgba(117,21,15,.38); }
+.pc-field input:focus { border-bottom-style: solid; border-bottom-color: var(--red); }
+.pc-err { min-height: 1.3em; margin: 2px 0 10px; font: 600 14px/1.3 var(--sans); color: var(--red); }
+.rsvp-form .sign { font-size: 19px; padding: 15px 22px 13px; }
+.rsvp-form .sign:disabled { opacity: .7; }
+.rsvp-form .linkish { display: block; margin: 14px auto 0; color: var(--maroon); opacity: .8; }
+[data-site="party"] .f-gold { --m: url(assets/foil_gold_host.webp); }
+[data-site="party"] .f-blue { --m: url(assets/foil_blue_host.webp); }
+[data-site="party"] .f-ink { --m: url(assets/foil_ink_host.webp); }
+[data-site="party"] .card::after { -webkit-mask-image: url(assets/invite_card_host.webp); mask-image: url(assets/invite_card_host.webp); }
