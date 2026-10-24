@@ -1075,15 +1075,20 @@ const MIX = (() => {
   }
   // inside the opening tap: start UNMUTED (that tap is what unlocks sound on phones), silence it the moment it plays
   function warm() { if (!ready || userPaused) return; hush = true; player.setVolume(0); player.unMute(); player.seekTo(START, true); player.playVideo(); }
-  let hush = false;
+  let hush = false, cued = false;
+  const going = () => ready && [1, 3].includes(player.getPlayerState());          // playing or buffering: leave it alone
   function loud() {                         // at the reveal: same song, sound up
     if (!ready || userPaused || !A.on) { ui(); return; }
-    hush = false; player.seekTo(START, true); player.unMute(); player.setVolume(cfg.volume || 45);   // the song starts at 0:30 on the reveal
-    if (!playing()) player.playVideo();
-    setTimeout(() => { needTap = !audible() && A.on && !userPaused; ui(); }, 1600);
+    hush = false;
+    if (!cued) { cued = true; player.seekTo(START, true); }   // the song starts at 0:34 once, at the reveal; never jumps back after that
+    player.unMute(); player.setVolume(cfg.volume || 45);
+    if (!going()) player.playVideo();
+    check(0);
   }
-  // any tap after the reveal counts as permission on strict phones
-  document.addEventListener('pointerdown', e => { if (needTap && !e.target.closest('#mix')) { needTap = false; loud(); } }, true);
+  // strict phones can refuse sound outside a tap: only then ask for one (a buffering player is not a refusal)
+  function check(n) { setTimeout(() => { if (going() && !player.isMuted()) { needTap = false; ui(); return; } if (n < 3) return check(n + 1); needTap = A.on && !userPaused; ui(); }, 1500); }
+  // any tap after the reveal counts as permission: just unmute + play from where it is, no seeking
+  document.addEventListener('pointerdown', e => { if (needTap && !e.target.closest('#mix')) { needTap = false; player.unMute(); player.setVolume(cfg.volume || 45); if (!going()) player.playVideo(); check(1); } }, true);
   pill.addEventListener('click', () => {
     if (!ready) return;
     if (audible()) { userPaused = true; player.pauseVideo(); }
@@ -1094,7 +1099,7 @@ const MIX = (() => {
   return {
     prime() { if (primed || revealed) return; primed = true; warm(); },   // never touch the song once the mix has started                       // first tap of the opening (a real gesture)
     start() { if (revealed) return; revealed = true; el.hidden = false; requestAnimationFrame(() => el.classList.add('in')); if (!primed) { primed = true; warm(); } loud(); },
-    sync() { if (!ready || !revealed) return; if (A.on && !userPaused) { player.unMute(); player.playVideo(); } else player.pauseVideo(); },
+    sync() { if (!ready || !revealed) return; if (A.on && !userPaused) { player.unMute(); if (!going()) player.playVideo(); } else player.pauseVideo(); },
   };
 })();
 
