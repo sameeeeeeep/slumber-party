@@ -1354,3 +1354,29 @@ html, body { overscroll-behavior-x: none; }
 .gbar { background: rgba(32,4,2,.97) !important; }
 /* anything scrolled out of view stops animating */
 .zz, .zz * { animation-play-state: paused !important; }
+
+/* ═════════ more Bungee: signs, stalls, card titles, kickers & labels (plain, no shadow) ═════════ */
+.sgn .o-big, .sgn .o-k, .stall b, .gbar button b, .kc-label, .wc-name, .wc-title, .mh-title, .reading .r-title, .tix .t-name,
+.reading .r-kick, .res-label, .wc-game, .k-status, .pc-head, .mb-foot, .mb-sign small, .foot-tick span, .tix .t-kick, .wc-tix, .wc-tix small,
+.mh-card .res-label, .guide, .l-s, .by, .gc-sub b, .aao .lede b {
+  font-family: var(--title) !important; font-weight: 400 !important; text-shadow: none !important; letter-spacing: .02em !important; text-transform: uppercase; }
+.sgn .o-big { font-size: 7.6cqw !important; line-height: 1.1 !important; background: none !important; -webkit-text-fill-color: #fff6dc !important; color: #fff6dc !important; filter: none !important; animation: none !important; }
+.sgn .o-k { font-size: 4.4cqw !important; letter-spacing: .14em !important; background: none !important; -webkit-text-fill-color: var(--yellow) !important; color: var(--yellow) !important; animation: none !important; }
+.stall b { font-size: 13px !important; } @media (max-width: 420px) { .stall b { font-size: 9.5px !important; } }
+.gbar button b { font-size: 11px !important; } @media (max-width: 420px) { .gbar button b { font-size: 8.5px !important; } }
+.kc-label { font-size: calc(var(--w) * .062) !important; line-height: 1.15 !important; }
+.wc-name { font-size: 13.5px !important; line-height: 1.25 !important; }
+.wc-title { font-size: 12px !important; color: var(--red) !important; }
+.mh-title { font-size: 17px !important; line-height: 1.2 !important; color: var(--red) !important; }
+.reading .r-title { font-size: 20px !important; color: var(--red) !important; }
+.reading .r-kick, .res-label, .wc-game, .mb-foot, .tix .t-kick { letter-spacing: .1em !important; }
+.res-label { font-size: 12px !important; }
+.tix .t-name { font-size: 4.4cqw !important; color: var(--ink) !important; }
+.k-status { font-size: 11.5px !important; }
+.foot-tick span { font-size: 16px !important; }
+.guide { font-size: 11px !important; } .pc-head { font-size: 13px !important; }
+/* "in places": small utility text goes back to the body faces */
+.k-status, .guide, .l-s, .by, .wc-game, .reading .r-kick, .wc-tix small, .tix .t-kick, .mb-sign small {
+  font-family: 'Barlow Condensed', var(--sans) !important; font-weight: 700 !important; letter-spacing: .12em !important; }
+.k-status { font-size: 12px !important; } .guide { font-size: 13px !important; } .by { text-transform: none !important; font-family: var(--sans) !important; font-weight: 500 !important; letter-spacing: 0 !important; font-size: 16px !important; }
+@media (max-width: 420px) { .stall b { font-size: 8.5px !important; letter-spacing: 0 !important; } .mb-foot { font-size: 10.5px !important; } }
