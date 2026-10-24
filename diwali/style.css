@@ -837,9 +837,9 @@ body:not(.lit) .decor .kandil .lamp img:not(.bloom) { filter: brightness(.55) sa
 /* printed paper: matchbox + seal + objects get grain and wear */
 .box .sleeve, .drawer img { filter: contrast(1.04) saturate(1.05); }
 .box::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: 3px; background: var(--grain); background-size: 160px; mix-blend-mode: multiply; opacity: .55;
-  -webkit-mask: url(assets/mb_sleeve.webp) center / 100% 100%; mask: url(assets/mb_sleeve.webp) center / 100% 100%; }
+  -webkit-mask: url(assets/mb_sleeve.webp?v=3) center / 100% 100%; mask: url(assets/mb_sleeve.webp?v=3) center / 100% 100%; }
 .box::before { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2; border-radius: 3px; background: linear-gradient(115deg, transparent 30%, rgba(255,240,200,.28) 45%, transparent 60%); mix-blend-mode: soft-light; background-size: 250% 100%; animation: sheen 5s ease-in-out infinite;
-  -webkit-mask: url(assets/mb_sleeve.webp) center / 100% 100%; mask: url(assets/mb_sleeve.webp) center / 100% 100%; }
+  -webkit-mask: url(assets/mb_sleeve.webp?v=3) center / 100% 100%; mask: url(assets/mb_sleeve.webp?v=3) center / 100% 100%; }
 .obj::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: var(--grain); background-size: 180px; mix-blend-mode: multiply; opacity: .35;
   -webkit-mask: var(--m) center / 100% 100% no-repeat; mask: var(--m) center / 100% 100% no-repeat; }
 .o-cal { --m: url(assets/deco/calendar.webp); } .o-sign { --m: url(assets/deco/sign.webp); } .o-tag { --m: url(assets/deco/tag.webp); }
@@ -1330,7 +1330,7 @@ html, body { overscroll-behavior-x: none; }
 .gbar.on { transform: translate(-50%, 0); visibility: visible; transition: transform .35s cubic-bezier(.2,1,.3,1); }
 
 /* ═════════ titles: Bungee Shade (truck/shop-sign 3D lettering) — its built-in shade is the only effect, no extra shadows ═════════ */
-:root { --title: 'Bungee Shade', 'Teko Display', system-ui, sans-serif; }
+:root { --title: 'Bungee', 'Teko Display', system-ui, sans-serif; }
 .aao h1, .rsvp h2, .rsvp-card h2, .games > h2, .wall2 h2, .g-head, .mb-sign b, .foot-see, .booth .g-head, .my-haul .g-head {
   font-family: var(--title) !important; font-weight: 400 !important; text-shadow: none !important; filter: none !important; letter-spacing: .01em !important; text-transform: uppercase; }
 .aao h1 { font-size: clamp(30px, 8.4vw, 60px) !important; line-height: 1.08 !important; }
@@ -1340,3 +1340,17 @@ html, body { overscroll-behavior-x: none; }
 .mb-sign b { font-size: clamp(18px, 5vw, 26px) !important; color: var(--red); }
 .foot-see { font-size: clamp(22px, 6.4vw, 34px) !important; }
 .g-head .foil, .aao h1 .foil, .rsvp h2 .foil, .foot-see .foot-name { font-family: inherit !important; }
+/* plain, readable title colours (no shade, no shadow) */
+.aao h1 { color: var(--yellow) !important; } .aao h1 .foil { -webkit-text-fill-color: var(--cream) !important; background: none !important; color: var(--cream) !important; }
+.games > h2, .wall2 h2, .rsvp h2, .foot-see { color: var(--yellow) !important; }
+.g-head { color: var(--yellow) !important; } .g-head .foil, .rsvp h2 .foil, .foot-see .foot-name { -webkit-text-fill-color: var(--cream) !important; background: none !important; color: var(--cream) !important; }
+.rsvp-card h2 { color: var(--red) !important; } .rsvp-card h2 .foil { -webkit-text-fill-color: var(--maroon) !important; background: none !important; }
+.mb-sign b { color: var(--red) !important; }
+
+/* ═════════ perf ═════════ */
+/* no live blur behind fixed UI (phones re-blur every frame while the page animates underneath) */
+.mx-pill, .mx-link, .gbar, .snd, .autobtn { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.mx-pill, .mx-link { background: rgba(32,4,2,.94) !important; }
+.gbar { background: rgba(32,4,2,.97) !important; }
+/* anything scrolled out of view stops animating */
+.zz, .zz * { animation-play-state: paused !important; }

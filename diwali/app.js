@@ -78,7 +78,7 @@ const assetsReady = Promise.all([
   ...['slide1', 'strike1', 'strike2', 'flame1', 'catch1', 'burn1', 'reveal1', 'poppers1'].map(n => counted(fetch(`assets/sfx/${n}.mp3`))),   // into the HTTP cache; decoded on first tap
 ]);
 CONF.forEach(k => loadImg(k, `assets/conf/${k}.webp`));                          // confetti isn't needed until the reveal: never block on it
-const fontsReady = Promise.all(['600 20px "Teko Display"', '500 20px "Teko Text"', '600 20px "Teko Text"', '700 20px "Palanquin Dark"', '20px "Bakbak One"', '700 20px "Barlow Condensed"', '500 20px "Barlow"', '20px "Bungee Shade"']
+const fontsReady = Promise.all(['600 20px "Teko Display"', '500 20px "Teko Text"', '600 20px "Teko Text"', '700 20px "Palanquin Dark"', '20px "Bakbak One"', '700 20px "Barlow Condensed"', '500 20px "Barlow"', '20px "Bungee"']
   .map(f => counted(document.fonts ? document.fonts.load(f, 'सेवा में Aa') : 0))).catch(() => {});
 
 /* ───────────── elements & layout ───────────── */
@@ -1007,7 +1007,7 @@ const MIX = (() => {
   const cfg = (window.MKD && window.MKD.music) || {}, el = $('#mix');
   const songs = cfg.songs || (cfg.youtube ? [cfg.youtube] : []);
   if ((!songs.length && !cfg.playlist) || !el) return { start() {}, sync() {}, prime() {} };
-  let player = null, ready = false, primed = false, revealed = false, userPaused = false, needTap = false;
+  let player = null, ready = false, primed = false, revealed = false, userPaused = false, needTap = false, preloading = false;
   const pill = $('#mxPlay'), ic = $('#mxIc'), title = cfg.title || 'mohalla diwali mix', START = cfg.start || 0;
   $('#mxTitle').textContent = title;
   $('#mxLink').href = cfg.playlist ? `https://www.youtube.com/playlist?list=${cfg.playlist}` : `https://www.youtube.com/watch?v=${songs[0]}&t=${START}s`;
@@ -1029,8 +1029,10 @@ const MIX = (() => {
     if (cfg.playlist) Object.assign(pv, { listType: 'playlist', list: cfg.playlist });
     else pv.playlist = songs.join(',');
     player = new YT.Player('mxPlayer', { ...(cfg.playlist ? {} : { videoId: songs[0] }), width: '200', height: '200', playerVars: pv,
-      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (revealed) loud(); else { player.mute(); player.seekTo(START, true); player.playVideo(); } if (window.__mixReady) window.__mixReady(); ui(); },   // buffered + silently rolling before the enter tap
-        onStateChange: e => { if (!revealed && e.data === 1) { player.mute(); if (player.getCurrentTime() > START + 8) player.seekTo(START, true); } ui(); } } });
+      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (revealed) loud(); else { player.mute(); player.seekTo(START, true); player.playVideo(); preloading = true; } ui(); },   // buffer the song at 0:34, then pause (below) so nothing decodes during the opening
+        onStateChange: e => {
+          if (!revealed && preloading && e.data === 1) { preloading = false; player.pauseVideo(); player.seekTo(START, true); if (window.__mixReady) window.__mixReady(); }   // buffered: stop decoding
+          ui(); } } });
   }
   // inside the opening tap: start UNMUTED (that tap is what unlocks sound on phones), silence it the moment it plays
   function warm() { if (!ready || userPaused) return; hush = true; player.setVolume(0); player.unMute(); player.seekTo(START, true); player.playVideo(); }
@@ -1051,7 +1053,7 @@ const MIX = (() => {
   });
   load();                                   // start loading right away, alongside the loader
   return {
-    prime() { if (primed) return; primed = true; warm(); },                       // first tap of the opening (a real gesture)
+    prime() { if (primed || revealed) return; primed = true; warm(); },   // never touch the song once the mix has started                       // first tap of the opening (a real gesture)
     start() { if (revealed) return; revealed = true; el.hidden = false; requestAnimationFrame(() => el.classList.add('in')); if (!primed) { primed = true; warm(); } loud(); },
     sync() { if (!ready || !revealed) return; if (A.on && !userPaused) { player.unMute(); player.playVideo(); } else player.pauseVideo(); },
   };
@@ -1083,6 +1085,13 @@ window.MKDFX = { sfx, initAudio, noiseHit, buzz, play, loop, stopAllLoops, get a
   };
   let w0 = -1; const rb = () => { const w = el.clientWidth; if (w && Math.abs(w - w0) > 20) { w0 = w; build(); } };
   rb(); if (window.ResizeObserver) new ResizeObserver(rb).observe(el); else window.addEventListener('resize', rb);
+})();
+
+/* ───────────── perf: sections off-screen pause all their CSS animation ───────────── */
+(() => {
+  if (!window.IntersectionObserver) return;
+  const io = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('zz', !e.isIntersecting)), { rootMargin: '200px 0px' });
+  document.querySelectorAll('main > section, main > div, .foot, .bunting, #seq .decor, #seq .decor-swag').forEach(el => io.observe(el));
 })();
 
 /* ───────────── boot ───────────── */
