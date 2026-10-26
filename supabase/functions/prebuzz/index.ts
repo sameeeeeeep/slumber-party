@@ -9,7 +9,7 @@
 //    me      {token}            → the secret chat again, for a returning member
 //    photo   {token, idx}       → a signed URL for photo 0, 1 or 2 — each ONCE per phone
 //    hamper  {token, url}       → enter the hamper draw with a post link
-//    lead    {name, phone, …}   → a stranger's details
+//    lead    {phone, email, …}  → a stranger's details
 //    verify  {code, phone}      ┐ for the CHECKOUT, not the browser: both need
 //    redeem  {code, phone, ref} ┘ the x-prebuzz-key header (PREBUZZ_REDEEM_KEY)
 //
@@ -283,7 +283,6 @@ Deno.serve(async (req) => {
     const name = str(b.name, 120);
     const phone = normPhone(b.phone);
     const email = str(b.email, 200)?.toLowerCase() || null;
-    if (!name) return json({ error: 'name' }, 400, origin);
     if (!phone) return json({ error: 'phone' }, 400, origin);
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: 'email' }, 400, origin);
     let handle = str(b.handle, 60);

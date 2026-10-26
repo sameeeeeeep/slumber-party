@@ -31,7 +31,7 @@ create index if not exists applications_phone_idx on public.applications (phone)
 create table if not exists public.prebuzz_leads (
   id          uuid primary key default gen_random_uuid(),
   created_at  timestamptz not null default now(),
-  name        text not null,
+  name        text,
   phone       text not null,          -- '+91 XXXXXXXXXX', same shape as applications
   email       text,
   handle      text,

@@ -33,12 +33,12 @@
   }
 </script>
 <style>
-  /* THE PREBUZZ PHONE. You land on her lock screen with two unread messages,
-     the way the slumber page opened on an unread DM:
-       · the secret slumber group — only for the people who applied; it asks
-         for the number they applied with, and if it matches, it lets them in
-       · a new message from khushi — everyone else; she won't say what's
-         coming, she just takes their details
+  /* THE PREBUZZ PHONE. You land on her lock screen with one unread message,
+     the way the slumber page opened on an unread DM. In it she says something's
+     cooking and asks if you applied for the slumber party:
+       · yes — the secret slumber party group opens, and the number you applied
+         with is its password. Wrong number, and you're back in her DM.
+       · no  — she'll tell you before it goes live: your number and email.
      Same bubbles, fonts and wine room as /late and /checkin: the same phone. */
   :root{
     --wine:#2a1520; --wine-2:#1c1017; --cream:#fff6f8; --ink:#2b1a22;
@@ -104,6 +104,7 @@
   .conv{ transform:translateX(100%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
     background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%); }
   .conv.open{ transform:none; }
+  #dm{ z-index:5; } #group{ z-index:6; }
   .conv.gold{ background:radial-gradient(120% 90% at 50% 0%, #3d2a18 0%, #2a1a14 46%, #170d0b 100%); }
   .head{ flex:none; display:flex; align-items:center; gap:.6rem; padding:calc(.8rem + env(safe-area-inset-top,0px)) .8rem .8rem;
     border-bottom:1px solid rgba(245,195,207,.14);
@@ -257,14 +258,6 @@
     background:repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px);
     mix-blend-mode:multiply; opacity:.55; }
 
-  /* stickers drift around the lock screen (and the room, on desktop) */
-  .stickers{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
-  .stickers img{ position:absolute; width:var(--w,3.4rem); opacity:.9; filter:drop-shadow(0 .4rem .8rem rgba(0,0,0,.35));
-    animation:float var(--d,7s) ease-in-out var(--dl,0s) infinite alternate; }
-  @keyframes float{ from{ transform:translateY(0) rotate(var(--r0,-8deg)) } to{ transform:translateY(-14px) rotate(var(--r1,8deg)) } }
-  #room{ position:fixed; inset:0; z-index:0; }
-  #home .stickers{ z-index:0; } #home > :not(.stickers):not(.snd){ position:relative; z-index:1; }
-
   /* sound on/off, top-right of the lock screen */
   .snd{ position:absolute; right:.9rem; top:calc(.9rem + env(safe-area-inset-top,0px)); z-index:2;
     width:var(--rowH); height:var(--rowH); border-radius:100px; cursor:pointer; font-size:1.3rem; color:var(--cream);
@@ -275,11 +268,9 @@
   .viewer .flash{ position:absolute; inset:0; background:#fff; pointer-events:none; animation:flash .45s ease-out forwards; }
   @keyframes flash{ from{ opacity:.9 } to{ opacity:0 } }
 
-  @media (min-width:800px){ .wrap{ z-index:1; } }
-  @media (max-width:799px){ #room{ display:none; } }
 
   @media (prefers-reduced-motion:reduce){
-    .stickers img,.ci-row.buzz,.wrap.buzz,.g-pos,.g-btn::after{ animation:none; }
+    .ci-row.buzz,.wrap.buzz,.g-pos,.g-btn::after{ animation:none; }
     .msg,.card,.chips,.once,.viewer{ animation:none; }
     .conv,.ci-row{ transition:none; }
   }
@@ -295,24 +286,14 @@
   </div>
   <p class="g-small">by entering you accept our <a href="/terms.html" target="_blank" rel="noopener">T&amp;C</a></p>
 </div>
-<div class="stickers" id="room" aria-hidden="true"><img src="/assets/sticker-bow.png" alt="" style="left:8%;top:12%;--w:6rem;--d:8s" /><img src="/assets/sticker-heart.png" alt="" style="left:14%;bottom:14%;--w:5rem;--d:6s;--dl:-2s" /><img src="/assets/sticker-pillow.png" alt="" style="right:9%;top:16%;--w:6.5rem;--d:9s;--dl:-4s" /><img src="/assets/sticker-sparkle.png" alt="" style="right:14%;bottom:18%;--w:4.5rem;--d:5s" /><img src="/assets/sticker-star.png" alt="" style="left:24%;top:46%;--w:3.6rem;--d:7s;--dl:-1s" /><img src="/assets/sticker-peach.png" alt="" style="right:24%;top:52%;--w:4rem;--d:6.5s;--dl:-3s" /></div>
 <div class="wrap" id="phone">
 
   <!-- the lock screen: two unread messages -->
   <section class="screen" id="home">
-    <div class="stickers" aria-hidden="true"><img src="/assets/sticker-bow.png" alt="" style="left:-.6rem;bottom:7rem;--w:4.2rem;--d:7s" /><img src="/assets/sticker-sparkle.png" alt="" style="right:1rem;bottom:12rem;--w:3rem;--d:5s;--dl:-2s" /><img src="/assets/sticker-heart.png" alt="" style="left:42%;bottom:2.4rem;--w:3.2rem;--d:6s;--dl:-1s" /><img src="/assets/sticker-star.png" alt="" style="right:-.4rem;bottom:4rem;--w:3.6rem;--d:8s;--dl:-3s" /></div>
     <button class="snd" type="button" id="snd" aria-label="sound on/off">♪</button>
     <div class="clock"><b id="clockT">9:41</b><span id="clockD">today</span></div>
     <p class="label">notifications</p>
     <div class="notifs">
-      <button class="ci-row gold" type="button" id="rowGroup">
-        <span class="stack"><span class="av"><img src="/assets/khushi-face.png" alt="" /></span><span class="av">A</span><span class="av">R</span></span>
-        <span class="ci-main">
-          <span class="ci-top"><span class="ci-name">the secret slumber group 🔒</span></span>
-          <span class="ci-prev" id="prevGroup">khushi: only for the ones who were there from the start</span>
-        </span>
-        <span class="ci-meta"><span class="ci-time">now</span><span class="ci-dot"></span></span>
-      </button>
       <button class="ci-row" type="button" id="rowDm">
         <span class="av"><img src="/assets/khushi-face.png" alt="" /></span>
         <span class="ci-main">
@@ -322,7 +303,7 @@
         <span class="ci-meta"><span class="ci-time">now</span><span class="ci-dot"></span></span>
       </button>
     </div>
-    <p class="hint" id="hint">tap a message to open ▸</p>
+    <p class="hint" id="hint">tap to open ▸</p>
   </section>
 
   <!-- the secret slumber group -->
@@ -330,7 +311,7 @@
     <div class="head">
       <button class="back" type="button" aria-label="back">‹</button>
       <span class="stack"><span class="av"><img src="/assets/khushi-face.png" alt="" /></span><span class="av">A</span><span class="av">R</span></span>
-      <span class="who"><b>the secret slumber group 🔒</b><span id="groupSub">khushi + the ones from the start</span></span>
+      <span class="who"><b>the secret slumber party 🔒</b><span id="groupSub">locked · the ones from the start</span></span>
     </div>
     <div class="thread"></div>
     <div class="compose" hidden><div class="answer"></div><p class="err" role="status" aria-live="polite"></p></div>
@@ -545,49 +526,118 @@ function Conv(id){
 
 const home = document.getElementById('home');
 const group = Conv('group'), dm = Conv('dm');
-let current = null;
+const rowDm = document.getElementById('rowDm');
 
-function open(conv, run){
-  current = conv;
-  conv.el.classList.add('open'); conv.el.setAttribute('aria-hidden', 'false');
-  home.setAttribute('aria-hidden', 'true');
-  (conv === group ? rowGroup : rowDm).classList.add('read');
-  if(!conv.started){ conv.started = true; run(); }
-}
-function close(){
-  if(!current) return;
-  current.el.classList.remove('open'); current.el.setAttribute('aria-hidden', 'true');
-  home.setAttribute('aria-hidden', 'false');
-  current = null;
-}
-document.querySelectorAll('.back').forEach(b => b.onclick = close);
-
-const rowGroup = document.getElementById('rowGroup'), rowDm = document.getElementById('rowDm');
-rowGroup.onclick = () => { ga('prebuzz_open_group'); open(group, groupFlow); };
-rowDm.onclick = () => { ga('prebuzz_open_dm'); open(dm, () => dmFlow()); };
+/* the DM slides over the lock screen, the group slides over the DM */
+function show(conv){ conv.el.classList.add('open'); conv.el.setAttribute('aria-hidden', 'false'); }
+function hide(conv){ conv.el.classList.remove('open'); conv.el.setAttribute('aria-hidden', 'true'); }
+dm.el.querySelector('.back').onclick = () => hide(dm);
+group.el.querySelector('.back').onclick = () => hide(group);
+rowDm.onclick = () => {
+  ga('prebuzz_open_dm'); rowDm.classList.add('read'); show(dm);
+  if(!dm.started){ dm.started = true; dmFlow(); }
+};
 
 const digits = (v) => String(v).replace(/\D/g, '').slice(-10);
 const phoneOk = (v) => /^[6-9]\d{9}$/.test(digits(v)) ? '' : 'a 10-digit indian mobile number pls 📱';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /* ============================================================================
-   THE SECRET SLUMBER GROUP
+   HER DM — everyone starts here
    ========================================================================== */
-async function groupFlow(){
-  // a returning member goes straight back in
+async function dmFlow(){
+  dm.sys(stampNow());
+  await sleep(300);
+  await dm.her('psst 🤫', 700);
+  await dm.her("something's cooking but i can't tell you what yettt 🤭", 1100);
+
+  // someone already in the group goes straight back to it
   if(token()){
     const me = await call({ action:'me', token:token() });
-    if(me.ok && me.chat) return inside(me.chat, true);
+    if(me.ok && me.chat){
+      await dm.her('oh wait it’s you 😌 the group’s waiting', 900);
+      return groupDoor(() => { show(group); if(!group.started){ group.started = true; inside(me.chat, true); } });
+    }
     if(me.session) token(null);
   }
-  group.sys('khushi created the secret slumber group 🔒', 'gold');
-  await sleep(300);
-  await group.her('this group is only for the ones who were there from the start 🎀', 1000);
-  await group.her('if you applied for my slumber party, type the number you applied with 👇', 1100);
-  return askNumber();
+
+  await dm.her('unless… you’d applied for the secret slumber party? 👀', 1100);
+  const applied = await dm.chips([
+    { label:'yes 🎀', value:true },
+    { label:'no', value:false },
+  ]);
+  if(!applied){ ga('prebuzz_says_no'); return signup(); }
+
+  ga('prebuzz_says_yes');
+  await dm.her('ooh. then come with me 🤭', 800);
+  await sleep(400);
+  show(group); group.started = true;
+  const res = await groupFlow();
+  if(res.member) return groupDoor(() => show(group));
+
+  // not on the list: back to her DM, and the same path as a "no"
+  await sleep(1300);
+  hide(group);
+  await sleep(450);
+  await dm.her("hmm, couldn't find you on the list 🥺", 900);
+  return signup(res.phone);
 }
 
-async function askNumber(){
+/* the way back into the group from her DM, once you're a member */
+function groupDoor(go){
+  const b = document.createElement('button');
+  b.className = 'chip'; b.type = 'button'; b.style.alignSelf = 'flex-start';
+  b.textContent = 'open the secret slumber party 🔒 ▸';
+  b.onclick = go;
+  dm.add(b);
+}
+
+/* ---- "no" (or a number that isn't on the list) --------------------------- */
+async function signup(knownPhone){
+  ga('prebuzz_lead_started');
+  await dm.her(knownPhone ? 'no worries ♡' : "you hadn't? no worries ♡", 800);
+  await dm.her("i'll let you know before it goes live", 900);
+
+  let phone = knownPhone;
+  if(phone){
+    await dm.her("i'll text you on +91 " + phone + ' ♡', 900);
+  }else{
+    await dm.her("what's your number?", 700);
+    phone = digits(await dm.ask({ type:'tel', pre:'+91', placeholder:'98XXXXXXXX', mode:'numeric', auto:'tel-national', max:14,
+      check:phoneOk, show:(v) => '+91 ' + digits(v) }));
+  }
+  await dm.her('and your email ID?', 700);
+  const email = (await dm.ask({ type:'email', placeholder:'you@email.com', mode:'email', auto:'email', max:200,
+    check:(v) => EMAIL.test(v.toLowerCase()) ? '' : "that doesn't look like an email 👀", show:(v) => v.toLowerCase() })).toLowerCase();
+
+  const body = { action:'lead', phone, email, source:trafficSource(),
+    tz:(Intl.DateTimeFormat().resolvedOptions().timeZone || null), user_agent:navigator.userAgent };
+  let r = await call(body);
+  while(!r.ok){
+    await dm.her(r.rate ? 'too many people at once 😮‍💨 one sec…' : "ugh my phone's acting up — one sec", 900);
+    await sleep(r.rate ? 4000 : 1500);
+    r = await call(body);
+  }
+  ga('prebuzz_lead_submitted');
+  document.getElementById('prevDm').textContent = 'you’re on the list ♡';
+  await dm.her("done ♡ you'll hear it from me first", 800);
+  await dm.her('you heard nothing 🤫', 800);
+  const d = document.createElement('div');
+  d.className = 'done';
+  d.innerHTML = '<h1>you heard nothing</h1><p>but you’ll hear it from me first ♡</p>';
+  dm.add(d);
+}
+
+/* ============================================================================
+   THE SECRET SLUMBER PARTY — locked; the number you applied with opens it.
+   Resolves {member:true} once you're in, or {member:false, phone} if not.
+   ========================================================================== */
+async function groupFlow(){
+  group.sys('🔒 this group is locked', 'gold');
+  await sleep(300);
+  await group.her('only for the ones who were there from the start 🎀', 900);
+  await group.her('the password is the number you applied with 👇', 1000);
+
   let res, typed;
   await group.ask({ type:'tel', pre:'+91', placeholder:'98XXXXXXXX', mode:'numeric', auto:'tel-national', max:14,
     show:(v) => '+91 ' + digits(v),
@@ -603,31 +653,22 @@ async function askNumber(){
   if(res.member){
     token(res.token);
     ga('prebuzz_member_unlocked');
-    return inside(res.chat, false, typed);
+    inside(res.chat, false, typed);
+    return { member:true };
   }
   ga('prebuzz_member_miss');
-  await group.her("hmm. that number's not on my list 🥺", 1000);
-  const next = await group.chips([
-    { label:'try another number', value:'retry' },
-    { label:"i wasn't there 🙈", value:'dm' },
-  ]);
-  if(next === 'retry'){ await group.her('go on 👀', 600); return askNumber(); }
-  await group.her("that's okay — i sent you something in my DMs ♡", 900);
-  const b = document.createElement('button');
-  b.className = 'chip'; b.type = 'button'; b.style.alignSelf = 'flex-start'; b.textContent = "open khushi's message ▸";
-  b.onclick = () => { close(); setTimeout(() => open(dm, () => dmFlow(typed)), 340); };
-  group.add(b);
+  group.sys('wrong password 🔒', 'gold');
+  return { member:false, phone:typed };
 }
 
 /* inside the group — everything in `chat` came from the server */
 async function inside(chat, returning, phone){
-  document.getElementById('prevGroup').textContent = 'you’re in 🔒';
   document.getElementById('groupSub').textContent = 'khushi + you + the ones from the start';
   if(returning){
-    group.sys('welcome back to the secret slumber group 🔒', 'gold');
+    group.sys('welcome back to the secret slumber party 🔒', 'gold');
     await group.her('you again 😌 your stuff is right where you left it', 800);
   }else{
-    group.sys('you joined the secret slumber group 🔒', 'gold');
+    group.sys('you’re in 🔒 welcome to the secret slumber party', 'gold');
     FX.chime();
     await sleep(400);
     await say(chat.lines);
@@ -716,7 +757,7 @@ function showPhoto(url){
 function couponCard(chat, phone){
   const c = document.createElement('div');
   c.className = 'card' + (chat.coupon_used ? ' used' : '');
-  c.innerHTML = '<small>EARLY ACCESS · SLUMBER GROUP ONLY</small>' +
+  c.innerHTML = '<small>EARLY ACCESS · SLUMBER PARTY ONLY</small>' +
     '<div class="off"></div><div class="code"><b></b><button type="button">COPY</button></div><div class="bind"></div>';
   FX.chime();
   c.querySelector('.off').textContent = chat.coupon_used ? 'already used ♡' : (chat.discount || 'just for you');
@@ -750,60 +791,6 @@ async function hamper(chat, returning){
   await group.her("you're in the draw 🎀 i'll pick a few of you myself", 900);
 }
 
-/* ============================================================================
-   A NEW MESSAGE FROM KHUSHI — we don't say what it is, we take their details
-   ========================================================================== */
-async function dmFlow(knownPhone){
-  ga('prebuzz_lead_started');
-  dm.sys(stampNow());
-  await sleep(300);
-  await dm.her('psst 🤫', 700);
-  await dm.her("something's cooking but i can't tell you what yettt 🤭", 1100);
-  await dm.her("i can put you first in line though", 900);
-  await dm.her("what's your name?", 700);
-  const name = await dm.ask({ placeholder:'your name', auto:'name', max:120,
-    check:(v) => v ? '' : 'just your first name is fine 🙈' });
-  const first = name.split(/\s+/)[0];
-
-  let phone = knownPhone;
-  if(!phone){
-    await dm.her('cute. ' + first + ', your number? so i can text you first', 900);
-    phone = digits(await dm.ask({ type:'tel', pre:'+91', placeholder:'98XXXXXXXX', mode:'numeric', auto:'tel-national', max:14,
-      check:phoneOk, show:(v) => '+91 ' + digits(v) }));
-  }else{
-    await dm.her('cute. ' + first + ', i\'ll text you on the number you gave me ♡', 900);
-  }
-
-  await dm.her('and your email? (in case my texts get lost)', 900);
-  const email = await dm.ask({ type:'email', placeholder:'you@email.com', mode:'email', auto:'email', max:200, optional:true,
-    check:(v) => EMAIL.test(v.toLowerCase()) ? '' : "that doesn't look like an email 👀", show:(v) => v.toLowerCase() });
-
-  await dm.her('your insta? 👀', 700);
-  const handle = await dm.ask({ placeholder:'@yourhandle', auto:'username', max:60, optional:true,
-    check:(v) => v.replace(/^@+/, '') ? '' : 'just the handle 🙈', show:(v) => '@' + v.replace(/^@+/, '') });
-
-  await dm.her("last one. what do you THINK i'm building? 🤭", 900);
-  const guess = await dm.ask({ placeholder:'your wildest guess', max:500, optional:true });
-
-  const body = { action:'lead', name, phone, email: email ? email.toLowerCase() : null, handle, guess,
-    source:trafficSource(), tz:(Intl.DateTimeFormat().resolvedOptions().timeZone || null), user_agent:navigator.userAgent };
-  let r = await call(body);
-  while(!r.ok){
-    await dm.her(r.rate ? 'too many people at once 😮‍💨 one sec…' : "ugh my phone's acting up — one sec", 900);
-    await sleep(r.rate ? 4000 : 1500);
-    r = await call(body);
-  }
-  ga('prebuzz_lead_submitted');
-  document.getElementById('prevDm').textContent = 'you’re on the list ♡';
-  await dm.her("you're on the list ♡", 800);
-  if(guess) await dm.her('and that guess… 🤐 my lips are sealed', 900);
-  await dm.her("you'll hear it from me before anyone else. you heard nothing 🤫", 1000);
-  const d = document.createElement('div');
-  d.className = 'done';
-  d.innerHTML = '<h1>you heard nothing</h1><p>but you’ll hear it from me first ♡</p>';
-  dm.add(d);
-}
-
 /* ---- the lock screen ------------------------------------------------------- */
 function stampNow(){
   const d = new Date(), h = d.getHours(), m = d.getMinutes();
@@ -818,10 +805,8 @@ async function boot(){
   const d = new Date();
   document.getElementById('clockT').textContent = (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
   document.getElementById('clockD').textContent = d.toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long' }).toLowerCase();
-  if(token()) document.getElementById('prevGroup').textContent = 'khushi: welcome back 🔒';
-  // the notifications land one after the other, newest on top, each with a buzz
-  await sleep(700);  buzz(rowDm); FX.nokia();
-  await sleep(1700); rowGroup.parentNode.insertBefore(rowGroup, rowDm); buzz(rowGroup); FX.recv();
+  // her message lands with a buzz and the nokia tone
+  await sleep(700); buzz(rowDm); FX.nokia();
   document.getElementById('hint').classList.add('in');
 }
 const snd = document.getElementById('snd');
