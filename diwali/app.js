@@ -180,7 +180,7 @@ function drawEnvelope() {
   // the pasted label: सेवा में, + the guest's name in Bakbak with the deck's red drop shadow
   const L0 = { x: W * .263, y: H * .659, w: W * .473, h: H * .228 };
   x.textAlign = 'left'; x.fillStyle = '#c4221a'; x.font = `700 ${u * 2.4}px "Palanquin Dark"`;
-  x.fillText('namastey,', L0.x + u * 2.8, L0.y + u * 3.5);
+  x.fillText('namaste,', L0.x + u * 2.8, L0.y + u * 3.5);
   const label = FIRST() || C.defaultName;
   let fs = u * 5.2; x.font = `400 ${fs}px "Bakbak One"`;
   while (x.measureText(label).width > L0.w - u * 6 && fs > u * 3) { fs -= .5; x.font = `400 ${fs}px "Bakbak One"`; }
