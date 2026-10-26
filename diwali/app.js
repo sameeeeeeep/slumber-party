@@ -38,9 +38,7 @@ function applyName() {
   if ($('#wa')) $('#wa').href = `https://wa.me/${C.rsvp.whatsapp}?text=${encodeURIComponent(C.rsvp.text.replace('{name}', n))}`;
 }
 applyName();
-// party.nailin.it names the venue on the invite; diwali.nailin.it keeps it for the confirmation email
 const PARTY = window.SITE === 'party';
-if (PARTY) Object.assign(C.event, { venue: 'bastian beach club, juhu', mapUrl: 'https://www.google.com/maps/search/?api=1&query=Bastian+Beach+Club+Juhu+Mumbai' });
 document.querySelectorAll('[data-c]').forEach(e => { e.textContent = C.event[e.dataset.c] || ''; });
 if (C.event.mapUrl) { const m = $('#map'); m.href = C.event.mapUrl; m.hidden = false; }
 $('#ics').addEventListener('click', () => {
@@ -49,7 +47,7 @@ $('#ics').addEventListener('click', () => {
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//nailinit//Diwali Party//EN', 'BEGIN:VEVENT',
     'UID:nailinit-diwali-party-2026@nailinit', 'DTSTAMP:' + f(new Date().toISOString()),
     'DTSTART:' + f(ev.start), 'DTEND:' + f(ev.end),
-    'SUMMARY:nailinit Diwali Party', (PARTY ? `LOCATION:${ev.venue}, ${ev.area}` : `LOCATION:${ev.area} (venue shared on confirmation)`),
+    'SUMMARY:nailinit Diwali Party', `LOCATION:${ev.venue}, ${ev.area}`,
     `DESCRIPTION:Dress code: ${ev.dress}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));

@@ -12,9 +12,9 @@ window.MKD = {
     dateHi: 'रविवार, २ नवंबर',
     dateShort: '02·11·26',
     time: '7pm onwards',
-    venue: 'will be shared',            // the real venue goes out in the confirmation email (set it in /admin)
+    venue: 'bastian beach club, juhu',
     area: 'Mumbai',
-    mapUrl: '',
+    mapUrl: 'https://www.google.com/maps/search/?api=1&query=Bastian+Beach+Club+Juhu+Mumbai',
     dress: 'desi maximalist',
     dressNote: '(be loud, basically)',
     rsvpBy: 'RSVP by 1 November',            // PLACEHOLDER
