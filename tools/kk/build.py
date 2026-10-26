@@ -29,6 +29,10 @@ s = re.sub(r'<link rel="canonical"[^>]*>\n', '', s, count=1)
 s = re.sub(r'<script type="application/ld\+json">.*?</script>\n?', '', s, flags=re.S)
 sub("fbq('trackCustom','slumberview');", "fbq('trackCustom','prebuzzview');")
 
+# Clarity records sessions on the homepage. On /kk the chat holds phone numbers,
+# emails, the coupon and the view-once photos, so the whole conversation is masked.
+sub('<div id="chat">', '<div id="chat" data-clarity-mask="True">')
+
 # ---------------------------------------------------------------- the teaser + gate
 sub('<span class="ci-prev">i have a secret to share 🤫</span>', '<span class="ci-prev">something\'s cooking 🤫</span>')
 # no application clock on this gate
