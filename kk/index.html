@@ -33,52 +33,99 @@
   }
 </script>
 <style>
-  /* THE PREBUZZ DM. Same phone as /late and /checkin — same bubbles, same wine
-     room — because it's the same khushi. Two doors out of one question: the
-     people who applied to the slumber party get moved into a secret chat, and
-     everyone else leaves their details for something she won't name yet. */
+  /* THE PREBUZZ PHONE. You land on her lock screen with two unread messages,
+     the way the slumber page opened on an unread DM:
+       · the secret slumber group — only for the people who applied; it asks
+         for the number they applied with, and if it matches, it lets them in
+       · a new message from khushi — everyone else; she won't say what's
+         coming, she just takes their details
+     Same bubbles, fonts and wine room as /late and /checkin: the same phone. */
   :root{
     --wine:#2a1520; --wine-2:#1c1017; --cream:#fff6f8; --ink:#2b1a22;
-    --pink:#eb648c; --rose:#c2456b; --soft:#c9a0ae; --yellow:#ffe9a8;
+    --pink:#eb648c; --rose:#c2456b; --soft:#c9a0ae; --yellow:#ffe9a8; --orange:#ec642a;
     --mono:'VT323',monospace; --pixel:'Press Start 2P',monospace;
     --hand:'Caveat',cursive; --serif:'Playfair Display',serif;
     --rowH:44px;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   p{ margin:0; }
-  html,body{ margin:0; min-height:100%; }
+  [hidden]{ display:none !important; }
+  html,body{ margin:0; height:100%; }
   body{ background:
       radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%);
-    color:var(--cream); font-family:var(--mono); overflow-x:hidden; }
-  /* the secret chat is a different room: the light goes gold */
-  body.secret{ background:
-      radial-gradient(120% 90% at 50% 0%, #3d2a18 0%, #2a1a14 46%, #170d0b 100%); }
+    color:var(--cream); font-family:var(--mono); overflow:hidden; }
 
-  .wrap{ max-width:520px; margin:0 auto; min-height:100vh; min-height:100dvh;
-    display:flex; flex-direction:column; }
-  .head{ display:flex; align-items:center; gap:.7rem; padding:calc(.9rem + env(safe-area-inset-top,0px)) 1rem .9rem;
-    border-bottom:1px solid rgba(245,195,207,.14); position:sticky; top:0; z-index:5;
-    background:linear-gradient(180deg,rgba(42,21,32,.96),rgba(42,21,32,.82)); backdrop-filter:blur(8px);
-    transition:background .6s ease; }
-  .secret .head{ background:linear-gradient(180deg,rgba(48,32,20,.96),rgba(48,32,20,.84));
-    border-bottom-color:rgba(255,233,168,.2); }
-  .av{ width:2.5rem; height:2.5rem; border-radius:100px; overflow:hidden; flex:none;
-    border:1px solid rgba(245,195,207,.3); }
-  .av img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .secret .av{ border-color:var(--yellow); box-shadow:0 0 0 2px rgba(255,233,168,.25); }
+  .wrap{ position:relative; max-width:520px; margin:0 auto; height:100vh; height:100dvh; overflow:hidden; }
+  .screen{ position:absolute; inset:0; display:flex; flex-direction:column; }
+
+  /* ---------------------------------------------------------- lock screen */
+  #home{ padding:calc(1.4rem + env(safe-area-inset-top,0px)) 1rem 1.4rem; }
+  .clock{ text-align:center; margin:1.4rem 0 1.6rem; }
+  .clock b{ display:block; font-family:var(--serif); font-weight:500; font-size:4.2rem; line-height:1; letter-spacing:-.02em; }
+  .clock span{ font-size:1.3rem; color:var(--soft); }
+  .label{ font-size:1.1rem; letter-spacing:.14em; color:var(--soft); padding:0 .3rem .4rem; opacity:.85; }
+  .notifs{ display:flex; flex-direction:column; gap:.6rem; }
+  .ci-row{ display:flex; align-items:center; gap:.75rem; width:100%; text-align:left; cursor:pointer;
+    color:inherit; font:inherit; padding:.8rem .9rem; border-radius:1.1rem;
+    background:rgba(255,255,255,.07); border:1px solid rgba(245,195,207,.16);
+    backdrop-filter:blur(10px); box-shadow:0 .5rem 1.6rem rgba(0,0,0,.35);
+    opacity:0; transform:translateY(-.8rem) scale(.97);
+    transition:opacity .45s ease, transform .5s cubic-bezier(.2,.85,.3,1.25), background .15s ease; }
+  .ci-row.in{ opacity:1; transform:none; }
+  .ci-row:hover{ background:rgba(255,255,255,.11); }
+  .ci-row:focus-visible{ outline:2px solid var(--yellow); outline-offset:2px; }
+  .ci-row.gold{ border-color:rgba(255,233,168,.35); background:linear-gradient(135deg,rgba(255,233,168,.12),rgba(255,255,255,.05)); }
+  .ci-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:.1rem; }
+  .ci-top{ display:flex; align-items:baseline; gap:.5rem; }
+  .ci-name{ font-size:1.3rem; color:#fff; line-height:1.1; }
+  .ci-prev{ font-size:1.25rem; color:rgba(255,246,248,.82); line-height:1.15; }
+  .ci-meta{ flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:.45rem; }
+  .ci-time{ font-size:1rem; color:var(--pink); }
+  .gold .ci-time{ color:var(--yellow); }
+  .ci-dot{ width:.6rem; height:.6rem; border-radius:100px; background:var(--pink); box-shadow:0 0 .5rem rgba(235,100,140,.85); }
+  .gold .ci-dot{ background:var(--yellow); box-shadow:0 0 .5rem rgba(255,233,168,.85); }
+  .ci-row.read .ci-dot{ visibility:hidden; }
+  .hint{ text-align:center; font-family:var(--pixel); font-size:.55rem; letter-spacing:.06em; color:var(--soft);
+    margin-top:1.1rem; opacity:0; transition:opacity .5s ease .6s; }
+  .hint.in{ opacity:.8; }
+
+  /* avatars: khushi's face, or the group's three-up stack */
+  .av{ width:2.6rem; height:2.6rem; border-radius:100px; overflow:hidden; flex:none; display:grid; place-items:center;
+    font-family:var(--pixel); font-size:.55rem; color:#fff; border:1px solid rgba(245,195,207,.3);
+    background:linear-gradient(135deg,var(--pink),var(--orange)); }
+  .av img{ width:100%; height:100%; object-fit:cover; object-position:50% 22%; display:block; }
+  .stack{ position:relative; width:2.6rem; height:2.6rem; flex:none; }
+  .stack .av{ position:absolute; width:1.75rem; height:1.75rem; font-size:.42rem; box-shadow:0 0 0 2px var(--wine); }
+  .stack .av:nth-child(1){ left:0; top:0; }
+  .stack .av:nth-child(2){ right:0; top:.2rem; background:linear-gradient(135deg,#b59bff,#7a5bd6); }
+  .stack .av:nth-child(3){ left:.45rem; bottom:0; background:linear-gradient(135deg,#ffd36b,#c77a1e); }
+
+  /* ------------------------------------------------------------- a chat */
+  .conv{ transform:translateX(100%); transition:transform .32s cubic-bezier(.2,.8,.2,1);
+    background:radial-gradient(120% 90% at 50% 0%, #3a1c2b 0%, var(--wine) 46%, var(--wine-2) 100%); }
+  .conv.open{ transform:none; }
+  .conv.gold{ background:radial-gradient(120% 90% at 50% 0%, #3d2a18 0%, #2a1a14 46%, #170d0b 100%); }
+  .head{ flex:none; display:flex; align-items:center; gap:.6rem; padding:calc(.8rem + env(safe-area-inset-top,0px)) .8rem .8rem;
+    border-bottom:1px solid rgba(245,195,207,.14);
+    background:linear-gradient(180deg,rgba(42,21,32,.96),rgba(42,21,32,.82)); backdrop-filter:blur(8px); }
+  .gold .head{ background:linear-gradient(180deg,rgba(48,32,20,.96),rgba(48,32,20,.84)); border-bottom-color:rgba(255,233,168,.2); }
+  .back{ flex:none; background:none; border:0; color:var(--soft); font-family:var(--mono); font-size:2.2rem; line-height:1;
+    cursor:pointer; padding:0 .3rem; min-width:var(--rowH); min-height:var(--rowH); }
   .who{ min-width:0; }
-  .who b{ font-size:1.3rem; letter-spacing:.02em; display:block; line-height:1.1; }
-  .who span{ font-size:1.05rem; color:var(--soft); }
+  .who b{ font-size:1.3rem; font-weight:400; display:block; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .who span{ font-size:1.05rem; color:var(--soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
   .who span i{ color:#7ddc9b; font-style:normal; }
 
-  .thread{ flex:1; display:flex; flex-direction:column; gap:.45rem; padding:1.1rem .9rem 1.4rem; }
+  .thread{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+    display:flex; flex-direction:column; gap:.45rem; padding:1.1rem .9rem 1.4rem; }
+  .thread::-webkit-scrollbar{ width:.3rem; }
+  .thread::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.14); border-radius:1rem; }
   .msg{ max-width:84%; font-size:1.32rem; line-height:1.3; padding:.5rem .85rem; border-radius:1.15rem;
-    white-space:pre-wrap; word-wrap:break-word;
-    animation:pop .38s cubic-bezier(.2,.9,.3,1.2) both; scroll-margin-bottom:8.5rem; }
-  .sys,.done,.card,.chips{ scroll-margin-bottom:8.5rem; }
+    white-space:pre-wrap; word-wrap:break-word; animation:pop .38s cubic-bezier(.2,.9,.3,1.2) both; }
   @keyframes pop{ from{ opacity:0; transform:translateY(.5rem) scale(.97) } to{ opacity:1; transform:none } }
   .her{ align-self:flex-start; background:var(--cream); color:var(--ink); border-bottom-left-radius:.3rem;
     box-shadow:0 2px 10px rgba(0,0,0,.25); }
+  .from{ display:block; font-size:1rem; color:var(--pink); margin-bottom:.05rem; }
   .you{ align-self:flex-end; color:#fff; background:linear-gradient(120deg,var(--pink),#d8447a);
     border-bottom-right-radius:.3rem; box-shadow:0 2px 10px rgba(0,0,0,.3); }
   .sys{ align-self:center; text-align:center; font-size:1.05rem; color:rgba(255,246,242,.55);
@@ -89,14 +136,40 @@
   .typing i:nth-child(2){ animation-delay:.16s } .typing i:nth-child(3){ animation-delay:.32s }
   @keyframes blink{ 0%,60%,100%{ opacity:.35 } 30%{ opacity:1 } }
 
-  /* quick replies: the thing you tap instead of typing */
   .chips{ align-self:flex-end; display:flex; flex-wrap:wrap; gap:.45rem; justify-content:flex-end;
     max-width:92%; animation:pop .38s cubic-bezier(.2,.9,.3,1.2) both; }
   .chip{ font-family:var(--mono); font-size:1.25rem; color:var(--cream); cursor:pointer;
     background:rgba(255,255,255,.06); border:1px solid rgba(245,195,207,.4); border-radius:100px;
     min-height:var(--rowH); padding:0 1rem; }
   .chip:hover{ border-color:var(--pink); background:rgba(235,100,140,.14); }
-  .chip:active{ transform:scale(.97); }
+
+  /* VIEW ONCE. A photo arrives as a bubble you tap, not as a picture — like
+     every messenger's view-once. After it's been looked at it says so. */
+  .once{ align-self:flex-start; display:flex; align-items:center; gap:.65rem; cursor:pointer;
+    font-family:var(--mono); font-size:1.3rem; color:var(--ink); text-align:left;
+    background:var(--cream); border:0; border-radius:1.15rem; border-bottom-left-radius:.3rem;
+    padding:.6rem 1rem .6rem .7rem; box-shadow:0 2px 10px rgba(0,0,0,.25);
+    animation:pop .38s cubic-bezier(.2,.9,.3,1.2) both; }
+  .once .ring{ width:2.1rem; height:2.1rem; border-radius:100px; display:grid; place-items:center; flex:none;
+    border:2px dashed var(--pink); color:var(--pink); font-family:var(--pixel); font-size:.6rem; }
+  .once small{ display:block; font-size:1rem; opacity:.6; }
+  .once:disabled{ cursor:default; background:rgba(255,246,248,.55); }
+  .once:disabled .ring{ border-style:solid; border-color:rgba(43,26,34,.35); color:rgba(43,26,34,.45); }
+
+  /* the photo, open, inside the chat — 30 seconds, then gone */
+  .viewer{ position:absolute; inset:0; z-index:20; background:#080406; display:flex; flex-direction:column;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; animation:fade .2s ease both; }
+  @keyframes fade{ from{ opacity:0 } to{ opacity:1 } }
+  .viewer .bar{ display:flex; align-items:center; gap:.7rem; padding:calc(.8rem + env(safe-area-inset-top,0px)) 1rem .6rem; }
+  .viewer .bar span{ flex:1; font-size:1.2rem; color:var(--yellow); }
+  .viewer .bar button{ font-family:var(--pixel); font-size:.55rem; color:#fff; background:none; cursor:pointer;
+    border:1px solid rgba(255,255,255,.4); border-radius:100px; padding:.6rem .9rem; }
+  .viewer .time{ height:3px; margin:0 1rem; border-radius:3px; background:rgba(255,255,255,.15); overflow:hidden; }
+  .viewer .time i{ display:block; height:100%; width:100%; transform-origin:left;
+    background:linear-gradient(90deg,var(--pink),var(--orange),var(--yellow)); }
+  .viewer .pic{ flex:1; min-height:0; display:grid; place-items:center; padding:1rem 1rem calc(1rem + env(safe-area-inset-bottom,0px)); }
+  .viewer img{ max-width:100%; max-height:100%; object-fit:contain; border-radius:.6rem; pointer-events:none; -webkit-user-drag:none; }
+  .viewer .wait{ font-size:1.3rem; color:var(--soft); }
 
   /* THE COUPON. A ticket, not a bubble: it's the thing they came for. */
   .card{ align-self:flex-start; width:min(84%,21rem); border-radius:1rem; padding:1rem 1.1rem;
@@ -116,17 +189,9 @@
   .card .bind{ font-size:1.1rem; margin-top:.5rem; opacity:.8; }
   .card.used{ filter:grayscale(.7); opacity:.8; }
 
-  a.cta, button.cta{ align-self:flex-start; display:inline-block; text-decoration:none; border:0; cursor:pointer;
-    max-width:84%; font-family:var(--pixel); font-size:.7rem; line-height:1.6; letter-spacing:.05em; color:#fff;
-    padding:.85rem 1.1rem; border-radius:1.15rem; border-bottom-left-radius:.3rem;
-    background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .25rem .9rem rgba(235,100,140,.4);
-    animation:pop .38s cubic-bezier(.2,.9,.3,1.2) both; scroll-margin-bottom:8.5rem; }
-  button.cta:disabled{ opacity:.55; cursor:default; box-shadow:none; }
-  .cta:active{ transform:scale(.98); }
-
-  .compose{ position:sticky; bottom:0; padding:.7rem .9rem calc(.9rem + env(safe-area-inset-bottom,0px));
+  .compose{ flex:none; padding:.7rem .9rem calc(.9rem + env(safe-area-inset-bottom,0px));
     background:#1a0f16; border-top:1px solid rgba(245,195,207,.14); }
-  .secret .compose{ background:#1b120d; }
+  .gold .compose{ background:#1b120d; }
   .row{ display:flex; gap:.5rem; align-items:stretch; }
   .fld{ flex:1; min-width:0; display:flex; align-items:center; gap:.4rem; min-height:var(--rowH);
     background:rgba(255,255,255,.06); border:1px solid rgba(245,195,207,.28); border-radius:100px; padding:0 .95rem; }
@@ -138,80 +203,96 @@
   .send{ flex:none; min-height:var(--rowH); border:0; cursor:pointer; border-radius:100px;
     padding:0 1.05rem; font-family:var(--pixel); font-size:.68rem; letter-spacing:.06em; color:#fff;
     background:linear-gradient(120deg,var(--pink),#e2703f); box-shadow:0 .25rem .9rem rgba(235,100,140,.4); }
-  .send:active{ transform:scale(.97); }
   .send:disabled{ opacity:.62; box-shadow:none; cursor:default; }
   .skip{ flex:none; min-height:var(--rowH); background:none; border:0; color:var(--soft); cursor:pointer;
     font-family:var(--mono); font-size:1.2rem; padding:0 .4rem; }
   .err{ color:#ffb3c6; font-size:1.1rem; padding:.35rem .3rem 0; min-height:1.4rem; }
 
   .done{ text-align:center; padding:1.6rem 1rem 2.4rem; }
-  .done h1{ font-family:var(--serif); font-style:italic; font-size:2.2rem; margin:.2rem 0 .4rem; }
+  .done h1{ font-family:var(--serif); font-style:italic; font-weight:500; font-size:2.2rem; margin:.2rem 0 .4rem; }
   .done p{ font-family:var(--hand); font-size:1.5rem; color:#ffd9e4; margin:.2rem 0 .8rem; }
 
-  /* THE ONE LOOK. Full screen, no save, and when it closes the images are
-     removed from the page — the URLs behind them expire in 90 seconds anyway. */
-  .peek{ position:fixed; inset:0; z-index:50; background:#080406; display:flex; flex-direction:column;
-    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
-  .peek .bar{ display:flex; align-items:center; justify-content:space-between; gap:.6rem;
-    padding:calc(.8rem + env(safe-area-inset-top,0px)) 1rem .8rem; font-size:1.2rem; color:var(--yellow); }
-  .peek .bar button{ font-family:var(--pixel); font-size:.6rem; color:#fff; background:none; cursor:pointer;
-    border:1px solid rgba(255,255,255,.4); border-radius:100px; padding:.6rem .9rem; }
-  .peek .strip{ flex:1; min-height:0; display:flex; overflow-x:auto; scroll-snap-type:x mandatory; gap:1rem;
-    padding:0 1rem calc(1rem + env(safe-area-inset-bottom,0px)); }
-  .peek .strip div{ flex:0 0 100%; scroll-snap-align:center; display:grid; place-items:center; }
-  .peek img{ max-width:100%; max-height:100%; object-fit:contain; border-radius:.5rem;
-    pointer-events:none; -webkit-user-drag:none; }
-
+  /* desktop: the phone in the middle of the room, same as /late */
   @media (min-width:800px){
-    body{ min-height:100dvh; display:grid; place-items:center; }
-    .wrap{ width:min(30rem,100%); min-height:0; height:min(46rem, calc(100dvh - 3rem));
-      border-radius:26px; overflow:hidden; border:1px solid rgba(245,195,207,.16);
+    body{ display:grid; place-items:center; }
+    .wrap{ width:min(30rem,100%); height:min(46rem, calc(100dvh - 3rem));
+      border-radius:26px; border:1px solid rgba(245,195,207,.16); background:inherit;
       box-shadow:0 40px 90px rgba(0,0,0,.6), 0 0 0 100vmax rgba(10,3,8,.5); }
-    .thread{ min-height:0; overflow-y:auto; overscroll-behavior:contain; }
-    .thread::-webkit-scrollbar{ width:.3rem; }
-    .thread::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.14); border-radius:1rem; }
-    .msg,.sys,.done,.card,.chips,.cta{ scroll-margin-bottom:0; }
-    .compose{ position:static; }
   }
-  @media (prefers-reduced-motion:reduce){ .msg,.card,.chips,.cta{ animation:none; } }
+  @media (prefers-reduced-motion:reduce){
+    .msg,.card,.chips,.once,.viewer{ animation:none; }
+    .conv,.ci-row{ transition:none; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="head">
-    <span class="av"><img src="/assets/khushi-face.png" alt="khushi" /></span>
-    <span class="who">
-      <b id="title">khushi</b>
-      <span id="sub">@khushikapoor · <i>●</i> online</span>
-    </span>
-  </div>
-  <div class="thread" id="thread"></div>
-  <div class="compose" id="compose" hidden>
-    <div id="answer"></div>
-    <p class="err" id="err" role="status" aria-live="polite"></p>
-  </div>
+<div class="wrap" id="phone">
+
+  <!-- the lock screen: two unread messages -->
+  <section class="screen" id="home">
+    <div class="clock"><b id="clockT">9:41</b><span id="clockD">today</span></div>
+    <p class="label">notifications</p>
+    <div class="notifs">
+      <button class="ci-row gold" type="button" id="rowGroup">
+        <span class="stack"><span class="av"><img src="/assets/khushi-face.png" alt="" /></span><span class="av">A</span><span class="av">R</span></span>
+        <span class="ci-main">
+          <span class="ci-top"><span class="ci-name">the secret slumber group 🔒</span></span>
+          <span class="ci-prev" id="prevGroup">khushi: only for the ones who were there from the start</span>
+        </span>
+        <span class="ci-meta"><span class="ci-time">now</span><span class="ci-dot"></span></span>
+      </button>
+      <button class="ci-row" type="button" id="rowDm">
+        <span class="av"><img src="/assets/khushi-face.png" alt="" /></span>
+        <span class="ci-main">
+          <span class="ci-top"><span class="ci-name">khushi</span></span>
+          <span class="ci-prev" id="prevDm">new message · something's cooking 🤫</span>
+        </span>
+        <span class="ci-meta"><span class="ci-time">now</span><span class="ci-dot"></span></span>
+      </button>
+    </div>
+    <p class="hint" id="hint">tap a message to open ▸</p>
+  </section>
+
+  <!-- the secret slumber group -->
+  <section class="screen conv gold" id="group" aria-hidden="true">
+    <div class="head">
+      <button class="back" type="button" aria-label="back">‹</button>
+      <span class="stack"><span class="av"><img src="/assets/khushi-face.png" alt="" /></span><span class="av">A</span><span class="av">R</span></span>
+      <span class="who"><b>the secret slumber group 🔒</b><span id="groupSub">khushi + the ones from the start</span></span>
+    </div>
+    <div class="thread"></div>
+    <div class="compose" hidden><div class="answer"></div><p class="err" role="status" aria-live="polite"></p></div>
+  </section>
+
+  <!-- a new message from khushi -->
+  <section class="screen conv" id="dm" aria-hidden="true">
+    <div class="head">
+      <button class="back" type="button" aria-label="back">‹</button>
+      <span class="av"><img src="/assets/khushi-face.png" alt="khushi" /></span>
+      <span class="who"><b>khushi</b><span>@khushikapoor · <i>●</i> online</span></span>
+    </div>
+    <div class="thread"></div>
+    <div class="compose" hidden><div class="answer"></div><p class="err" role="status" aria-live="polite"></p></div>
+  </section>
 </div>
 
 <script src="/assets/config.js?v=2026-10-27-prebuzz"></script>
 <script>
 /* ============================================================================
-   / in prebuzz mode — khushi's launch, before she says what it is.
+   /kk — khushi's prebuzz phone.
 
    Everything a stranger can see is in this file. Everything only a slumber
-   applicant may see — her secret-chat lines, the coupon, the discount, the
-   photos — is NOT: it arrives from /functions/v1/prebuzz after the phone they
-   type has matched a row in `applications`. View-source here shows the shape
-   of the secret chat and none of its contents. See the migration
-   20261027120000_prebuzz.sql for where that copy is edited.
+   applicant may see — the group's lines, the photos, the coupon — is NOT: it
+   arrives from /functions/v1/prebuzz after the phone they type has matched a
+   row in `applications`. View-source shows the shape of the group and none of
+   its contents. The copy is edited in public.prebuzz_settings (see the
+   migration 20261027120000_prebuzz.sql).
    ========================================================================== */
 const CFG = window.SLUMBER_CONFIG || {};
 const API = (CFG.prebuzzUrl || (CFG.supabaseUrl || '').replace(/\/$/,'') + '/functions/v1/prebuzz');
-const thread = document.getElementById('thread');
-const compose = document.getElementById('compose');
-const answerEl = document.getElementById('answer');
-const errEl = document.getElementById('err');
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const TOKEN_KEY = 'ssp-pb';
+const PHOTO_SECONDS = 30;
 
 function visitorId(){ try{ return localStorage.getItem('ssp-vid') || null; }catch(e){ return null; } }
 function trafficSource(){
@@ -231,81 +312,9 @@ function trafficSource(){
 function ga(name, params){
   try{ if(window.gtag && window.ga4Ready && window.ga4Ready()) gtag('event', name, Object.assign({ ssp_vid:visitorId() }, params||{})); }catch(e){}
 }
-
-/* ---- the chat engine (same shape as /late) -------------------------------- */
-function keepUp(el){
-  if (getComputedStyle(thread).overflowY === 'auto') thread.scrollTo({ top: thread.scrollHeight, behavior:'smooth' });
-  else el.scrollIntoView({ block:'end', behavior:'smooth' });
+function token(v){
+  try{ if(v === undefined) return localStorage.getItem(TOKEN_KEY); if(v) localStorage.setItem(TOKEN_KEY, v); else localStorage.removeItem(TOKEN_KEY); }catch(e){ return null; }
 }
-function add(el){ thread.appendChild(el); keepUp(el); return el; }
-function bubble(cls, text){
-  const p = document.createElement('p');
-  p.className = 'msg ' + cls; p.textContent = text;
-  return add(p);
-}
-function sys(text, cls){
-  const p = document.createElement('p');
-  p.className = 'sys' + (cls ? ' ' + cls : ''); p.textContent = text;
-  return add(p);
-}
-async function her(text, beat = 700){
-  const t = document.createElement('div');
-  t.className = 'msg her typing'; t.innerHTML = '<i></i><i></i><i></i>';
-  add(t); await sleep(beat); t.remove();
-  return bubble('her', text);
-}
-function stampNow(){
-  const d = new Date(), h = d.getHours(), m = d.getMinutes();
-  return 'today · ' + (h % 12 || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? 'am' : 'pm');
-}
-
-/* tap-to-answer: resolves with the chosen label, echoed as your bubble */
-function chips(options){
-  return new Promise(resolve => {
-    const d = document.createElement('div'); d.className = 'chips';
-    options.forEach(o => {
-      const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.textContent = o.label;
-      b.onclick = () => { d.remove(); bubble('you', o.label); resolve(o.value); };
-      d.appendChild(b);
-    });
-    add(d);
-  });
-}
-
-/* one text question in the compose row. `check(value)` returns an error string
-   or '' — and may be async, for the questions that ask the server. */
-function ask({ type = 'text', placeholder = '', pre = '', mode, auto, optional = false, max = 120, check, show }){
-  return new Promise(resolve => {
-    compose.hidden = false; errEl.textContent = '';
-    answerEl.innerHTML =
-      '<form class="row" id="f" novalidate>' +
-        '<span class="fld">' + (pre ? '<span class="pre">' + pre + '</span>' : '') +
-          '<input id="in" type="' + type + '" maxlength="' + max + '" /></span>' +
-        (optional ? '<button class="skip" type="button" id="skip">skip</button>' : '') +
-        '<button class="send" type="submit">SEND ▸</button>' +
-      '</form>';
-    const f = document.getElementById('f'), inp = document.getElementById('in');
-    inp.placeholder = placeholder;
-    if(mode) inp.inputMode = mode;
-    if(auto) inp.autocomplete = auto;
-    inp.focus();
-    // the compose row just took space from the thread — keep the newest line in view
-    if(thread.lastElementChild) keepUp(thread.lastElementChild);
-    const done = (v, echo) => { compose.hidden = true; answerEl.innerHTML = ''; if(echo) bubble('you', echo); resolve(v); };
-    if(optional) document.getElementById('skip').onclick = () => done(null, 'skip');
-    f.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const v = inp.value.trim();
-      const bad = check ? await check(v) : (v ? '' : 'say something 🙈');
-      if(bad){ errEl.textContent = bad; return; }
-      done(v, show ? show(v) : v);
-    });
-  });
-}
-
-const digits = (v) => String(v).replace(/\D/g, '').slice(-10);
-const phoneOk = (v) => /^[6-9]\d{9}$/.test(digits(v)) ? '' : 'a 10-digit indian mobile number pls 📱';
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /* ---- the server ----------------------------------------------------------- */
 async function call(body, attempt = 0){
@@ -326,44 +335,127 @@ async function call(body, attempt = 0){
     return { ok:false };
   }
 }
-function token(v){
-  try{ if(v === undefined) return localStorage.getItem(TOKEN_KEY); if(v) localStorage.setItem(TOKEN_KEY, v); else localStorage.removeItem(TOKEN_KEY); }catch(e){ return null; }
-}
 
 /* ============================================================================
-   THE OPEN DOOR — everyone starts here
+   A CONVERSATION — one per chat, each with its own thread and compose row,
+   so leaving one mid-question and coming back finds it where you left it
    ========================================================================== */
-async function start(){
-  ga('prebuzz_landed', { source:trafficSource() });
-  sys(stampNow());
+function Conv(id){
+  const el = document.getElementById(id);
+  const thread = el.querySelector('.thread'), compose = el.querySelector('.compose');
+  const answer = el.querySelector('.answer'), err = el.querySelector('.err');
+  const c = { el, thread, started:false };
 
-  // a returning applicant goes straight back into the secret chat
-  if(token()){
-    const me = await call({ action:'me', token:token() });
-    if(me.ok && me.chat){ return secretChat(me.chat, true); }
-    if(me.session) token(null);
-  }
-
-  await sleep(400);
-  await her('psst 🤫', 700);
-  await her("something's coming. i can't tell you what yet", 1000);
-  await her("i've been building it for months and you're early. like, actually early", 1100);
-  await her('quick q first — did you apply for my secret slumber party? 🎀', 1000);
-  const applied = await chips([
-    { label:'yes, i applied 🎀', value:true },
-    { label:"no… what's that?", value:false },
-  ]);
-  if(applied) return applicant();
-  return stranger();
+  const keepUp = () => thread.scrollTo({ top: thread.scrollHeight, behavior:'smooth' });
+  c.add = (node) => { thread.appendChild(node); keepUp(); return node; };
+  c.bubble = (cls, text, from) => {
+    const p = document.createElement('p');
+    p.className = 'msg ' + cls;
+    if(from){ const s = document.createElement('span'); s.className = 'from'; s.textContent = from; p.appendChild(s); }
+    p.appendChild(document.createTextNode(text));
+    return c.add(p);
+  };
+  c.sys = (text, cls) => {
+    const p = document.createElement('p');
+    p.className = 'sys' + (cls ? ' ' + cls : ''); p.textContent = text;
+    return c.add(p);
+  };
+  c.her = async (text, beat, from) => {
+    const t = document.createElement('div');
+    t.className = 'msg her typing'; t.innerHTML = '<i></i><i></i><i></i>';
+    c.add(t); await sleep(beat || Math.min(1400, 450 + String(text).length * 14)); t.remove();
+    return c.bubble('her', text, from);
+  };
+  c.chips = (options) => new Promise(resolve => {
+    const d = document.createElement('div'); d.className = 'chips';
+    options.forEach(o => {
+      const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.textContent = o.label;
+      b.onclick = () => { d.remove(); c.bubble('you', o.label); resolve(o.value); };
+      d.appendChild(b);
+    });
+    c.add(d);
+  });
+  /* one text question. check(value) returns an error string or '' and may be async */
+  c.ask = ({ type = 'text', placeholder = '', pre = '', mode, auto, optional = false, max = 120, check, show }) =>
+    new Promise(resolve => {
+      compose.hidden = false; err.textContent = '';
+      answer.innerHTML =
+        '<form class="row" novalidate>' +
+          '<span class="fld">' + (pre ? '<span class="pre">' + pre + '</span>' : '') +
+            '<input type="' + type + '" maxlength="' + max + '" /></span>' +
+          (optional ? '<button class="skip" type="button">skip</button>' : '') +
+          '<button class="send" type="submit">SEND ▸</button>' +
+        '</form>';
+      const f = answer.querySelector('form'), inp = answer.querySelector('input');
+      inp.placeholder = placeholder;
+      if(mode) inp.inputMode = mode;
+      if(auto) inp.autocomplete = auto;
+      // the compose row just took space from the thread: jump to the newest line
+      // (instantly — a smooth scroll gets cut short by the resize)
+      requestAnimationFrame(() => { thread.scrollTop = thread.scrollHeight; inp.focus({ preventScroll:true }); });
+      const done = (v, echo) => { compose.hidden = true; answer.innerHTML = ''; if(echo) c.bubble('you', echo); resolve(v); };
+      if(optional) answer.querySelector('.skip').onclick = () => done(null, 'skip');
+      f.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const send = f.querySelector('.send'); if(send.disabled) return;
+        const v = inp.value.trim();
+        send.disabled = true;
+        const bad = check ? await check(v) : (v ? '' : 'say something 🙈');
+        send.disabled = false;
+        if(bad){ err.textContent = bad; return; }
+        done(v, show ? show(v) : v);
+      });
+    });
+  return c;
 }
 
-/* ---- "yes, i applied" ------------------------------------------------------ */
-async function applicant(){
-  ga('prebuzz_says_applied');
-  await her('wait really?? 🥹', 700);
-  await her('okay prove it 😌 which number did you apply with?', 900);
+const home = document.getElementById('home');
+const group = Conv('group'), dm = Conv('dm');
+let current = null;
+
+function open(conv, run){
+  current = conv;
+  conv.el.classList.add('open'); conv.el.setAttribute('aria-hidden', 'false');
+  home.setAttribute('aria-hidden', 'true');
+  (conv === group ? rowGroup : rowDm).classList.add('read');
+  if(!conv.started){ conv.started = true; run(); }
+}
+function close(){
+  if(!current) return;
+  current.el.classList.remove('open'); current.el.setAttribute('aria-hidden', 'true');
+  home.setAttribute('aria-hidden', 'false');
+  current = null;
+}
+document.querySelectorAll('.back').forEach(b => b.onclick = close);
+
+const rowGroup = document.getElementById('rowGroup'), rowDm = document.getElementById('rowDm');
+rowGroup.onclick = () => { ga('prebuzz_open_group'); open(group, groupFlow); };
+rowDm.onclick = () => { ga('prebuzz_open_dm'); open(dm, () => dmFlow()); };
+
+const digits = (v) => String(v).replace(/\D/g, '').slice(-10);
+const phoneOk = (v) => /^[6-9]\d{9}$/.test(digits(v)) ? '' : 'a 10-digit indian mobile number pls 📱';
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/* ============================================================================
+   THE SECRET SLUMBER GROUP
+   ========================================================================== */
+async function groupFlow(){
+  // a returning member goes straight back in
+  if(token()){
+    const me = await call({ action:'me', token:token() });
+    if(me.ok && me.chat) return inside(me.chat, true);
+    if(me.session) token(null);
+  }
+  group.sys('khushi created the secret slumber group 🔒', 'gold');
+  await sleep(300);
+  await group.her('this group is only for the ones who were there from the start 🎀', 1000);
+  await group.her('if you applied for my slumber party, type the number you applied with 👇', 1100);
+  return askNumber();
+}
+
+async function askNumber(){
   let res, typed;
-  await ask({ type:'tel', pre:'+91', placeholder:'98XXXXXXXX', mode:'numeric', auto:'tel-national', max:14,
+  await group.ask({ type:'tel', pre:'+91', placeholder:'98XXXXXXXX', mode:'numeric', auto:'tel-national', max:14,
     show:(v) => '+91 ' + digits(v),
     check: async (v) => {
       const bad = phoneOk(v); if(bad) return bad;
@@ -377,43 +469,118 @@ async function applicant(){
   if(res.member){
     token(res.token);
     ga('prebuzz_member_unlocked');
-    await her('checking my list… 👀', 1100);
-    return secretChat(res.chat, false, typed);
+    return inside(res.chat, false, typed);
   }
   ga('prebuzz_member_miss');
-  await her("hmm. that number's not on my list 🥺", 1100);
-  await her("maybe you used another one? or maybe it's a sign — either way, you can still get in early", 1200);
-  return stranger(typed);
+  await group.her("hmm. that number's not on my list 🥺", 1000);
+  const next = await group.chips([
+    { label:'try another number', value:'retry' },
+    { label:"i wasn't there 🙈", value:'dm' },
+  ]);
+  if(next === 'retry'){ await group.her('go on 👀', 600); return askNumber(); }
+  await group.her("that's okay — i sent you something in my DMs ♡", 900);
+  const b = document.createElement('button');
+  b.className = 'chip'; b.type = 'button'; b.style.alignSelf = 'flex-start'; b.textContent = "open khushi's message ▸";
+  b.onclick = () => { close(); setTimeout(() => open(dm, () => dmFlow(typed)), 340); };
+  group.add(b);
 }
 
-/* ============================================================================
-   THE SECRET CHAT — everything in `chat` came from the server
-   ========================================================================== */
-async function secretChat(chat, returning, phone){
-  document.body.classList.add('secret');
-  document.getElementById('title').textContent = 'the secret chat 🔒';
-  document.getElementById('sub').innerHTML = 'khushi + slumber applicants only';
-  sys(returning ? 'welcome back to the secret chat' : 'khushi added you to the secret chat 🔒', 'gold');
-  await sleep(500);
+/* inside the group — everything in `chat` came from the server */
+async function inside(chat, returning, phone){
+  document.getElementById('prevGroup').textContent = 'you’re in 🔒';
+  document.getElementById('groupSub').textContent = 'khushi + you + the ones from the start';
+  if(returning){
+    group.sys('welcome back to the secret slumber group 🔒', 'gold');
+    await group.her('you again 😌 your stuff is right where you left it', 800);
+  }else{
+    group.sys('you joined the secret slumber group 🔒', 'gold');
+    await sleep(400);
+    await say(chat.lines);
+  }
 
-  if(!returning){ for(const line of chat.lines || []) await her(line, Math.min(1400, 500 + line.length * 14)); }
-  else await her('you again 😌 your stuff is right where you left it', 800);
+  // the photos, one at a time: the next arrives once you've opened this one
+  const photos = chat.photos || [];
+  for(let i = 0; i < photos.length; i++){
+    if(!returning && chat.photo_lines && chat.photo_lines[i]) await group.her(chat.photo_lines[i]);
+    await viewOnce(i, photos[i].viewed);
+  }
+  if(!returning) await say(chat.after_lines);
 
-  if(chat.coupon) await couponCard(chat, phone);
-  if(chat.photos > 0 && chat.photos_line){
-    if(!returning) await her(chat.photos_line, 1100);
-    photoButton(chat);
+  if(chat.coupon){
+    if(!returning && chat.coupon_line) await group.her(chat.coupon_line, 1300);
+    await couponCard(chat, phone);
   }
   if(chat.hamper_line) await hamper(chat, returning);
+}
+
+/* her lines from the server: plain strings or {from, text} */
+async function say(lines){
+  for(const l of lines || []){
+    const line = typeof l === 'string' ? { text:l } : l;
+    if(line && line.text) await group.her(line.text, null, line.from && line.from !== 'khushi' ? line.from : null);
+  }
+}
+
+/* a view-once photo bubble. Resolves once it's been looked at (or already was). */
+function viewOnce(i, viewed){
+  return new Promise(resolve => {
+    const b = document.createElement('button');
+    b.className = 'once'; b.type = 'button';
+    b.innerHTML = '<span class="ring">1</span><span>photo<small></small></span>';
+    const sub = b.querySelector('small');
+    const opened = () => { b.disabled = true; b.querySelector('.ring').textContent = '✓'; sub.textContent = 'opened'; };
+    if(viewed){ opened(); group.add(b); return resolve(); }
+    sub.textContent = 'view once · tap to open';
+    b.onclick = async () => {
+      b.disabled = true; sub.textContent = 'opening…';
+      const r = await call({ action:'photo', token:token(), idx:i });
+      if(r.ok && r.url){ ga('prebuzz_photo_opened', { idx:i }); await showPhoto(r.url); opened(); return resolve(); }
+      if(r.ok && r.seen){ opened(); return resolve(); }
+      if(r.session){ token(null); sub.textContent = 'chat timed out — reload and type your number again'; return; }
+      b.disabled = false; sub.textContent = "didn't load — tap to try again";
+    };
+    group.add(b);
+  });
+}
+
+/* opens over the group chat itself — not a new tab — and closes on its own
+   after PHOTO_SECONDS. The image leaves the page when it does. */
+function showPhoto(url){
+  return new Promise(resolve => {
+    const v = document.createElement('div');
+    v.className = 'viewer';
+    v.innerHTML = '<div class="bar"><span>view once · <b class="left">' + PHOTO_SECONDS + '</b>s</span><button type="button">CLOSE</button></div>' +
+      '<div class="time"><i></i></div><div class="pic"><p class="wait">loading…</p></div>';
+    v.addEventListener('contextmenu', e => e.preventDefault());
+    const img = new Image(); img.alt = ''; img.draggable = false;
+    const bar = v.querySelector('.time i'), left = v.querySelector('.left');
+    let timer = null, t0 = 0, closed = false;
+    const finish = () => {
+      if(closed) return; closed = true;
+      clearInterval(timer); img.src = ''; v.remove(); resolve();
+    };
+    img.onload = () => {
+      v.querySelector('.pic').replaceChildren(img);
+      t0 = Date.now();
+      timer = setInterval(() => {
+        const rem = Math.max(0, PHOTO_SECONDS - (Date.now() - t0) / 1000);
+        left.textContent = Math.ceil(rem);
+        bar.style.transform = 'scaleX(' + (rem / PHOTO_SECONDS) + ')';
+        if(rem <= 0) finish();
+      }, 200);
+    };
+    img.onerror = finish;
+    img.src = url;
+    v.querySelector('button').onclick = finish;
+    group.el.appendChild(v);
+  });
 }
 
 function couponCard(chat, phone){
   const c = document.createElement('div');
   c.className = 'card' + (chat.coupon_used ? ' used' : '');
-  c.innerHTML = '<small>EARLY ACCESS · SLUMBER APPLICANTS ONLY</small>' +
-    '<div class="off"></div>' +
-    '<div class="code"><b></b><button type="button">COPY</button></div>' +
-    '<div class="bind"></div>';
+  c.innerHTML = '<small>EARLY ACCESS · SLUMBER GROUP ONLY</small>' +
+    '<div class="off"></div><div class="code"><b></b><button type="button">COPY</button></div><div class="bind"></div>';
   c.querySelector('.off').textContent = chat.coupon_used ? 'already used ♡' : (chat.discount || 'just for you');
   c.querySelector('.code b').textContent = chat.coupon;
   c.querySelector('.bind').textContent = 'only works with ' + (phone ? 'your number ••' + phone.slice(-4) : 'the number you applied with') + ' · once';
@@ -422,119 +589,101 @@ function couponCard(chat, phone){
     try{ await navigator.clipboard.writeText(chat.coupon); btn.textContent = 'COPIED ♡'; ga('prebuzz_coupon_copied'); }
     catch(e){ btn.textContent = 'HOLD TO COPY'; }
   };
-  add(c);
+  group.add(c);
   return sleep(700);
 }
 
-function photoButton(chat){
-  const b = document.createElement('button');
-  b.className = 'cta'; b.type = 'button';
-  if(chat.photos_seen){ b.textContent = 'YOU ALREADY PEEKED 🙈'; b.disabled = true; return add(b); }
-  b.textContent = '▸ PEEK AT THE NIGHT (ONCE)';
-  b.onclick = async () => {
-    b.disabled = true; b.textContent = 'OPENING…';
-    const r = await call({ action:'photos', token:token() });
-    if(r.ok && r.urls && r.urls.length){ ga('prebuzz_photos_opened', { count:r.urls.length }); return peek(r.urls, b); }
-    if(r.ok && r.seen){ b.textContent = 'YOU ALREADY PEEKED 🙈'; return; }
-    b.disabled = false; b.textContent = '▸ TRY AGAIN';
-  };
-  add(b);
-}
-
-function peek(urls, btn){
-  const o = document.createElement('div');
-  o.className = 'peek';
-  o.innerHTML = '<div class="bar"><span>one look. that\'s it 👀 <span id="pc"></span></span><button type="button">CLOSE</button></div><div class="strip"></div>';
-  const strip = o.querySelector('.strip');
-  urls.forEach(u => { const d = document.createElement('div'); const i = new Image(); i.alt = ''; i.draggable = false; i.src = u; d.appendChild(i); strip.appendChild(d); });
-  o.addEventListener('contextmenu', e => e.preventDefault());
-  const pc = o.querySelector('#pc'), total = urls.length;
-  const count = () => { pc.textContent = (Math.round(strip.scrollLeft / Math.max(1, strip.clientWidth)) + 1) + '/' + total; };
-  strip.addEventListener('scroll', count, { passive:true });
-  o.querySelector('button').onclick = async () => {
-    o.remove();   // the images go with it
-    btn.textContent = 'GONE 🫣'; btn.disabled = true;
-    await her("and that's all you get 🫣", 700);
-  };
-  document.body.appendChild(o); count();
-}
-
 async function hamper(chat, returning){
-  if(chat.hamper === 'won'){ return her("and you WON the hamper 🎀 i'll be in touch", 900); }
-  if(chat.hamper === 'entered'){ return her("you're in the hamper draw 🎀 fingers crossed", 900); }
-  if(chat.hamper === 'lost'){ return; }
-  if(!returning) await her(chat.hamper_line, 1300);
-  else await her('still want in on the hamper? paste your post link 🎀', 900);
-  await ask({ type:'url', placeholder:'instagram.com/p/…', mode:'url', max:400, optional:true,
-    check: async (v) => {
-      if(!/^https?:\/\//i.test(v)) v = 'https://' + v;
-      const r = await call({ action:'hamper', token:token(), url:v });
+  if(chat.hamper === 'won') return group.her("and you WON the hamper 🎀 i'll be in touch", 900);
+  if(chat.hamper === 'entered') return group.her("you're in the hamper draw 🎀 fingers crossed", 900);
+  if(chat.hamper === 'lost') return;
+  await group.her(returning ? 'still want in on the hamper? paste your post link 🎀' : chat.hamper_line, returning ? 900 : 1300);
+  const v = await group.ask({ type:'url', placeholder:'instagram.com/p/…', mode:'url', max:400, optional:true,
+    check: async (raw) => {
+      const url = /^https?:\/\//i.test(raw) ? raw : 'https://' + raw;
+      const r = await call({ action:'hamper', token:token(), url });
       if(r.ok) return '';
       if(r.error === 'url') return 'paste the link to your post (instagram, threads, x…) 🔗';
-      if(r.session){ token(null); return 'your secret chat timed out — refresh and type your number again'; }
+      if(r.session){ token(null); return 'your chat timed out — reload and type your number again'; }
       return "ugh, didn't go through. try again?";
-    },
-    show:(v) => v }).then(async (v) => {
-      if(v === null) return her('no stress — come back anytime, the link box stays here ♡', 800);
-      ga('prebuzz_hamper_entered');
-      await her("you're in the draw 🎀 i'll pick a few of you myself", 900);
-    });
+    } });
+  if(v === null) return group.her('no stress — come back anytime ♡', 800);
+  ga('prebuzz_hamper_entered');
+  await group.her("you're in the draw 🎀 i'll pick a few of you myself", 900);
 }
 
 /* ============================================================================
-   THE STRANGER — we don't say what it is, we just take their details
+   A NEW MESSAGE FROM KHUSHI — we don't say what it is, we take their details
    ========================================================================== */
-async function stranger(knownPhone){
+async function dmFlow(knownPhone){
   ga('prebuzz_lead_started');
-  if(!knownPhone){
-    await her("ahh okay — it was a little secret thing i did. don't worry about it 🙊", 1000);
-  }
-  await her("i can't say what's coming. but i can put you first in line", 1000);
-  await her("what's your name?", 700);
-  const name = await ask({ placeholder:'your name', auto:'name', max:120,
+  dm.sys(stampNow());
+  await sleep(300);
+  await dm.her('psst 🤫', 700);
+  await dm.her("something's cooking but i can't tell you what yettt 🤭", 1100);
+  await dm.her("i can put you first in line though", 900);
+  await dm.her("what's your name?", 700);
+  const name = await dm.ask({ placeholder:'your name', auto:'name', max:120,
     check:(v) => v ? '' : 'just your first name is fine 🙈' });
   const first = name.split(/\s+/)[0];
 
   let phone = knownPhone;
   if(!phone){
-    await her('cute. ' + first + ', your number? so i can text you first', 900);
-    phone = digits(await ask({ type:'tel', pre:'+91', placeholder:'98XXXXXXXX', mode:'numeric', auto:'tel-national', max:14,
+    await dm.her('cute. ' + first + ', your number? so i can text you first', 900);
+    phone = digits(await dm.ask({ type:'tel', pre:'+91', placeholder:'98XXXXXXXX', mode:'numeric', auto:'tel-national', max:14,
       check:phoneOk, show:(v) => '+91 ' + digits(v) }));
   }else{
-    await her('cute. ' + first + ', i\'ll text you on that number ♡', 900);
+    await dm.her('cute. ' + first + ', i\'ll text you on the number you gave me ♡', 900);
   }
 
-  await her('and your email? (in case my texts get lost)', 900);
-  const email = await ask({ type:'email', placeholder:'you@email.com', mode:'email', auto:'email', max:200, optional:true,
+  await dm.her('and your email? (in case my texts get lost)', 900);
+  const email = await dm.ask({ type:'email', placeholder:'you@email.com', mode:'email', auto:'email', max:200, optional:true,
     check:(v) => EMAIL.test(v.toLowerCase()) ? '' : "that doesn't look like an email 👀", show:(v) => v.toLowerCase() });
 
-  await her('your insta? 👀', 700);
-  const handle = await ask({ placeholder:'@yourhandle', auto:'username', max:60, optional:true,
+  await dm.her('your insta? 👀', 700);
+  const handle = await dm.ask({ placeholder:'@yourhandle', auto:'username', max:60, optional:true,
     check:(v) => v.replace(/^@+/, '') ? '' : 'just the handle 🙈', show:(v) => '@' + v.replace(/^@+/, '') });
 
-  await her("last one. what do you THINK i'm building? 🤭", 900);
-  const guess = await ask({ placeholder:'your wildest guess', max:500, optional:true });
+  await dm.her("last one. what do you THINK i'm building? 🤭", 900);
+  const guess = await dm.ask({ placeholder:'your wildest guess', max:500, optional:true });
 
   const body = { action:'lead', name, phone, email: email ? email.toLowerCase() : null, handle, guess,
     source:trafficSource(), tz:(Intl.DateTimeFormat().resolvedOptions().timeZone || null), user_agent:navigator.userAgent };
   let r = await call(body);
   while(!r.ok){
-    await her(r.rate ? 'too many people at once 😮‍💨 one sec…' : "ugh my phone's acting up — one sec", 900);
+    await dm.her(r.rate ? 'too many people at once 😮‍💨 one sec…' : "ugh my phone's acting up — one sec", 900);
     await sleep(r.rate ? 4000 : 1500);
     r = await call(body);
   }
   ga('prebuzz_lead_submitted');
-  if(r.already) await her("wait — you're already on my list 😌", 800);
-  else await her("you're on the list ♡", 800);
-  if(guess) await her('and that guess… 🤐 my lips are sealed', 900);
-  await her("you'll hear it from me before anyone else. you heard nothing 🤫", 1000);
+  document.getElementById('prevDm').textContent = 'you’re on the list ♡';
+  await dm.her("you're on the list ♡", 800);
+  if(guess) await dm.her('and that guess… 🤐 my lips are sealed', 900);
+  await dm.her("you'll hear it from me before anyone else. you heard nothing 🤫", 1000);
   const d = document.createElement('div');
   d.className = 'done';
   d.innerHTML = '<h1>you heard nothing</h1><p>but you’ll hear it from me first ♡</p>';
-  add(d);
+  dm.add(d);
 }
 
-start();
+/* ---- the lock screen ------------------------------------------------------- */
+function stampNow(){
+  const d = new Date(), h = d.getHours(), m = d.getMinutes();
+  return 'today · ' + (h % 12 || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? 'am' : 'pm');
+}
+(async function boot(){
+  const d = new Date();
+  document.getElementById('clockT').textContent = (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
+  document.getElementById('clockD').textContent = d.toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long' }).toLowerCase();
+  if(token()) document.getElementById('prevGroup').textContent = 'khushi: welcome back 🔒';
+  ga('prebuzz_landed', { source:trafficSource() });
+  // the notifications drop in one after the other, like they're arriving
+  await sleep(500);  rowDm.classList.add('in');
+  await sleep(900);  rowGroup.classList.add('in');
+  // newest on top: the group arrived second
+  rowGroup.parentNode.insertBefore(rowGroup, rowDm);
+  document.getElementById('hint').classList.add('in');
+})();
 </script>
 </body>
 </html>

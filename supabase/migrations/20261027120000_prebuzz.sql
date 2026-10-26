@@ -52,7 +52,8 @@ create table if not exists public.prebuzz_members (
   last_seen_at        timestamptz not null default now(),
   coupon_redeemed_at  timestamptz,
   coupon_order_ref    text,
-  photos_viewed_at    timestamptz,
+  -- which photos this phone has opened: {"0": "<when>", "1": …}. Each one once.
+  photos_viewed       jsonb not null default '{}'::jsonb,
   hamper_post_url     text,
   hamper_submitted_at timestamptz,
   hamper_status       text not null default 'none'
@@ -84,17 +85,28 @@ create table if not exists public.prebuzz_settings (
 --      set value = value || '{"coupon":"YOURCODE","discount":"30% off"}'::jsonb
 --    where key = 'secret';
 -- Until coupon is set the card doesn't show and redeem refuses every code.
+-- `demo_phones` (set the same way, e.g. '{"demo_phones":["9xxxxxxxxx"]}')
+-- opens the secret chat for numbers that never applied, for demos. Empty it
+-- before launch: anyone who types a demo number sees the coupon.
 insert into public.prebuzz_settings (key, value) values ('secret', jsonb_build_object(
   'coupon',   null,
   'discount', null,
+  -- her lines in the group, in order, before the photos. `from` is who says
+  -- it (khushi unless set).
   'lines', jsonb_build_array(
-    'wait. YOU 🥹',
-    'okay you were there from the start, so you get the secret chat',
-    'the thing i''ve been building is almost here. you see it before anyone',
-    'early access + a discount nobody else gets. it only works with your number'
+    jsonb_build_object('text', 'the slumber party was maddddd 🥹'),
+    jsonb_build_object('text', 'i''m sorry i couldn''t get you'),
+    jsonb_build_object('text', 'check the pics 👀')
   ),
-  'photos_line', 'and because you applied — a few photos from the night. you get to look ONCE 👀',
-  'hamper_line', 'last thing: post about the slumber party on your story or feed, tag me, and paste the link here. a few of you get a hamper from me 🎀',
+  -- one line before each photo, in bucket order (first three files by name);
+  -- leave one '' to send that photo without a line
+  'photo_lines', jsonb_build_array('', '', ''),
+  -- after the photos
+  'after_lines', jsonb_build_array(
+    jsonb_build_object('text', 'madness 😭')
+  ),
+  'coupon_line', 'btw it''s all for something i''ve been building for monthsss. and you were the first, so you''ll be the first to know ♡',
+  'hamper_line', 'last thing: post about the slumber party, tag me, paste the link here. a few of you get a hamper from me 🎀',
   'hamper_tag',  '@khushikapoor'
 ))
 on conflict (key) do nothing;
@@ -127,10 +139,28 @@ create policy "admins update prebuzz settings" on public.prebuzz_settings
   for update to authenticated using (public.is_admin()) with check (public.is_admin());
 -- prebuzz_sessions: no policy at all. Only the function touches it.
 
+-- One photo, one look. Returns true if this phone may open photo `idx` now:
+-- the first time (and it's recorded in the same statement, so two tabs can't
+-- both win), or again inside the grace window in case the first load failed.
+create or replace function public.prebuzz_claim_photo(p_phone text, p_idx int, p_grace_seconds int)
+returns boolean
+language plpgsql security definer set search_path = public, pg_temp as $$
+declare seen timestamptz;
+begin
+  update public.prebuzz_members
+     set photos_viewed = photos_viewed || jsonb_build_object(p_idx::text, now())
+   where phone = p_phone and not (photos_viewed ? p_idx::text);
+  if found then return true; end if;
+  select (photos_viewed ->> p_idx::text)::timestamptz into seen
+    from public.prebuzz_members where phone = p_phone;
+  return seen is not null and seen > now() - make_interval(secs => p_grace_seconds);
+end $$;
+revoke all on function public.prebuzz_claim_photo(text, int, int) from public, anon, authenticated;
+
 -- ------------------------------------------------------------------ the photos
 -- Private bucket: no public URLs, no anon policies. The function lists it and
--- hands out 90-second signed URLs, once per phone. Upload the photos in
--- Supabase → Storage → prebuzz-photos.
+-- hands out short signed URLs, each photo once per phone. Upload THREE photos
+-- to Supabase → Storage → prebuzz-photos; they're shown in filename order.
 insert into storage.buckets (id, name, public)
 values ('prebuzz-photos', 'prebuzz-photos', false)
 on conflict (id) do nothing;

@@ -7,7 +7,7 @@
 //                                 token + the secret chat. If not, {member:false}
 //                                 and the browser carries on as a stranger.
 //    me      {token}            → the secret chat again, for a returning member
-//    photos  {token}            → signed URLs for the party photos, ONCE per phone
+//    photo   {token, idx}       → a signed URL for photo 0, 1 or 2 — each ONCE per phone
 //    hamper  {token, url}       → enter the hamper draw with a post link
 //    lead    {name, phone, …}   → a stranger's details
 //    verify  {code, phone}      ┐ for the CHECKOUT, not the browser: both need
@@ -46,10 +46,13 @@ const MAX_LEADS_PER_IP_PER_HOUR = 300;
 const MAX_CHECK_MISSES_PER_HOUR = 1500;
 
 const SESSION_DAYS = 14;
-const PHOTO_URL_SECONDS = 90;
-/* View-once, with a little mercy: if the photos fail to load the first time,
-   asking again within this window still works. After it, they're gone. */
-const PHOTO_GRACE_MS = 3 * 60_000;
+/* The chat shows each photo for 30 seconds; the URL outlives that only by the
+   time it takes to load. */
+const PHOTO_URL_SECONDS = 45;
+const MAX_PHOTOS = 3;
+/* View-once, with a little mercy: if a photo fails to load the first time,
+   asking again within this window still works. After it, it's gone. */
+const PHOTO_GRACE_SECONDS = 120;
 const BUCKET = 'prebuzz-photos';
 
 function cors(origin: string | null) {
@@ -100,10 +103,17 @@ function sameKey(a: string, b: string) {
 
 type Db = SupabaseClient;
 
+/** The applicant this phone belongs to: its application id, or 'demo' for a
+ *  number listed in prebuzz_settings.demo_phones (so the flow can be shown
+ *  without inventing a row in `applications`). */
 async function applicantId(db: Db, phone: string) {
   const { data } = await db.from('applications').select('id').eq('phone', phone).limit(1);
-  return data?.[0]?.id as string | undefined;
+  if (data?.[0]?.id) return data[0].id as string;
+  const demo = (await settings(db)).demo_phones;
+  if (Array.isArray(demo) && demo.map(d => normPhone(d)).includes(phone)) return 'demo';
+  return undefined;
 }
+const appRef = (id: string) => (id === 'demo' ? null : id);
 
 async function settings(db: Db) {
   const { data } = await db.from('prebuzz_settings').select('value').eq('key', 'secret').single();
@@ -112,26 +122,32 @@ async function settings(db: Db) {
 
 /** Everything the secret chat shows. Built here so the browser holds none of it
  *  until a phone has matched. */
+async function photoNames(db: Db) {
+  const { data } = await db.storage.from(BUCKET).list('', { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+  // folders come back with a null id; only real files count
+  return (data ?? []).filter(f => f.id).map(f => f.name).slice(0, MAX_PHOTOS);
+}
+
 async function secretChat(db: Db, phone: string) {
-  const [s, m, files] = await Promise.all([
+  const [s, m, names] = await Promise.all([
     settings(db),
     db.from('prebuzz_members')
-      .select('photos_viewed_at, coupon_redeemed_at, hamper_status')
+      .select('photos_viewed, coupon_redeemed_at, hamper_status')
       .eq('phone', phone).single(),
-    db.storage.from(BUCKET).list('', { limit: 100 }),
+    photoNames(db),
   ]);
-  // folders come back with a null id; only real files count
-  const count = (files.data ?? []).filter(f => f.id).length;
-  const row: { photos_viewed_at?: string | null; coupon_redeemed_at?: string | null; hamper_status?: string } = m.data ?? {};
+  const row: { photos_viewed?: Record<string, string>; coupon_redeemed_at?: string | null; hamper_status?: string } = m.data ?? {};
+  const viewed = row.photos_viewed ?? {};
   return {
     lines: Array.isArray(s.lines) ? s.lines : [],
+    photo_lines: Array.isArray(s.photo_lines) ? s.photo_lines : [],
+    // only whether each was opened — never the file names
+    photos: names.map((_, i) => ({ viewed: i in viewed })),
+    after_lines: Array.isArray(s.after_lines) ? s.after_lines : [],
+    coupon_line: s.coupon_line ?? null,
     coupon: s.coupon ?? null,
     discount: s.discount ?? null,
     coupon_used: !!row.coupon_redeemed_at,
-    photos_line: s.photos_line ?? null,
-    photos: count,
-    photos_seen: !!row.photos_viewed_at &&
-      Date.now() - new Date(row.photos_viewed_at!).getTime() > PHOTO_GRACE_MS,
     hamper_line: s.hamper_line ?? null,
     hamper_tag: s.hamper_tag ?? null,
     hamper: row.hamper_status ?? 'none',
@@ -199,7 +215,7 @@ Deno.serve(async (req) => {
 
     const now = new Date().toISOString();
     const { error: upErr } = await db.from('prebuzz_members').upsert(
-      { phone, application_id: appId, last_seen_at: now },
+      { phone, application_id: appRef(appId), last_seen_at: now },
       { onConflict: 'phone' },
     );
     if (upErr) { console.error('member upsert', upErr); return json({ error: 'server' }, 500, origin); }
@@ -220,31 +236,23 @@ Deno.serve(async (req) => {
     return json({ ok: true, chat: await secretChat(db, phone) }, 200, origin);
   }
 
-  // --------------------------------------------------------------- photos
-  if (action === 'photos') {
+  // ---------------------------------------------------------------- photo
+  if (action === 'photo') {
     const phone = await phoneForToken(db, b.token);
     if (!phone) return json({ error: 'session' }, 401, origin);
+    const idx = typeof b.idx === 'number' ? b.idx : -1;
+    const names = await photoNames(db);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= names.length) return json({ error: 'photo' }, 400, origin);
 
-    /* Claim the viewing atomically: only the request that flips photos_viewed_at
-       from null wins, so two tabs can't each get a "first" look. A re-ask inside
-       the grace window is allowed so a failed load isn't a lost look. */
-    const now = new Date();
-    const { data: claimed } = await db.from('prebuzz_members')
-      .update({ photos_viewed_at: now.toISOString() })
-      .eq('phone', phone).is('photos_viewed_at', null).select('phone');
-    if (!claimed?.length) {
-      const { data: m } = await db.from('prebuzz_members')
-        .select('photos_viewed_at').eq('phone', phone).single();
-      const seenAt = m?.photos_viewed_at ? new Date(m.photos_viewed_at).getTime() : 0;
-      if (now.getTime() - seenAt > PHOTO_GRACE_MS) return json({ ok: true, seen: true }, 200, origin);
-    }
+    // recorded and checked in one statement, so two tabs can't both get a first look
+    const { data: allowed, error: claimErr } = await db.rpc('prebuzz_claim_photo',
+      { p_phone: phone, p_idx: idx, p_grace_seconds: PHOTO_GRACE_SECONDS });
+    if (claimErr) { console.error('claim', claimErr); return json({ error: 'server' }, 500, origin); }
+    if (!allowed) return json({ ok: true, seen: true }, 200, origin);
 
-    const { data: files } = await db.storage.from(BUCKET).list('', { limit: 100, sortBy: { column: 'name', order: 'asc' } });
-    const names = (files ?? []).filter(f => f.id).map(f => f.name);
-    if (!names.length) return json({ ok: true, urls: [] }, 200, origin);
-    const { data: signed, error } = await db.storage.from(BUCKET).createSignedUrls(names, PHOTO_URL_SECONDS);
-    if (error) { console.error('sign', error); return json({ error: 'server' }, 500, origin); }
-    return json({ ok: true, urls: (signed ?? []).map(s => s.signedUrl).filter(Boolean) }, 200, origin);
+    const { data: signed, error } = await db.storage.from(BUCKET).createSignedUrl(names[idx], PHOTO_URL_SECONDS);
+    if (error || !signed) { console.error('sign', error); return json({ error: 'server' }, 500, origin); }
+    return json({ ok: true, url: signed.signedUrl }, 200, origin);
   }
 
   // --------------------------------------------------------------- hamper
@@ -315,7 +323,7 @@ Deno.serve(async (req) => {
     if (!appId) return json({ ok: false, reason: 'not_registered' }, 200, origin);
 
     // an applicant who never opened the chat can still use the code
-    await db.from('prebuzz_members').upsert({ phone, application_id: appId }, { onConflict: 'phone', ignoreDuplicates: true });
+    await db.from('prebuzz_members').upsert({ phone, application_id: appRef(appId) }, { onConflict: 'phone', ignoreDuplicates: true });
 
     if (action === 'verify') {
       const { data } = await db.from('prebuzz_members').select('coupon_redeemed_at').eq('phone', phone).single();
