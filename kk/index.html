@@ -219,17 +219,89 @@
       border-radius:26px; border:1px solid rgba(245,195,207,.16); background:inherit;
       box-shadow:0 40px 90px rgba(0,0,0,.6), 0 0 0 100vmax rgba(10,3,8,.5); }
   }
+  /* ---------------------------------------------------------- the vibe */
+  /* THE GATE — the same blush screen the slumber page opened on, and for the
+     same reason: one tap is the gesture that lets the phone make noise. */
+  #gate{ position:fixed; inset:0; z-index:60; background:#fdeff3; display:grid; place-items:center; text-align:center;
+    padding:calc(1.5rem + env(safe-area-inset-top,0px)) 1.4rem calc(1.5rem + env(safe-area-inset-bottom,0px)); }
+  #gate.leaving{ animation:gateOut .6s ease forwards; pointer-events:none; }
+  #gate.leaving .g-pos{ animation:gateDive .6s cubic-bezier(.5,0,.35,1) forwards; }
+  .g-pos{ display:flex; flex-direction:column; align-items:center; gap:clamp(1.3rem,4.5vh,2.3rem);
+    animation:gateRise .85s .1s cubic-bezier(.2,.85,.3,1) both; }
+  .g-pos img{ width:min(74vw,26rem); max-height:30vh; object-fit:contain; filter:drop-shadow(0 .5rem 1.6rem rgba(235,100,140,.3)); }
+  .g-ask{ font-family:var(--hand); font-weight:700; color:#d4557d; font-size:clamp(1.6rem,6.5vw,2.2rem); line-height:1.05; margin-top:-.6rem; }
+  .g-ask small{ display:block; font-size:.62em; color:#eb648c; margin-top:.35rem; }
+  .g-btn{ position:relative; overflow:hidden; cursor:pointer; font-family:var(--pixel); display:inline-flex; align-items:center; gap:.85em;
+    font-size:.7rem; letter-spacing:.06em; color:#fff; padding:1.05em 1.6em; border-radius:.55em;
+    background:linear-gradient(90deg,#eb648c,#ec642a); border:1px solid rgba(255,255,255,.5);
+    box-shadow:0 0 10px rgba(235,100,140,.55), inset 0 0 8px rgba(255,255,255,.2); }
+  .g-btn::after{ content:''; position:absolute; top:0; bottom:0; left:0; width:55%; pointer-events:none;
+    background:linear-gradient(105deg, transparent 18%, rgba(255,255,255,.6) 50%, transparent 82%);
+    animation:shimmer 2.6s ease-in-out infinite; }
+  .g-btn:hover{ transform:translateY(-2px); }
+  .g-small{ position:absolute; left:0; right:0; bottom:calc(1.1rem + env(safe-area-inset-bottom,0px));
+    font-size:1.02rem; color:#eb648c; }
+  .g-small a{ color:inherit; }
+  @keyframes shimmer{ 0%{ transform:translateX(-200%) skewX(-14deg); } 55%,100%{ transform:translateX(320%) skewX(-14deg); } }
+  @keyframes gateOut{ to{ opacity:0 } }
+  @keyframes gateRise{ from{ opacity:0; transform:translateY(16px) scale(.94) } to{ opacity:1; transform:none } }
+  @keyframes gateDive{ to{ opacity:0; transform:scale(1.6); filter:blur(7px) } }
+
+  /* the phone buzzes when a notification lands */
+  .ci-row.buzz{ animation:buzz .5s linear; }
+  @keyframes buzz{ 0%,100%{ translate:0 } 10%,50%,90%{ translate:-3px 0 } 30%,70%{ translate:3px 0 } }
+  .wrap.buzz{ animation:buzz .45s linear; }
+
+  /* CRT scanlines over the whole phone — the slumber page's TV, turned way down */
+  .wrap::after{ content:''; position:absolute; inset:0; z-index:40; pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px);
+    mix-blend-mode:multiply; opacity:.55; }
+
+  /* stickers drift around the lock screen (and the room, on desktop) */
+  .stickers{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .stickers img{ position:absolute; width:var(--w,3.4rem); opacity:.9; filter:drop-shadow(0 .4rem .8rem rgba(0,0,0,.35));
+    animation:float var(--d,7s) ease-in-out var(--dl,0s) infinite alternate; }
+  @keyframes float{ from{ transform:translateY(0) rotate(var(--r0,-8deg)) } to{ transform:translateY(-14px) rotate(var(--r1,8deg)) } }
+  #room{ position:fixed; inset:0; z-index:0; }
+  #home .stickers{ z-index:0; } #home > :not(.stickers):not(.snd){ position:relative; z-index:1; }
+
+  /* sound on/off, top-right of the lock screen */
+  .snd{ position:absolute; right:.9rem; top:calc(.9rem + env(safe-area-inset-top,0px)); z-index:2;
+    width:var(--rowH); height:var(--rowH); border-radius:100px; cursor:pointer; font-size:1.3rem; color:var(--cream);
+    background:rgba(255,255,255,.08); border:1px solid rgba(245,195,207,.25); }
+  .snd.off{ opacity:.45; text-decoration:line-through; }
+
+  /* the shutter flash when a view-once photo opens */
+  .viewer .flash{ position:absolute; inset:0; background:#fff; pointer-events:none; animation:flash .45s ease-out forwards; }
+  @keyframes flash{ from{ opacity:.9 } to{ opacity:0 } }
+
+  @media (min-width:800px){ .wrap{ z-index:1; } }
+  @media (max-width:799px){ #room{ display:none; } }
+
   @media (prefers-reduced-motion:reduce){
+    .stickers img,.ci-row.buzz,.wrap.buzz,.g-pos,.g-btn::after{ animation:none; }
     .msg,.card,.chips,.once,.viewer{ animation:none; }
     .conv,.ci-row{ transition:none; }
   }
 </style>
 </head>
 <body>
+<!-- the gate: one tap lets the phone make noise -->
+<div id="gate">
+  <div class="g-pos">
+    <img src="/assets/logo2.png" alt="khushi's secret slumber party" />
+    <p class="g-ask">psst… you've got messages<small>sound on 🔊</small></p>
+    <button class="g-btn" type="button" id="enter"><span>enter</span><i aria-hidden="true">▸</i></button>
+  </div>
+  <p class="g-small">by entering you accept our <a href="/terms.html" target="_blank" rel="noopener">T&amp;C</a></p>
+</div>
+<div class="stickers" id="room" aria-hidden="true"><img src="/assets/sticker-bow.png" alt="" style="left:8%;top:12%;--w:6rem;--d:8s" /><img src="/assets/sticker-heart.png" alt="" style="left:14%;bottom:14%;--w:5rem;--d:6s;--dl:-2s" /><img src="/assets/sticker-pillow.png" alt="" style="right:9%;top:16%;--w:6.5rem;--d:9s;--dl:-4s" /><img src="/assets/sticker-sparkle.png" alt="" style="right:14%;bottom:18%;--w:4.5rem;--d:5s" /><img src="/assets/sticker-star.png" alt="" style="left:24%;top:46%;--w:3.6rem;--d:7s;--dl:-1s" /><img src="/assets/sticker-peach.png" alt="" style="right:24%;top:52%;--w:4rem;--d:6.5s;--dl:-3s" /></div>
 <div class="wrap" id="phone">
 
   <!-- the lock screen: two unread messages -->
   <section class="screen" id="home">
+    <div class="stickers" aria-hidden="true"><img src="/assets/sticker-bow.png" alt="" style="left:-.6rem;bottom:7rem;--w:4.2rem;--d:7s" /><img src="/assets/sticker-sparkle.png" alt="" style="right:1rem;bottom:12rem;--w:3rem;--d:5s;--dl:-2s" /><img src="/assets/sticker-heart.png" alt="" style="left:42%;bottom:2.4rem;--w:3.2rem;--d:6s;--dl:-1s" /><img src="/assets/sticker-star.png" alt="" style="right:-.4rem;bottom:4rem;--w:3.6rem;--d:8s;--dl:-3s" /></div>
+    <button class="snd" type="button" id="snd" aria-label="sound on/off">♪</button>
     <div class="clock"><b id="clockT">9:41</b><span id="clockD">today</span></div>
     <p class="label">notifications</p>
     <div class="notifs">
@@ -316,6 +388,66 @@ function token(v){
   try{ if(v === undefined) return localStorage.getItem(TOKEN_KEY); if(v) localStorage.setItem(TOKEN_KEY, v); else localStorage.removeItem(TOKEN_KEY); }catch(e){ return null; }
 }
 
+/* ---- sound — all synthesized, no files ----------------------------------------
+   The slumber page's chat sounds (nokia sms tone, the two-note ding, the send
+   swoosh, key ticks) plus a few for here: the phone buzz, the group-join chime,
+   a camera shutter, and the soft poof of a view-once photo going. Lazy context,
+   woken by every gesture (iOS re-suspends it when idle); every sound is
+   try/catch'd so audio can never break the page. Shares 'ksp-snd' with / . */
+const FX = (function(){
+  let ctx = null, noise = null;
+  let muted = false; try{ muted = localStorage.getItem('ksp-snd') === 'off'; }catch(e){}
+  function unlock(){
+    try{
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      if(ctx.state !== 'running') ctx.resume();
+      const b = ctx.createBuffer(1, 1, 22050), src = ctx.createBufferSource(); src.buffer = b; src.connect(ctx.destination); src.start(0);
+    }catch(e){}
+  }
+  ['pointerdown','touchstart','touchend','keydown','click'].forEach(ev => window.addEventListener(ev, unlock, { passive:true }));
+  const ok = () => !muted && ctx && ctx.state === 'running';
+  function noiseBuf(){
+    if(!noise){ noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const d = noise.getChannelData(0); for(let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    return noise;
+  }
+  function tone(freq, at, dur, type, peak){
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, at); o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.start(at); o.stop(at + dur + 0.02);
+  }
+  function hiss(at, dur, type, from, to, peak, q){
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf();
+    const f = ctx.createBiquadFilter(); f.type = type; f.Q.value = q || 1;
+    f.frequency.setValueAtTime(from, at); f.frequency.exponentialRampToValueAtTime(to, at + dur);
+    const g = ctx.createGain(); src.connect(f); f.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    src.start(at); src.stop(at + dur + 0.02);
+  }
+  const play = (fn) => { try{ if(ok()) fn(ctx.currentTime + 0.01); }catch(e){} };
+  return {
+    unlock,
+    muted: () => muted,
+    setMuted(m){ muted = !!m; try{ localStorage.setItem('ksp-snd', muted ? 'off' : 'on'); }catch(e){} if(!muted) unlock(); },
+    // the classic nokia sms tone — morse for "sms"
+    nokia: () => play(t => {
+      const DOT = .07, DASH = .2, GAP = .07, LGAP = .2, F = 2093, P = .05;
+      [DOT,DOT,DOT].forEach(d => { tone(F, t, d, 'square', P); t += d + GAP; }); t += LGAP - GAP;
+      [DASH,DASH].forEach(d => { tone(F, t, d, 'square', P); t += d + GAP; }); t += LGAP - GAP;
+      [DOT,DOT,DOT].forEach(d => { tone(F, t, d, 'square', P); t += d + GAP; });
+    }),
+    // the phone buzzing on the table: a low rattle
+    buzz: () => play(t => { for(let i = 0; i < 2; i++){ tone(140, t + i * .22, .16, 'sawtooth', .05); hiss(t + i * .22, .16, 'lowpass', 400, 200, .05); } }),
+    recv: () => play(t => { tone(784, t, .16, 'triangle', .07); tone(1046.5, t + .12, .22, 'sine', .06); }),
+    sent: () => play(t => { hiss(t, .28, 'bandpass', 400, 3500, .08, 6); }),
+    click: () => play(t => { hiss(t, .012, 'highpass', 2500 + Math.random() * 1500, 3000, .03); }),
+    // the group lets you in / the coupon lands: a sparkly arpeggio up
+    chime: () => play(t => { [1046.5, 1318.5, 1568, 2093].forEach((f, i) => tone(f, t + i * .08, .5, 'sine', .05)); }),
+    shutter: () => play(t => { hiss(t, .05, 'highpass', 1800, 1800, .14); hiss(t + .09, .08, 'bandpass', 1200, 900, .1, 2); }),
+    poof: () => play(t => { hiss(t, .45, 'lowpass', 2400, 180, .06); tone(660, t, .3, 'sine', .03); }),
+  };
+})();
+
 /* ---- the server ----------------------------------------------------------- */
 async function call(body, attempt = 0){
   if(!CFG.supabaseAnonKey) return { ok:false };
@@ -349,6 +481,7 @@ function Conv(id){
   const keepUp = () => thread.scrollTo({ top: thread.scrollHeight, behavior:'smooth' });
   c.add = (node) => { thread.appendChild(node); keepUp(); return node; };
   c.bubble = (cls, text, from) => {
+    if(cls === 'you') FX.sent(); else if(cls === 'her') FX.recv();
     const p = document.createElement('p');
     p.className = 'msg ' + cls;
     if(from){ const s = document.createElement('span'); s.className = 'from'; s.textContent = from; p.appendChild(s); }
@@ -390,6 +523,7 @@ function Conv(id){
       inp.placeholder = placeholder;
       if(mode) inp.inputMode = mode;
       if(auto) inp.autocomplete = auto;
+      inp.addEventListener('keydown', (e) => { if(e.key.length === 1 || e.key === 'Backspace') FX.click(); });
       // the compose row just took space from the thread: jump to the newest line
       // (instantly — a smooth scroll gets cut short by the resize)
       requestAnimationFrame(() => { thread.scrollTop = thread.scrollHeight; inp.focus({ preventScroll:true }); });
@@ -494,6 +628,7 @@ async function inside(chat, returning, phone){
     await group.her('you again 😌 your stuff is right where you left it', 800);
   }else{
     group.sys('you joined the secret slumber group 🔒', 'gold');
+    FX.chime();
     await sleep(400);
     await say(chat.lines);
   }
@@ -557,10 +692,12 @@ function showPhoto(url){
     let timer = null, t0 = 0, closed = false;
     const finish = () => {
       if(closed) return; closed = true;
-      clearInterval(timer); img.src = ''; v.remove(); resolve();
+      clearInterval(timer); img.src = ''; v.remove(); FX.poof(); resolve();
     };
     img.onload = () => {
       v.querySelector('.pic').replaceChildren(img);
+      FX.shutter();
+      const fl = document.createElement('div'); fl.className = 'flash'; v.appendChild(fl); setTimeout(() => fl.remove(), 500);
       t0 = Date.now();
       timer = setInterval(() => {
         const rem = Math.max(0, PHOTO_SECONDS - (Date.now() - t0) / 1000);
@@ -581,6 +718,7 @@ function couponCard(chat, phone){
   c.className = 'card' + (chat.coupon_used ? ' used' : '');
   c.innerHTML = '<small>EARLY ACCESS · SLUMBER GROUP ONLY</small>' +
     '<div class="off"></div><div class="code"><b></b><button type="button">COPY</button></div><div class="bind"></div>';
+  FX.chime();
   c.querySelector('.off').textContent = chat.coupon_used ? 'already used ♡' : (chat.discount || 'just for you');
   c.querySelector('.code b').textContent = chat.coupon;
   c.querySelector('.bind').textContent = 'only works with ' + (phone ? 'your number ••' + phone.slice(-4) : 'the number you applied with') + ' · once';
@@ -671,19 +809,32 @@ function stampNow(){
   const d = new Date(), h = d.getHours(), m = d.getMinutes();
   return 'today · ' + (h % 12 || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? 'am' : 'pm');
 }
-(async function boot(){
+function buzz(row){
+  FX.buzz();
+  try{ if(navigator.vibrate) navigator.vibrate([90, 60, 90]); }catch(e){}
+  row.classList.add('in'); row.classList.remove('buzz'); void row.offsetWidth; row.classList.add('buzz');
+}
+async function boot(){
   const d = new Date();
   document.getElementById('clockT').textContent = (d.getHours() % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
   document.getElementById('clockD').textContent = d.toLocaleDateString(undefined, { weekday:'long', day:'numeric', month:'long' }).toLowerCase();
   if(token()) document.getElementById('prevGroup').textContent = 'khushi: welcome back 🔒';
-  ga('prebuzz_landed', { source:trafficSource() });
-  // the notifications drop in one after the other, like they're arriving
-  await sleep(500);  rowDm.classList.add('in');
-  await sleep(900);  rowGroup.classList.add('in');
-  // newest on top: the group arrived second
-  rowGroup.parentNode.insertBefore(rowGroup, rowDm);
+  // the notifications land one after the other, newest on top, each with a buzz
+  await sleep(700);  buzz(rowDm); FX.nokia();
+  await sleep(1700); rowGroup.parentNode.insertBefore(rowGroup, rowDm); buzz(rowGroup); FX.recv();
   document.getElementById('hint').classList.add('in');
-})();
+}
+const snd = document.getElementById('snd');
+const paintSnd = () => { snd.classList.toggle('off', FX.muted()); snd.title = FX.muted() ? 'sound off' : 'sound on'; };
+snd.onclick = () => { FX.setMuted(!FX.muted()); paintSnd(); };
+paintSnd();
+ga('prebuzz_landed', { source:trafficSource() });
+document.getElementById('enter').addEventListener('click', () => {
+  FX.unlock(); FX.setMuted(false); paintSnd();   // entering is the gesture that turns sound on, as on /
+  ga('prebuzz_entered');
+  const g = document.getElementById('gate'); g.classList.add('leaving');
+  setTimeout(() => { g.remove(); boot(); }, 560);
+}, { once:true });
 </script>
 </body>
 </html>
