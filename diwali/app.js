@@ -38,6 +38,9 @@ function applyName() {
   if ($('#wa')) $('#wa').href = `https://wa.me/${C.rsvp.whatsapp}?text=${encodeURIComponent(C.rsvp.text.replace('{name}', n))}`;
 }
 applyName();
+// party.nailin.it names the venue on the invite; diwali.nailin.it keeps it for the confirmation email
+const PARTY = window.SITE === 'party';
+if (PARTY) Object.assign(C.event, { venue: 'bastian beach club, juhu', mapUrl: 'https://www.google.com/maps/search/?api=1&query=Bastian+Beach+Club+Juhu+Mumbai' });
 document.querySelectorAll('[data-c]').forEach(e => { e.textContent = C.event[e.dataset.c] || ''; });
 if (C.event.mapUrl) { const m = $('#map'); m.href = C.event.mapUrl; m.hidden = false; }
 $('#ics').addEventListener('click', () => {
@@ -46,7 +49,7 @@ $('#ics').addEventListener('click', () => {
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//nailinit//Diwali Party//EN', 'BEGIN:VEVENT',
     'UID:nailinit-diwali-party-2026@nailinit', 'DTSTAMP:' + f(new Date().toISOString()),
     'DTSTART:' + f(ev.start), 'DTEND:' + f(ev.end),
-    'SUMMARY:nailinit Diwali Party', `LOCATION:${ev.area} (venue shared on confirmation)`,
+    'SUMMARY:nailinit Diwali Party', (PARTY ? `LOCATION:${ev.venue}, ${ev.area}` : `LOCATION:${ev.area} (venue shared on confirmation)`),
     `DESCRIPTION:Dress code: ${ev.dress}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
@@ -651,6 +654,7 @@ const DONE = {
   approved: ["you're in!", e => `your entry pass is in ${e || 'your email'}. venue + QR are all there. see you ${C.event.dateLong}!`],
   declined: ['thank you!', () => "the list is full this time, but we're so glad you wanted to come."],
   no: ['next time then.', () => "we'll miss you at the mohalla."],
+  yes: ['pakka!', () => `see you ${C.event.dateLong}, ${C.event.time} · ${C.event.venue}`],      // party.nailin.it: a plain yes, no pass
 };
 function showRsvp(st) {
   const [head, msg] = DONE[st] || [];
@@ -659,7 +663,7 @@ function showRsvp(st) {
   if (!st) return;
   $('#doneHead').textContent = head;
   $('#doneMsg').textContent = msg(store.get(RKEY + ':email'));
-  $('#ics').hidden = st !== 'applied' && st !== 'approved';
+  $('#ics').hidden = !['applied', 'approved', 'yes'].includes(st);
   $('#change').hidden = st === 'approved';
 }
 function openForm(on) {
@@ -670,7 +674,11 @@ function openForm(on) {
   $('#apEmail').value = $('#apEmail').value || store.get(RKEY + ':email') || '';
   rsvpForm.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
-$('#yes').addEventListener('click', () => { initAudio(); play('tap'); openForm(true); });
+$('#yes').addEventListener('click', () => {
+  initAudio();
+  if (PARTY) { store.set(RKEY, 'yes'); showRsvp('yes'); track('rsvp', { rsvp: 'yes' }); play('win', { vol: .8 }); buzz(30); return; }   // party: just their okay
+  play('tap'); openForm(true);
+});
 $('#apBack').addEventListener('click', () => openForm(false));
 $('#no').addEventListener('click', () => { store.set(RKEY, 'no'); showRsvp('no'); track('rsvp', { rsvp: 'no' }); play('tap'); });
 $('#change').addEventListener('click', () => { rsvpDone.hidden = true; rsvpAsk.hidden = false; });
@@ -691,9 +699,9 @@ rsvpForm.addEventListener('submit', async e => {
     $('#apErr').textContent = x.message === 'email' ? "that email doesn't look right" : x.message === 'phone' ? 'add your phone number (10 digits)' : "couldn't send. check your internet and try again?";
   } finally { btn.disabled = false; btn.textContent = 'send my request'; }
 });
-showRsvp(({ yes: 'applied' })[store.get(RKEY)] || store.get(RKEY) || '');
+showRsvp((PARTY ? {} : { yes: 'applied' })[store.get(RKEY)] || store.get(RKEY) || '');
 // the hosts may have approved since the last visit
-if (NAME) fetch(API_BASE + '/api/apply?name=' + encodeURIComponent(NAME)).then(r => r.json()).then(d => {
+if (NAME && !PARTY) fetch(API_BASE + '/api/apply?name=' + encodeURIComponent(NAME)).then(r => r.json()).then(d => {
   if (d.status && d.status !== store.get(RKEY) && (DONE[d.status])) { store.set(RKEY, d.status); showRsvp(d.status); }
 }).catch(() => {});
 
