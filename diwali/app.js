@@ -23,6 +23,8 @@ const qs = new URLSearchParams(location.search);
 // ?to=Riya&k=<check>                                     → older links, still honoured
 const nice = v => String(v || '').trim().replace(/\s+/g, ' ').slice(0, 32).replace(/(^|\s)(\p{Ll})/gu, (m, a, b) => a + b.toUpperCase());
 const INV = (qs.get('inv') || '').trim();
+// ?h=tanishq → which host's link this is; remembered so later visits still count for them
+const HOST = (() => { const h = (qs.get('h') || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 20); if (h) store.set('mkd:h', h); return h || store.get('mkd:h') || ''; })();
 const KEY = (INV ? INV.slice(0, 5) : (qs.get('k') || '')).trim().toLowerCase();
 const SEALED = INV.length > 5 ? INV.slice(5) : '';
 let NAME = nice(qs.get('name') || qs.get('to'));            // full name: used for tracking / sheet rows
@@ -121,8 +123,10 @@ function layout() {
 
   // the AAO poster: starts inside the envelope, grows into the hero
   C2.w = EB.w * .86; C2.h = C2.w / POSTER_AR;
-  C2.fh = Math.min(vh * .5, (vw * .94) / POSTER_AR, 460); C2.fs = C2.fh / C2.h;
-  C2.fy = clamp(vh * .45, C2.fh / 2 + 84, vh - C2.fh / 2 - 120);
+  // party.nailin.it adds a "hosted by" line under the welcome, so its ticket sits a little smaller and higher
+  const host = window.SITE === 'party';
+  C2.fh = Math.min(vh * (host ? .44 : .5), (vw * .94) / POSTER_AR, 460); C2.fs = C2.fh / C2.h;
+  C2.fy = clamp(vh * (host ? .39 : .45), C2.fh / 2 + 80, vh - C2.fh / 2 - (host ? 215 : 120));
   css(card, '--cw', C2.w + 'px'); css(card, '--ch', C2.h + 'px');
   css(nameEl, '--ny', (C2.fy + C2.fh / 2 + 20) + 'px');
 
@@ -632,7 +636,7 @@ function track(event, extra = {}) {
   if (event === 'play' || event === 'wall') post(R.gamesForm, R.gamesFields, { ...who, type: event === 'wall' ? 'pinned to wall' : 'played',
     game: ({ tota: 'tota jyotish', gubbara: 'balloon shoot', chhalla: 'ring toss', draw: 'lucky draw' })[extra.rsvp] || extra.rsvp || '', result: extra.link || '', details: extra.device || '' });
   // our own database (admin dashboard + wall): plain-text beacon, no CORS preflight
-  const api = { event, name: NAME || '', rsvp: event === 'rsvp' ? extra.rsvp : '',
+  const api = { event, h: HOST, name: NAME || '', rsvp: event === 'rsvp' ? extra.rsvp : '',
     game: (event === 'wall' || event === 'play') ? extra.rsvp : '', title: extra.link || '', text: extra.device || '' };
   try { const b = new Blob([JSON.stringify(api)], { type: 'text/plain' }); navigator.sendBeacon ? navigator.sendBeacon(API_BASE + '/api/track', b) : fetch(API_BASE + '/api/track', { method: 'POST', body: b, keepalive: true }); } catch (e) {}
 }
@@ -677,7 +681,7 @@ rsvpForm.addEventListener('submit', async e => {
   if (err) { $('#apErr').textContent = err; buzz(20); return; }
   const btn = $('#apSend'); btn.disabled = true; btn.textContent = 'sending…'; $('#apErr').textContent = '';
   try {
-    const r = await fetch(API_BASE + '/api/apply', { method: 'POST', body: JSON.stringify({ name, phone, email }) });
+    const r = await fetch(API_BASE + '/api/apply', { method: 'POST', body: JSON.stringify({ name, phone, email, h: HOST }) });
     const d = await r.json();
     if (!d.ok) throw new Error(d.error || 'x');
     store.set(RKEY, d.status); store.set(RKEY + ':email', email); store.set(RKEY + ':phone', phone);
