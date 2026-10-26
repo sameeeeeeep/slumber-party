@@ -1059,7 +1059,7 @@ const MIX = (() => {
   const songs = cfg.songs || (cfg.youtube ? [cfg.youtube] : []);
   if ((!songs.length && !cfg.playlist) || !el) return { start() {}, sync() {}, prime() {} };
   let player = null, ready = false, primed = false, revealed = false, userPaused = false, needTap = false, preloading = false;
-  const pill = $('#mxPlay'), ic = $('#mxIc'), title = cfg.title || 'mohalla diwali mix', START = cfg.start || 0;
+  const pill = $('#mxPlay'), ic = $('#mxIc'), title = cfg.title || 'mohalla diwali mix', START = cfg.start || 0, FULL = cfg.volume || 100;
   $('#mxTitle').textContent = title;
   $('#mxLink').href = cfg.playlist ? `https://www.youtube.com/playlist?list=${cfg.playlist}` : `https://www.youtube.com/watch?v=${songs[0]}&t=${START}s`;
   const playing = () => ready && player.getPlayerState && player.getPlayerState() === 1;
@@ -1080,27 +1080,29 @@ const MIX = (() => {
     if (cfg.playlist) Object.assign(pv, { listType: 'playlist', list: cfg.playlist });
     else pv.playlist = songs.join(',');
     player = new YT.Player('mxPlayer', { ...(cfg.playlist ? {} : { videoId: songs[0] }), width: '200', height: '200', playerVars: pv,
-      events: { onReady: () => { ready = true; player.setVolume(cfg.volume || 45); if (revealed) loud(); else { player.mute(); player.seekTo(START, true); player.playVideo(); preloading = true; } ui(); },   // buffer the song at 0:34, then pause (below) so nothing decodes during the opening
+      events: { onReady: () => { ready = true; player.setVolume(FULL); if (revealed) loud(); else { player.mute(); player.seekTo(START, true); player.playVideo(); preloading = true; } ui(); },   // buffer the song at 0:34, then pause (below) so nothing decodes during the opening
         onStateChange: e => {
           if (!revealed && preloading && e.data === 1) { preloading = false; player.pauseVideo(); player.seekTo(START, true); if (window.__mixReady) window.__mixReady(); }   // buffered: stop decoding
+          if (revealed && e.data === 1 && !hush) { player.unMute(); player.setVolume(FULL); }   // every (re)start plays at full volume
           ui(); } } });
   }
   // inside the opening tap: start UNMUTED (that tap is what unlocks sound on phones), silence it the moment it plays
   function warm() { if (!ready || userPaused) return; hush = true; player.setVolume(0); player.unMute(); player.seekTo(START, true); player.playVideo(); }
-  let hush = false, cued = false;
+  let hush = false, cued = false, rekicked = false;
   const going = () => ready && [1, 3].includes(player.getPlayerState());          // playing or buffering: leave it alone
   function loud() {                         // at the reveal: same song, sound up
     if (!ready || userPaused || !A.on) { ui(); return; }
     hush = false;
     if (!cued) { cued = true; player.seekTo(START, true); }   // the song starts at 0:34 once, at the reveal; never jumps back after that
-    player.unMute(); player.setVolume(cfg.volume || 45);
+    player.unMute(); player.setVolume(FULL);
     if (!going()) player.playVideo();
     check(0);
+    if (!rekicked) { rekicked = true; setTimeout(() => { if (!going() || userPaused) return; player.pauseVideo(); setTimeout(() => { player.unMute(); player.setVolume(FULL); player.playVideo(); }, 140); }, 1800); }
   }
   // strict phones can refuse sound outside a tap: only then ask for one (a buffering player is not a refusal)
   function check(n) { setTimeout(() => { if (going() && !player.isMuted()) { needTap = false; ui(); return; } if (n < 3) return check(n + 1); needTap = A.on && !userPaused; ui(); }, 1500); }
   // any tap after the reveal counts as permission: just unmute + play from where it is, no seeking
-  document.addEventListener('pointerdown', e => { if (needTap && !e.target.closest('#mix')) { needTap = false; player.unMute(); player.setVolume(cfg.volume || 45); if (!going()) player.playVideo(); check(1); } }, true);
+  document.addEventListener('pointerdown', e => { if (needTap && !e.target.closest('#mix')) { needTap = false; player.unMute(); player.setVolume(FULL); if (!going()) player.playVideo(); check(1); } }, true);
   pill.addEventListener('click', () => {
     if (!ready) return;
     if (audible()) { userPaused = true; player.pauseVideo(); }
