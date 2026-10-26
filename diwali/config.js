@@ -29,7 +29,7 @@ window.MKD = {
     title: 'mohalla diwali mix',
     songs: ['4dsFQFCvVGU'],          // Kajra Re (YRF) — placeholder until the real playlist
     playlist: '',
-    volume: 45,
+    volume: 100,
     start: 34,                       // seconds into the first song
   },
 
