@@ -18,8 +18,8 @@
 //      has nothing to guess at.
 //    · IMAGES TRAVEL WITH THE MESSAGE (cid:), because the blurred preview is
 //      the hook and Outlook hides remote images from a new sender. The preview
-//      is one pre-made picture (tools/blur-leaks.py): email can't blur live
-//      content or lay a pill over an image.
+//      is one pre-made picture (tools/blur-leaks.py) because email can't blur
+//      live content; the "+12 new messages" pill under it is real text.
 //    · A PLAIN-TEXT TWIN, always.
 //
 //  The pixel font (VT323) loads where web fonts work (Apple Mail, iOS Mail).
@@ -30,6 +30,8 @@ import { escapeHtml } from './handset-email.ts';
 import { PREVIEW_JPG_B64, AVATAR_PNG_B64 } from './teaser-assets.ts';
 
 export const PREVIEW_CID = 'preview';
+/** Messages waiting on the site after the email's three. Keep in step with the site's chat. */
+export const PREVIEW_COUNT = 12;
 export const AVATAR_CID = 'khushi';
 
 export interface TeaserInput {
@@ -142,9 +144,17 @@ ${lines.map((l, i) => bubble(l, i)).join('')}
         <tr><td align="center" style="padding:4px 0 0">
           <div class="b" style="animation-delay:${previewAt}s">
           <a href="${link}" style="display:block;text-decoration:none">
-            <img src="cid:${PREVIEW_CID}" width="392" alt="+12 new messages from khushi. open the chat to read them"
+            <img src="cid:${PREVIEW_CID}" width="392" alt="the rest of the chat, blurred"
                  style="display:block;width:100%;max-width:392px;height:auto;border:0" />
           </a>
+          </div>
+        </td></tr>
+        <!-- the pill is real text, not part of the picture: it reads with images off -->
+        <tr><td align="center" style="padding:10px 0 0">
+          <div class="b" style="animation-delay:${previewAt}s">
+          <a href="${link}" style="display:inline-block;background-color:#241821;border:1.5px solid #eb648c;color:#fff6f8;
+                     border-radius:20px;padding:8px 18px;font-family:${PIXEL};font-size:10px;letter-spacing:.06em;
+                     text-decoration:none">+${PREVIEW_COUNT} NEW MESSAGES</a>
           </div>
         </td></tr>
         </table>
@@ -183,7 +193,7 @@ ${lines.map((l, i) => bubble(l, i)).join('')}
 remember the slumber party?
 well... it happened. and i have something for you
 
-+12 new messages. open the chat:
++${PREVIEW_COUNT} new messages. open the chat:
 ${input.link}
 
 khushi

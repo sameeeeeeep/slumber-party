@@ -22,9 +22,6 @@ SRC = ROOT / 'assets/email/leaks'
 OUT = ROOT / 'assets/email/leaks-blur.jpg'
 TILE, GAP, SIZE = 292, 16, 600
 TINTS = ['#c9b3bd', '#b9a7c9', '#d8b89e', '#e4bcc8']
-# Messages waiting on the site after the email's three. Keep in step with the
-# site's chat, or the pill promises a number the page doesn't deliver.
-PREVIEW_COUNT = 12
 
 photos = sorted(p for p in SRC.glob('*') if p.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp'))[:4]
 if len(photos) < 4:
@@ -55,10 +52,10 @@ av.save(ROOT / 'assets/email/khushi-avatar.png', optimize=True)
 print(f"wrote assets/email/khushi-avatar.png ({(ROOT / 'assets/email/khushi-avatar.png').stat().st_size // 1024}KB)")
 
 # The teaser's "rest of the chat": a few cream bubbles and the photo grid,
-# blurred, with the "+N new messages" pill drawn on top. Email can't layer
-# HTML over an image or blur live content, so this is one picture.
-from PIL import ImageFont
-W, H = 600, 560
+# blurred. Email can't blur live content, so this is one picture. The
+# "+N new messages" pill is NOT drawn in: it is real text under the image in
+# thread-email.ts, so it still reads when images are blocked.
+W, H = 600, 500
 # Background is a vertical ramp matching the email's gradient where the image
 # sits (sampled from a render), so the picture has no visible box edge.
 pv = Image.new('RGB', (W, H))
@@ -76,16 +73,6 @@ for w_, h_ in [(420, 54), (330, 210), (500, 86), (360, 54)]:
         d.rounded_rectangle((20, y, 20 + w_, y + h_), 26, fill='#fff6f8')
     y += h_ + 16
 pv = pv.filter(ImageFilter.GaussianBlur(9))
-d = ImageDraw.Draw(pv)
-try:
-    font = ImageFont.truetype('DejaVuSansMono-Bold.ttf', 26)
-except OSError:
-    font = ImageFont.load_default()
-label = f'+{PREVIEW_COUNT} NEW MESSAGES'
-tw = d.textlength(label, font=font)
-bx, by = (W - tw) / 2 - 30, H / 2 - 32
-d.rounded_rectangle((bx, by, bx + tw + 60, by + 64), 32, fill='#241821', outline='#eb648c', width=3)
-d.text((bx + 30, by + 17), label, fill='#fff6f8', font=font)
 PREVIEW = ROOT / 'assets/email/chat-preview.jpg'
 pv.save(PREVIEW, 'JPEG', quality=80, optimize=True, progressive=True)
 print(f'wrote {PREVIEW.relative_to(ROOT)} ({PREVIEW.stat().st_size // 1024}KB)')
