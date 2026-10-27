@@ -146,9 +146,9 @@ async function kkFlow(run){
   await kkHer(run, "i can't tell you what yettt 🤭");
   await kkHer(run, 'unless… you’d applied for the secret slumber party? 👀');
   const applied = await kkAsk(run, { name:'applied', type:'choice', choices:['yes 🎀', 'no'] });
-  if(applied === 'no'){ ga('prebuzz_says_no'); return kkSignup(run); }
+  if(applied === 'no'){ ga('prebuzz_says_no'); kkPixel('PrebuzzSaidNo', null, true); return kkSignup(run); }
 
-  ga('prebuzz_says_yes');
+  ga('prebuzz_says_yes'); kkPixel('PrebuzzSaidYes', null, true);
   await kkHer(run, 'ooh 👀 then come with me');
   await kkSleep(450); if(!kkAlive(run)) return;
   kkEnterGroup(false);
@@ -168,12 +168,13 @@ async function kkFlow(run){
   if(res.member){
     kkToken(res.token);
     ga('prebuzz_member_unlocked');
+    kkPixel('CompleteRegistration', { content_name:'slumber_group', status:'member' });
     KKFX.unlock();
     kkEnterGroup(true);
     return kkGroup(run, res.chat, false, phone);
   }
 
-  ga('prebuzz_member_miss');
+  ga('prebuzz_member_miss'); kkPixel('PrebuzzNotOnList', null, true);
   KKFX.denied();
   kkSys('wrong password 🔒');
   await kkSleep(1400); if(!kkAlive(run)) return;
@@ -270,7 +271,7 @@ async function kkInsta(run){
   ctChips.classList.remove('list');
   ctChips.innerHTML = '<a class="ct-chip cta kk-insta" href="https://instagram.com/' + KK_INSTA + '" target="_blank" rel="noopener">▸ follow @' + KK_INSTA + '</a>';
   composeMode('choice'); pinChat(true);
-  ctChips.querySelector('a').addEventListener('click', () => ga('prebuzz_insta_follow'));
+  ctChips.querySelector('a').addEventListener('click', () => { ga('prebuzz_insta_follow'); kkPixel('PrebuzzInstaFollow', null, true); });
 }
 
 function kkCoupon(chat, phone){
@@ -329,6 +330,7 @@ async function kkSignup(run, knownPhone){
   clearTyping();
   if(!kkAlive(run)) return;
   ga('prebuzz_lead_submitted'); ga('generate_lead', { ssp_vid:visitorId() });
+  kkPixel('Lead', { content_name:'prebuzz_waitlist' });
   await kkHer(run, ["done ♡ you'll hear it from me first", 'you heard nothing 🤫']);
   kkInsta(run);
 }

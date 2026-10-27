@@ -64,6 +64,13 @@ a = s.index('function track(step){'); b = s.index("track('landed');", a)
 s = s[:a] + """function track(step){
   // /kk reports to GA as prebuzz_<step>. It never posts to the slumber funnel (`visits`).
   ga('prebuzz_'+step, { funnel_step:step, ssp_vid:visitorId() });
+  if(step==='opened_dm') kkPixel('ViewContent', { content_name:'prebuzz_dm' });
+}
+/* Meta Pixel for the prebuzz funnel. Standard events where Meta has one (so ads
+   can optimise on them), custom ones for the rest. Never sends a phone or an
+   email — the pixel only ever learns which step someone reached. */
+function kkPixel(name, params, custom){
+  try{ if(window.fbq) fbq(custom ? 'trackCustom' : 'track', name, Object.assign({ ssp_vid:visitorId() }, params||{})); }catch(e){}
 }
 """ + s[b:]
 # answers never go to the slumber drafts table or the application Google Sheet
