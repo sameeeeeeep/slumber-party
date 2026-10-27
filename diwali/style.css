@@ -1408,7 +1408,7 @@ html, body { overscroll-behavior-x: none; }
 [data-site="party"] .f-ink { --m: url(assets/foil_ink_host.webp); }
 [data-site="party"] .card::after { -webkit-mask-image: url(assets/invite_card_host.webp); mask-image: url(assets/invite_card_host.webp); }
 /* diwali.dotmediabase.com: DOT MEDIA leads the ticket; nailinit is the small credit above DIWALI */
-[data-site="media"] .f-gold { --m: url(assets/foil_gold_host.webp); }
+[data-site="media"] .f-gold { --m: url(assets/foil_gold_media.webp); }
 [data-site="media"] .f-blue { --m: url(assets/foil_blue_host.webp); }
 [data-site="media"] .f-ink { --m: url(assets/foil_ink_media.webp); }
 
