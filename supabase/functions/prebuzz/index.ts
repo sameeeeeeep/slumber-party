@@ -28,6 +28,8 @@
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
 const ALLOWED_ORIGINS = [
+  'https://access.nailin.it',              // the prebuzz page (Pages project nailinit-access)
+  'https://nailinit-access.pages.dev',
   'https://secretslumberparty.com',
   'https://www.secretslumberparty.com',
   'http://localhost:4321',
