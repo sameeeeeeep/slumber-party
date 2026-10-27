@@ -9,8 +9,7 @@
 //  tools/out/teaser.txt         the plain-text twin
 //
 //  Images are cid: attachments in a real send; here they're inlined so a
-//  browser shows them. The numbers are the ones in the current draft copy and
-//  are NOT verified (see appliedCount in thread-email.ts).
+//  browser shows them.
 // ============================================================================
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,15 +19,13 @@ import { teaserEmail } from '../supabase/functions/_shared/thread-email.ts';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const mail = teaserEmail({
   firstName: 'Riya Sharma',
-  instagramUrl: 'https://www.instagram.com/[HANDLE]/',
+  link: 'https://nailin.it/pages/khushis-list?k=PREVIEWTOKEN',
   optOutUrl: 'https://nailin.it/pages/khushis-list?k=PREVIEWTOKEN&optout=1',
-  appliedCount: '25,000+',
-  spots: 'two',
 });
 
 const data = (f, type) => `data:${type};base64,${fs.readFileSync(path.join(root, f)).toString('base64')}`;
 const inline = (html) => html
-  .replace(/cid:leaks/g, data('assets/email/leaks-blur.jpg', 'image/jpeg'))
+  .replace(/cid:preview/g, data('assets/email/chat-preview.jpg', 'image/jpeg'))
   .replace(/cid:khushi/g, data('assets/email/khushi-avatar.png', 'image/png'));
 const gmailish = (html) => html.replace(/<style>[\s\S]*?<\/style>/, '').replace(/<link [^>]*fonts\.googleapis[^>]*>/, '');
 
