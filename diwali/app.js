@@ -124,10 +124,13 @@ function layout() {
 
   // the AAO poster: starts inside the envelope, grows into the hero
   C2.w = EB.w * .86; C2.h = C2.w / POSTER_AR;
-  // party.nailin.it adds a "hosted by" line under the welcome, so its ticket sits a little smaller and higher
+  // the ticket shares the screen with the welcome line (+ "hosted by" on party.nailin.it) and, below it,
+  // the buttons + partner strip pinned to the bottom; size it to whatever room is left between the toran and those
   const host = window.SITE === 'party';
-  C2.fh = Math.min(vh * (host ? .44 : .5), (vw * .94) / POSTER_AR, 460); C2.fs = C2.fh / C2.h;
-  C2.fy = clamp(vh * (host ? .39 : .45), C2.fh / 2 + 80, vh - C2.fh / 2 - (host ? 215 : 120));
+  const below = (vw > 600 ? 210 : 270) + (host ? 112 : 66), top = Math.max(64, vh * .08);
+  const room = vh - top - below;
+  C2.fh = Math.max(110, Math.min(room, (vw * .92) / POSTER_AR, 420)); C2.fs = C2.fh / C2.h;
+  C2.fy = top + Math.max(0, room - C2.fh) * (vw > 600 ? .45 : .8) + C2.fh / 2;   // phones: sit low, close to the welcome + buttons
   css(card, '--cw', C2.w + 'px'); css(card, '--ch', C2.h + 'px');
   css(nameEl, '--ny', (C2.fy + C2.fh / 2 + 20) + 'px');
 

@@ -356,6 +356,30 @@ body.open .gate { transform: translateY(110%); opacity: 0; pointer-events: none;
 
 .caption { max-width: calc(100% - 92px); text-align: center; }
 .after .replay { margin-top: 2px; }
+/* partner strip under the ticket: one row on desktop, a looping slider on phones */
+.after { gap: 10px; }
+.partners { margin-top: 6px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.p-head { font: 600 10px/1 var(--sans); letter-spacing: .32em; text-transform: uppercase; color: var(--cream); opacity: .7; }
+.partners ul { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-end; justify-content: center; gap: 10px 30px; flex-wrap: wrap; max-width: 92vw; }
+.partners li { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.partners img { display: block; height: 30px; width: auto; }
+.partners .p-bastian img { height: 50px; } .partners .p-chk img { height: 19px; margin-bottom: 9px; } .partners .p-unfltrd img { height: 24px; margin-bottom: 6px; } .partners .p-goyel img { height: 43px; }
+.partners li span { font-size: 9.5px !important; }
+.partners li span { font: 600 8.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--cream); opacity: .6; white-space: nowrap; }
+/* the loop copy only exists for the phone slider */
+.partners li[aria-hidden] { display: none; }
+@media (max-width: 600px) {
+  /* phones: the logos glide by in a loop, lifted clear of the music player in the corner */
+  .after { bottom: calc(env(safe-area-inset-bottom) + 74px); }
+  .partners { width: 100%; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+  .partners ul { flex-wrap: nowrap; justify-content: flex-start; gap: 0; width: max-content; max-width: none; animation: pslide 16s linear infinite; }
+  .partners li, .partners li[aria-hidden] { display: flex; padding: 0 20px; gap: 6px; }
+  .partners .p-bastian img { height: 40px; } .partners .p-chk img { height: 15px; margin-bottom: 9px; } .partners .p-unfltrd img { height: 19px; margin-bottom: 7px; } .partners .p-goyel img { height: 34px; }
+  .partners li span { font-size: 8px !important; }
+}
+@keyframes pslide { to { transform: translateX(-50%); } }
+@media (max-width: 600px) and (prefers-reduced-motion: reduce) { .partners ul { animation: none; } .partners li[aria-hidden] { display: none; } .partners { overflow-x: auto; } }
+
 /* toran: genda heads with mango leaves, in place of the flags */
 .bunting { height: 64px; position: relative; overflow: hidden;
   background:
