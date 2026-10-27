@@ -1049,12 +1049,12 @@ body:not(.lit) .decor .kandil .lamp img:not(.bloom) { filter: brightness(.55) sa
 
 /* ═════════ metallic: the invite is foil-printed (gold paper, holo DIWALI, glossy ink) ═════════ */
 .card-foil { position: absolute; inset: 0; pointer-events: none; -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; background-size: 260% 260%; background-position: var(--fx, 50%) var(--fy, 50%); }
-.f-gold { --m: url(assets/foil_gold.webp?v=4); mix-blend-mode: overlay; opacity: .95;
+.f-gold { --m: url(assets/foil_gold.webp?v=5); mix-blend-mode: overlay; opacity: .95;
   background-image: repeating-linear-gradient(92deg, rgba(255,255,255,.07) 0 1px, transparent 1px 3px),
     linear-gradient(115deg, #6b4508 0%, #f8dc84 16%, #a8781c 30%, #fff4c2 44%, #b58322 56%, #f6d56e 70%, #7c540e 86%, #e9c45c 100%); }
-.f-blue { --m: url(assets/foil_blue.webp?v=4); mix-blend-mode: color-dodge; opacity: .55;
+.f-blue { --m: url(assets/foil_blue.webp?v=5); mix-blend-mode: color-dodge; opacity: .55;
   background-image: linear-gradient(125deg, #3f7bff 0%, #b98cff 18%, #ffffff 32%, #6ff2d6 46%, #5aa0ff 60%, #ffd1f0 76%, #3f7bff 100%); }
-.f-ink { --m: url(assets/foil_ink.webp?v=4); mix-blend-mode: screen; opacity: .55;
+.f-ink { --m: url(assets/foil_ink.webp?v=5); mix-blend-mode: screen; opacity: .55;
   background-image: linear-gradient(115deg, transparent 38%, rgba(255,250,235,.85) 48%, rgba(255,255,255,.2) 53%, transparent 62%); }
 .card .card-sheen { mix-blend-mode: overlay !important; opacity: .9; }
 
@@ -1428,14 +1428,24 @@ html, body { overscroll-behavior-x: none; }
 .rsvp-form .sign { font-size: 19px; padding: 15px 22px 13px; }
 .rsvp-form .sign:disabled { opacity: .7; }
 .rsvp-form .linkish { display: block; margin: 14px auto 0; color: var(--maroon); opacity: .8; }
-[data-site="party"] .f-gold { --m: url(assets/foil_gold_host.webp?v=4); }
-[data-site="party"] .f-blue { --m: url(assets/foil_blue_host.webp?v=4); }
-[data-site="party"] .f-ink { --m: url(assets/foil_ink_host.webp?v=4); }
+[data-site="party"] .f-gold { --m: url(assets/foil_gold_host.webp?v=5); }
+[data-site="party"] .f-blue { --m: url(assets/foil_blue_host.webp?v=5); }
+[data-site="party"] .f-ink { --m: url(assets/foil_ink_host.webp?v=5); }
 [data-site="party"] .card::after { -webkit-mask-image: url(assets/invite_card_host.webp); mask-image: url(assets/invite_card_host.webp); }
 /* diwali.dotmediabase.com: DOT MEDIA leads the ticket; nailinit is the small credit above DIWALI */
-[data-site="media"] .f-gold { --m: url(assets/foil_gold_media.webp?v=4); }
-[data-site="media"] .f-blue { --m: url(assets/foil_blue_host.webp?v=4); }
-[data-site="media"] .f-ink { --m: url(assets/foil_ink_media.webp?v=4); }
+[data-site="media"] .f-gold { --m: url(assets/foil_gold_media.webp?v=5); }
+[data-site="media"] .f-blue { --m: url(assets/foil_blue_host.webp?v=5); }
+[data-site="media"] .f-ink { --m: url(assets/foil_ink_media.webp?v=5); }
+[data-site="demo"] .f-gold { --m: url(assets/foil_gold_demo.webp?v=5); }
+[data-site="demo"] .f-blue { --m: url(assets/foil_blue_demo.webp?v=5); }
+[data-site="demo"] .f-ink { --m: url(assets/foil_ink_demo.webp?v=5); }
+[data-site="demo"] .card::after { -webkit-mask-image: url(assets/invite_card_demo.webp); mask-image: url(assets/invite_card_demo.webp); }
 
 /* the outfit sign's label matches kab / kaha (an older pink-sign override had put it in Teko) */
 .sgn.s-pink .o-k { font-family: var(--title) !important; font-size: 4.4cqw !important; letter-spacing: .14em !important; font-weight: 400 !important; }
+
+/* diwaliparty.live demo: no venue sign, no partner strip (made-up party) */
+[data-site="demo"] .sgn.s-blue, [data-site="demo"] .partners { display: none; }
+#groupBtn { text-decoration: none; }
+#groupBtn[hidden] { display: none; }
+

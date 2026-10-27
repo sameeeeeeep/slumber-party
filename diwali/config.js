@@ -46,3 +46,17 @@ window.MKD = {
     text: 'Haan ji! {name} pakka aa rahi/raha hai Mohalle ki Diwali pe 🪔',
   },
 };
+
+// diwaliparty.live: a demo copy for showing people the experience. Not a real party: a made-up date, no venue,
+// and "yes" puts them into the builders group (AI tools + prompts behind sites like this) instead of a guest list.
+if (window.SITE === 'demo') {
+  Object.assign(window.MKD.event, {
+    dateLong: '8 nov, 2026', dateHi: 'रविवार, ८ नवंबर', dateShort: '08·11·26', postmark: '8 NOV 26',
+    venue: '', mapUrl: '', rsvpBy: '',
+    start: '2026-11-08T19:00:00+05:30', end: '2026-11-09T01:00:00+05:30',
+  });
+  window.MKD.demo = {
+    group: '',   // invite link to the builders group (WhatsApp community / Discord): set before sharing
+  };
+}
+

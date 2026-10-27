@@ -38,7 +38,7 @@ function applyName() {
   if ($('#wa')) $('#wa').href = `https://wa.me/${C.rsvp.whatsapp}?text=${encodeURIComponent(C.rsvp.text.replace('{name}', n))}`;
 }
 applyName();
-const PARTY = window.SITE === 'party';
+const PARTY = window.SITE === 'party', DEMO = window.SITE === 'demo';
 document.querySelectorAll('[data-c]').forEach(e => { e.textContent = C.event[e.dataset.c] || ''; });
 if (C.event.mapUrl) { const m = $('#map'); m.href = C.event.mapUrl; m.hidden = false; }
 $('#ics').addEventListener('click', () => {
@@ -127,7 +127,7 @@ function layout() {
   // under the ticket: the partner strip, then the welcome line (+ "hosted by" on party.nailin.it), then the
   // buttons pinned to the bottom; the ticket gets whatever room is left between the toran and all that
   const host = window.SITE === 'party';
-  const PH = vw > 600 ? 100 : 98;      // partner strip between the ticket and the welcome line
+  const PH = DEMO ? 0 : vw > 600 ? 100 : 98;      // partner strip (none on the demo) between the ticket and the welcome line
   const below = (vw > 600 ? 150 : 175) + PH + (host ? 112 : 66), top = Math.max(64, vh * .08);
   const room = vh - top - below;
   C2.fh = Math.max(110, Math.min(room, (vw * .92) / POSTER_AR, 420)); C2.fs = C2.fh / C2.h;
@@ -646,7 +646,7 @@ function track(event, extra = {}) {
     game: (event === 'wall' || event === 'play') ? extra.rsvp : '', title: extra.link || '', text: extra.device || '' };
   try { const b = new Blob([JSON.stringify(api)], { type: 'text/plain' }); navigator.sendBeacon ? navigator.sendBeacon(API_BASE + '/api/track', b) : fetch(API_BASE + '/api/track', { method: 'POST', body: b, keepalive: true }); } catch (e) {}
 }
-const API_BASE = /nailin\.it$|dotmediabase\.com$|pages\.dev$|localhost$|^127\./.test(location.hostname) ? '' : 'https://diwali.nailin.it';
+const API_BASE = /nailin\.it$|dotmediabase\.com$|diwaliparty\.live$|pages\.dev$|localhost$|^127\./.test(location.hostname) ? '' : 'https://diwali.nailin.it';
 window.MKD_API = API_BASE;
 window.MKDTrack = (ev, extra) => track(ev, extra);
 /* RSVP: "yes" = apply (name + phone + email) → hosts approve in /admin → entry pass with QR by email */
@@ -658,7 +658,15 @@ const DONE = {
   declined: ['thank you!', () => "the list is full this time, but we're so glad you wanted to come."],
   no: ['next time then.', () => "we'll miss you at the mohalla."],
   yes: ['pakka!', () => `see you ${C.event.dateLong}, ${C.event.time} · ${C.event.venue}`],      // party.nailin.it: a plain yes, no pass
+  joined: ["you're in!", () => "this party was a demo, but the group is real: we swap the AI tools, prompts and tricks behind sites like this one."],   // diwaliparty.live
 };
+if (DEMO) {   // the demo's "yes" is a door into the builders group, not a guest list
+  $('#rsvpForm h2').innerHTML = 'want to make <span class="foil">one</span>?';
+  $('#rsvpForm .b-note').textContent = "this invite is a demo. say yes and you're in our little group where we share how to build things like it with AI.";
+  $('#apSend').textContent = 'let me in';
+  if (C.demo.group) $('#groupBtn').href = C.demo.group;
+  const pm = $('.pc-mark b'); if (pm) pm.textContent = C.event.postmark;
+}
 function showRsvp(st) {
   const [head, msg] = DONE[st] || [];
   rsvpAsk.hidden = !!st || !rsvpForm.hidden; rsvpDone.hidden = !st;
@@ -666,7 +674,8 @@ function showRsvp(st) {
   if (!st) return;
   $('#doneHead').textContent = head;
   $('#doneMsg').textContent = msg(store.get(RKEY + ':email'));
-  $('#ics').hidden = !['applied', 'approved', 'yes'].includes(st);
+  $('#ics').hidden = DEMO || !['applied', 'approved', 'yes'].includes(st);
+  $('#groupBtn').hidden = st !== 'joined' || !(C.demo && C.demo.group);
   $('#change').hidden = st === 'approved';
 }
 function openForm(on) {
@@ -700,7 +709,7 @@ rsvpForm.addEventListener('submit', async e => {
     track('rsvp', { rsvp: 'yes' });
   } catch (x) {
     $('#apErr').textContent = x.message === 'email' ? "that email doesn't look right" : x.message === 'phone' ? 'add your phone number (10 digits)' : "couldn't send. check your internet and try again?";
-  } finally { btn.disabled = false; btn.textContent = 'send my request'; }
+  } finally { btn.disabled = false; btn.textContent = DEMO ? 'let me in' : 'send my request'; }
 });
 showRsvp((PARTY ? {} : { yes: 'applied' })[store.get(RKEY)] || store.get(RKEY) || '');
 // the hosts may have approved since the last visit
