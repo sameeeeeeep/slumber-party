@@ -145,8 +145,8 @@ async function kkFlow(run){
 
   await kkHer(run, "i can't tell you what yettt 🤭");
   await kkHer(run, 'unless… you’d applied for the secret slumber party? 👀');
-  const applied = await kkAsk(run, { name:'applied', type:'choice', choices:['yes 🎀', 'no'] });
-  if(applied === 'no'){ ga('prebuzz_says_no'); kkPixel('PrebuzzSaidNo', null, true); return kkSignup(run); }
+  const applied = await kkAsk(run, { name:'applied', type:'choice', choices:['yess, I had', 'no, I hadn\'t'] });
+  if(applied !== 'yess, I had'){ ga('prebuzz_says_no'); kkPixel('PrebuzzSaidNo', null, true); return kkSignup(run); }
 
   ga('prebuzz_says_yes'); kkPixel('PrebuzzSaidYes', null, true);
   await kkHer(run, 'ooh 👀 then come with me');
@@ -331,6 +331,6 @@ async function kkSignup(run, knownPhone){
   if(!kkAlive(run)) return;
   ga('prebuzz_lead_submitted'); ga('generate_lead', { ssp_vid:visitorId() });
   kkPixel('Lead', { content_name:'prebuzz_waitlist' });
-  await kkHer(run, ["done ♡ you'll hear it from me first", 'you heard nothing 🤫']);
+  await kkHer(run, "done ♡ you'll hear it from me first");
   kkInsta(run);
 }
