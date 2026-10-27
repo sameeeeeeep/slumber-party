@@ -188,6 +188,16 @@ const SEED = [   // 5 sample cards so the wall never looks empty; real pins come
   { name: 'Rohan P', game: 'chhalla', title: 'ringed 2 bottles', text: 'gossip VIP pass · the good lighting spot' },
   { name: 'Meher A', game: 'tota', title: 'nakhre unlimited', text: '2027 will put up with every one of your nakhre.' },
 ];
+// diwaliparty.live is a demo with no real guests: a fuller wall of made-up people so it looks like a party happened
+if (window.SITE === 'demo') SEED.push(
+  { name: 'Tara V', game: 'tota', title: 'pahadon ki pukaar', text: 'the mountains will call in 2027, and you’ll pick up.' },
+  { name: 'Arjun D', game: 'gubbara', title: 'popped 2 balloons', text: 'a phuljhadi that actually lights · front-row seat at the family dance-off' },
+  { name: 'Ishaan R', game: 'draw', title: '“bas aakhri party”', text: 'every party in 2027 you’ll call your last. thankfully, it won’t be.' },
+  { name: 'Naina B', game: 'chhalla', title: 'ringed 1 bottle', text: 'gossip VIP pass' },
+  { name: 'Vikram S', game: 'tota', title: 'maggi master', text: 'your 2027 signature dish might still be maggi, and it’ll be the best one around.' },
+  { name: 'Pia G', game: 'tota', title: 'playlist queen', text: 'in 2027 the aux cord is officially yours.' },
+  { name: 'Dev N', game: 'draw', title: '“i’m my own good luck charm”', text: 'good things keep finding you all year. you stop acting surprised.' },
+);
 const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const WS = { x: 0, w: 0, t: 0, v: 38, drag: null, raf: 0 };
 function renderWall() {          // one row, every game remixed, drifting forever (drag to scrub)

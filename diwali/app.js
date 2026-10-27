@@ -1186,7 +1186,21 @@ Promise.race([Promise.all([assetsReady, fontsReady, counted(mixReady)]), new Pro
       if (L) { L.classList.add('out'); setTimeout(() => L.remove(), 800); }
       setTimeout(open, 250);
     };
-    if (L && go) { L.classList.add('done'); go.hidden = false; go.focus({ preventScroll: true }); go.addEventListener('click', enter, { once: true }); }
+    // a bare link (no ?name=): ask for their name right here so the envelope and the letter are addressed to them
+    const ask = !NAME && document.getElementById('ldrName');
+    if (L && go && ask) {
+      L.classList.add('done'); ask.hidden = false; go.hidden = false; go.textContent = 'open my chitthi ✉'; ask.focus({ preventScroll: true });
+      const named = () => {
+        const n = nice(ask.value);
+        if (!n) { ask.classList.remove('bad'); void ask.offsetWidth; ask.classList.add('bad'); ask.focus(); return; }
+        NAME = n; applyName(); envDirty = true;
+        document.getElementById('ldrT').textContent = FIRST() + ', your chitthi is on its way';
+        go.removeEventListener('click', named); ask.blur(); enter();
+      };
+      go.addEventListener('click', named);
+      ask.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); named(); } });
+    }
+    else if (L && go) { L.classList.add('done'); go.hidden = false; go.focus({ preventScroll: true }); go.addEventListener('click', enter, { once: true }); }
     else enter();
   });
 requestAnimationFrame(frame);
