@@ -55,6 +55,8 @@ if (window.SITE === 'demo') {
     venue: '', mapUrl: '', rsvpBy: '',
     start: '2026-11-08T19:00:00+05:30', end: '2026-11-09T01:00:00+05:30',
   });
+  // nothing from the demo may reach the real party's Google Forms / RSVP sheet (its own D1 is picked server-side)
+  Object.assign(window.MKD.rsvp, { form: '', gamesForm: '', wall: '' });
   window.MKD.demo = {
     group: '',   // invite link to the builders group (WhatsApp community / Discord): set before sharing
   };
