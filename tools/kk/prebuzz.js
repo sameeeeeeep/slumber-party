@@ -1,12 +1,13 @@
 /* ============================================================================
    /kk — THE PREBUZZ SCRIPT, on the slumber page's own chat engine.
-   Same room, same CRT, same drafted replies and sounds. After the two opening
-   turns she asks whether you applied for the secret slumber party:
+   Same room, same CRT and sounds. Her opener, the one reply drafted for you,
+   then she asks whether you applied for the secret slumber party:
      · yes → the screen becomes the secret slumber party group, locked; the
-       number you applied with is the password. In: her lines, three view-once
-       photos (30s each, inside the chat), the coupon, the hamper. Wrong number:
-       back to her DM, and on as a "no".
+       number you applied with is the password. In: her lines one by one, the
+       three view-once photos together (30s each, inside the chat), then early
+       access + a promo coming by email. Wrong number: back to her DM, on as "no".
      · no  → she'll tell you before it goes live: your number, your email.
+   Both end on nailinit's instagram.
    Nothing only an applicant may see is in this file — the group's lines, the
    photos and the coupon arrive from /functions/v1/prebuzz after the phone has
    matched a row in `applications`. Copy lives in public.prebuzz_settings.
@@ -14,6 +15,10 @@
 const KK_API = ((window.SLUMBER_CONFIG||{}).prebuzzUrl) ||
   (((window.SLUMBER_CONFIG||{}).supabaseUrl||'').replace(/\/$/,'') + '/functions/v1/prebuzz');
 const KK_PHOTO_SECONDS = 30;
+const KK_INSTA = 'nailinittt';
+/* after the photos land, the chat waits for all three to be opened — but never
+   strands someone who doesn't tap: it carries on after this long regardless */
+const KK_PHOTO_WAIT_MS = 45000;
 let kkRun = 0, kkPending = null, kkDmHtml = null;
 const kkSleep = ms => new Promise(r => setTimeout(r, ms));
 const kkAlive = run => run === kkRun && inside;   // leaving the screen abandons the run
@@ -72,13 +77,17 @@ function kkHer(run, lines){
   return new Promise(res => {
     (function next(n){
       if(!kkAlive(run)) return;
-      if(n >= lines.length){ setTimeout(() => { if(kkAlive(run)) res(); }, 380); return; }
-      addTyping();
+      if(n >= lines.length){ setTimeout(() => { if(kkAlive(run)) res(); }, 500); return; }
+      // a breath after the last line before she starts typing the next one
       setTimeout(() => {
         if(!kkAlive(run)) return;
-        clearTyping(); addBubble('her', lines[n]);
-        next(n+1);
-      }, n === 0 ? 1100 : Math.min(1500, 700 + String(lines[n]).length * 12));
+        addTyping();
+        setTimeout(() => {
+          if(!kkAlive(run)) return;
+          clearTyping(); addBubble('her', lines[n]);
+          next(n+1);
+        }, Math.max(1100, Math.min(2600, 800 + String(lines[n]).length * 22)));
+      }, n === 0 ? 0 : 650);
     })(0);
   });
 }
@@ -134,6 +143,7 @@ async function kkFlow(run){
     if(me.session) kkToken(null);
   }
 
+  await kkHer(run, "i can't tell you what yettt 🤭");
   await kkHer(run, 'unless… you’d applied for the secret slumber party? 👀');
   const applied = await kkAsk(run, { name:'applied', type:'choice', choices:['yes 🎀', 'no'] });
   if(applied === 'no'){ ga('prebuzz_says_no'); return kkSignup(run); }
@@ -183,11 +193,11 @@ async function kkGroup(run, chat, returning, phone){
     await kkSleep(600);
     await kkHer(run, kkLines(chat.lines));
   }
-  // the photos, one at a time: the next only arrives once you've opened this one
+  // the three photos land together; she carries on once they've all been opened
   const photos = chat.photos || [];
-  for(let i = 0; i < photos.length; i++){
-    if(!returning && chat.photo_lines && chat.photo_lines[i]) await kkHer(run, chat.photo_lines[i]);
-    await kkOnce(run, i, photos[i].viewed);
+  if(photos.length){
+    const looks = photos.map((p, i) => kkOnce(run, i, p.viewed));
+    await Promise.race([Promise.all(looks), kkSleep(KK_PHOTO_WAIT_MS)]);
     if(!kkAlive(run)) return;
   }
   if(!returning) await kkHer(run, kkLines(chat.after_lines));
@@ -196,10 +206,8 @@ async function kkGroup(run, chat, returning, phone){
     kkCoupon(chat, phone);
     await kkSleep(900);
   }
-  if(chat.hamper_line) await kkHamper(run, chat, returning);
   if(!kkAlive(run)) return;
-  await kkHer(run, 'till then…');
-  showArcadeCta();
+  kkInsta(run);
 }
 
 /* a view-once photo: a bubble you tap, not a picture. Resolves once it's been
@@ -253,6 +261,16 @@ function kkView(url){
     v.querySelector('button').onclick = finish;
     kkCard.appendChild(v);
   });
+}
+
+/* both conversations end here: follow nailinit for the reveal */
+async function kkInsta(run){
+  await kkHer(run, 'till then, follow us on insta for the reveal ✨');
+  if(!kkAlive(run)) return;
+  ctChips.classList.remove('list');
+  ctChips.innerHTML = '<a class="ct-chip cta kk-insta" href="https://instagram.com/' + KK_INSTA + '" target="_blank" rel="noopener">▸ follow @' + KK_INSTA + '</a>';
+  composeMode('choice'); pinChat(true);
+  ctChips.querySelector('a').addEventListener('click', () => ga('prebuzz_insta_follow'));
 }
 
 function kkCoupon(chat, phone){
@@ -311,6 +329,6 @@ async function kkSignup(run, knownPhone){
   clearTyping();
   if(!kkAlive(run)) return;
   ga('prebuzz_lead_submitted'); ga('generate_lead', { ssp_vid:visitorId() });
-  await kkHer(run, ["done ♡ you'll hear it from me first", 'you heard nothing 🤫', 'till then…']);
-  showArcadeCta();
+  await kkHer(run, ["done ♡ you'll hear it from me first", 'you heard nothing 🤫']);
+  kkInsta(run);
 }

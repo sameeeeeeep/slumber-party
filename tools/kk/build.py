@@ -33,6 +33,11 @@ sub("fbq('trackCustom','slumberview');", "fbq('trackCustom','prebuzzview');")
 # emails, the coupon and the view-once photos, so the whole conversation is masked.
 sub('<div id="chat">', '<div id="chat" data-clarity-mask="True">')
 
+# nailinit's wordmark, not the slumber sticker — in the header and on the gate
+s = s.replace('src="assets/logo2.png" alt="(secret;) khushi\'s slumber party"', 'src="assets/nailinit.webp" alt="nailinit"')
+s = s.replace('src="assets/logo2.png"', 'src="assets/nailinit.webp"')
+s = s.replace('alt="Khushi\'s Secret Slumber Party"', 'alt="nailinit"')
+
 # ---------------------------------------------------------------- the teaser + gate
 sub('<span class="ci-prev">i have a secret to share 🤫</span>', '<span class="ci-prev">something\'s cooking 🤫</span>')
 # no application clock on this gate
@@ -44,10 +49,14 @@ sub("const FORM_CLOSES = new Date((window.SLUMBER_CONFIG || {}).formCloses);",
 
 # ---------------------------------------------------------------- the DM's opening turns
 a = s.index('const CHAT=['); b = s.index('];', a) + 2
-s = s[:a] + """const CHAT=[
-  { her:"psst 🤫 something's cooking",         draft:'ooh what is it??' },
-  { her:"i can't tell you what yettt 🤭",       draft:'pleaseee 🥺' }
+s = s[:a] + """// /kk: one scripted turn — her opener and the one reply drafted for you.
+// Everything after that is the prebuzz script.
+const CHAT=[
+  { her:"psst 🤫 something's cooking", draft:'ooh what is it??' }
 ];""" + s[b:]
+# with no turns, there is no "last drafted reply" to append when the questions start
+sub("if(forward && ctBody.children.length){\n      ctBody.insertAdjacentHTML('beforeend', bubble('you', CHAT[CHAT.length-1].draft));",
+    "if(forward && CHAT.length && ctBody.children.length){\n      ctBody.insertAdjacentHTML('beforeend', bubble('you', CHAT[CHAT.length-1].draft));")
 
 # ---------------------------------------------------------------- keep slumber data clean
 # funnel: GA only, prefixed — never the slumber `visits` table

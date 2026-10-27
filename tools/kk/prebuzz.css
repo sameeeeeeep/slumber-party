@@ -53,3 +53,8 @@
   .kk-card.used{ filter:grayscale(.7); opacity:.8; }
   /* the CRT is pointer-events:none — these are tappable */
   #chat .kk-once, #chat .kk-viewer, #chat .kk-viewer button, #chat .kk-card button{ pointer-events:auto; }
+
+  /* nailinit's wordmark is wide and short where the slumber sticker was square-ish */
+  html #masthead .logo{ height:clamp(1.5rem,3.6vw,2.1rem); }
+  #gateLogo{ width:min(64vw,20rem); }
+  a.ct-chip.cta{ display:block; text-align:center; text-decoration:none; }

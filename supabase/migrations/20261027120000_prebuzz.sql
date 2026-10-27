@@ -98,15 +98,16 @@ insert into public.prebuzz_settings (key, value) values ('secret', jsonb_build_o
     jsonb_build_object('text', 'i''m sorry i couldn''t get you'),
     jsonb_build_object('text', 'check the pics 👀')
   ),
-  -- one line before each photo, in bucket order (first three files by name);
-  -- leave one '' to send that photo without a line
-  'photo_lines', jsonb_build_array('', '', ''),
-  -- after the photos
+  -- after the photos (all three land together; these follow once they're opened)
   'after_lines', jsonb_build_array(
-    jsonb_build_object('text', 'madness 😭')
+    jsonb_build_object('text', 'madness 😭'),
+    jsonb_build_object('text', 'btw it''s all for something i''ve been building for monthsss. you were the first, so you''ll be the first to know ♡'),
+    jsonb_build_object('text', 'you''re getting early access + a special promo just for you, over email in 2 days 💌'),
+    jsonb_build_object('text', 'keep an eye out 👀')
   ),
-  'coupon_line', 'btw it''s all for something i''ve been building for monthsss. and you were the first, so you''ll be the first to know ♡',
-  'hamper_line', 'last thing: post about the slumber party, tag me, paste the link here. a few of you get a hamper from me 🎀',
+  -- optional: a coupon card shown in the chat (off — the promo goes out by email)
+  'coupon_line', null,
+  'hamper_line', null,
   'hamper_tag',  '@khushikapoor'
 ))
 on conflict (key) do nothing;
