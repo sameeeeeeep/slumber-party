@@ -25,7 +25,8 @@ const local = (el, e) => { const r = el.getBoundingClientRect(); return { x: e.c
 /* ═════════ share: every result becomes a story-sized card ═════════ */
 const SH = {};
 const who = () => (window.MKDGuest ? window.MKDGuest.first : 'dost');
-const SHARE_URL = 'https://diwali.nailin.it/';
+const MEDIA = window.SITE === 'media';
+const SHARE_URL = MEDIA ? 'https://diwali.dotmediabase.com/' : 'https://diwali.nailin.it/';
 const showShare = k => { const b = document.querySelector(`.share-btn[data-share="${k}"]`); if (b) b.hidden = false; };
 const hideShare = k => { const b = document.querySelector(`.share-btn[data-share="${k}"]`); if (b) b.hidden = true; };
 const loadI = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -36,13 +37,13 @@ function wrap(c, text, x, y, maxW, lh) {
 }
 async function renderShare(k) {
   const d = k === 'invite'
-    ? { img: window.CARD || 'assets/invite_card.webp', title: `${who()} is invited!`, text: 'nailinit diwali party · dress loud, gossip louder.', kick: 'chitthi aayi hai' }
+    ? { img: window.CARD || 'assets/invite_card.webp', title: `${who()} is invited!`, text: (MEDIA ? 'DOT Media diwali party' : 'nailinit diwali party') + ' · dress loud, gossip louder.', kick: 'chitthi aayi hai' }
     : k === 'gubbara'
       ? { img: 'assets/game/bal1.webp', title: `${who()} popped ${document.querySelectorAll('#glist .win-card').length} balloons and won`, text: [...document.querySelectorAll('#glist .win-card p')].map(p => p.textContent).join(' · '), kick: 'mela balloon shoot' }
       : SH[k];
   if (!d) return null;
   const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
-  const [bg, swag, k1, k2, art, nl] = await Promise.all(['assets/pattern.webp', 'assets/swag.webp', 'assets/k1.webp', 'assets/k3.webp', d.img, 'assets/nailinit_light.webp'].map(loadI));
+  const [bg, swag, k1, k2, art, nl] = await Promise.all(['assets/pattern.webp', 'assets/swag.webp', 'assets/k1.webp', 'assets/k3.webp', d.img, MEDIA ? 'assets/dot_white.webp' : 'assets/nailinit_light.webp'].map(loadI));
   c.fillStyle = '#75150f'; c.fillRect(0, 0, W, H);
   if (bg) { c.globalAlpha = .1; for (let y = 0; y < H; y += 300) for (let x = 0; x < W; x += 300) c.drawImage(bg, x, y, 300, 300); c.globalAlpha = 1; }
   const g = c.createRadialGradient(W / 2, H * .45, 100, W / 2, H * .45, 1100); g.addColorStop(0, 'rgba(255,190,80,.22)'); g.addColorStop(1, 'rgba(20,2,1,.5)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
@@ -63,9 +64,9 @@ async function renderShare(k) {
   c.font = '600 104px "Teko Display", sans-serif'; c.fillStyle = '#c4221a'; let yy = wrap(c, d.title, W / 2 + 5, y + 6, 940, 92);
   c.fillStyle = '#efbd0d'; wrap(c, d.title, W / 2, y, 940, 92);
   c.font = '500 46px "Teko Text", sans-serif'; c.fillStyle = '#f7e6c8'; yy = wrap(c, d.text, W / 2, yy + 80, 900, 58);
-  if (nl) c.drawImage(nl, W / 2 - 150, H - 230, 300, 300 * nl.height / nl.width);
+  if (nl) { const lw = MEDIA ? 200 : 300; c.drawImage(nl, W / 2 - lw / 2, H - (MEDIA ? 250 : 230), lw, lw * nl.height / nl.width); }
   c.font = '600 34px "Teko Text", sans-serif'; c.fillStyle = '#efbd0d'; c.fillText('DIWALI PARTY · MOHALLA GAME CENTER', W / 2, H - 120);
-  c.fillStyle = '#f7e6c8'; c.font = '500 32px "Teko Text", sans-serif'; c.fillText('diwali.nailin.it', W / 2, H - 76);
+  c.fillStyle = '#f7e6c8'; c.font = '500 32px "Teko Text", sans-serif'; c.fillText(SHARE_URL.replace(/^https:\/\/|\/$/g, ''), W / 2, H - 76);
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
   return { blob, d };
 }
@@ -74,7 +75,7 @@ async function shareCard(k) {
   const out = await renderShare(k); if (!out) return;
   const { blob, d } = out;
   const file = new File([blob], `nailinit-diwali-${k}.png`, { type: 'image/png' });
-  const text = k === 'invite' ? `chitthi aayi hai ✉️ nailinit diwali party` : `${d.kick}: ${d.title} 🪔 play at ${SHARE_URL}`;
+  const text = k === 'invite' ? `chitthi aayi hai ✉️ ${MEDIA ? 'DOT Media diwali party' : 'nailinit diwali party'}` : `${d.kick}: ${d.title} 🪔 play at ${SHARE_URL}`;
   try {
     if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text, title: 'nailinit diwali party' }); return; }
   } catch (e) { if (e && e.name === 'AbortError') return; }

@@ -641,7 +641,7 @@ function track(event, extra = {}) {
     game: (event === 'wall' || event === 'play') ? extra.rsvp : '', title: extra.link || '', text: extra.device || '' };
   try { const b = new Blob([JSON.stringify(api)], { type: 'text/plain' }); navigator.sendBeacon ? navigator.sendBeacon(API_BASE + '/api/track', b) : fetch(API_BASE + '/api/track', { method: 'POST', body: b, keepalive: true }); } catch (e) {}
 }
-const API_BASE = /nailin\.it$|pages\.dev$|localhost$|^127\./.test(location.hostname) ? '' : 'https://diwali.nailin.it';
+const API_BASE = /nailin\.it$|dotmediabase\.com$|pages\.dev$|localhost$|^127\./.test(location.hostname) ? '' : 'https://diwali.nailin.it';
 window.MKD_API = API_BASE;
 window.MKDTrack = (ev, extra) => track(ev, extra);
 /* RSVP: "yes" = apply (name + phone + email) → hosts approve in /admin → entry pass with QR by email */

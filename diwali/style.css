@@ -1407,6 +1407,10 @@ html, body { overscroll-behavior-x: none; }
 [data-site="party"] .f-blue { --m: url(assets/foil_blue_host.webp); }
 [data-site="party"] .f-ink { --m: url(assets/foil_ink_host.webp); }
 [data-site="party"] .card::after { -webkit-mask-image: url(assets/invite_card_host.webp); mask-image: url(assets/invite_card_host.webp); }
+/* diwali.dotmediabase.com: DOT MEDIA leads the ticket; nailinit is the small credit above DIWALI */
+[data-site="media"] .f-gold { --m: url(assets/foil_gold_host.webp); }
+[data-site="media"] .f-blue { --m: url(assets/foil_blue_host.webp); }
+[data-site="media"] .f-ink { --m: url(assets/foil_ink_media.webp); }
 
 /* the outfit sign's label matches kab / kaha (an older pink-sign override had put it in Teko) */
 .sgn.s-pink .o-k { font-family: var(--title) !important; font-size: 4.4cqw !important; letter-spacing: .14em !important; font-weight: 400 !important; }
