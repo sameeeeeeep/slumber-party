@@ -14,6 +14,9 @@
 //    verify  {code, phone}      ┐ for the CHECKOUT, not the browser: both need
 //    redeem  {code, phone, ref} ┘ the x-prebuzz-key header (PREBUZZ_REDEEM_KEY)
 //
+//  The one thing about the applicant the reply does carry is their FIRST name, so
+//  she can say hi — never the surname, email or phone back.
+//
 //  WHY NOTHING SECRET IS IN HERE. This file is in a public repo. The coupon
 //  code, the discount and her lines live in public.prebuzz_settings (see the
 //  migration), and leave the database only inside a `check`/`me` reply to a
@@ -143,14 +146,14 @@ async function secretChat(db: Db, phone: string) {
   const [s, m, names] = await Promise.all([
     settings(db),
     db.from('prebuzz_members')
-      .select('photos_viewed, coupon_redeemed_at, hamper_status, email, email_confirmed_at, applications(email)')
+      .select('photos_viewed, coupon_redeemed_at, hamper_status, email, email_confirmed_at, applications(email, name)')
       .eq('phone', phone).single(),
     photoNames(db),
   ]);
   const row: { photos_viewed?: Record<string, string>; coupon_redeemed_at?: string | null; hamper_status?: string;
     email?: string | null; email_confirmed_at?: string | null; applications?: unknown } = m.data ?? {};
   // the joined application comes back as an object (many-to-one); typed loosely, so read either shape
-  const app = (Array.isArray(row.applications) ? row.applications[0] : row.applications) as { email?: string | null } | null | undefined;
+  const app = (Array.isArray(row.applications) ? row.applications[0] : row.applications) as { email?: string | null; name?: string | null } | null | undefined;
   // the promo goes to the address they confirmed here, else the one they applied with
   const promoEmail = row.email ?? app?.email ?? null;
   const viewed = row.photos_viewed ?? {};
@@ -168,6 +171,8 @@ async function secretChat(db: Db, phone: string) {
     hamper_tag: s.hamper_tag ?? null,
     hamper: row.hamper_status ?? 'none',
     email_masked: maskEmail(promoEmail),
+    // first word of the name they applied with, lowercase like the rest of her lines
+    first_name: (app?.name ?? '').trim().split(/\s+/)[0]?.toLowerCase().slice(0, 30) || null,
     email_confirmed: !!row.email_confirmed_at,
   };
 }

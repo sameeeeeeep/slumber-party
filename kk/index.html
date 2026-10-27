@@ -1927,7 +1927,8 @@ async function kkFlow(run){
     clearTyping();
     if(!kkAlive(run)) return;
     if(me.ok && me.chat){
-      await kkHer(run, ['oh wait, it’s you 😌', 'the group’s waiting ♡']);
+      const fn = me.chat.first_name;
+      await kkHer(run, [fn ? 'oh wait, it’s you ' + fn + ' 😌' : 'oh wait, it’s you 😌', 'the group’s waiting ♡']);
       await kkAsk(run, { name:'open', type:'choice', choices:['open the secret slumber party 🔒'] });
       KKFX.unlock();
       kkEnterGroup(true);
@@ -1980,11 +1981,13 @@ async function kkFlow(run){
 async function kkGroup(run, chat, returning, phone){
   if(returning){
     kkSys('welcome back to the secret slumber party 🔒');
-    await kkHer(run, 'you again 😌 your stuff is right where you left it');
+    await kkHer(run, (chat.first_name ? 'you again, ' + chat.first_name + ' 😌' : 'you again 😌') + ' your stuff is right where you left it');
   }else{
     kkSys('you’re in 🔒 welcome to the secret slumber party');
     KKFX.chime();
     await kkSleep(600);
+    // first name from their application — she knows who walked in
+    if(chat.first_name) await kkHer(run, 'hi ' + chat.first_name + ', good to see you again ♡');
     await kkHer(run, kkLines(chat.lines));
   }
   // the three photos land together; she carries on once they've all been opened
