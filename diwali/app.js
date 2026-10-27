@@ -89,7 +89,7 @@ const fontsReady = Promise.all(['600 20px "Teko Display"', '500 20px "Teko Text"
 const stage = $('#stage'), envC = $('#env'), card = $('#card');
 const boxEl = $('#box'), drawer = boxEl.querySelector('.drawer');
 const matchEl = $('#match'), fxC = $('#fx'), fx = fxC.getContext('2d');
-const decorEl = $('#decor'), nightEl = $('#night'), nctx = nightEl.getContext('2d'), glowEl = $('#glow'), capEl = $('#caption'), nameEl = $('#cardname'), ghost = $('#ghost');
+const decorEl = $('#decor'), nightEl = $('#night'), nctx = nightEl.getContext('2d'), glowEl = $('#glow'), capEl = $('#caption'), nameEl = $('#cardname'), partnersEl = $('#partners'), ghost = $('#ghost');
 const autoBtn = $('#autobtn'), afterEl = $('#after'), stepsEl = [...document.querySelectorAll('#steps li')];
 const css = (el, k, v) => el.style.setProperty(k, v);
 
@@ -124,15 +124,17 @@ function layout() {
 
   // the AAO poster: starts inside the envelope, grows into the hero
   C2.w = EB.w * .86; C2.h = C2.w / POSTER_AR;
-  // the ticket shares the screen with the welcome line (+ "hosted by" on party.nailin.it) and, below it,
-  // the buttons + partner strip pinned to the bottom; size it to whatever room is left between the toran and those
+  // under the ticket: the partner strip, then the welcome line (+ "hosted by" on party.nailin.it), then the
+  // buttons pinned to the bottom; the ticket gets whatever room is left between the toran and all that
   const host = window.SITE === 'party';
-  const below = (vw > 600 ? 210 : 270) + (host ? 112 : 66), top = Math.max(64, vh * .08);
+  const PH = vw > 600 ? 100 : 98;      // partner strip between the ticket and the welcome line
+  const below = (vw > 600 ? 150 : 175) + PH + (host ? 112 : 66), top = Math.max(64, vh * .08);
   const room = vh - top - below;
   C2.fh = Math.max(110, Math.min(room, (vw * .92) / POSTER_AR, 420)); C2.fs = C2.fh / C2.h;
   C2.fy = top + Math.max(0, room - C2.fh) * (vw > 600 ? .45 : .8) + C2.fh / 2;   // phones: sit low, close to the welcome + buttons
   css(card, '--cw', C2.w + 'px'); css(card, '--ch', C2.h + 'px');
-  css(nameEl, '--ny', (C2.fy + C2.fh / 2 + 20) + 'px');
+  css(partnersEl, '--py', (C2.fy + C2.fh / 2 + 16) + 'px');
+  css(nameEl, '--ny', (C2.fy + C2.fh / 2 + 16 + PH) + 'px');
 
   // matchbox
   const bw = wide ? Math.min(vw * .24, 360) : Math.min(vw * .56, 300), bh = bw / SLEEVE_AR;
