@@ -54,8 +54,10 @@ create table if not exists public.prebuzz_members (
   coupon_order_ref    text,
   -- which photos this phone has opened: {"0": "<when>", "1": …}. Each one once.
   photos_viewed       jsonb not null default '{}'::jsonb,
-  -- where the early-access promo goes: set when they change it in the chat;
-  -- null = the email on their application. email_confirmed_at = they checked it.
+  -- the early-access promo: set when they change it in the chat (once — it locks
+  -- after the first confirm/change). Send the promo to the application's email
+  -- AND this one when they differ: the phone alone opened the chat, so a changed
+  -- address must never be the only place the real applicant's promo goes.
   email               text,
   email_confirmed_at  timestamptz,
   hamper_post_url     text,

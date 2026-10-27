@@ -2082,6 +2082,7 @@ async function kkEmail(run, chat){
     if(!kkAlive(run)) return;
     if(r.ok){ ga('prebuzz_email_changed'); return kkHer(run, 'updated ♡ watch that inbox'); }
     if(r.session){ kkToken(null); return kkHer(run, 'this chat timed out — reload and type your number again 🙏'); }
+    if(r.error === 'locked') return kkHer(run, "it's already set ♡ watch your inbox");
     await kkHer(run, r.error === 'email' ? "that doesn't look like an email 👀" : "ugh, didn't save — try that again?");
   }
 }

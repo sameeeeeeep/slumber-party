@@ -303,8 +303,13 @@ Deno.serve(async (req) => {
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: 'email' }, 400, origin);
     const patch: Record<string, string> = { email_confirmed_at: new Date().toISOString() };
     if (email) patch.email = email;
-    const { error } = await db.from('prebuzz_members').update(patch).eq('phone', phone);
+    /* Once only. The phone alone opened this chat, so whoever answers first sets
+       it and nobody can redirect it afterwards. A changed address never replaces
+       the application's own email — the promo should go to BOTH (see migration). */
+    const { data: set, error } = await db.from('prebuzz_members').update(patch)
+      .eq('phone', phone).is('email_confirmed_at', null).select('phone');
     if (error) { console.error('email', error); return json({ error: 'server' }, 500, origin); }
+    if (!set?.length) return json({ ok: false, error: 'locked' }, 409, origin);
     return json({ ok: true, email_masked: email ? maskEmail(email) : undefined }, 200, origin);
   }
 
