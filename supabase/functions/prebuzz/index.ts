@@ -9,6 +9,7 @@
 //    me      {token}            → the secret chat again, for a returning member
 //    photo   {token, idx}       → a signed URL for photo 0, 1 or 2 — each ONCE per phone
 //    hamper  {token, url}       → enter the hamper draw with a post link
+//    email   {token, email}     → the address the early-access promo should go to
 //    lead    {phone, email, …}  → a stranger's details
 //    verify  {code, phone}      ┐ for the CHECKOUT, not the browser: both need
 //    redeem  {code, phone, ref} ┘ the x-prebuzz-key header (PREBUZZ_REDEEM_KEY)
@@ -128,15 +129,28 @@ async function photoNames(db: Db) {
   return (data ?? []).filter(f => f.id).map(f => f.name).slice(0, MAX_PHOTOS);
 }
 
+/** "khushi@gmail.com" → "kh•••@gmail.com". The phone alone opens the group, so
+ *  the chat only ever sees enough of the address to recognise it, never all of it. */
+function maskEmail(e: string | null | undefined) {
+  if (!e || !e.includes('@')) return null;
+  const [user, domain] = e.split('@');
+  return user.slice(0, Math.min(2, user.length)) + '•••@' + domain;
+}
+
 async function secretChat(db: Db, phone: string) {
   const [s, m, names] = await Promise.all([
     settings(db),
     db.from('prebuzz_members')
-      .select('photos_viewed, coupon_redeemed_at, hamper_status')
+      .select('photos_viewed, coupon_redeemed_at, hamper_status, email, email_confirmed_at, applications(email)')
       .eq('phone', phone).single(),
     photoNames(db),
   ]);
-  const row: { photos_viewed?: Record<string, string>; coupon_redeemed_at?: string | null; hamper_status?: string } = m.data ?? {};
+  const row: { photos_viewed?: Record<string, string>; coupon_redeemed_at?: string | null; hamper_status?: string;
+    email?: string | null; email_confirmed_at?: string | null; applications?: unknown } = m.data ?? {};
+  // the joined application comes back as an object (many-to-one); typed loosely, so read either shape
+  const app = (Array.isArray(row.applications) ? row.applications[0] : row.applications) as { email?: string | null } | null | undefined;
+  // the promo goes to the address they confirmed here, else the one they applied with
+  const promoEmail = row.email ?? app?.email ?? null;
   const viewed = row.photos_viewed ?? {};
   return {
     lines: Array.isArray(s.lines) ? s.lines : [],
@@ -151,6 +165,8 @@ async function secretChat(db: Db, phone: string) {
     hamper_line: s.hamper_line ?? null,
     hamper_tag: s.hamper_tag ?? null,
     hamper: row.hamper_status ?? 'none',
+    email_masked: maskEmail(promoEmail),
+    email_confirmed: !!row.email_confirmed_at,
   };
 }
 
@@ -274,6 +290,22 @@ Deno.serve(async (req) => {
       .eq('phone', phone).in('hamper_status', ['none', 'entered']);
     if (error) { console.error('hamper', error); return json({ error: 'server' }, 500, origin); }
     return json({ ok: true }, 200, origin);
+  }
+
+  // ---------------------------------------------------------------- email
+  /* Where the early-access promo goes. `email` absent = "yes, that's still me"
+     (confirms the address on file); present = a new one. Stored on the member
+     row — the application itself is never edited. */
+  if (action === 'email') {
+    const phone = await phoneForToken(db, b.token);
+    if (!phone) return json({ error: 'session' }, 401, origin);
+    const email = str(b.email, 200)?.toLowerCase() || null;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: 'email' }, 400, origin);
+    const patch: Record<string, string> = { email_confirmed_at: new Date().toISOString() };
+    if (email) patch.email = email;
+    const { error } = await db.from('prebuzz_members').update(patch).eq('phone', phone);
+    if (error) { console.error('email', error); return json({ error: 'server' }, 500, origin); }
+    return json({ ok: true, email_masked: email ? maskEmail(email) : undefined }, 200, origin);
   }
 
   // ----------------------------------------------------------------- lead

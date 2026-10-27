@@ -1995,6 +1995,8 @@ async function kkGroup(run, chat, returning, phone){
     if(!kkAlive(run)) return;
   }
   if(!returning) await kkHer(run, kkLines(chat.after_lines));
+  // the promo goes by email, so make sure it's going to the right one
+  if(!chat.email_confirmed) await kkEmail(run, chat);
   if(chat.coupon){
     if(!returning && chat.coupon_line) await kkHer(run, chat.coupon_line);
     kkCoupon(chat, phone);
@@ -2055,6 +2057,33 @@ function kkView(url){
     v.querySelector('button').onclick = finish;
     kkCard.appendChild(v);
   });
+}
+
+/* where the early-access promo goes. They see the address they applied with
+   only masked (the phone alone opened this chat), and can keep it or swap it. */
+async function kkEmail(run, chat){
+  if(chat.email_masked){
+    await kkHer(run, ["it'll come to " + chat.email_masked, 'is that still your email?']);
+    const ok = await kkAsk(run, { name:'emailok', type:'choice', choices:["yes, that's me", 'change it'] });
+    if(ok === "yes, that's me"){
+      kkCall({ action:'email', token:kkToken() });
+      ga('prebuzz_email_confirmed');
+      return kkHer(run, 'perfect ♡');
+    }
+    await kkHer(run, "what's the right one?");
+  }else{
+    await kkHer(run, "what's your email ID? that's where it'll come");
+  }
+  for(;;){
+    const email = String(await kkAsk(run, { name:'email', type:'email', ph:'you@email.com' })).toLowerCase();
+    addTyping();
+    const r = await kkCall({ action:'email', token:kkToken(), email });
+    clearTyping();
+    if(!kkAlive(run)) return;
+    if(r.ok){ ga('prebuzz_email_changed'); return kkHer(run, 'updated ♡ watch that inbox'); }
+    if(r.session){ kkToken(null); return kkHer(run, 'this chat timed out — reload and type your number again 🙏'); }
+    await kkHer(run, r.error === 'email' ? "that doesn't look like an email 👀" : "ugh, didn't save — try that again?");
+  }
 }
 
 /* both conversations end here: follow nailinit for the reveal */
