@@ -20,7 +20,7 @@ import { teaserEmail } from '../supabase/functions/_shared/thread-email.ts';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const mail = teaserEmail({
   firstName: 'Riya Sharma',
-  link: 'https://nailin.it/pages/khushis-list?k=PREVIEWTOKEN',
+  instagramUrl: 'https://www.instagram.com/[HANDLE]/',
   optOutUrl: 'https://nailin.it/pages/khushis-list?k=PREVIEWTOKEN&optout=1',
   appliedCount: '25,000+',
   spots: 'two',

@@ -3,8 +3,9 @@
 //
 //  The first nailinit email ("sorry I've been MIA!") goes to every slumber
 //  applicant. It looks like the /late chat: a wine background, cream bubbles,
-//  the pink-to-orange pill. It ends on ONE button, to the person's own page on
-//  nailin.it, where the photos the email shows blurred are shown clear.
+//  khushi "online" with a glowing green dot. It ends on ONE button, styled as
+//  the chat's reply bar: follow the Instagram page, where the photos this email
+//  shows blurred get posted.
 //
 //  THE RULES IT OBEYS (same as handset-email.ts, for the same reasons)
 //    · TABLES AND INLINE STYLES carry the whole design. The <style> block only
@@ -17,8 +18,10 @@
 //    · IMAGES TRAVEL WITH THE MESSAGE (cid:), because the blurred grid is the
 //      hook and Outlook hides remote images from a new sender.
 //    · A PLAIN-TEXT TWIN, always.
-//    · NO TYPING DOTS, NO "ONLINE". It is labelled a note from khushi; it never
-//      pretends she is texting this person live.
+//    · THE TYPING BUBBLE STARTS HIDDEN, the one exception to the rule above,
+//      because a typing bubble frozen on screen is worse than none. It is
+//      display:none inline and only an @supports block (which Gmail drops)
+//      shows it, for one beat, before the last message.
 //
 //  The pixel font (VT323) loads where web fonts work (Apple Mail, iOS Mail).
 //  Elsewhere the stack falls to Courier New, and the sizes below are chosen
@@ -33,9 +36,8 @@ export const AVATAR_CID = 'khushi';
 export interface TeaserInput {
   /** First name as the person typed it on the application. Empty → "hi!". */
   firstName: string;
-  /** Their personal page, e.g. https://nailin.it/pages/khushis-list?k=<token>.
-   *  The token is random: the link must never carry their email or name. */
-  link: string;
+  /** The Instagram page the one button follows, e.g. https://www.instagram.com/<handle>/ */
+  instagramUrl: string;
   /** HTTPS one-click opt-out for this person (also sent as List-Unsubscribe). */
   optOutUrl: string;
   /** The application count Khushi quotes, e.g. "25,000+". Passed in rather than
@@ -53,7 +55,7 @@ const PIXEL = "'Press Start 2P','Courier New',Courier,monospace";
 export function teaserEmail(input: TeaserInput): { subject: string; html: string; text: string } {
   const name = input.firstName.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
   const hi = name ? `hi ${escapeHtml(name)}!` : 'hi!';
-  const link = escapeHtml(input.link);
+  const link = escapeHtml(input.instagramUrl);
   const optOut = escapeHtml(input.optOutUrl);
 
   const stamp = new Intl.DateTimeFormat('en-GB', {
@@ -85,6 +87,8 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
         </td></tr>`;
 
   const after = lines.length;
+  const typingAt = (0.15 + (after + 1) * 0.32).toFixed(2);   // after the photos land
+  const lastAt = 0.15 + (after + 1) * 0.32 + 1.5;            // once the typing beat ends
   const html = `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8" />
@@ -98,9 +102,14 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
   @keyframes pop { from { opacity:0; transform:translateY(8px) scale(.97); } to { opacity:1; transform:none; } }
   @keyframes glow { 0%,100% { box-shadow:0 6px 16px rgba(235,100,140,.35); } 50% { box-shadow:0 6px 30px rgba(236,100,42,.75); } }
   .b { animation:pop .38s ease-out backwards; }
-  .cta { animation:glow 2.4s ease-in-out ${(0.15 + (after + 3) * 0.32).toFixed(2)}s infinite; }
+  .cta { animation:glow 2.4s ease-in-out ${(lastAt + 0.8).toFixed(2)}s infinite; }
   .peek { transition:transform .25s ease; }
   .peek:hover { transform:rotate(-1.5deg) scale(1.02); }
+  @keyframes live { 0%,100% { box-shadow:0 0 4px 1px rgba(74,222,128,.55); } 50% { box-shadow:0 0 10px 4px rgba(74,222,128,.9); } }
+  .live { animation:live 1.8s ease-in-out infinite; }
+  @keyframes typing { 0% { opacity:0; max-height:0; } 12%,82% { opacity:1; max-height:60px; } 100% { opacity:0; max-height:0; } }
+  @keyframes dot { 0%,60%,100% { opacity:.25; } 30% { opacity:1; } }
+  .d1 { animation:dot 1s infinite; } .d2 { animation:dot 1s .2s infinite; } .d3 { animation:dot 1s .4s infinite; }
   /* Sizes inline are for Courier, the fallback. VT323 runs small, so where
      web fonts load (Apple Mail, iOS Mail) it gets bigger type. Gmail drops
      @supports blocks entirely, so Courier never sees these sizes. */
@@ -108,8 +117,9 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
     .t { font-size:21px !important; line-height:1.3 !important; }
     .s { font-size:17px !important; }
     .n { font-size:23px !important; }
+    .ty { display:block !important; overflow:hidden; animation:typing 1.5s ease-in-out ${typingAt}s both; }
   }
-  @media (prefers-reduced-motion: reduce) { .b, .cta { animation:none !important; } .peek:hover { transform:none; } }
+  @media (prefers-reduced-motion: reduce) { .b, .cta, .live { animation:none !important; } .ty { display:none !important; } .peek:hover { transform:none; } }
 </style>
 </head>
 <body style="margin:0;padding:0;background-color:#1c1017">
@@ -138,7 +148,7 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
           </td>
           <td valign="middle" style="font-family:${FONT};line-height:1.15">
             <div class="n" style="font-size:19px;font-weight:bold;color:#fff6f8">khushi</div>
-            <div class="s" style="font-size:14px;color:#c9a0ae">a note from khushi</div>
+            <div class="s" style="font-size:14px;color:#4ade80"><span class="live" style="display:inline-block;width:9px;height:9px;border-radius:5px;background-color:#4ade80;box-shadow:0 0 6px 2px rgba(74,222,128,.7);vertical-align:middle;margin:0 6px 2px 0"></span>online</div>
           </td>
         </tr></table>
       </td></tr>
@@ -158,27 +168,45 @@ ${lines.map((l, i) => bubble(l, i)).join('')}
           <a href="${link}" class="peek" style="display:block;width:260px;max-width:86%;text-decoration:none">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr><td bgcolor="#fff6f8" style="background-color:#fff6f8;border-radius:18px;padding:7px">
-                <img src="cid:${LEAKS_CID}" width="246" alt="4 leaked pictures, blurred. tap to see them"
+                <img src="cid:${LEAKS_CID}" width="246" alt="4 leaked pictures, blurred"
                      style="display:block;width:100%;height:auto;border:0;border-radius:12px" />
               </td></tr>
             </table>
           </a>
           </div>
         </td></tr>
-${bubble('i made you a link. something exclusive, just for you &#8595;', after + 1)}
+        <!-- typing: only where @supports runs; hidden everywhere else -->
+        <tr><td align="left" style="padding:0">
+          <div class="ty" style="display:none;max-height:0;overflow:hidden;mso-hide:all">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px 0">
+            <tr><td bgcolor="#fff6f8" style="background-color:#fff6f8;border-radius:18px;padding:8px 16px;
+                       font-family:Arial,sans-serif;font-size:22px;line-height:1;color:#8a5670;letter-spacing:2px">
+              <span class="d1">&#8226;</span><span class="d2">&#8226;</span><span class="d3">&#8226;</span>
+            </td></tr>
+          </table>
+          </div>
+        </td></tr>
+${bubble("follow my page, i'll send you all the stuff there &#8595;", 0).replace(/animation-delay:[0-9.]+s/, `animation-delay:${lastAt.toFixed(2)}s`)}
         </table>
       </td></tr>
 
-      <!-- the one button -->
-      <tr><td style="padding:10px 14px 22px">
-        <div class="b" style="animation-delay:${(0.15 + (after + 2) * 0.32).toFixed(2)}s">
+      <!-- the one button, drawn as the chat's reply bar: field + send pill, one link -->
+      <tr><td style="padding:10px 14px 22px;border-top:1px solid #3d2430">
+        <div class="b" style="animation-delay:${(lastAt + 0.35).toFixed(2)}s">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr><td align="center" bgcolor="#eb648c" class="cta"
-                  style="background-color:#eb648c;background-image:linear-gradient(90deg,#eb648c,#ec642a);
-                         border-radius:27px;box-shadow:0 6px 16px rgba(235,100,140,.35)">
-            <a href="${link}" style="display:block;padding:18px 12px;font-family:${PIXEL};font-size:12px;
-                       letter-spacing:.06em;color:#ffffff;text-decoration:none;font-weight:bold">SEE IT FIRST &#9656;</a>
-          </td></tr>
+          <tr>
+            <td bgcolor="#241821" style="background-color:#241821;border:1.5px solid #eb648c;border-radius:24px;padding:0">
+              <a href="${link}" style="display:block;padding:12px 16px;font-family:${FONT};font-size:15px;line-height:1.25;
+                         color:#fff6f8;text-decoration:none" class="s">follow this page for all the updates</a>
+            </td>
+            <td width="8" style="width:8px;font-size:0;line-height:0">&#8203;</td>
+            <td align="center" bgcolor="#eb648c" class="cta" width="112"
+                style="width:112px;background-color:#eb648c;background-image:linear-gradient(90deg,#eb648c,#ec642a);
+                       border-radius:24px;box-shadow:0 6px 16px rgba(235,100,140,.35)">
+              <a href="${link}" style="display:block;padding:16px 8px;font-family:${PIXEL};font-size:10px;
+                         letter-spacing:.06em;color:#ffffff;text-decoration:none;font-weight:bold">FOLLOW &#9656;</a>
+            </td>
+          </tr>
         </table>
         </div>
       </td></tr>
@@ -209,8 +237,9 @@ thank you for all the love, seriously
 but since you applied, i'm letting you in on a secret
 i've been building a brand. the last few months have gone into making sure what comes out is something unimaginable
 
-here are some leaked pictures btw, and i made you a link. something exclusive, just for you:
-${input.link}
+here are some leaked pictures btw (blurred, sorry)
+follow my page, i'll send you all the stuff there:
+${input.instagramUrl}
 
 khushi
 
