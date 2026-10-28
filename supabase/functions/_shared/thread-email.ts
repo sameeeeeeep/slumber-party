@@ -20,7 +20,9 @@
 //      the hook and Outlook hides remote images from a new sender. The preview
 //      is one pre-made picture (tools/blur-leaks.py): the mockup's blurred
 //      block with the "+12 new messages" pill drawn on it, because email can't
-//      blur live content or lay text over an image.
+//      blur live content or lay text over an image. The button is a picture
+//      too (tools/email-buttons.py): Gmail's dark mode recolours live text,
+//      and white on pink came out dark on pink. Images it leaves alone.
 //    · A PLAIN-TEXT TWIN, always.
 //
 //  The pixel font (VT323) loads where web fonts work (Apple Mail, iOS Mail).
@@ -32,15 +34,16 @@
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/* The two pictures, fetched when sending and attached to each message (cid:).
-   They live in this repo's assets/email/, built by tools/blur-leaks.py, and
-   are read from main. For the real send set TEASER_ASSET_BASE to the same URL
-   with a commit hash in place of `main`, so nothing pushed mid-send changes
-   the email. */
+/* The three pictures, fetched when sending and attached to each message (cid:).
+   They live in this repo's assets/email/, built by tools/blur-leaks.py and
+   tools/email-buttons.py, and are read from main. For the real send set
+   TEASER_ASSET_BASE to the same URL with a commit hash in place of `main`, so
+   nothing pushed mid-send changes the email. */
 export const ASSET_BASE_DEFAULT =
   'https://raw.githubusercontent.com/sameeeeeeep/slumber-party/main/assets/email/';
 const ASSETS = [
   { file: 'chat-preview.png', cid: 'preview', type: 'image/png' },
+  { file: 'cta.png', cid: 'cta', type: 'image/png' },
   { file: 'khushi-avatar.png', cid: 'khushi', type: 'image/png' },
 ];
 let assetCache: { filename: string; content: string; content_id: string; content_type: string }[] | null = null;
@@ -63,6 +66,7 @@ export const PREVIEW_CID = 'preview';
  *  picture after changing it. */
 export const PREVIEW_COUNT = 12;
 export const AVATAR_CID = 'khushi';
+export const CTA_CID = 'cta';
 
 export interface TeaserInput {
   /** First name as the person typed it on the application. Empty → "hi!". */
@@ -74,8 +78,9 @@ export interface TeaserInput {
   optOutUrl: string;
 }
 
-const FONT = "'VT323','Courier New',Courier,monospace";
-const PIXEL = "'Press Start 2P','Courier New',Courier,monospace";
+/* Gmail and Outlook drop web fonts; Menlo / Consolas are crisper than Courier
+   where they exist, and the same width, so the sizes below still fit. */
+const FONT = "'VT323','SF Mono',Menlo,Consolas,'Courier New',Courier,monospace";
 
 export function teaserEmail(input: TeaserInput): { subject: string; html: string; text: string } {
   const name = input.firstName.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
@@ -114,11 +119,9 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
 <style>
   /* Motion only. Every rule here is optional; see the header comment. */
   @keyframes pop { from { opacity:0; transform:translateY(8px) scale(.97); } to { opacity:1; transform:none; } }
-  @keyframes glow { 0%,100% { box-shadow:0 8px 20px rgba(235,100,140,.4); } 50% { box-shadow:0 8px 36px rgba(236,100,42,.85); } }
   @keyframes live { 0%,100% { box-shadow:0 0 4px 1px rgba(74,222,128,.55); } 50% { box-shadow:0 0 10px 4px rgba(74,222,128,.9); } }
   .b { animation:pop .38s ease-out backwards; }
   .live { animation:live 1.8s ease-in-out infinite; }
-  .cta { animation:glow 2.4s ease-in-out ${(Number(ctaAt) + 0.6).toFixed(2)}s infinite; }
   /* Sizes inline are for Courier, the fallback. VT323 runs small, so where
      web fonts load (Apple Mail, iOS Mail) it gets bigger type. Gmail drops
      @supports blocks entirely, so Courier never sees these sizes. */
@@ -127,7 +130,7 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
     .s { font-size:17px !important; }
     .n { font-size:23px !important; }
   }
-  @media (prefers-reduced-motion: reduce) { .b, .cta, .live { animation:none !important; } }
+  @media (prefers-reduced-motion: reduce) { .b, .live { animation:none !important; } }
 </style>
 </head>
 <body style="margin:0;padding:0;background-color:#1c1017">
@@ -186,22 +189,19 @@ ${lines.map((l, i) => bubble(l, i)).join('')}
         </div>
       </td></tr>
 
-      <!-- the one button -->
-      <tr><td style="padding:16px 14px 18px">
+      <!-- the one button: a picture, the card's full width with its glow in
+           the margins (18px of clear space above and below are in the picture) -->
+      <tr><td style="padding:0">
         <div class="b" style="animation-delay:${ctaAt}s">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr><td align="center" bgcolor="#eb648c" class="cta"
-                  style="background-color:#eb648c;background-image:linear-gradient(90deg,#eb648c,#ec642a);
-                         border-radius:32px;box-shadow:0 8px 20px rgba(235,100,140,.4)">
-            <a href="${link}" style="display:block;padding:24px 12px;font-family:${PIXEL};font-size:14px;
-                       letter-spacing:.06em;color:#ffffff;text-decoration:none;font-weight:bold">OPEN THE CHAT &#9656;</a>
-          </td></tr>
-        </table>
+        <a href="${link}" style="display:block;text-decoration:none;text-align:center">
+          <img src="cid:${CTA_CID}" width="420" alt="OPEN THE CHAT &#9656;"
+               style="display:block;width:100%;max-width:420px;height:auto;border:0;
+                      font-family:${FONT};font-size:20px;font-weight:bold;color:#ffffff" /></a>
         </div>
       </td></tr>
 
       <!-- why you got this, and the way out -->
-      <tr><td align="center" class="s" style="padding:0 30px 26px;font-family:${FONT};font-size:13px;line-height:1.45;color:#9c7d89">
+      <tr><td align="center" class="s" style="padding:0 30px 26px;font-family:${FONT};font-size:13px;line-height:1.45;color:#c4a3b0">
         you're getting this because you applied for khushi's slumber party at secretslumberparty.com.
         nailinit is khushi's brand. not interested?
         <a href="${optOut}" style="color:#ffd9e4;text-decoration:underline">no thanks</a> and we won't email you about it again.
