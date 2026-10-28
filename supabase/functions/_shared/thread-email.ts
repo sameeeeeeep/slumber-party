@@ -18,8 +18,9 @@
 //      has nothing to guess at.
 //    · IMAGES TRAVEL WITH THE MESSAGE (cid:), because the blurred preview is
 //      the hook and Outlook hides remote images from a new sender. The preview
-//      is one pre-made picture (tools/blur-leaks.py) because email can't blur
-//      live content; the "+12 new messages" pill under it is real text.
+//      is two pre-made pictures (tools/blur-leaks.py) because email can't blur
+//      live content or layer text on an image; the "+12 new messages" pill is
+//      real text between them, so it reads as floating in the blur.
 //    · A PLAIN-TEXT TWIN, always.
 //
 //  The pixel font (VT323) loads where web fonts work (Apple Mail, iOS Mail).
@@ -27,9 +28,10 @@
 //  for Courier, the larger of the two, so neither version overflows a bubble.
 // ============================================================================
 import { escapeHtml } from './handset-email.ts';
-import { PREVIEW_JPG_B64, AVATAR_PNG_B64 } from './teaser-assets.ts';
+import { PREVIEW_TOP_JPG_B64, PREVIEW_BOTTOM_JPG_B64, AVATAR_PNG_B64 } from './teaser-assets.ts';
 
-export const PREVIEW_CID = 'preview';
+export const PREVIEW_TOP_CID = 'preview-top';
+export const PREVIEW_BOTTOM_CID = 'preview-bottom';
 /** Messages waiting on the site after the email's three. Keep in step with the site's chat. */
 export const PREVIEW_COUNT = 12;
 export const AVATAR_CID = 'khushi';
@@ -140,21 +142,28 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
         </td></tr>
 ${lines.map((l, i) => bubble(l, i)).join('')}
 
-        <!-- the rest of the chat, blurred, one picture, linked -->
-        <tr><td align="center" style="padding:4px 0 0">
+        <!-- the rest of the chat, blurred: top picture, real-text pill, bottom picture -->
+        <tr><td align="left" style="padding:4px 0 0">
           <div class="b" style="animation-delay:${previewAt}s">
           <a href="${link}" style="display:block;text-decoration:none">
-            <img src="cid:${PREVIEW_CID}" width="392" alt="the rest of the chat, blurred"
+            <img src="cid:${PREVIEW_TOP_CID}" width="392" alt="the rest of the chat, blurred"
                  style="display:block;width:100%;max-width:392px;height:auto;border:0" />
           </a>
           </div>
         </td></tr>
-        <!-- the pill is real text, not part of the picture: it reads with images off -->
-        <tr><td align="center" style="padding:10px 0 0">
+        <tr><td align="center" style="padding:0">
           <div class="b" style="animation-delay:${previewAt}s">
           <a href="${link}" style="display:inline-block;background-color:#241821;border:1.5px solid #eb648c;color:#fff6f8;
-                     border-radius:20px;padding:8px 18px;font-family:${PIXEL};font-size:10px;letter-spacing:.06em;
-                     text-decoration:none">+${PREVIEW_COUNT} NEW MESSAGES</a>
+                     border-radius:20px;padding:9px 20px;font-family:${PIXEL};font-size:11px;letter-spacing:.06em;
+                     text-decoration:none;box-shadow:0 0 24px rgba(235,100,140,.45)">+${PREVIEW_COUNT} NEW MESSAGES</a>
+          </div>
+        </td></tr>
+        <tr><td align="left" style="padding:0">
+          <div class="b" style="animation-delay:${previewAt}s">
+          <a href="${link}" style="display:block;text-decoration:none">
+            <img src="cid:${PREVIEW_BOTTOM_CID}" width="392" alt=""
+                 style="display:block;width:100%;max-width:392px;height:auto;border:0" />
+          </a>
           </div>
         </td></tr>
         </table>
@@ -229,7 +238,8 @@ export async function sendTeaserEmail(
         html: mail.html,
         text: mail.text,
         attachments: [
-          { filename: 'chat.jpg', content: PREVIEW_JPG_B64, content_id: PREVIEW_CID, content_type: 'image/jpeg' },
+          { filename: 'chat-1.jpg', content: PREVIEW_TOP_JPG_B64, content_id: PREVIEW_TOP_CID, content_type: 'image/jpeg' },
+          { filename: 'chat-2.jpg', content: PREVIEW_BOTTOM_JPG_B64, content_id: PREVIEW_BOTTOM_CID, content_type: 'image/jpeg' },
           { filename: 'khushi.png', content: AVATAR_PNG_B64, content_id: AVATAR_CID, content_type: 'image/png' },
         ],
         headers: {
