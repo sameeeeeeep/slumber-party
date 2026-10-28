@@ -250,7 +250,8 @@ export async function sendTeaserEmail(
   mail: { subject: string; html: string; text: string },
   optOutUrl: string,
 ): Promise<{ sent: boolean; id?: string; reason?: string }> {
-  const key = Deno.env.get('RESEND_API_KEY');
+  // a key pasted with quotes or a trailing newline is the usual "API key is invalid"
+  const key = (Deno.env.get('RESEND_API_KEY') ?? '').trim().replace(/^["']|["']$/g, '');
   if (!key) return { sent: false, reason: 'no RESEND_API_KEY' };
   const replyTo = Deno.env.get('TEASER_REPLY_TO') ?? Deno.env.get('MAIL_REPLY_TO') ?? 'khushi@nailin.it';
   try {
@@ -277,7 +278,9 @@ export async function sendTeaserEmail(
     if (res.ok) return { sent: true, id: (await res.json()).id };
     const why = (await res.text()).slice(0, 400);
     console.error('resend rejected', res.status, why);
-    return { sent: false, reason: `${res.status} ${why}` };
+    // its shape only, never the key, so a bad paste can be told from a revoked key
+    const shape = res.status === 401 ? ` [key: ${key.length} chars, ${key.startsWith('re_') ? 're_' : 'not re_'}]` : '';
+    return { sent: false, reason: `${res.status} ${why}${shape}` };
   } catch (e) {
     console.error('teaser send threw', e);
     return { sent: false, reason: 'threw: ' + String(e).slice(0, 300) };
