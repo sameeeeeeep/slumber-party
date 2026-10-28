@@ -37,7 +37,7 @@ const escapeHtml = (s: string) =>
    sender reads them from a pinned commit so a send never picks up a half-made
    image. TEASER_ASSET_BASE overrides it. */
 export const ASSET_BASE_DEFAULT =
-  'https://raw.githubusercontent.com/sameeeeeeep/slumber-party/claude/intelligent-edison-vvwras/assets/email/';
+  'https://raw.githubusercontent.com/sameeeeeeep/slumber-party/0b95dbb55d646dc099a2654936d8c7290f275e3e/assets/email/';
 const ASSETS = [
   { file: 'chat-preview-top.jpg', cid: 'preview-top', type: 'image/jpeg' },
   { file: 'chat-preview-bottom.jpg', cid: 'preview-bottom', type: 'image/jpeg' },
@@ -66,7 +66,7 @@ export const AVATAR_CID = 'khushi';
 export interface TeaserInput {
   /** First name as the person typed it on the application. Empty → "hi!". */
   firstName: string;
-  /** Their chat on nailin.it, e.g. https://nailin.it/pages/khushis-list?k=<token>.
+  /** Their personal chat link, https://access.nailin.it/?i=<token>.
    *  The token is random: the link must never carry their email or name. */
   link: string;
   /** HTTPS one-click opt-out for this person (also sent as List-Unsubscribe). */

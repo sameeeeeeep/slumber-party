@@ -2,7 +2,7 @@
 //  /functions/v1/teaser — sends "sorry I've been MIA!" and handles its opt-out.
 //
 //    POST {action:'test', to}   x-teaser-key   → one real send, to an address
-//                                               in TEASER_TEST_TO only
+//                                               in teaser_test_recipients only
 //    GET  ?optout=<token>                       → "no thanks" from the email
 //    POST ?optout=<token>                       → the same, one-click
 //                                               (List-Unsubscribe-Post)
@@ -17,8 +17,9 @@
 //  separately, after the test has been checked in real inboxes.
 //
 //  Deploy:  supabase functions deploy teaser --no-verify-jwt   (auth is the key)
-//  Secrets: TEASER_KEY (long random), TEASER_TEST_TO (comma list),
-//           RESEND_API_KEY, optional TEASER_FROM / TEASER_REPLY_TO /
+//  Keys:    sha256 of each x-teaser-key lives in teaser_keys, the test
+//           allowlist in teaser_test_recipients (both service-role only).
+//  Secrets: RESEND_API_KEY, optional TEASER_FROM / TEASER_REPLY_TO /
 //           TEASER_ASSET_BASE / TEASER_ACCESS_URL
 // ============================================================================
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -31,12 +32,6 @@ const sha = async (s: string) => hex(await crypto.subtle.digest('SHA-256', new T
 function newToken() {
   const b = crypto.getRandomValues(new Uint8Array(32));
   return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-function sameKey(a: string, b: string) {
-  if (!a || !b || a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return d === 0;
 }
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -65,15 +60,19 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
-  if (!sameKey(req.headers.get('x-teaser-key') ?? '', Deno.env.get('TEASER_KEY') ?? '')) return json({ error: 'forbidden' }, 403);
+  const key = req.headers.get('x-teaser-key') ?? '';
+  const { data: k } = key.length >= 32
+    ? await db.from('teaser_keys').select('key_hash').eq('key_hash', await sha(`key:${key}`)).maybeSingle()
+    : { data: null };
+  if (!k) return json({ error: 'forbidden' }, 403);
   let b: Record<string, unknown>;
   try { b = await req.json(); } catch { return json({ error: 'bad json' }, 400); }
 
   // ----------------------------------------------------------------- test
   if (b.action === 'test') {
     const to = String(b.to ?? '').trim().toLowerCase();
-    const allowed = (Deno.env.get('TEASER_TEST_TO') ?? '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-    if (!allowed.includes(to)) return json({ error: 'not a test address' }, 400);
+    const { data: allowed } = await db.from('teaser_test_recipients').select('email').eq('email', to).maybeSingle();
+    if (!allowed) return json({ error: 'not a test address' }, 400);
 
     const { data: app } = await db.from('applications').select('id, name, email')
       .ilike('email', to).order('created_at', { ascending: false }).limit(1).single();
