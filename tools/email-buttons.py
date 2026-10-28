@@ -1,60 +1,80 @@
-# Draws the teaser email's button and "+12 NEW MESSAGES" pill as PNGs (2x),
-# so Gmail's dark mode can't recolour their text.
-#
-#   python3 tools/email-buttons.py <dir with PressStart2P-Regular.ttf> assets/email
-#
-# (the font is OFL, from github.com/google/fonts/tree/main/ofl/pressstart2p)
+"""
+Draw the teaser email's button as a PNG (2x), so Gmail's dark mode can't
+recolour its text the way it did the live-text version (white on pink came
+out dark on pink). Images it leaves alone.
+
+    python3 tools/email-buttons.py [--fonts DIR]
+
+The button is the mockup's: 392x64, pink to orange, white Press Start 2P
+with a drawn ▸ (the font has no such glyph), soft glow. The picture is the
+card's full 420px wide, with 18px of clear space above and below, so the
+glow spills into the margins; thread-email.ts shows it at width 420 in a row
+with no padding. The "+12 new messages" pill is drawn by blur-leaks.py, into
+the preview picture it sits on.
+
+Fonts: PressStart2P-Regular.ttf from --fonts DIR or tools/fonts/.
+Writes assets/email/cta.png.
+"""
+import argparse
+import pathlib
 import sys
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
-FONTS, OUT = sys.argv[1], sys.argv[2]
-PIXEL = f'{FONTS}/PressStart2P-Regular.ttf'
-S = 2  # retina
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+OUT = ROOT / 'assets/email/cta.png'
+
+ap = argparse.ArgumentParser()
+ap.add_argument('--fonts', type=pathlib.Path, default=ROOT / 'tools/fonts')
+args = ap.parse_args()
+PIXEL = args.fonts / 'PressStart2P-Regular.ttf'
+if not PIXEL.exists():
+    sys.exit(f'need {PIXEL} (see the docstring)')
+
+S = 2                                     # retina
+W, H = 392 * S, 64 * S                    # the button
+PAD_X, PAD_Y = 14 * S, 18 * S             # clear space: the card's side margin; room for the glow
+PINK, ORANGE = (235, 100, 140), (236, 100, 42)
+
 
 def glow_layer(size, box, radius, color, blur):
     g = Image.new('RGBA', size, (0, 0, 0, 0))
     ImageDraw.Draw(g).rounded_rectangle(box, radius, fill=color)
     return g.filter(ImageFilter.GaussianBlur(blur))
 
+
 def gradient(size, a, b):
+    """CSS linear-gradient(90deg, a, b)."""
     w, h = size
     g = Image.new('RGBA', size)
     px = g.load()
     for x in range(w):
         t = x / max(1, w - 1)
         c = tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3)) + (255,)
-        for y in range(h): px[x, y] = c
+        for y in range(h):
+            px[x, y] = c
     return g
+
 
 def text_center(img, box, text, font, fill, arrow=False):
     d = ImageDraw.Draw(img)
     tw = d.textlength(text, font=font)
     aw = (font.size * 0.75 + font.size * 0.6) if arrow else 0
     x0 = box[0] + (box[2] - box[0] - tw - aw) / 2
-    asc, desc = font.getmetrics()
-    y0 = box[1] + (box[3] - box[1] - font.size) / 2
+    y0 = box[1] + (box[3] - box[1] - font.size) / 2   # Press Start 2P sits on a square em
     d.text((x0, y0), text, font=font, fill=fill)
-    if arrow:  # ▸ drawn, not typed: the pixel font has no such glyph
-        ax = x0 + tw + font.size * 0.6; s = font.size * 0.75; cy = y0 + font.size / 2
+    if arrow:
+        ax = x0 + tw + font.size * 0.6
+        s, cy = font.size * 0.75, y0 + font.size / 2
         d.polygon([(ax, cy - s / 2), (ax + s * 0.8, cy), (ax, cy + s / 2)], fill=fill)
 
-# ---- the button: 392 x 72, pink→orange, white pixel text, soft glow
-W, H, PAD = 392 * S, 72 * S, 18 * S
-img = Image.new('RGBA', (W + PAD * 2, H + PAD * 2), (0, 0, 0, 0))
-img.alpha_composite(glow_layer(img.size, (PAD, PAD + 8 * S, PAD + W, PAD + H + 8 * S), H // 2, (235, 100, 140, 120), 12 * S))
-mask = Image.new('L', (W, H), 0); ImageDraw.Draw(mask).rounded_rectangle((0, 0, W - 1, H - 1), H // 2, fill=255)
-img.paste(gradient((W, H), (235, 100, 140), (236, 100, 42)), (PAD, PAD), mask)
-text_center(img, (PAD, PAD, PAD + W, PAD + H), 'OPEN THE CHAT', ImageFont.truetype(PIXEL, 15 * S), (255, 255, 255, 255), arrow=True)
-img.save(f'{OUT}/cta.png', optimize=True)
 
-# ---- the pill: dark, pink border, cream pixel text, pink glow
-font = ImageFont.truetype(PIXEL, 11 * S)
-label = '+12 NEW MESSAGES'
-tw = ImageDraw.Draw(img).textlength(label, font=font)
-W, H, PAD = int(tw + 44 * S), 36 * S, 16 * S
-img = Image.new('RGBA', (W + PAD * 2, H + PAD * 2), (0, 0, 0, 0))
-img.alpha_composite(glow_layer(img.size, (PAD, PAD, PAD + W, PAD + H), H // 2, (235, 100, 140, 110), 10 * S))
-d = ImageDraw.Draw(img)
-d.rounded_rectangle((PAD, PAD, PAD + W - 1, PAD + H - 1), H // 2, fill=(36, 24, 33, 255), outline=(235, 100, 140, 255), width=3)
-text_center(img, (PAD, PAD, PAD + W, PAD + H), label, font, (255, 246, 248, 255))
-img.save(f'{OUT}/pill.png', optimize=True)
-print('cta', Image.open(f'{OUT}/cta.png').size, 'pill', Image.open(f'{OUT}/pill.png').size)
+img = Image.new('RGBA', (W + 2 * PAD_X, H + 2 * PAD_Y), (0, 0, 0, 0))
+box = (PAD_X, PAD_Y, PAD_X + W, PAD_Y + H)
+# box-shadow: 0 6px 20px rgba(235,100,140,.45)
+img.alpha_composite(glow_layer(img.size, (box[0], box[1] + 6 * S, box[2], box[3] + 6 * S), H // 2, PINK + (115,), 10 * S))
+mask = Image.new('L', (W, H), 0)
+ImageDraw.Draw(mask).rounded_rectangle((0, 0, W - 1, H - 1), H // 2, fill=255)
+img.paste(gradient((W, H), PINK, ORANGE), box[:2], mask)
+text_center(img, box, 'OPEN THE CHAT', ImageFont.truetype(str(PIXEL), 14 * S), (255, 255, 255, 255), arrow=True)
+img.save(OUT, optimize=True)
+print(f'wrote {OUT.relative_to(ROOT)} {img.size[0]}x{img.size[1]} ({OUT.stat().st_size // 1024}KB)')
