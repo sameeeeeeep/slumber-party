@@ -1,0 +1,80 @@
+"""
+Build the blurred "leaked pictures" grid for the teaser email.
+
+    python3 tools/blur-leaks.py            # uses assets/email/leaks/*.jpg|png
+
+Drop the four real photos in assets/email/leaks/ (any size, any order; the
+first four by name are used). The script crops each to a square, lays them out
+2x2, and blurs them hard enough that nothing can be made out, because the
+reveal is the website's job, not the email's. With fewer than four photos it
+fills the gaps with flat tinted tiles and says so, so the layout can be checked
+before the real shoot exists.
+
+Writes assets/email/leaks-blur.jpg (600x600, ~30-50KB) and the avatar the
+thread header uses, assets/email/khushi-avatar.png (96x96).
+"""
+import pathlib
+import sys
+from PIL import Image, ImageFilter, ImageDraw
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SRC = ROOT / 'assets/email/leaks'
+OUT = ROOT / 'assets/email/leaks-blur.jpg'
+TILE, GAP, SIZE = 292, 16, 600
+TINTS = ['#c9b3bd', '#b9a7c9', '#d8b89e', '#e4bcc8']
+
+photos = sorted(p for p in SRC.glob('*') if p.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp'))[:4]
+if len(photos) < 4:
+    print(f'only {len(photos)} real photo(s) in {SRC.relative_to(ROOT)}; filling the rest with placeholder tiles', file=sys.stderr)
+
+grid = Image.new('RGB', (SIZE, SIZE), '#fff6f8')
+for i in range(4):
+    if i < len(photos):
+        im = Image.open(photos[i]).convert('RGB')
+        s = min(im.size)
+        im = im.crop(((im.width - s) // 2, (im.height - s) // 2, (im.width + s) // 2, (im.height + s) // 2))
+        im = im.resize((TILE, TILE), Image.LANCZOS)
+    else:
+        im = Image.new('RGB', (TILE, TILE), TINTS[i])
+        d = ImageDraw.Draw(im)
+        d.ellipse((60, 70, 200, 210), fill='#fff6f8')
+    im = im.filter(ImageFilter.GaussianBlur(22))
+    mask = Image.new('L', (TILE, TILE), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, TILE - 1, TILE - 1), 22, fill=255)
+    x, y = (i % 2) * (TILE + GAP), (i // 2) * (TILE + GAP)
+    grid.paste(im, (x, y), mask)
+
+grid.save(OUT, 'JPEG', quality=78, optimize=True, progressive=True)
+print(f'wrote {OUT.relative_to(ROOT)} ({OUT.stat().st_size // 1024}KB)')
+
+av = Image.open(ROOT / 'assets/khushi-face.png').convert('RGBA').resize((96, 96), Image.LANCZOS)
+av.save(ROOT / 'assets/email/khushi-avatar.png', optimize=True)
+print(f"wrote assets/email/khushi-avatar.png ({(ROOT / 'assets/email/khushi-avatar.png').stat().st_size // 1024}KB)")
+
+# The teaser's "rest of the chat": cream bubbles and photos, blurred, in two
+# pictures. Email can't lay text over an image, so the "+12 new messages"
+# pill is real text BETWEEN them (thread-email.ts) and reads as floating in
+# the middle of the blur. Each picture's background is a ramp matching the
+# email's gradient at that height (sampled from a render), so no box edge.
+def stack(items, size, top, bot, path):
+    w, h = size
+    im = Image.new('RGB', size)
+    d = ImageDraw.Draw(im)
+    for row in range(h):
+        f = row / (h - 1)
+        d.line((0, row, w, row), fill=tuple(round(a + (b - a) * f) for a, b in zip(top, bot)))
+    y = 24
+    for kind, bw, bh in items:
+        if kind == 'photo':
+            im.paste(grid.resize((bw, bh)), (20, y))
+        else:
+            d.rounded_rectangle((20, y, 20 + bw, y + bh), 26, fill='#fff6f8')
+        y += bh + 16
+    im = im.filter(ImageFilter.GaussianBlur(9))
+    im.save(path, 'JPEG', quality=80, optimize=True, progressive=True)
+    print(f'wrote {path.relative_to(ROOT)} ({path.stat().st_size // 1024}KB)')
+
+PREVIEW_TOP = ROOT / 'assets/email/chat-preview-top.jpg'
+PREVIEW_BOTTOM = ROOT / 'assets/email/chat-preview-bottom.jpg'
+stack([('bubble', 400, 54), ('photo', 360, 220)], (600, 330), (41, 21, 31), (38, 20, 29), PREVIEW_TOP)
+stack([('bubble', 330, 54), ('photo', 360, 220)], (600, 330), (37, 20, 29), (34, 18, 27), PREVIEW_BOTTOM)

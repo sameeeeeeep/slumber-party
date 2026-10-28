@@ -27,6 +27,9 @@ import { handsetEmail, sendHandsetEmail } from '../_shared/handset-email.ts';
 const ALLOWED_ORIGINS = [
   'https://secretslumberparty.com',
   'https://www.secretslumberparty.com',
+  // the "join khushi's list" block on the store (tools/nailinit-embed.html)
+  'https://nailin.it',
+  'https://www.nailin.it',
   'http://localhost:4321',
 ];
 

@@ -1,0 +1,71 @@
+<!--
+  "join khushi's list" &mdash; the slumber-party signup, embedded on nailin.it.
+
+  Paste this whole file into a Custom Liquid section on the store
+  (Online Store → Themes → Customize → add section → Custom Liquid).
+  It posts to the same waitlist function /late uses, tagged source=nailin.it,
+  so every signup lands in the slumber party's `waitlist` table &mdash; and gets
+  the same handset email /late sends.
+
+  Everything is scoped under #ssp-join so the theme's CSS can't reach in and
+  this can't leak out. The privacy line links the slumber-party policy because
+  that is the promise these addresses are collected under: party news only.
+-->
+<div id="ssp-join">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Space+Mono&display=swap">
+  <style>
+    #ssp-join{--pink:#d6577f;--ink:#4a3d0f;--paper:#fff0f4;
+      max-width:520px;margin:48px auto;padding:32px 24px;border-radius:24px;
+      background:var(--paper);color:var(--ink);text-align:center;
+      font-family:"Space Mono",ui-monospace,monospace;box-sizing:border-box}
+    #ssp-join *{box-sizing:border-box}
+    #ssp-join h2{margin:0 0 8px;font:700 30px/1.1 "Amatic SC","Caveat",cursive;letter-spacing:.02em;color:var(--ink)}
+    #ssp-join p{margin:0 0 20px;font-size:14px;line-height:1.5;color:var(--pink)}
+    #ssp-join form{display:flex;gap:8px;flex-wrap:wrap}
+    #ssp-join input{flex:1 1 220px;min-width:0;padding:14px 16px;border:1.5px solid #f2b6c8;border-radius:999px;
+      background:#fff;font:inherit;font-size:15px;color:var(--ink)}
+    #ssp-join button{flex:0 0 auto;padding:14px 22px;border:0;border-radius:999px;cursor:pointer;
+      background:linear-gradient(90deg,#e8638a,#ef7a3a);color:#fff;font:inherit;font-weight:700;font-size:14px}
+    #ssp-join button:disabled{opacity:.6;cursor:default}
+    #ssp-join .msg{min-height:20px;margin:14px 0 0;font-size:13px;color:var(--ink)}
+    #ssp-join small{display:block;margin-top:14px;font-size:11px;opacity:.7}
+    #ssp-join small a{color:inherit}
+  </style>
+  <h2>khushi's (secret) slumber party</h2>
+  <p>missed the invite? leave your email &mdash; you'll hear what's next first &#9825;</p>
+  <form novalidate>
+    <input type="email" name="email" placeholder="your email" autocomplete="email" required aria-label="email">
+    <button type="submit">i'm in</button>
+  </form>
+  <div class="msg" role="status" aria-live="polite"></div>
+  <small>party news only, from khushi. <a href="https://secretslumberparty.com/privacy.html" target="_blank" rel="noopener">privacy</a></small>
+  <script>
+  (function(){
+    var URL = 'https://secseoyetyfqsfgzlnis.supabase.co/functions/v1/waitlist';
+    var KEY = 'sb_publishable_eyh8o8PCrMBfjZ0199Ki4A_cyKjbXJZ'; // publishable \u2014 safe in a page; the table is write-only via this function
+    var root = document.getElementById('ssp-join');
+    var form = root.querySelector('form'), input = root.querySelector('input'),
+        btn = root.querySelector('button'), msg = root.querySelector('.msg');
+    function sid(){
+      try{ var v = sessionStorage.getItem('ssp-sid');
+        if(!v){ v = 'nailinit-' + (crypto.randomUUID ? crypto.randomUUID() : Date.now()); sessionStorage.setItem('ssp-sid', v); }
+        return v; }catch(e){ return 'nailinit-anon'; }
+    }
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      var email = input.value.trim().toLowerCase();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){ msg.textContent = 'that email looks a little off \u2014 try again?'; return; }
+      btn.disabled = input.disabled = true; msg.textContent = 'sending\u2026';
+      fetch(URL, { method:'POST',
+        headers:{ 'Content-Type':'application/json', apikey:KEY, Authorization:'Bearer ' + KEY },
+        body: JSON.stringify({ email:email, session_id:sid(), source:'nailin.it', user_agent:navigator.userAgent })
+      }).then(function(r){ return r.json().then(function(j){ return { status:r.status, j:j }; }, function(){ return { status:r.status, j:{} }; }); })
+        .then(function(res){
+          if(res.j.ok){ msg.textContent = res.j.already ? "you're already on my list \u2661" : 'noted \u2014 check your inbox \u2728'; form.style.display = 'none'; return; }
+          msg.textContent = res.status === 429 ? 'too many tries \u2014 give it a little while \ud83d\ude4f' : "ugh, that didn't go through. try again?";
+          btn.disabled = input.disabled = false;
+        }, function(){ msg.textContent = "ugh, that didn't go through. try again?"; btn.disabled = input.disabled = false; });
+    });
+  })();
+  </script>
+</div>
