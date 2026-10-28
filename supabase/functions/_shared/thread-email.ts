@@ -18,9 +18,9 @@
 //      has nothing to guess at.
 //    · IMAGES TRAVEL WITH THE MESSAGE (cid:), because the blurred preview is
 //      the hook and Outlook hides remote images from a new sender. The preview
-//      is two pre-made pictures (tools/blur-leaks.py) because email can't blur
-//      live content or layer text on an image; the "+12 new messages" pill is
-//      real text between them, so it reads as floating in the blur.
+//      is one pre-made picture (tools/blur-leaks.py): the mockup's blurred
+//      block with the "+12 new messages" pill drawn on it, because email can't
+//      blur live content or lay text over an image.
 //    · A PLAIN-TEXT TWIN, always.
 //
 //  The pixel font (VT323) loads where web fonts work (Apple Mail, iOS Mail).
@@ -32,15 +32,15 @@
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-/* The three pictures, fetched when sending and attached to each message (cid:).
-   They live in this repo's assets/email/, built by tools/blur-leaks.py; the
-   sender reads them from a pinned commit so a send never picks up a half-made
-   image. TEASER_ASSET_BASE overrides it. */
+/* The two pictures, fetched when sending and attached to each message (cid:).
+   They live in this repo's assets/email/, built by tools/blur-leaks.py, and
+   are read from main. For the real send set TEASER_ASSET_BASE to the same URL
+   with a commit hash in place of `main`, so nothing pushed mid-send changes
+   the email. */
 export const ASSET_BASE_DEFAULT =
-  'https://raw.githubusercontent.com/sameeeeeeep/slumber-party/0b95dbb55d646dc099a2654936d8c7290f275e3e/assets/email/';
+  'https://raw.githubusercontent.com/sameeeeeeep/slumber-party/main/assets/email/';
 const ASSETS = [
-  { file: 'chat-preview-top.jpg', cid: 'preview-top', type: 'image/jpeg' },
-  { file: 'chat-preview-bottom.jpg', cid: 'preview-bottom', type: 'image/jpeg' },
+  { file: 'chat-preview.png', cid: 'preview', type: 'image/png' },
   { file: 'khushi-avatar.png', cid: 'khushi', type: 'image/png' },
 ];
 let assetCache: { filename: string; content: string; content_id: string; content_type: string }[] | null = null;
@@ -57,9 +57,10 @@ export async function teaserAttachments(base = ASSET_BASE_DEFAULT) {
   return assetCache;
 }
 
-export const PREVIEW_TOP_CID = 'preview-top';
-export const PREVIEW_BOTTOM_CID = 'preview-bottom';
-/** Messages waiting on the site after the email's three. Keep in step with the site's chat. */
+export const PREVIEW_CID = 'preview';
+/** Messages waiting on the site after the email's three. Keep in step with the
+ *  site's chat; blur-leaks.py reads this line to draw the pill, so rebuild the
+ *  picture after changing it. */
 export const PREVIEW_COUNT = 12;
 export const AVATAR_CID = 'khushi';
 
@@ -93,7 +94,7 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
   const bubble = (html: string, n: number) => `
         <tr><td align="left" style="padding:0 0 8px 0">
           <div class="b" style="animation-delay:${(0.15 + n * 0.35).toFixed(2)}s">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="max-width:86%">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="max-width:84%">
             <tr><td bgcolor="#fff6f8" class="t" style="background-color:#fff6f8;border-radius:18px;padding:9px 14px;
                        font-family:${FONT};font-size:17px;line-height:1.4;color:#2b1a22">${html}</td></tr>
           </table>
@@ -142,9 +143,12 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
   <tr><td align="center" style="padding:0">
 
     <!--[if mso]><table role="presentation" width="420" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+    <!-- The mockup's gradient, flattened to #2a1520 through the middle so the
+         preview picture (which has that colour baked in) blends in whether or
+         not the client draws gradients. -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
            bgcolor="#2a1520" style="width:100%;max-width:420px;background-color:#2a1520;
-           background-image:linear-gradient(180deg,#3a1a2a 0%,#2a1520 30%,#1c1017 100%)">
+           background-image:linear-gradient(180deg,#3a1a2a 0%,#2a1520 12%,#2a1520 82%,#1c1017 100%)">
 
       <!-- header: khushi, online -->
       <tr><td style="padding:18px 16px 14px;border-bottom:1px solid #3d2430">
@@ -161,43 +165,29 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
       </td></tr>
 
       <!-- the thread -->
-      <tr><td style="padding:14px 14px 6px">
+      <tr><td style="padding:14px 14px 0">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr><td align="center" style="padding:0 0 12px">
           <span style="display:inline-block;background-color:#3a2230;color:#c9a0ae;border-radius:10px;padding:3px 12px;
                        font-family:${FONT};font-size:14px">today &#183; ${stamp}</span>
         </td></tr>
 ${lines.map((l, i) => bubble(l, i)).join('')}
-
-        <!-- the rest of the chat, blurred: top picture, real-text pill, bottom picture -->
-        <tr><td align="left" style="padding:4px 0 0">
-          <div class="b" style="animation-delay:${previewAt}s">
-          <a href="${link}" style="display:block;text-decoration:none">
-            <img src="cid:${PREVIEW_TOP_CID}" width="392" alt="the rest of the chat, blurred"
-                 style="display:block;width:100%;max-width:392px;height:auto;border:0" />
-          </a>
-          </div>
-        </td></tr>
-        <tr><td align="center" style="padding:0">
-          <div class="b" style="animation-delay:${previewAt}s">
-          <a href="${link}" style="display:inline-block;background-color:#241821;border:1.5px solid #eb648c;color:#fff6f8;
-                     border-radius:20px;padding:9px 20px;font-family:${PIXEL};font-size:11px;letter-spacing:.06em;
-                     text-decoration:none;box-shadow:0 0 24px rgba(235,100,140,.45)">+${PREVIEW_COUNT} NEW MESSAGES</a>
-          </div>
-        </td></tr>
-        <tr><td align="left" style="padding:0">
-          <div class="b" style="animation-delay:${previewAt}s">
-          <a href="${link}" style="display:block;text-decoration:none">
-            <img src="cid:${PREVIEW_BOTTOM_CID}" width="392" alt=""
-                 style="display:block;width:100%;max-width:392px;height:auto;border:0" />
-          </a>
-          </div>
-        </td></tr>
         </table>
       </td></tr>
 
+      <!-- the rest of the chat, blurred, "+12 new messages" on top: one picture,
+           the card's full width so the blur spills into the margin as in the mockup -->
+      <tr><td style="padding:0">
+        <div class="b" style="animation-delay:${previewAt}s">
+        <a href="${link}" style="display:block;text-decoration:none">
+          <img src="cid:${PREVIEW_CID}" width="420" alt="+${PREVIEW_COUNT} new messages. open the chat to read them"
+               style="display:block;width:100%;max-width:420px;height:auto;border:0" />
+        </a>
+        </div>
+      </td></tr>
+
       <!-- the one button -->
-      <tr><td style="padding:12px 14px 22px">
+      <tr><td style="padding:16px 14px 18px">
         <div class="b" style="animation-delay:${ctaAt}s">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr><td align="center" bgcolor="#eb648c" class="cta"

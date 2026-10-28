@@ -25,8 +25,7 @@ const mail = teaserEmail({
 
 const data = (f, type) => `data:${type};base64,${fs.readFileSync(path.join(root, f)).toString('base64')}`;
 const inline = (html) => html
-  .replace(/cid:preview-top/g, data('assets/email/chat-preview-top.jpg', 'image/jpeg'))
-  .replace(/cid:preview-bottom/g, data('assets/email/chat-preview-bottom.jpg', 'image/jpeg'))
+  .replace(/cid:preview/g, data('assets/email/chat-preview.png', 'image/png'))
   .replace(/cid:khushi/g, data('assets/email/khushi-avatar.png', 'image/png'));
 const gmailish = (html) => html.replace(/<style>[\s\S]*?<\/style>/, '').replace(/<link [^>]*fonts\.googleapis[^>]*>/, '');
 
