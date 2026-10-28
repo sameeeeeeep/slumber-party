@@ -27,8 +27,35 @@
 //  Elsewhere the stack falls to Courier New, and the sizes below are chosen
 //  for Courier, the larger of the two, so neither version overflows a bubble.
 // ============================================================================
-import { escapeHtml } from './handset-email.ts';
-import { PREVIEW_TOP_JPG_B64, PREVIEW_BOTTOM_JPG_B64, AVATAR_PNG_B64 } from './teaser-assets.ts';
+/* Kept here rather than imported from handset-email.ts, so the teaser function
+   deploys as two small files without dragging in the handset's inline logo. */
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/* The three pictures, fetched when sending and attached to each message (cid:).
+   They live in this repo's assets/email/, built by tools/blur-leaks.py; the
+   sender reads them from a pinned commit so a send never picks up a half-made
+   image. TEASER_ASSET_BASE overrides it. */
+export const ASSET_BASE_DEFAULT =
+  'https://raw.githubusercontent.com/sameeeeeeep/slumber-party/claude/intelligent-edison-vvwras/assets/email/';
+const ASSETS = [
+  { file: 'chat-preview-top.jpg', cid: 'preview-top', type: 'image/jpeg' },
+  { file: 'chat-preview-bottom.jpg', cid: 'preview-bottom', type: 'image/jpeg' },
+  { file: 'khushi-avatar.png', cid: 'khushi', type: 'image/png' },
+];
+let assetCache: { filename: string; content: string; content_id: string; content_type: string }[] | null = null;
+export async function teaserAttachments(base = ASSET_BASE_DEFAULT) {
+  if (assetCache) return assetCache;
+  assetCache = await Promise.all(ASSETS.map(async (a) => {
+    const res = await fetch(base + a.file);
+    if (!res.ok) throw new Error(`asset ${a.file}: ${res.status}`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return { filename: a.file, content: btoa(bin), content_id: a.cid, content_type: a.type };
+  }));
+  return assetCache;
+}
 
 export const PREVIEW_TOP_CID = 'preview-top';
 export const PREVIEW_BOTTOM_CID = 'preview-bottom';
@@ -225,23 +252,22 @@ export async function sendTeaserEmail(
 ): Promise<{ sent: boolean; id?: string; reason?: string }> {
   const key = Deno.env.get('RESEND_API_KEY');
   if (!key) return { sent: false, reason: 'no RESEND_API_KEY' };
-  const replyTo = Deno.env.get('MAIL_REPLY_TO') ?? 'khushi@nailin.it';
+  const replyTo = Deno.env.get('TEASER_REPLY_TO') ?? Deno.env.get('MAIL_REPLY_TO') ?? 'khushi@nailin.it';
   try {
+    const attachments = await teaserAttachments(Deno.env.get('TEASER_ASSET_BASE') ?? ASSET_BASE_DEFAULT);
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: Deno.env.get('MAIL_FROM') ?? 'khushi from nailinit <khushi@nailin.it>',
+        /* khushi@nailin.it once nailin.it is verified in Resend (TEASER_FROM);
+           until then the slumber site's verified sender. */
+        from: Deno.env.get('TEASER_FROM') ?? Deno.env.get('MAIL_FROM') ?? 'khushi <khushi@send.secretslumberparty.com>',
         to: [to],
         reply_to: replyTo,
         subject: mail.subject,
         html: mail.html,
         text: mail.text,
-        attachments: [
-          { filename: 'chat-1.jpg', content: PREVIEW_TOP_JPG_B64, content_id: PREVIEW_TOP_CID, content_type: 'image/jpeg' },
-          { filename: 'chat-2.jpg', content: PREVIEW_BOTTOM_JPG_B64, content_id: PREVIEW_BOTTOM_CID, content_type: 'image/jpeg' },
-          { filename: 'khushi.png', content: AVATAR_PNG_B64, content_id: AVATAR_CID, content_type: 'image/png' },
-        ],
+        attachments,
         headers: {
           'List-Unsubscribe': `<${optOutUrl}>, <mailto:${replyTo}?subject=unsubscribe>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
@@ -253,7 +279,7 @@ export async function sendTeaserEmail(
     console.error('resend rejected', res.status, why);
     return { sent: false, reason: `${res.status} ${why}` };
   } catch (e) {
-    console.error('resend threw', e);
+    console.error('teaser send threw', e);
     return { sent: false, reason: 'threw: ' + String(e).slice(0, 300) };
   }
 }

@@ -19,8 +19,8 @@ import { teaserEmail } from '../supabase/functions/_shared/thread-email.ts';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const mail = teaserEmail({
   firstName: 'Riya Sharma',
-  link: 'https://nailin.it/pages/khushis-list?k=PREVIEWTOKEN',
-  optOutUrl: 'https://nailin.it/pages/khushis-list?k=PREVIEWTOKEN&optout=1',
+  link: 'https://access.nailin.it/?i=PREVIEWTOKEN',
+  optOutUrl: 'https://secseoyetyfqsfgzlnis.supabase.co/functions/v1/teaser?optout=PREVIEWTOKEN',
 });
 
 const data = (f, type) => `data:${type};base64,${fs.readFileSync(path.join(root, f)).toString('base64')}`;
