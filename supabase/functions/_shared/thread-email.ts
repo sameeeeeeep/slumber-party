@@ -37,11 +37,13 @@ const escapeHtml = (s: string) =>
    sender reads them from a pinned commit so a send never picks up a half-made
    image. TEASER_ASSET_BASE overrides it. */
 export const ASSET_BASE_DEFAULT =
-  'https://raw.githubusercontent.com/sameeeeeeep/slumber-party/0b95dbb55d646dc099a2654936d8c7290f275e3e/assets/email/';
+  'https://raw.githubusercontent.com/sameeeeeeep/slumber-party/c4b77b335572ba304a414ca60e3b397d50ce719d/assets/email/';
 const ASSETS = [
   { file: 'chat-preview-top.jpg', cid: 'preview-top', type: 'image/jpeg' },
   { file: 'chat-preview-bottom.jpg', cid: 'preview-bottom', type: 'image/jpeg' },
   { file: 'khushi-avatar.png', cid: 'khushi', type: 'image/png' },
+  { file: 'cta.png', cid: 'cta', type: 'image/png' },
+  { file: 'pill.png', cid: 'pill', type: 'image/png' },
 ];
 let assetCache: { filename: string; content: string; content_id: string; content_type: string }[] | null = null;
 export async function teaserAttachments(base = ASSET_BASE_DEFAULT) {
@@ -62,6 +64,11 @@ export const PREVIEW_BOTTOM_CID = 'preview-bottom';
 /** Messages waiting on the site after the email's three. Keep in step with the site's chat. */
 export const PREVIEW_COUNT = 12;
 export const AVATAR_CID = 'khushi';
+/* The button and the pill are pictures (tools/email-buttons.py): Gmail's dark
+   mode recolours text, and white on pink came out dark on pink. Images it
+   leaves alone. */
+export const CTA_CID = 'cta';
+export const PILL_CID = 'pill';
 
 export interface TeaserInput {
   /** First name as the person typed it on the application. Empty → "hi!". */
@@ -73,8 +80,9 @@ export interface TeaserInput {
   optOutUrl: string;
 }
 
-const FONT = "'VT323','Courier New',Courier,monospace";
-const PIXEL = "'Press Start 2P','Courier New',Courier,monospace";
+/* Gmail and Outlook drop web fonts; Menlo / Consolas are crisper than Courier
+   where they exist, and the same width, so the sizes below still fit. */
+const FONT = "'VT323','SF Mono',Menlo,Consolas,'Courier New',Courier,monospace";
 
 export function teaserEmail(input: TeaserInput): { subject: string; html: string; text: string } {
   const name = input.firstName.trim().split(/\s+/)[0]?.toLowerCase() ?? '';
@@ -113,11 +121,9 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
 <style>
   /* Motion only. Every rule here is optional; see the header comment. */
   @keyframes pop { from { opacity:0; transform:translateY(8px) scale(.97); } to { opacity:1; transform:none; } }
-  @keyframes glow { 0%,100% { box-shadow:0 8px 20px rgba(235,100,140,.4); } 50% { box-shadow:0 8px 36px rgba(236,100,42,.85); } }
   @keyframes live { 0%,100% { box-shadow:0 0 4px 1px rgba(74,222,128,.55); } 50% { box-shadow:0 0 10px 4px rgba(74,222,128,.9); } }
   .b { animation:pop .38s ease-out backwards; }
   .live { animation:live 1.8s ease-in-out infinite; }
-  .cta { animation:glow 2.4s ease-in-out ${(Number(ctaAt) + 0.6).toFixed(2)}s infinite; }
   /* Sizes inline are for Courier, the fallback. VT323 runs small, so where
      web fonts load (Apple Mail, iOS Mail) it gets bigger type. Gmail drops
      @supports blocks entirely, so Courier never sees these sizes. */
@@ -126,7 +132,7 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
     .s { font-size:17px !important; }
     .n { font-size:23px !important; }
   }
-  @media (prefers-reduced-motion: reduce) { .b, .cta, .live { animation:none !important; } }
+  @media (prefers-reduced-motion: reduce) { .b, .live { animation:none !important; } }
 </style>
 </head>
 <body style="margin:0;padding:0;background-color:#1c1017">
@@ -180,9 +186,9 @@ ${lines.map((l, i) => bubble(l, i)).join('')}
         </td></tr>
         <tr><td align="center" style="padding:0">
           <div class="b" style="animation-delay:${previewAt}s">
-          <a href="${link}" style="display:inline-block;background-color:#241821;border:1.5px solid #eb648c;color:#fff6f8;
-                     border-radius:20px;padding:9px 20px;font-family:${PIXEL};font-size:11px;letter-spacing:.06em;
-                     text-decoration:none;box-shadow:0 0 24px rgba(235,100,140,.45)">+${PREVIEW_COUNT} NEW MESSAGES</a>
+          <a href="${link}" style="display:inline-block;text-decoration:none">
+            <img src="cid:${PILL_CID}" width="252" height="68" alt="+${PREVIEW_COUNT} NEW MESSAGES"
+                 style="display:block;width:252px;height:68px;border:0;font-family:${FONT};font-size:15px;color:#fff6f8" /></a>
           </div>
         </td></tr>
         <tr><td align="left" style="padding:0">
@@ -199,19 +205,15 @@ ${lines.map((l, i) => bubble(l, i)).join('')}
       <!-- the one button -->
       <tr><td style="padding:12px 14px 22px">
         <div class="b" style="animation-delay:${ctaAt}s">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr><td align="center" bgcolor="#eb648c" class="cta"
-                  style="background-color:#eb648c;background-image:linear-gradient(90deg,#eb648c,#ec642a);
-                         border-radius:32px;box-shadow:0 8px 20px rgba(235,100,140,.4)">
-            <a href="${link}" style="display:block;padding:24px 12px;font-family:${PIXEL};font-size:14px;
-                       letter-spacing:.06em;color:#ffffff;text-decoration:none;font-weight:bold">OPEN THE CHAT &#9656;</a>
-          </td></tr>
-        </table>
+        <a href="${link}" style="display:block;text-decoration:none;text-align:center">
+          <img src="cid:${CTA_CID}" width="392" alt="OPEN THE CHAT &#9656;"
+               style="display:block;width:100%;max-width:392px;height:auto;border:0;margin:0 auto;
+                      font-family:${FONT};font-size:20px;font-weight:bold;color:#ffffff" /></a>
         </div>
       </td></tr>
 
       <!-- why you got this, and the way out -->
-      <tr><td align="center" class="s" style="padding:0 30px 26px;font-family:${FONT};font-size:13px;line-height:1.45;color:#9c7d89">
+      <tr><td align="center" class="s" style="padding:0 30px 26px;font-family:${FONT};font-size:13px;line-height:1.45;color:#c4a3b0">
         you're getting this because you applied for khushi's slumber party at secretslumberparty.com.
         nailinit is khushi's brand. not interested?
         <a href="${optOut}" style="color:#ffd9e4;text-decoration:underline">no thanks</a> and we won't email you about it again.
