@@ -38,7 +38,7 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Bungee&family=Teko:wght@400;500;600&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1793248201">
+<link rel="stylesheet" href="style.css?v=1793256438">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -77,6 +77,9 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
   box-shadow: 0 0 0 3px #75150f, 0 0 0 5px #ec5a86, 0 10px 24px rgba(0,0,0,.45), 0 0 30px rgba(239,189,13,.35); animation: lgoIn .5s cubic-bezier(.2,1.4,.4,1) both, lgoPulse 2s ease-in-out .6s infinite; }
 #ldr .l-go[hidden] { display: none; }
 #ldr.done .l-s { display: none; }
+/* diwaliparty.live demo, phones: the name ask sits high so the iPhone keyboard leaves "open my chitthi" in view */
+@media (max-width: 700px) { html[data-site="demo"] #ldr.ask { place-items: start center; padding-top: max(9vh, calc(env(safe-area-inset-top) + 16px)); }
+  html[data-site="demo"] #ldr.ask .l-in { gap: 12px; } html[data-site="demo"] #ldr.ask .genda { display: none; } }
 @keyframes lgoIn { from { opacity: 0; transform: translateY(10px) scale(.9); } to { opacity: 1; transform: none; } }
 @keyframes lgoPulse { 50% { box-shadow: 0 0 0 3px #75150f, 0 0 0 5px #ec5a86, 0 10px 24px rgba(0,0,0,.45), 0 0 46px rgba(239,189,13,.6); } }
 @media (prefers-reduced-motion: reduce) { #ldr .flm, #ldr .halo { animation: none; } }
@@ -351,10 +354,10 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
   <button class="mx-pill" id="mxPlay" type="button" aria-label="Pause music"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b><span class="mx-ic" id="mxIc">❚❚</span></button>
   <a class="mx-link" id="mxLink" href="#" target="_blank" rel="noopener" aria-label="Open the playlist on YouTube">↗</a>
 </div>
-<script src="config.js?v=1793248201"></script>
-<script src="lib.js?v=1793248201"></script>
-<script src="app.js?v=1793248201"></script>
-<script src="games.js?v=1793248201"></script>
+<script src="config.js?v=1793256438"></script>
+<script src="lib.js?v=1793256438"></script>
+<script src="app.js?v=1793256438"></script>
+<script src="games.js?v=1793256438"></script>
 <!-- Cloudflare Web Analytics (cookieless page views, both hosts): dash → Analytics & Logs → Web Analytics → diwali.nailin.it -->
 <script>   // Cloudflare Web Analytics for the real party sites only: the diwaliparty.live demo stays out of the numbers
   if (window.SITE !== 'demo') { var cfb = document.createElement('script'); cfb.defer = true; cfb.src = 'https://static.cloudflareinsights.com/beacon.min.js'; cfb.setAttribute('data-cf-beacon', '{"token": "a5d5840e60434566ad096fb1208ac78d"}'); document.body.appendChild(cfb); }

@@ -1196,7 +1196,8 @@ Promise.race([Promise.all([assetsReady, fontsReady, counted(mixReady)]), new Pro
     // a bare link (no ?name=): ask for their name right here so the envelope and the letter are addressed to them
     const ask = !NAME && document.getElementById('ldrName');
     if (L && go && ask) {
-      L.classList.add('done'); ask.hidden = false; go.hidden = false; go.textContent = 'open my chitthi ✉'; ask.focus({ preventScroll: true });
+      L.classList.add('done'); if (window.SITE === 'demo') { L.classList.add('ask'); ask.setAttribute('enterkeyhint', 'go'); }   // demo: keyboard says Go, box sits high
+      ask.hidden = false; go.hidden = false; go.textContent = 'open my chitthi ✉'; ask.focus({ preventScroll: true });
       const named = () => {
         const n = nice(ask.value);
         if (!n) { ask.classList.remove('bad'); void ask.offsetWidth; ask.classList.add('bad'); ask.focus(); return; }
