@@ -38,7 +38,7 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Bungee&family=Teko:wght@400;500;600&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1793256510">
+<link rel="stylesheet" href="style.css?v=1793267607">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -123,8 +123,15 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
           <li class="p-chk"><img src="assets/partners/chk.webp" alt="CHK" decoding="async"><span>footwear partner</span></li>
           <li class="p-unfltrd"><img src="assets/partners/unfltrd.webp" alt="un:fltrd" decoding="async"><span>beauty partner</span></li>
           <li class="p-goyel"><img src="assets/partners/goyel.webp" alt="Goyel &amp; Goyal" decoding="async"><span>legal partner</span></li>
-          <!-- pouring partner: logo to come -->
-        </ul><script>/* phones scroll the strip as a loop: a second, hidden copy of the logos */ (function (u) { [...u.children].forEach(function (li) { var c = li.cloneNode(true); c.setAttribute('aria-hidden', 'true'); u.appendChild(c); }); })(document.currentScript.previousElementSibling);</script>
+        </ul>
+        <!-- second row, diwali.dotmediabase.com only -->
+        <span class="p-head p-more">pouring partners</span>
+        <ul class="p-more">
+          <li class="p-code"><img src="assets/partners/code.webp" alt="Code Entertainment" decoding="async"></li>
+          <li class="p-jager"><img src="assets/partners/jager.webp" alt="Jägermeister" decoding="async"></li>
+          <li class="p-sixfields"><img src="assets/partners/sixfields.webp" alt="DeVANS Six Fields" decoding="async"></li>
+          <li class="p-monkey"><img src="assets/partners/monkey.webp" alt="Monkey Shoulder" decoding="async"></li>
+        </ul><script>/* phones scroll each row as a loop: a second, hidden copy of the logos */ document.currentScript.parentNode.querySelectorAll('ul').forEach(function (u) { [...u.children].forEach(function (li) { var c = li.cloneNode(true); c.setAttribute('aria-hidden', 'true'); u.appendChild(c); }); });</script>
       </div>
 
     <canvas id="env" aria-label="Your envelope"></canvas>
@@ -354,10 +361,10 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
   <button class="mx-pill" id="mxPlay" type="button" aria-label="Pause music"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b><span class="mx-ic" id="mxIc">❚❚</span></button>
   <a class="mx-link" id="mxLink" href="#" target="_blank" rel="noopener" aria-label="Open the playlist on YouTube">↗</a>
 </div>
-<script src="config.js?v=1793256510"></script>
-<script src="lib.js?v=1793256510"></script>
-<script src="app.js?v=1793256510"></script>
-<script src="games.js?v=1793256510"></script>
+<script src="config.js?v=1793267607"></script>
+<script src="lib.js?v=1793267607"></script>
+<script src="app.js?v=1793267607"></script>
+<script src="games.js?v=1793267607"></script>
 <!-- Cloudflare Web Analytics (cookieless page views, both hosts): dash → Analytics & Logs → Web Analytics → diwali.nailin.it -->
 <script>   // Cloudflare Web Analytics for the real party sites only: the diwaliparty.live demo stays out of the numbers
   if (window.SITE !== 'demo') { var cfb = document.createElement('script'); cfb.defer = true; cfb.src = 'https://static.cloudflareinsights.com/beacon.min.js'; cfb.setAttribute('data-cf-beacon', '{"token": "a5d5840e60434566ad096fb1208ac78d"}'); document.body.appendChild(cfb); }

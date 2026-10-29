@@ -127,7 +127,7 @@ function layout() {
   // under the ticket: the partner strip, then the welcome line (+ "hosted by" on party.nailin.it), then the
   // buttons pinned to the bottom; the ticket gets whatever room is left between the toran and all that
   const host = window.SITE === 'party';
-  const PH = DEMO ? 0 : vw > 600 ? 100 : 98;      // partner strip (none on the demo) between the ticket and the welcome line
+  const PH = DEMO ? 0 : (vw > 600 ? 100 : 98) + (window.SITE === 'media' ? (vw > 600 ? 76 : 60) : 0);   // partner strip (none on the demo; two rows on dot media) between the ticket and the welcome line
   const below = (vw > 600 ? 150 : 175) + PH + (host ? 112 : 66), top = Math.max(64, vh * .08);
   const room = vh - top - below;
   C2.fh = Math.max(110, Math.min(room, (vw * .92) / POSTER_AR, 420)); C2.fs = C2.fh / C2.h;
