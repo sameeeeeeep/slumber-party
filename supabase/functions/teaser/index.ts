@@ -3,6 +3,10 @@
 //
 //    POST {action:'test', to}   x-teaser-key   → one real send, to an address
 //                                               in teaser_test_recipients only
+//    POST {action:'status'}     x-teaser-key   → where the real send stands
+//    POST {action:'batch', n}   x-teaser-key   → the real send, one wave: claims
+//                                               up to n (max 60) applicants not
+//                                               yet sent or opted out, sends each
 //    GET  ?optout=<token>                       → "no thanks" from the email
 //    POST ?optout=<token>                       → the same, one-click
 //                                               (List-Unsubscribe-Post)
@@ -13,8 +17,10 @@
 //  function's `invite` action turns it into their seat in the secret group,
 //  greeted by first name. The same token is their opt-out key.
 //
-//  There is deliberately no bulk action yet: the real send is switched on
-//  separately, after the test has been checked in real inboxes.
+//  The real send goes out in waves (tools/send-teaser.sh in nailinit-access
+//  calls `batch` every ~45s). teaser_claim() inserts into teaser_sends, keyed by
+//  the address, and returns only what it inserted, so nobody gets it twice even
+//  if two waves overlap. A failed send stays recorded and is not retried.
 //
 //  Deploy:  supabase functions deploy teaser --no-verify-jwt   (auth is the key)
 //  Keys:    sha256 of each x-teaser-key lives in teaser_keys, the test
@@ -68,6 +74,25 @@ Deno.serve(async (req) => {
   let b: Record<string, unknown>;
   try { b = await req.json(); } catch { return json({ error: 'bad json' }, 400); }
 
+  /* One teaser to one applicant: mint their personal link, send, record it. */
+  async function sendOne(app: { id: string; name: string | null }, to: string, test: boolean):
+    Promise<{ sent: boolean; id?: string; reason?: string }> {
+    const token = newToken();
+    const tokenHash = await sha(`inv:${token}`);
+    const { error: insErr } = await db.from('prebuzz_invites').insert({ token_hash: tokenHash, application_id: app.id, email: to });
+    if (insErr) return { sent: false, reason: 'invite: ' + insErr.message };
+
+    const link = `${ACCESS_URL}?i=${encodeURIComponent(token)}`;
+    const optOutUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/teaser?optout=${encodeURIComponent(token)}`;
+    const mail = teaserEmail({ firstName: app.name ?? '', link, optOutUrl });
+    const r = await sendTeaserEmail(to, test ? { ...mail, subject: `[TEST] ${mail.subject}` } : mail, optOutUrl);
+
+    await db.from('prebuzz_invites').update(r.sent
+      ? { sent_at: new Date().toISOString(), resend_id: r.id ?? null }
+      : { send_error: r.reason ?? 'unknown' }).eq('token_hash', tokenHash);
+    return r;
+  }
+
   // ----------------------------------------------------------------- test
   if (b.action === 'test') {
     const to = String(b.to ?? '').trim().toLowerCase();
@@ -80,21 +105,38 @@ Deno.serve(async (req) => {
     const { data: out } = await db.from('email_optouts').select('email').eq('email', to).maybeSingle();
     if (out) return json({ error: 'opted out' }, 409);
 
-    const token = newToken();
-    const tokenHash = await sha(`inv:${token}`);
-    const { error: insErr } = await db.from('prebuzz_invites').insert({ token_hash: tokenHash, application_id: app.id, email: to });
-    if (insErr) return json({ error: 'invite', detail: insErr.message }, 500);
-
-    const link = `${ACCESS_URL}?i=${encodeURIComponent(token)}`;
-    const optOutUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/teaser?optout=${encodeURIComponent(token)}`;
-    const mail = teaserEmail({ firstName: app.name ?? '', link, optOutUrl });
-    const r = await sendTeaserEmail(to, { ...mail, subject: `[TEST] ${mail.subject}` }, optOutUrl);
-
-    await db.from('prebuzz_invites').update(r.sent
-      ? { sent_at: new Date().toISOString(), resend_id: r.id ?? null }
-      : { send_error: r.reason ?? 'unknown' }).eq('token_hash', tokenHash);
+    const r = await sendOne(app, to, true);
     // the link itself is never returned: it exists only in the inbox it was sent to
     return json({ ok: r.sent, id: r.id, reason: r.reason });
+  }
+
+  // --------------------------------------------------------------- status
+  const status = async () => {
+    const { data, error } = await db.rpc('teaser_status').single();
+    if (error || !data) return null;
+    const s = data as { total: number; claimed: number; sent: number; failed: number; opted_out: number };
+    return { ...s, remaining: Math.max(0, s.total - s.claimed - s.opted_out) };
+  };
+  if (b.action === 'status') {
+    const s = await status();
+    return s ? json({ ok: true, ...s }) : json({ error: 'status' }, 500);
+  }
+
+  // ---------------------------------------------------------------- batch
+  if (b.action === 'batch') {
+    const n = Math.max(1, Math.min(60, Math.floor(Number(b.n) || 50)));
+    const { data: claimed, error } = await db.rpc('teaser_claim', { n });
+    if (error) return json({ error: 'claim', detail: error.message }, 500);
+    let sent = 0, failed = 0;
+    for (const c of (claimed ?? []) as { email: string; application_id: string; name: string | null }[]) {
+      const r = await sendOne({ id: c.application_id, name: c.name }, c.email, false);
+      await db.from('teaser_sends').update(r.sent
+        ? { sent_at: new Date().toISOString(), resend_id: r.id ?? null }
+        : { send_error: (r.reason ?? 'unknown').slice(0, 500) }).eq('email', c.email);
+      if (r.sent) sent++; else failed++;
+      await new Promise(res => setTimeout(res, 550));   // Resend allows ~2 sends a second
+    }
+    return json({ ok: true, wave: { sent, failed }, status: await status() });
   }
 
   return json({ error: 'unknown action' }, 400);

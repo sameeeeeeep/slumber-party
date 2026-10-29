@@ -38,7 +38,7 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Bungee&family=Teko:wght@400;500;600&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1793131194">
+<link rel="stylesheet" href="style.css?v=1793248201">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -351,13 +351,30 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
   <button class="mx-pill" id="mxPlay" type="button" aria-label="Pause music"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b><span class="mx-ic" id="mxIc">❚❚</span></button>
   <a class="mx-link" id="mxLink" href="#" target="_blank" rel="noopener" aria-label="Open the playlist on YouTube">↗</a>
 </div>
-<script src="config.js?v=1793131194"></script>
-<script src="lib.js?v=1793131194"></script>
-<script src="app.js?v=1793131194"></script>
-<script src="games.js?v=1793131194"></script>
+<script src="config.js?v=1793248201"></script>
+<script src="lib.js?v=1793248201"></script>
+<script src="app.js?v=1793248201"></script>
+<script src="games.js?v=1793248201"></script>
 <!-- Cloudflare Web Analytics (cookieless page views, both hosts): dash → Analytics & Logs → Web Analytics → diwali.nailin.it -->
 <script>   // Cloudflare Web Analytics for the real party sites only: the diwaliparty.live demo stays out of the numbers
   if (window.SITE !== 'demo') { var cfb = document.createElement('script'); cfb.defer = true; cfb.src = 'https://static.cloudflareinsights.com/beacon.min.js'; cfb.setAttribute('data-cf-beacon', '{"token": "a5d5840e60434566ad096fb1208ac78d"}'); document.body.appendChild(cfb); }
+</script>
+<script>   // diwaliparty.live (the demo) only: send its visitors on to make their own wish on happydiwali.to (bottom right, above the music pill)
+  if (window.SITE === 'demo') (function () {
+    var st = document.createElement('style');
+    // same build as the music pill beneath it: dark, gold ring, yellow condensed caps
+    st.textContent = '.hd-pill{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:calc(env(safe-area-inset-bottom) + 66px);z-index:39;display:inline-flex;align-items:center;gap:8px;height:40px;box-sizing:border-box;padding:0 16px 0 14px;border-radius:99px;background:rgba(32,4,2,.94);box-shadow:inset 0 0 0 1.5px rgba(239,189,13,.6),0 8px 20px rgba(20,2,1,.45);color:var(--yellow,#efbd0d);font:700 13.5px/1 var(--cta,"Barlow Condensed"),"Barlow Condensed",system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;white-space:nowrap;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s;pointer-events:none}'
+      + '.hd-pill.on{opacity:1;transform:none;pointer-events:auto}.hd-pill u{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:4px}.hd-pill i{font-style:normal;font-size:15px;transition:transform .2s}.hd-pill:hover i{transform:translateX(3px)}body.locked .hd-pill{opacity:0;pointer-events:none}'
+      + '@media (max-width:420px){.hd-pill{font-size:12px;padding:0 14px 0 12px}}';   /* phones too: bottom right, stacked above the music pill */
+    document.head.appendChild(st);
+    var a = document.createElement('a'); a.className = 'hd-pill';
+    a.href = 'https://happydiwali.to/?utm_source=diwaliparty&utm_medium=pill'; a.target = '_blank'; a.rel = 'noopener';
+    a.innerHTML = '<u>create your own diwali wish</u><i aria-hidden="true">→</i>'; a.setAttribute('aria-label', 'Create your own Diwali wish on happydiwali.to');
+    document.body.appendChild(a);
+    // only once the invite is revealed (scroll unlocks) and the guest has scrolled a little past it
+    function check() { if (!document.body.classList.contains('locked') && scrollY > 120) { a.classList.add('on'); removeEventListener('scroll', check); } }
+    addEventListener('scroll', check, { passive: true });
+  })();
 </script>
 </body>
 </html>
