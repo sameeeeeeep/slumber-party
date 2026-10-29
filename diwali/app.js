@@ -658,11 +658,15 @@ const DONE = {
   declined: ['thank you!', () => "the list is full this time, but we're so glad you wanted to come."],
   no: ['next time then.', () => "we'll miss you at the mohalla."],
   yes: ['pakka!', () => `see you ${C.event.dateLong}, ${C.event.time} · ${C.event.venue}`],      // party.nailin.it: a plain yes, no pass
-  joined: ["you're in!", () => "this party was a demo, but the group is real: we swap the AI tools, prompts and tricks behind sites like this one."],   // diwaliparty.live
+  joined: ["you're on the list!", () => "no party (this one was a demo), but you'll hear about our next fun products, and the AI builders WhatsApp community invite is on its way."],   // diwaliparty.live
 };
 if (DEMO) {   // the demo's "yes" is a door into the builders group, not a guest list
   $('#rsvpForm h2').innerHTML = 'want to make <span class="foil">one</span>?';
-  $('#rsvpForm .b-note').textContent = "this invite is a demo. say yes and you're in our little group where we share how to build things like it with AI.";
+  // the demo's form: no invite comes of it, just what they're signing up for
+  const note = $('#rsvpForm .b-note'); note.textContent = "this demo won't get you an invite, but leave your details for:";
+  const perks = document.createElement('ul'); perks.className = 'demo-perks';
+  ['more fun products like this one', 'an invite to our AI builders WhatsApp community'].forEach((t) => { const li = document.createElement('li'); li.textContent = t; perks.append(li); });
+  note.after(perks);
   $('#apSend').textContent = 'let me in';
   if (C.demo.group) $('#groupBtn').href = C.demo.group;
   const pm = $('.pc-mark b'); if (pm) pm.textContent = C.event.postmark;
@@ -1180,6 +1184,9 @@ Promise.race([Promise.all([assetsReady, fontsReady, counted(mixReady)]), new Pro
     ready = true;
     document.body.classList.add('ready');
     document.body.dataset.ph = 'gate';
+    // while they strike the match, warm the mela below (stall art, wall art) so the games open instantly
+    const warmMela = () => document.querySelectorAll('#games img, #wall img, .foot img').forEach((i) => { const s = i.getAttribute('src'); if (s) new Image().src = s; });
+    (window.requestIdleCallback || ((f) => setTimeout(f, 1200)))(warmMela, { timeout: 3000 });
     const L = document.getElementById('ldr'), go = document.getElementById('ldrGo');
     const enter = () => {                   // a real tap: unlocks sound on every phone, warms the music, then the scene
       initAudio(); MIX.start(); play('tap', { vol: .7 });   // the mix begins with this tap

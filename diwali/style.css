@@ -441,6 +441,8 @@ body:not(.open) .bottom, body:not(.open) .snd { opacity: 0; }
 .rsvp-card { max-width: 520px; margin: 0 auto; padding: 34px 26px 30px !important; }
 .rsvp-card h2 { font: 400 clamp(28px, 7.4vw, 40px)/1.05 var(--display) !important; color: var(--ink) !important; text-shadow: 2px 2px 0 var(--red) !important; margin: 0 0 10px !important; }
 .rsvp-card .b-note { color: var(--maroon) !important; font: 600 15px/1.4 var(--sans); margin: 0 0 20px; }
+.rsvp-card .demo-perks { margin: 0 0 18px; padding-left: 20px; color: var(--maroon); font: 600 15px/1.45 var(--sans); text-align: left; }
+.rsvp-card .b-note:has(+ .demo-perks) { margin-bottom: 6px !important; }
 .rsvp-btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
 .rsvp-btns .sign { font-size: 19px; padding: 15px 22px 13px; }
 .rsvp-done .sign { font-size: 16px; padding: 13px 20px 11px; }
@@ -1449,3 +1451,6 @@ html, body { overscroll-behavior-x: none; }
 #groupBtn { text-decoration: none; }
 #groupBtn[hidden] { display: none; }
 
+
+/* diwaliparty.live demo, phones: lift the step strip / caption / "stuck? do it for me" stack clear of the music pill */
+@media (max-width: 700px) { html[data-site="demo"] .bottom { bottom: calc(env(safe-area-inset-bottom) + 72px) !important; } }
