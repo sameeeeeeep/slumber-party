@@ -88,9 +88,10 @@ export function teaserEmail(input: TeaserInput): { subject: string; html: string
   const link = escapeHtml(input.link);
   const optOut = escapeHtml(input.optOutUrl);
 
+  // ICU puts a narrow no-break space before am/pm, so strip any space, not just U+0020
   const stamp = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true,
-  }).format(new Date()).replace(' ', '').toLowerCase();
+  }).format(new Date()).replace(/\s/g, '').toLowerCase();
 
   const lines = [hi, 'remember the slumber party?', 'well&#8230; it happened. and i have something for you'];
 
