@@ -499,6 +499,7 @@
     <a href="#/stay"         data-view="stay"><span class="nvl">rooms</span><span class="nvc" id="nv-stay"></span></a>
     <a href="#/activity"     data-view="activity"><span class="nvl">activities</span><span class="nvc" id="nv-activity"></span></a>
     <a href="#/day"          data-view="day"><span class="nvl">itinerary</span><span class="nvc" id="nv-day"></span></a>
+    <a href="#/prebuzz"      data-view="prebuzz"><span class="nvl">prebuzz</span><span class="nvc" id="nv-prebuzz"></span></a>
     <a href="#/reach"        data-view="reach"><span class="nvl">reach</span><span class="nvc" id="nv-reach"></span></a>
   </div>
 </nav>
@@ -909,6 +910,33 @@
       </table>
     </div>
     <p class="empty" id="wlEmpty" hidden>no one yet — it fills once applications close.</p>
+  </section>
+
+  <!-- ----------------------------------------------------------- prebuzz -->
+  <section id="sec-prebuzz" class="panel" style="margin-top:18px">
+    <div class="tablebar">
+      <h2 style="flex:1">access.nailin.it</h2>
+      <span class="pill" id="pbCount">—</span>
+      <button class="btn ghost" id="pbCsv" type="button">download csv</button>
+    </div>
+    <div class="ovs" id="ovPrebuzz"></div>
+    <p class="sub">everyone who left a number + email on nailinit's prebuzz page, newest
+      first. <b>slumber</b> marks a number that also applied for the slumber party (she
+      greets them by first name). <b>emailed</b> is the "got your deets" email.</p>
+    <div class="ovs" id="pbDays" style="align-items:flex-end"></div>
+    <div class="addRow" style="margin:0 0 10px">
+      <label style="flex:2 1 220px">search
+        <input id="pbSearch" type="search" placeholder="name, phone, email, city…" /></label>
+      <label style="flex:0 1 auto;flex-direction:row;align-items:center;gap:6px">
+        <input id="pbOnlyApp" type="checkbox" style="width:auto" /> slumber applicants only</label>
+    </div>
+    <div class="scroll">
+      <table id="pbTbl">
+        <thead><tr><th>when</th><th>phone</th><th>email</th><th>slumber</th><th>emailed</th><th>source</th></tr></thead>
+        <tbody id="pbBody"></tbody>
+      </table>
+    </div>
+    <p class="empty" id="pbEmpty" hidden>no sign-ups yet.</p>
   </section>
 
   <!-- ---------------------------------------------------------- sponsors -->
@@ -1384,6 +1412,7 @@ document.getElementById('out').addEventListener('click', async () => {
 sb.auth.getSession().then(({ data }) => { if (data.session) boot(); });
 
 /* -------------------------------------------------------------------- data */
+let PB_LEADS = [], PB_MEMBERS = [], PB_INV = null;
 let APPS = [], VISITS = [], CHECKINS = [], GUESTS = [], FAILS = [], CREW = [], WAITLIST = [], DRAFTS = [], ITIN = [], VENUES = [], ROOMS = [], HOUSES = [], POINTS = [], SPONSORS = [], DELIVS = [], BFFS = [], HAMPERS = [], ACTS = [], BOARD = [], BVOTES = [], PUZZLES = [], PIECES = [], NEVERQS = [], NEVERANS = [];
 
 /* Supabase answers any single select with at most 1000 rows. At launch scale
@@ -1457,7 +1486,7 @@ function absorb(list, page) {
 const LOADING = new Set(['applications','checkins','guests','submit_log','crew','itinerary',
   'venues','rooms','houses','points','sponsors','deliverables','bffs','hampers','activities',
   'board_posts','board_votes','puzzles','puzzle_pieces','never_qs','never_answers',
-  'waitlist','drafts','visits']);
+  'waitlist','drafts','visits','prebuzz_leads','prebuzz_members']);
 const loading = key => LOADING.has(key);
 function loaded(key) {
   if (!LOADING.delete(key)) return;
@@ -1610,6 +1639,22 @@ function loadAll() {
   one('never_answers', () => sb.from('never_answers').select('id,q_id,name,answer'), d => NEVERANS = d);
   paged('waitlist', () => sb.from('waitlist').select('*').order('created_at', { ascending: false }),
         p => { WAITLIST = absorb(WAITLIST, p); });
+  paged('prebuzz_leads', () => sb.from('prebuzz_leads')
+          .select('id,created_at,phone,email,city,source,application_id,confirm_sent_at,confirm_resend_id,applications(name)')
+          .order('created_at', { ascending: false }),
+        p => { PB_LEADS = absorb(PB_LEADS, p); });
+  paged('prebuzz_members', () => sb.from('prebuzz_members')
+          .select('phone,first_seen_at,last_seen_at,email,email_confirmed_at,coupon_redeemed_at,hamper_status')
+          .order('first_seen_at', { ascending: false }),
+        p => { PB_MEMBERS = PB_MEMBERS.concat(p); });
+  /* the teaser invites are ~15k rows; only their counts are wanted */
+  (async () => {
+    const n = q => q.then(r => r.count ?? 0, () => 0);
+    const inv = () => sb.from('prebuzz_invites').select('token_hash', { count: 'exact', head: true });
+    const [sent, opened, optout] = await Promise.all([
+      n(inv().not('sent_at', 'is', null)), n(inv().not('first_opened_at', 'is', null)), n(inv().not('opted_out_at', 'is', null))]);
+    PB_INV = { sent, opened, optout }; paintSoon();
+  })();
   paged('drafts',   () => sb.from('drafts').select('*').order('updated_at', { ascending: false }),
         p => { DRAFTS = absorb(DRAFTS, p); });
 
@@ -1893,6 +1938,7 @@ const VIEWS = [
   { id:'stay',         title:'rooms',               blurb:'the venue, and who sleeps where' },
   { id:'activity',     title:'activities',          blurb:'what is happening, what it is, and whose job it is' },
   { id:'day',          title:'itinerary',           blurb:'what guests see at /itinerary' },
+  { id:'prebuzz',      title:'prebuzz',             blurb:'nailinit\'s access.nailin.it — sign-ups, and the slumber email link' },
   { id:'reach',        title:'reach',               blurb:'the late list, and how the link looks when shared' },
 ];
 
@@ -1907,6 +1953,7 @@ const VIEW_MAP = {
   games:        ['sec-games', 'sec-board', 'sec-puzzle', 'sec-never'],
   sponsors:     ['sec-sponsors'],
   bffs:         ['sec-bffs', 'sec-hampers'],
+  prebuzz:      ['sec-prebuzz'],
   stay:         ['sec-stay'],
   activity:     ['sec-activities'],
   day:          ['sec-itin'],
@@ -2089,6 +2136,7 @@ function navCounts() {
   set('activity', ACTS.filter(a => a.status !== 'cut').length);
   set('day', ITIN.length);
   set('reach', WAITLIST.length);
+  set('prebuzz', PB_LEADS.length);
   const live = new Set(VISITS.filter(v => Date.now() - +new Date(v.created_at) < 5 * 60 * 1000)
     .map(v => v.session_id)).size;
   set('overview', live);
@@ -2153,6 +2201,7 @@ const PANEL_VIEW = {
   activity:     [() => activitiesPanel()],
   day:          [() => itineraryPanel()],
   reach:        [() => waitlistPanel()],
+  prebuzz:      [() => prebuzzPanel()],
 };
 
 /* The rail counts sit outside the views, so they redraw regardless — they're a
@@ -3483,6 +3532,74 @@ document.getElementById('wlCsv').addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
   const a = document.createElement('a');
   a.href = url; a.download = 'late-list.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ============================================================================
+   PREBUZZ — access.nailin.it (nailinit-access repo, Supabase function prebuzz)
+   Strangers leave a number + email → prebuzz_leads. A lead whose number also
+   applied for slumber carries application_id. Slumber applicants who came in
+   through their email link are prebuzz_members; the invites are only counted.
+   ========================================================================== */
+const pbName = r => { const a = Array.isArray(r.applications) ? r.applications[0] : r.applications; return (a && a.name) || ''; };
+function pbRows() {
+  const q = norm(document.getElementById('pbSearch').value);
+  const onlyApp = document.getElementById('pbOnlyApp').checked;
+  return PB_LEADS.filter(r => (!onlyApp || r.application_id) &&
+    (!q || [r.phone, r.email, r.city, r.source, pbName(r)].some(v => norm(v).includes(q))));
+}
+function prebuzzPanel() {
+  const body = document.getElementById('pbBody');
+  if (!body) return;
+  if (loading('prebuzz_leads')) {
+    document.getElementById('pbEmpty').hidden = true;
+    body.innerHTML = skelCells(6, 4);
+    return;
+  }
+  const today = dayKey(Date.now());
+  const emailed = PB_LEADS.filter(r => r.confirm_resend_id && r.confirm_resend_id !== 'skipped').length;
+  strip('ovPrebuzz', [
+    [PB_LEADS.length, 'sign-ups'],
+    [PB_LEADS.filter(r => dayKey(r.created_at) === today).length, 'today'],
+    [PB_LEADS.filter(r => r.application_id).length, 'slumber applicants'],
+    [emailed, 'got the email'],
+    [PB_LEADS.filter(r => r.email && !r.confirm_sent_at).length, 'email pending', true],
+    ...(PB_INV ? [[PB_INV.sent, 'slumber links sent'], [PB_INV.opened, 'links opened']] : []),
+    [PB_MEMBERS.length, 'in the group'],
+    [PB_MEMBERS.filter(m => m.email_confirmed_at).length, 'email confirmed'],
+    [PB_MEMBERS.filter(m => m.coupon_redeemed_at).length, 'coupon used'],
+  ]);
+  /* sign-ups a day, last 14 days */
+  const days = [];
+  for (let i = 13; i >= 0; i--) days.push(dayKey(Date.now() - i * DAY));
+  const per = new Map(days.map(d => [d, 0]));
+  for (const r of PB_LEADS) { const k = dayKey(r.created_at); if (per.has(k)) per.set(k, per.get(k) + 1); }
+  strip('pbDays', days.map(d => [per.get(d), d.slice(5)]));
+
+  const rows = pbRows();
+  document.getElementById('pbCount').textContent = rows.length === PB_LEADS.length
+    ? (PB_LEADS.length ? `${PB_LEADS.length} sign-up${PB_LEADS.length === 1 ? '' : 's'}` : '—')
+    : `${rows.length} of ${PB_LEADS.length}`;
+  document.getElementById('pbEmpty').hidden = rows.length > 0;
+  body.innerHTML = rows.slice(0, 1000).map(r => `<tr>
+    <td class="muted">${esc(istStamp(r.created_at))}</td>
+    <td>${esc(r.phone)}</td>
+    <td>${esc(r.email || '—')}</td>
+    <td>${r.application_id ? `<b>✓</b> ${esc(pbName(r))}` : '<span class="muted">—</span>'}</td>
+    <td class="muted">${r.confirm_sent_at ? (r.confirm_resend_id === 'skipped' ? 'skipped' : '✓') : (r.email ? 'pending' : '—')}</td>
+    <td>${esc(r.source || '—')}</td>
+  </tr>`).join('');
+}
+document.getElementById('pbSearch').addEventListener('input', () => prebuzzPanel());
+document.getElementById('pbOnlyApp').addEventListener('change', () => prebuzzPanel());
+document.getElementById('pbCsv').addEventListener('click', () => {
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['when (IST)','phone','email','city','source','slumber applicant','applied as','emailed'].map(cell).join(',')];
+  for (const r of pbRows()) lines.push([istStamp(r.created_at), r.phone, r.email || '', r.city || '', r.source || '',
+    r.application_id ? 'yes' : '', pbName(r), r.confirm_sent_at ? istStamp(r.confirm_sent_at) : ''].map(cell).join(','));
+  const url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'prebuzz-signups.csv'; a.click();
   URL.revokeObjectURL(url);
 });
 
