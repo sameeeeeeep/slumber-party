@@ -3593,7 +3593,8 @@ function prebuzzPanel() {
 document.getElementById('pbSearch').addEventListener('input', () => prebuzzPanel());
 document.getElementById('pbOnlyApp').addEventListener('change', () => prebuzzPanel());
 document.getElementById('pbCsv').addEventListener('click', () => {
-  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  /* strangers type city/source/email, so a leading = + - @ must not become a formula */
+  const cell = v => { const t = String(v ?? ''); return `"${(/^[=+\-@\t\r]/.test(t) ? "'" + t : t).replace(/"/g, '""')}"`; };
   const lines = [['when (IST)','phone','email','city','source','slumber applicant','applied as','emailed'].map(cell).join(',')];
   for (const r of pbRows()) lines.push([istStamp(r.created_at), r.phone, r.email || '', r.city || '', r.source || '',
     r.application_id ? 'yes' : '', pbName(r), r.confirm_sent_at ? istStamp(r.confirm_sent_at) : ''].map(cell).join(','));
