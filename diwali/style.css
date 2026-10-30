@@ -369,7 +369,7 @@ body.open .gate { transform: translateY(110%); opacity: 0; pointer-events: none;
 [data-site="media"] .partners .p-more { display: flex; }
 .partners .p-head.p-more { margin-top: 10px; }
 .partners ul.p-more { align-items: center; gap: 10px 38px; }
-.partners .p-code img { height: 34px; } .partners .p-jager img { height: 18px; } .partners .p-sixfields img { height: 54px; } .partners .p-monkey img { height: 48px; } .partners .p-donromeo img { height: 28px; }
+.partners .p-code img { height: 34px; } .partners .p-jager img { height: 18px; } .partners .p-sixfields img { height: 54px; } .partners .p-monkey img { height: 48px; } .partners .p-donromeo img { height: 28px; } .partners .p-uluvka img { height: 36px; }
 .partners li span { font-size: 9.5px !important; }
 .partners li span { font: 600 8.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase; color: var(--cream); opacity: .6; white-space: nowrap; }
 /* the loop copy only exists for the phone slider */
@@ -383,7 +383,7 @@ body.open .gate { transform: translateY(110%); opacity: 0; pointer-events: none;
   .partners .p-chk img { height: 15px; margin-bottom: 9px; } .partners .p-unfltrd img { height: 19px; margin-bottom: 7px; } .partners .p-goyel img { height: 34px; }
   .partners .p-head.p-more { margin-top: 6px; }
   .partners ul.p-more { gap: 0; animation-direction: reverse; }
-  .partners .p-code img { height: 27px; } .partners .p-jager img { height: 15px; } .partners .p-sixfields img { height: 43px; } .partners .p-monkey img { height: 38px; } .partners .p-donromeo img { height: 23px; }
+  .partners .p-code img { height: 27px; } .partners .p-jager img { height: 15px; } .partners .p-sixfields img { height: 43px; } .partners .p-monkey img { height: 38px; } .partners .p-donromeo img { height: 23px; } .partners .p-uluvka img { height: 30px; }
   .partners li span { font-size: 8px !important; }
 }
 @keyframes pslide { to { transform: translateX(-50%); } }

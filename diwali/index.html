@@ -38,7 +38,7 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bakbak+One&family=Bungee&family=Teko:wght@400;500;600&family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Palanquin+Dark:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1793293910">
+<link rel="stylesheet" href="style.css?v=1793375266">
 <style>
 /* loader: inline so it paints before anything else arrives */
 #ldr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(90% 70% at 50% 45%, #3a0a06 0%, #1a0503 70%, #0e0302 100%); color: #f7e6c8; transition: opacity .6s ease, visibility 0s linear .6s; }
@@ -132,6 +132,7 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
           <li class="p-sixfields"><img src="assets/partners/sixfields.webp" alt="DeVANS Six Fields" decoding="async"></li>
           <li class="p-monkey"><img src="assets/partners/monkey.webp" alt="Monkey Shoulder" decoding="async"></li>
           <li class="p-donromeo"><img src="assets/partners/donromeo.webp" alt="Don Romeo" decoding="async"></li>
+          <li class="p-uluvka"><img src="assets/partners/uluvka.webp" alt="U'Luvka Vodka" decoding="async"></li>
         </ul><script>/* dot media-only logos leave the other invites; then phones scroll each row as a loop: a second, hidden copy of the logos */ if (SITE !== 'media') document.currentScript.parentNode.querySelectorAll('.p-media').forEach(function (li) { li.remove(); }); var P = document.currentScript.parentNode; P.querySelectorAll('ul').forEach(function (u) { var set = [...u.children]; for (var k = 0; k < 3; k++) set.forEach(function (li) { var c = li.cloneNode(true); c.setAttribute('aria-hidden', 'true'); u.appendChild(c); }); });
           /* each half of a row (two sets) must be wider than the phone so the loop never runs dry; speed stays the same on every row */
           addEventListener('load', function () { P.querySelectorAll('ul').forEach(function (u) { u.style.animationDuration = (u.scrollWidth / 2 / 32) + 's'; }); });</script>
@@ -364,10 +365,10 @@ window.CARD = SITE === 'party' ? 'assets/invite_card_host.webp?v=5' : SITE === '
   <button class="mx-pill" id="mxPlay" type="button" aria-label="Pause music"><span class="mx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b id="mxTitle">mohalla diwali mix</b><span class="mx-ic" id="mxIc">❚❚</span></button>
   <a class="mx-link" id="mxLink" href="#" target="_blank" rel="noopener" aria-label="Open the playlist on YouTube">↗</a>
 </div>
-<script src="config.js?v=1793293910"></script>
-<script src="lib.js?v=1793293910"></script>
-<script src="app.js?v=1793293910"></script>
-<script src="games.js?v=1793293910"></script>
+<script src="config.js?v=1793375266"></script>
+<script src="lib.js?v=1793375266"></script>
+<script src="app.js?v=1793375266"></script>
+<script src="games.js?v=1793375266"></script>
 <!-- Cloudflare Web Analytics (cookieless page views, both hosts): dash → Analytics & Logs → Web Analytics → diwali.nailin.it -->
 <script>   // Cloudflare Web Analytics for the real party sites only: the diwaliparty.live demo stays out of the numbers
   if (window.SITE !== 'demo') { var cfb = document.createElement('script'); cfb.defer = true; cfb.src = 'https://static.cloudflareinsights.com/beacon.min.js'; cfb.setAttribute('data-cf-beacon', '{"token": "a5d5840e60434566ad096fb1208ac78d"}'); document.body.appendChild(cfb); }
