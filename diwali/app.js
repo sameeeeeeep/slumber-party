@@ -652,12 +652,14 @@ window.MKDTrack = (ev, extra) => track(ev, extra);
 /* RSVP: "yes" = apply (name + phone + email) → hosts approve in /admin → entry pass with QR by email */
 const rsvpAsk = $('#rsvpAsk'), rsvpDone = $('#rsvpDone'), rsvpForm = $('#rsvpForm');
 const RKEY = 'mkd:rsvp:' + (INV || (NAME || '').toLowerCase());
+const CLOSED = !!C.rsvpClosed && !DEMO;   // at capacity: only people already on the list see their status
 const DONE = {
   applied: ['request sent!', e => `the hosts will confirm soon. your entry pass (with a QR) will come to ${e || 'your email'}.`],
   approved: ["you're in!", e => `your entry pass is in ${e || 'your email'}. venue + QR are all there. see you ${C.event.dateLong}!`],
   declined: ['thank you!', () => "the list is full this time, but we're so glad you wanted to come."],
   no: ['next time then.', () => "we'll miss you at the mohalla."],
   yes: ['pakka!', () => `see you ${C.event.dateLong}, ${C.event.time} · ${C.event.venue}`],      // party.nailin.it: a plain yes, no pass
+  closed: ['registrations closed', () => "the event is at capacity, so we can't take new RSVPs. thank you so much for wanting to come!"],
   joined: ["you're on the list!", () => "no party (this one was a demo), but you'll hear about our next fun products, and the AI builders WhatsApp community invite is on its way."],   // diwaliparty.live
 };
 if (DEMO) {   // the demo's "yes" is a door into the builders group, not a guest list
@@ -680,7 +682,7 @@ function showRsvp(st) {
   $('#doneMsg').textContent = msg(store.get(RKEY + ':email'));
   $('#ics').hidden = DEMO || !['applied', 'approved', 'yes'].includes(st);
   $('#groupBtn').hidden = st !== 'joined' || !(C.demo && C.demo.group);
-  $('#change').hidden = st === 'approved';
+  $('#change').hidden = st === 'approved' || st === 'closed' || (CLOSED && st === 'no');
 }
 function openForm(on) {
   rsvpForm.hidden = !on; rsvpAsk.hidden = on; rsvpDone.hidden = true; $('#apErr').textContent = '';
@@ -692,6 +694,7 @@ function openForm(on) {
 }
 $('#yes').addEventListener('click', () => {
   initAudio();
+  if (CLOSED) { showRsvp('closed'); return; }
   if (PARTY) { store.set(RKEY, 'yes'); showRsvp('yes'); track('rsvp', { rsvp: 'yes' }); play('win', { vol: .8 }); buzz(30); return; }   // party: just their okay
   play('tap'); openForm(true);
 });
@@ -707,6 +710,7 @@ rsvpForm.addEventListener('submit', async e => {
   try {
     const r = await fetch(API_BASE + '/api/apply', { method: 'POST', body: JSON.stringify({ name, phone, email, h: HOST }) });
     const d = await r.json();
+    if (d.error === 'closed') { showRsvp('closed'); return; }
     if (!d.ok) throw new Error(d.error || 'x');
     store.set(RKEY, d.status); store.set(RKEY + ':email', email); store.set(RKEY + ':phone', phone);
     showRsvp(d.status); play('win', { vol: .8 }); buzz(30);
@@ -715,10 +719,11 @@ rsvpForm.addEventListener('submit', async e => {
     $('#apErr').textContent = x.message === 'email' ? "that email doesn't look right" : x.message === 'phone' ? 'add your phone number (10 digits)' : "couldn't send. check your internet and try again?";
   } finally { btn.disabled = false; btn.textContent = DEMO ? 'let me in' : 'send my request'; }
 });
-showRsvp((PARTY ? {} : { yes: 'applied' })[store.get(RKEY)] || store.get(RKEY) || '');
+showRsvp((PARTY ? {} : { yes: 'applied' })[store.get(RKEY)] || store.get(RKEY) || (CLOSED ? 'closed' : ''));
 // the hosts may have approved since the last visit
-if (NAME && !PARTY) fetch(API_BASE + '/api/apply?name=' + encodeURIComponent(NAME)).then(r => r.json()).then(d => {
-  if (d.status && d.status !== store.get(RKEY) && (DONE[d.status])) { store.set(RKEY, d.status); showRsvp(d.status); }
+if (NAME && (!PARTY || CLOSED)) fetch(API_BASE + '/api/apply?name=' + encodeURIComponent(NAME)).then(r => r.json()).then(d => {
+  const st = PARTY ? (d.rsvp === 'yes' ? 'yes' : '') : d.status;   // party.nailin.it: a yes from another phone still counts
+  if (st && st !== store.get(RKEY) && (DONE[st])) { store.set(RKEY, st); showRsvp(st); }
 }).catch(() => {});
 
 /* ───────────── gate ───────────── */

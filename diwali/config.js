@@ -33,6 +33,9 @@ window.MKD = {
     start: 34,                       // seconds into the first song
   },
 
+  // at capacity: no new RSVPs. guests already approved / applied / yes keep their status and pass
+  rsvpClosed: true,
+
   rsvp: {
     // Opens + RSVPs post to a Google Form (sameep@nailin.it) → sheet "Untitled form (Responses)".
     wall: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSOz57GoCcYtf5P_uLFsGA47RaG94OYH8CUPdhqPPPT2hWbUeiUVKd8czXGoW0tLYCwJEMNcCddr6lD/pub?gid=1314439309&single=true&output=csv',
